@@ -4,21 +4,24 @@
 ;; sync' after modifying this file!
 
 ;;#############EXWM##################
-;;
-(use-package exwm
-  :config
-  (require 'exwm-config)
-  (exwm-config-default)
-  (require 'exwm-randr)
-  (setq exwm-randr-workspace-monitor-plist '(0 "DP-4"))
-  (add-hook 'exwm-randr-screen-change-hook
-            (lambda()
-              (start-process-shell-command
-               "xrandr" nil "xrandr --output DP-4 --mode 1920x1080 --pos 0x0 --rotate normal")))
-  (exwm-randr-enable)
-  (require 'exwm-systemtray)
-  (exwm-systemtray-enable)
-  )
+(eshell-command "setq stringvar $XDG_CURRENT_DESKTOP")
+(if (string= stringvar "EXWM")
+    (use-package exwm
+      :config
+      (require 'exwm-config)
+      (exwm-config-default)
+      (require 'exwm-randr)
+      (setq exwm-randr-workspace-monitor-plist '(0 "DP-4"))
+      (add-hook 'exwm-randr-screen-change-hook
+                (lambda()
+                  (start-process-shell-command
+                   "xrandr" nil "xrandr --output DP-4 --mode 1920x1080 --pos 0x0 --rotate normal")))
+      (exwm-randr-enable)
+      (require 'exwm-systemtray)
+      (exwm-systemtray-enable)
+      )
+nil
+)
 
 ;;###########DEFAULTS##################
 ;;
