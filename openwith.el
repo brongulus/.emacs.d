@@ -54,7 +54,7 @@
 (defcustom openwith-associations
   '(;; ("\\.pdf\\'" "acroread" (file))
     ;; ("\\.mp3\\'" "mpd" (file))
-    ("\\.\\(?:mpe?g\\|avi\\|wmv\\|mp4\\|mkv\\)\\'" "mpv" ("-idx" file))
+    ("\\.\\(?:mpe?g\\|avi\\|wmv\\|mp4\\|mkv\\)\\'" "mpv" (file))
     ("\\.\\(?:jp?g\\|png\\)\\'" "display" (file)))
   "Associations of file patterns to external programs.
 File pattern is a regular expression describing the files to

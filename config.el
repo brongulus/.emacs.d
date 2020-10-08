@@ -80,9 +80,9 @@
 (add-hook 'pdf-view-mode-hook 'doom-modeline-mode)
 ;;(setq pdf-view-midnight-colors '("#839496" . "#002b36" ))
 
+
 ;;#############WINDMOVE###############
 (use-package windmove
-  :ensure nil
   :bind
   (("S-<left>". windmove-left)
    ("S-<right>". windmove-right)
