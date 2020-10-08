@@ -4,14 +4,12 @@
 #+STARTUP: inlineimages nofold
 
 * TODO
-- [ ] Check if the user has gui version or cli
-- [ ] Figure out the automatic refresh and update without restarting doom
-- [ ] Start transmission as a daemon on invocation from emacs
+- [X] Figure out the automatic refresh and update without restarting doom
+- [ ] Improve Magnet link Support
 - [ ] Add Shortcuts
-- [ ] Finish Readme
+- [ ] Add transmission-remote --exit option to q?
+- [ ] Finish README
 - [ ] More, More, More
-- [ ] Check the other package and compare viability
-
 
 * Table of Contents :TOC_3:noexport:
 - [[#todo][TODO]]
@@ -20,6 +18,6 @@
 
 * Description
 * Prerequisites
-+ Transmission app and transmission-cli from your package manager
-+ Go to Preferences, Remote, Allow remote access, cross check the HTTP Port to be 9091
-+
++ Transmission-cli from your package manager
++ Run transmission-daemon after installation to generate the config file
++ Check for enable-daemon and port options
