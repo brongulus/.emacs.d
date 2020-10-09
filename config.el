@@ -3,6 +3,14 @@
 ;; Place your private configuration here! Remember, you do not need to run 'doom
 ;; sync' after modifying this file!
 
+
+;; TODO
+;; [ ] Turn into a literate config
+;; [ ] Edit doom screen, replace woth frequently used apps
+;; [ ] More in the future
+
+
+
 ;;#############EXWM##################
 (eshell-command "setq stringvar $XDG_CURRENT_DESKTOP")
 (if (string= stringvar "EXWM")

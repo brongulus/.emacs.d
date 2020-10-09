@@ -1,6 +1,7 @@
 ;;; app/torrent/config.el -*- lexical-binding: t; -*-
 
 (use-package! transmission
+  :defer t
   :init
   (after! evil-snipe
     (add-to-list 'evil-snipe-disabled-modes 'transmission-mode)

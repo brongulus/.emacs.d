@@ -4,20 +4,29 @@
 #+STARTUP: inlineimages nofold
 
 * TODO
-- [X] Figure out the automatic refresh and update without restarting doom
-- [ ] Improve Magnet link Support
-- [ ] Add Shortcuts
-- [ ] Add transmission-remote --exit option to q?
-- [ ] Finish README
-- [ ] More, More, More
 
 * Table of Contents :TOC_3:noexport:
 - [[#todo][TODO]]
 - [[#description][Description]]
+  - [[#plugins][Plugins]]
 - [[#prerequisites][Prerequisites]]
+- [[#features][Features]]
+- [[#configuration][Configuration]]
 
 * Description
+This module provides an interface to a transmission session. One can add, start/stop, verify, remove torrents, set speed limits, ratio limits, bandwidth priorities, trackers, etc.  Also, one can navigate to the corresponding file list, torrent info, or peer info contexts.  In the file list, individual files can be toggled for download, and their priorities set.
+
+** Plugins
++ [[https://github.com/holomorph/transmission/][transmission.el]]
+
 * Prerequisites
-+ Transmission-cli from your package manager
-+ Run transmission-daemon after installation to generate the config file
-+ Check for enable-daemon and port options
++ =transmission-cli= from your package manager.
++ Run =transmission-daemon= after installation to generate the configuration file. It should be located in '~/.config/transmission-daemon/settings.json'.
++ Before making any changes to the config file, run =transmission-remote --exit= otherwise changes will be overwritten.
++ Check for enable-daemon and port options, set the download location, save the changes and run =transmission-daemon= again.
+
+* Features
+- Keybinds....
+
+* Configuration
+- Mostly related to settings.json
