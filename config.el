@@ -29,6 +29,8 @@ nil
       user-full-name "Prashant Tak"
       user-mail-address "prashantrameshtak@gmail.com"
       doom-font (font-spec :family "Source Code Pro" :size 16)
+      doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
+      doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
       doom-theme 'doom-challenger-deep
       org-directory "/mnt/Data/Documents/org/"
       evil-escape-mode 1
@@ -73,7 +75,7 @@ nil
 
 
 (after! elfeed
-  (setq elfeed-search-filter "@1-month-ago +unread"))
+  (setq elfeed-search-filter "@2-month-ago"))
 
 (add-hook 'dired-mode-hook 'dired-hide-details-mode)
 ;; automatically turns on midnight-mode for pdf
