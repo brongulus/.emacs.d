@@ -6,7 +6,6 @@
 
 ;; TODO
 ;; [ ] Turn into a literate config
-;; [ ] Edit doom screen, replace woth frequently used apps
 ;; [ ] More in the future
 
 
@@ -94,6 +93,34 @@ nil
 ;;(setq pdf-view-midnight-colors '("#839496" . "#002b36" ))
 
 
+;; Dashboard
+(defun =elfeed ()
+  (interactive)
+  (elfeed)
+  )
+(map! :n "SPC o e" #'=elfeed)
+
+(setq fancy-splash-image "~/.doom.d/doom_grin.png")
+
+(setq +doom-dashboard-menu-sections
+  '(("Reload last session"
+     :icon (all-the-icons-octicon "history" :face 'doom-dashboard-menu-title)
+     :when (cond ((require 'persp-mode nil t)
+                  (file-exists-p (expand-file-name persp-auto-save-fname persp-save-dir)))
+                 ((require 'desktop nil t)
+                  (file-exists-p (desktop-full-file-name))))
+     :face (:inherit (doom-dashboard-menu-title bold))
+     :action doom/quickload-session)
+    ("Open notmuch"
+     :icon (all-the-icons-octicon "mention" :face 'doom-dashboard-menu-title)
+     :face (:inherit (doom-dashboard-menu-title bold))
+     :action =notmuch)
+    ("Open elfeed"
+     :icon (all-the-icons-octicon "book" :face 'doom-dashboard-menu-title)
+     :face (:inherit (doom-dashboard-menu-title bold))
+     :action =elfeed)
+    )
+  )
 ;;#############WINDMOVE###############
 (use-package windmove
   :bind
