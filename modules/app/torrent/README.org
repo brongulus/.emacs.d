@@ -3,18 +3,18 @@
 #+SINCE:   v2.0.9
 #+STARTUP: inlineimages nofold
 
-* TODO
-
 * Table of Contents :TOC_3:noexport:
-- [[#todo][TODO]]
 - [[#description][Description]]
+  - [[#module-flags][Module Flags]]
   - [[#plugins][Plugins]]
 - [[#prerequisites][Prerequisites]]
 - [[#features][Features]]
-- [[#configuration][Configuration]]
 
 * Description
-This module provides an interface to a transmission session. One can add, start/stop, verify, remove torrents, set speed limits, ratio limits, bandwidth priorities, trackers, etc.  Also, one can navigate to the corresponding file list, torrent info, or peer info contexts.  In the file list, individual files can be toggled for download, and their priorities set.
+This module provides an interface to a transmission session.
+
+** Module Flags
++ This module has no flags.
 
 ** Plugins
 + [[https://github.com/holomorph/transmission/][transmission.el]]
@@ -26,7 +26,20 @@ This module provides an interface to a transmission session. One can add, start/
 + Check for enable-daemon and port options, set the download location, save the changes and run =transmission-daemon= again.
 
 * Features
-- Keybinds....
+One can add, start/stop, verify, remove torrents, set speed limits, ratio limits, bandwidth priorities, trackers, etc.  Also, one can navigate to the corresponding file list, torrent info, or peer info contexts.  In the file list, individual files can be toggled for download, and their priorities set.
 
-* Configuration
-- Mostly related to settings.json
+|---------------------------+------------|
+| Function                  | Keybinding |
+|---------------------------+------------|
+| transmission-add          | a          |
+| transmission-info         | i          |
+| transmission-stats        | s          |
+| transmission-files        | RET        |
+| transmission-toggle       | x          |
+| transmission-remove       | D          |
+| transmission-set-download | d          |
+| transmission-set-upload   | u          |
+| transmission-toggle-mark  | m          |
+| transmission-unmark-all   | U          |
+| transmission-quit         | q          |
+|---------------------------+------------|
