@@ -7,7 +7,7 @@
 ;; TODO
 ;; [ ] Turn into a literate config
 ;; [ ] More in the future
-
+;; [ ] Improve Exwm experience
 
 
 ;;#############EXWM##################
@@ -26,6 +26,36 @@
       (exwm-randr-enable)
       (require 'exwm-systemtray)
       (exwm-systemtray-enable)
+
+      (defun volume-increase ()
+        (interactive)
+        ;; (eshell-command "amixer -D pulse set Master 5%+ unmute")
+        (call-process-shell-command "amixer -D pulse set Master 5%+ unmute&" nil 0)
+        )
+      (defun volume-decrease ()
+        (interactive)
+        ;; (eshell-command "amixer -D pulse set Master 5%+ unmute")
+        (call-process-shell-command "amixer -D pulse set Master 5%- unmute&" nil 0)
+        )
+      (defun mute()
+        (interactive)
+        (call-process-shell-command "amixer -D pulse set Master Playback Switch toggle&" nil 0)
+        )
+      (defun brightness-up ()
+        (interactive)
+        (call-process-shell-command "xbacklight -inc 5 && xbacklight > /home/prashant/.config/brightness")
+        )
+      (defun brightness-down ()
+        (interactive)
+        (call-process-shell-command "xbacklight -dec 5 && xbacklight > /home/prashant/.config/brightness")
+        )
+      (map! :niv "<XF86AudioRaiseVolume>" #'volume-increase
+            :niv "<XF86AudioLowerVolume>" #'volume-decrease
+            :niv "<XF86AudioMute>" #'mute
+            :niv "<XF86MonBrightnessUp>" #'brightness-up
+            :niv "<XF86MonBrightnessDown>" #'brightness-down
+            )
+
       )
 nil
 )
