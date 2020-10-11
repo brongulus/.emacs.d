@@ -13,50 +13,7 @@
 ;;#############EXWM##################
 (eshell-command "setq stringvar $XDG_CURRENT_DESKTOP")
 (if (string= stringvar "EXWM")
-    (use-package exwm
-      :config
-      (require 'exwm-config)
-      (exwm-config-default)
-      (require 'exwm-randr)
-      (setq exwm-randr-workspace-monitor-plist '(0 "DP-4"))
-      (add-hook 'exwm-randr-screen-change-hook
-                (lambda()
-                  (start-process-shell-command
-                   "xrandr" nil "xrandr --output DP-4 --mode 1920x1080 --pos 0x0 --rotate normal")))
-      (exwm-randr-enable)
-      (require 'exwm-systemtray)
-      (exwm-systemtray-enable)
-
-      (defun volume-increase ()
-        (interactive)
-        ;; (eshell-command "amixer -D pulse set Master 5%+ unmute")
-        (call-process-shell-command "amixer -D pulse set Master 5%+ unmute&" nil 0)
-        )
-      (defun volume-decrease ()
-        (interactive)
-        ;; (eshell-command "amixer -D pulse set Master 5%+ unmute")
-        (call-process-shell-command "amixer -D pulse set Master 5%- unmute&" nil 0)
-        )
-      (defun mute()
-        (interactive)
-        (call-process-shell-command "amixer -D pulse set Master Playback Switch toggle&" nil 0)
-        )
-      (defun brightness-up ()
-        (interactive)
-        (call-process-shell-command "xbacklight -inc 5 && xbacklight > /home/prashant/.config/brightness")
-        )
-      (defun brightness-down ()
-        (interactive)
-        (call-process-shell-command "xbacklight -dec 5 && xbacklight > /home/prashant/.config/brightness")
-        )
-      (map! :niv "<XF86AudioRaiseVolume>" #'volume-increase
-            :niv "<XF86AudioLowerVolume>" #'volume-decrease
-            :niv "<XF86AudioMute>" #'mute
-            :niv "<XF86MonBrightnessUp>" #'brightness-up
-            :niv "<XF86MonBrightnessDown>" #'brightness-down
-            )
-
-      )
+   (load! "+exwm")
 nil
 )
 
