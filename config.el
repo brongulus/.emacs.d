@@ -11,11 +11,11 @@
 
 
 ;;#############EXWM##################
-(eshell-command "setq stringvar $XDG_CURRENT_DESKTOP")
-(if (string= stringvar "EXWM")
-   (load! "+exwm")
-nil
-)
+;;(eshell-command "setq stringvar $XDG_CURRENT_DESKTOP")
+;;(if (string= stringvar "EXWM")
+;;   (load! "+exwm")
+;;nil
+;;)
 
 ;;###########DEFAULTS##################
 ;;
@@ -25,7 +25,7 @@ nil
       doom-font (font-spec :family "Source Code Pro" :size 16)
       doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
       doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
-      doom-theme 'doom-challenger-deep
+      doom-theme 'doom-dracula
       org-directory "/mnt/Data/Documents/org/"
       evil-escape-mode 1
       display-line-numbers-type 'relative
@@ -49,6 +49,9 @@ nil
 (add-hook 'Info-selection-hook 'info-colors-fontify-node)
 (add-hook 'Info-mode-hook #'mixed-pitch-mode)
 
+
+
+(after! lsp-ui (setq lsp-ui-doc-enable t))
 
 (after! company
   (setq company-idle-delay 0.2))
@@ -87,7 +90,7 @@ nil
   )
 (map! :n "SPC o e" #'=elfeed)
 
-(setq fancy-splash-image "~/.doom.d/doom_grin.png")
+;; (setq fancy-splash-image "~/.doom.d/doom_grin.png")
 
 (setq +doom-dashboard-menu-sections
   '(("Reload last session"

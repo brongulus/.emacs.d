@@ -14,6 +14,8 @@
 ;;      Alternatively, press 'gd' (or 'C-c g d') on a module to browse its
 ;;      directory (for easy access to its source code).
 
+(eshell-command "setq WM $XDG_CURRENT_DESKTOP")
+
 (doom! :input
        ;;chinese
        ;;japanese
@@ -90,7 +92,7 @@
        (eval +overlay)       ; run code, run (also, repls)
        ;;gist              ; interacting with github gists
        (lookup +dictionary)           ; navigate your code and its documentation
-       lsp
+       (lsp +peek)
        ;;macos             ; MacOS-specific commands
        magit                    ; a git porcelain for Emacs
        make                     ; run make tasks from Emacs
@@ -101,6 +103,11 @@
        ;;terraform         ; infrastructure as code
        ;;tmux              ; an API for interacting with tmux
        ;;upload            ; map local to remote projects via ssh/ftp
+
+       :os
+       (:cond ((string= WM "EXWM")
+               exwm)
+        )
 
        :lang
        ;;agda              ; types of types of types of types...
@@ -138,7 +145,7 @@
        ;;nim               ; python + lisp at the speed of c
        ;;nix               ; I hereby declare "nix geht mehr!"
        ;;ocaml             ; an objective camel
-       (org +pretty +dragndrop +jupyter) ; organize your plain life in plain text
+       (org +pretty +dragndrop +jupyter +pomodoro) ; organize your plain life in plain text
        ;;perl              ; write code no one else can comprehend
        ;;php               ; perl's insecure younger brother
        ;;plantuml          ; diagrams for confusing people more
@@ -174,4 +181,5 @@
 
        :config
        ;;literate
-       (default +bindings +smartparens))
+       (default +bindings +smartparens)
+   )

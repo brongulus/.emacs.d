@@ -1,18 +1,28 @@
-;;; +exwm.el -*- lexical-binding: t; -*-
+;;; os/exwm/config.el -*- lexical-binding: t; -*-
+
+;; DEPENDENCIES
+;; 1. xbacklight
+;; 2. pulse audio
+;; 3. alsamixer
+;; 4. networkmanager (nm-applet)
+
 
 ;; TODO
-;; [ ] Use elvish in vterm
-;; [ ] Improve buffer and workspace switching
+;; [ ] Start Workspaces from 1 ffs
+;; [ ] Add COPY PASTE commands ASAP
+;; [ ] Improve workspace switching (Model Golden Ratio Partitioning?)
 ;; [ ] Figure out the autoload situation
 ;; [ ] Add volume and brightness Meters in either modeline, or preferably exwm dashboard
+;; [ ] Fix opening links
+;; [ ] Remap Move buffer to workspace C-c RET to s-shift-X
 
 (use-package exwm
       :config
 
       (require 'exwm-config)
       (exwm-config-example)
-      (require 'exwm-randr)
 
+      (require 'exwm-randr)
       (setq exwm-randr-workspace-monitor-plist '(0 "DP-4"))
       (add-hook 'exwm-randr-screen-change-hook
                 (lambda()
@@ -22,37 +32,69 @@
 
       (require 'exwm-systemtray)
       (exwm-systemtray-enable)
+      (call-process-shell-command "nm-applet" nil 0)
 
+      ;; Function Definitions
+      (defun get-vol()
+        (setq VOL (shell-command-to-string "amixer get Master | grep '%' | head -n 1 | cut -d '[' -f 2 | cut -d '%' -f 1 "))
+        )
+      (defun get-brightness()
+        (setq BRI (shell-command-to-string "xbacklight | cut -c 1-2"))
+        )
       (defun volume-increase ()
         (interactive)
-        (call-process-shell-command "amixer -D pulse set Master 5%+ unmute&" nil 0)
+        (eshell-command "amixer -D pulse set Master 5%+ unmute")
+        (get-vol)
+        (eshell-command "notify-send Volume: $VOL")
         )
       (defun volume-decrease ()
         (interactive)
-        (call-process-shell-command "amixer -D pulse set Master 5%- unmute&" nil 0)
+        (eshell-command "amixer -D pulse set Master 5%- unmute")
+        (get-vol)
+        (eshell-command "notify-send Volume: $VOL")
         )
       (defun mute()
         (interactive)
-        (call-process-shell-command "amixer -D pulse set Master Playback Switch toggle&" nil 0)
+        (eshell-command "amixer -D pulse set Master Playback Switch toggle")
+        (get-vol)
+        ;; FIXME
+        (if (string= VOL "0")
+            (eshell-command "notify-send Mute")
+        (eshell-command "notify-send Unmute")
+        )
         )
       (defun brightness-up ()
         (interactive)
         (call-process-shell-command "xbacklight -inc 5 && xbacklight > /home/prashant/.config/brightness")
+        (get-brightness)
+        (eshell-command "notify-send Brightness: $BRI")
         )
       (defun brightness-down ()
         (interactive)
         (call-process-shell-command "xbacklight -dec 5 && xbacklight > /home/prashant/.config/brightness")
+        (get-brightness)
+        (eshell-command "notify-send Brightness: $BRI")
         )
-      ;;(map! :niv "<XF86AudioRaiseVolume>" #'volume-increase
-      ;;      :niv "<XF86AudioLowerVolume>" #'volume-decrease
-      ;;      :niv "<XF86AudioMute>" #'mute
-      ;;      :niv "<XF86MonBrightnessUp>" #'brightness-up
-      ;;      :niv "<XF86MonBrightnessDown>" #'brightness-down
-      ;;      )
+
+      ;; Window split on new buffer
+
+      ;; Keybindings
       (setq exwm-input-global-keys
             `(
-              ;; 's-x': Open app launcher
+              ;; Open app launcher
               ([?\s-x] . counsel-linux-app)
+              ;; Buffer list
+              ([?\s-b] . ivy-switch-buffer)
+              ;; App shortcuts (ADD YOUR OWN HERE)
+              ([s-f2] . (lambda ()
+                          (interactive)
+                          (eshell-command "start-process-shell-command vivaldi nil vivaldi-stable")))
+              ([s-f4] . (lambda ()
+                          (interactive)
+                          (eshell-command "start-process-shell-command discord nil discord")))
+              ([s-return] . (lambda ()
+                              (interactive)
+                              (eshell-command "terminal -e 'elvish'> /dev/null 2>&1")))
               ;; Brightness and Volume Controls
               ([XF86AudioRaiseVolume] . volume-increase)
               ([XF86AudioLowerVolume] . volume-decrease)
@@ -64,6 +106,10 @@
               ([s-left] . windmove-left)
               ([s-up] . windmove-up)
               ([s-down] . windmove-down)
+              ([?\s-f] . doom/window-enlargen)
+              ([?\s-q] . kill-this-buffer)
+              ;;([s-SPC] . exwm-floating-toggle-floating)
+
               ;; TODO Add window split shortcuts, and possibly improve it
               ;; 's-r': Reset (to line-mode).
               ([?\s-r] . exwm-reset)
@@ -82,4 +128,5 @@
                         (number-sequence 0 9))
               )
             )
+
    )
