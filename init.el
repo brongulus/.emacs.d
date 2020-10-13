@@ -14,8 +14,6 @@
 ;;      Alternatively, press 'gd' (or 'C-c g d') on a module to browse its
 ;;      directory (for easy access to its source code).
 
-;; FIXME (eshell-command "setq WM $XDG_CURRENT_DESKTOP")
-
 (doom! :input
        ;;chinese
        ;;japanese
