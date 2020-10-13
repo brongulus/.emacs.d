@@ -14,11 +14,6 @@
 ;;      Alternatively, press 'gd' (or 'C-c g d') on a module to browse its
 ;;      directory (for easy access to its source code).
 
-<<<<<<< HEAD
-=======
-(eshell-command "setq WM $XDG_CURRENT_DESKTOP")
-
->>>>>>> c4b85562dffed43c7e0805e7e14a0cc8db101d10
 (doom! :input
        ;;chinese
        ;;japanese
@@ -108,15 +103,9 @@
        ;;upload            ; map local to remote projects via ssh/ftp
 
        :os
-<<<<<<< HEAD
        (:cond ((string= (getenv "XDG_CURRENT_DESKTOP") "EXWM")
                exwm)
         )
-=======
-       (:cond ((string= WM "EXWM")
-            exwm)
-          )
->>>>>>> c4b85562dffed43c7e0805e7e14a0cc8db101d10
 
        :lang
        ;;agda              ; types of types of types of types...
