@@ -15,6 +15,7 @@
 ;; [ ] Add volume and brightness Meters in either modeline, or preferably exwm dashboard
 ;; [ ] Fix opening links
 ;; [ ] Remap Move buffer to workspace C-c RET to s-shift-X
+;; [ ] Fix Dunst notification spam
 
 (use-package exwm
       :config
@@ -34,47 +35,7 @@
       (exwm-systemtray-enable)
       (call-process-shell-command "nm-applet" nil 0)
 
-      ;; Function Definitions
-      (defun get-vol()
-        (setq VOL (shell-command-to-string "amixer get Master | grep '%' | head -n 1 | cut -d '[' -f 2 | cut -d '%' -f 1 "))
-        )
-      (defun get-brightness()
-        (setq BRI (shell-command-to-string "xbacklight | cut -c 1-2"))
-        )
-      (defun volume-increase ()
-        (interactive)
-        (eshell-command "amixer -D pulse set Master 5%+ unmute")
-        (get-vol)
-        (eshell-command "notify-send Volume: $VOL")
-        )
-      (defun volume-decrease ()
-        (interactive)
-        (eshell-command "amixer -D pulse set Master 5%- unmute")
-        (get-vol)
-        (eshell-command "notify-send Volume: $VOL")
-        )
-      (defun mute()
-        (interactive)
-        (eshell-command "amixer -D pulse set Master Playback Switch toggle")
-        (get-vol)
-        ;; FIXME
-        (if (string= VOL "0")
-            (eshell-command "notify-send Mute")
-        (eshell-command "notify-send Unmute")
-        )
-        )
-      (defun brightness-up ()
-        (interactive)
-        (call-process-shell-command "xbacklight -inc 5 && xbacklight > /home/prashant/.config/brightness")
-        (get-brightness)
-        (eshell-command "notify-send Brightness: $BRI")
-        )
-      (defun brightness-down ()
-        (interactive)
-        (call-process-shell-command "xbacklight -dec 5 && xbacklight > /home/prashant/.config/brightness")
-        (get-brightness)
-        (eshell-command "notify-send Brightness: $BRI")
-        )
+      ;; Function Definitions (Moved to autoload.el)
 
       ;; Window split on new buffer
 
@@ -96,11 +57,11 @@
                               (interactive)
                               (eshell-command "terminal -e 'elvish'> /dev/null 2>&1")))
               ;; Brightness and Volume Controls
-              ([XF86AudioRaiseVolume] . volume-increase)
-              ([XF86AudioLowerVolume] . volume-decrease)
-              ([XF86AudioMute] . mute)
-              ([XF86MonBrightnessUp] . brightness-up)
-              ([XF86MonBrightnessDown] . brightness-down)
+              ([XF86AudioRaiseVolume] . exwm/volume-increase)
+              ([XF86AudioLowerVolume] . exwm/volume-decrease)
+              ([XF86AudioMute] . exwm/mute)
+              ([XF86MonBrightnessUp] . exwm/brightness-up)
+              ([XF86MonBrightnessDown] . exwm/brightness-down)
               ;; Window Focus
               ([s-right] . windmove-right)
               ([s-left] . windmove-left)

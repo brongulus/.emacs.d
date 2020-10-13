@@ -18,7 +18,7 @@
 (package! elvish-mode)
 (package! rainbow-mode)
 ;;(package! djvu)
-(package! exwm)
+;;(package! exwm)
 (package! info-colors)
 (package! systemd)
 (package! emms)

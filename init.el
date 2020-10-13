@@ -14,7 +14,7 @@
 ;;      Alternatively, press 'gd' (or 'C-c g d') on a module to browse its
 ;;      directory (for easy access to its source code).
 
-(eshell-command "setq WM $XDG_CURRENT_DESKTOP")
+;; FIXME (eshell-command "setq WM $XDG_CURRENT_DESKTOP")
 
 (doom! :input
        ;;chinese
@@ -105,9 +105,8 @@
        ;;upload            ; map local to remote projects via ssh/ftp
 
        :os
-       (:cond ((string= WM "EXWM")
-               exwm)
-        )
+;;       (:cond ((string= WM "EXWM")
+       exwm
 
        :lang
        ;;agda              ; types of types of types of types...
