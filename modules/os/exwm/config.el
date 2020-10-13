@@ -8,6 +8,7 @@
 
 
 ;; TODO
+;; [ ] FIXME eshell-command output crap
 ;; [ ] Start Workspaces from 1 ffs
 ;; [ ] Add COPY PASTE commands ASAP
 ;; [ ] Improve workspace switching (Model Golden Ratio Partitioning?)

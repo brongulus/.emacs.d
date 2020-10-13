@@ -105,8 +105,9 @@
        ;;upload            ; map local to remote projects via ssh/ftp
 
        :os
-;;       (:cond ((string= WM "EXWM")
-       exwm
+       (:cond ((string= (getenv "XDG_CURRENT_DESKTOP") "EXWM")
+               exwm)
+        )
 
        :lang
        ;;agda              ; types of types of types of types...
