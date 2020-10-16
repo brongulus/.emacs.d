@@ -9,6 +9,7 @@
 
 ;; TODO
 ;; [ ] FIXME eshell-command output crap
+;; [ ] Add keybindings under the s- leader?
 ;; [ ] Start Workspaces from 1 ffs
 ;; [ ] Add COPY PASTE commands ASAP
 ;; [ ] Improve workspace switching (Model Golden Ratio Partitioning?)
@@ -32,9 +33,12 @@
                    "xrandr" nil "xrandr --output DP-4 --mode 1920x1080 --pos 0x0 --rotate normal")))
       (exwm-randr-enable)
 
+      ;; systemtray
       (require 'exwm-systemtray)
       (exwm-systemtray-enable)
       (call-process-shell-command "nm-applet" nil 0)
+;; FIXME Multiple Instances
+;; (call-process-shell-command "clipit" nil 0)
 
       ;; Function Definitions (Moved to autoload.el)
 
@@ -56,7 +60,15 @@
                           (eshell-command "start-process-shell-command discord nil discord")))
               ([s-return] . (lambda ()
                               (interactive)
-                              (eshell-command "terminal -e 'elvish'> /dev/null 2>&1")))
+                              (eshell-command "terminal -e 'elvish'"))) ;; > /dev/null 2>&1")))
+              ;; Take screenshots (saved in pwd)
+              ([print] . (lambda ()
+                           (interactive)
+                           (eshell-command "scrot -s")))
+              ;; Lock
+              ([?\s-l] . (lambda ()
+                         (interactive)
+                         (start-process-shell-command "i3lock -i ~/Downloads/neon.png" nil lock)))
               ;; Brightness and Volume Controls
               ([XF86AudioRaiseVolume] . exwm/volume-increase)
               ([XF86AudioLowerVolume] . exwm/volume-decrease)

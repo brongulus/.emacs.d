@@ -1,5 +1,8 @@
 ;;; app/torrent/config.el -*- lexical-binding: t; -*-
 
+;; TODO
+;; [ ] Add progress bar
+;;
 (use-package! transmission
   :defer t
   :init

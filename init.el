@@ -89,7 +89,7 @@
        ;;ein               ; tame Jupyter notebooks with emacs
        (eval +overlay)       ; run code, run (also, repls)
        ;;gist              ; interacting with github gists
-       (lookup +dictionary)           ; navigate your code and its documentation
+       (lookup +dictionary +docsets)           ; navigate your code and its documentation
        (lsp +peek)
        ;;macos             ; MacOS-specific commands
        magit                    ; a git porcelain for Emacs
@@ -103,9 +103,9 @@
        ;;upload            ; map local to remote projects via ssh/ftp
 
        :os
-       (:cond ((string= (getenv "XDG_CURRENT_DESKTOP") "EXWM")
-               exwm)
-        )
+       ;;(:cond ((string= (getenv "XDG_CURRENT_DESKTOP") "EXWM")
+               exwm
+         ;;      ))
 
        :lang
        ;;agda              ; types of types of types of types...
@@ -178,6 +178,6 @@
        torrent
 
        :config
-       ;;literate
+       literate
        (default +bindings +smartparens)
    )

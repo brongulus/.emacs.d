@@ -1,3 +1,25 @@
+#+title: Doom Emacs Configuration
+#+author: Prashant Tak
+#+email: prashantrameshtak@gmail.com
+
+:DOC-CONFIG:
+#+startup: fold
+#+property: header-args:emacs-lisp :tangle config.el
+:END:
+
+The first edition of my soon-to-be literate configuration :P
+
+NOTE: Run =org-babel-tangle= after making changes it to this file. Oddly enough, first time I had to run =doom sync=, need to look into this.
+
+* TODO
+1. [ ] Turn this into a literate Configuration
+2. [ ] Improve the EXWM experience
+3. [ ] Incorporate elvish and other configuration stuff within this.
+
+* Config File Header
+For the lexical binding of the elisp file.
+
+#+BEGIN_SRC emacs-lisp
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
 ;; Here are some additional functions/macros that could help you configure Doom:
@@ -16,13 +38,23 @@
 ;;
 ;; You can also try 'gd' (or 'C-c g d') to jump to their definition and see how
 ;; they are implemented.
+#+END_SRC
 
+* Hack to remove EXWM Warning
+This is not functional since I moved from a ssignle EXWM file to a personal doom EXWM module but might be useful in the future if I decide to scrap that idea.
+
+#+BEGIN_SRC emacs-lisp
 ;;(eshell-command "setq stringvar $XDG_CURRENT_DESKTOP")
 ;;(if (string= stringvar "EXWM")
 ;;   (load! "+exwm")
 ;;nil
 ;;)
+#+END_SRC
 
+* Customized Variables
+To avoid the issue of reproducing your customize options.
+
+#+BEGIN_SRC emacs-lisp
 (setq-default
       user-full-name "Prashant Tak"
       user-mail-address "prashantrameshtak@gmail.com"
@@ -45,30 +77,72 @@
                (battery))
   (display-battery-mode 1))
 
+#+END_SRC
+
+Add some highlighting to woman pages
+
+#+BEGIN_SRC emacs-lisp
 (add-hook 'Info-selection-hook 'info-colors-fontify-node)
 (add-hook 'Info-mode-hook #'mixed-pitch-mode)
+#+END_SRC
 
+Ensuring that emacs is focused after restarting
+
+#+BEGIN_SRC emacs-lisp
 (add-hook! 'window-setup-hook
   (select-frame-set-input-focus (selected-frame)))
+#+END_SRC
 
+Also =doom/window enlargen= has some freezing issues, this HACK attempts to fix them for the time being.
+
+#+BEGIN_SRC emacs-lisp
 (setq window-resize-pixelwise nil
       frame-resize-pixelwise nil)
+#+END_SRC
 
+Company's completion dialog frame takes a long time to show up, making it look slow, hence we reduce the idle delay.
+
+#+BEGIN_SRC emacs-lisp
 (after! company
   (setq company-idle-delay 0.2))
+#+END_SRC
 
+Also, I don't need the details dired provides all the time, so I disabled that.
+
+#+BEGIN_SRC emacs-lisp
 (add-hook 'dired-mode-hook 'dired-hide-details-mode)
+#+END_SRC
 
+Now this somehow makes notes of the changes you made using the customize wizard, but I need to look into its working yet.
+
+#+BEGIN_SRC emacs-lisp
 (setq-default custom-file (expand-file-name ".custom.el" doom-private-dir))
 (when (file-exists-p custom-file)
   (load custom-file))
+#+END_SRC
+* LSP
+I've yet to look more into the different speed-up and configuration options related to LSP but these are some basics that I yanked off the discord.
 
+#+BEGIN_SRC
+(after! lsp-ui (setq lsp-ui-doc-enable t))
+(after! lsp-mode (setq lsp-enable-semantic-highlighting t))
+#+END_SRC
+
+* Org
+Now I need to make all these changes coherent and consistent but for the time being I'm just dumping them here.
+
+#+BEGIN_SRC emacs-lisp
 (add-hook 'org-mode-hook 'org-fragtog-mode)
 (add-hook 'org-mode-hook
           (λ! (yas-minor-mode)
               (yas-activate-extra-mode 'latex-mode)))
 ;; (add-hook 'org-mode-hook 'lsp-completion-mode)
+#+END_SRC
 
+* Elfeed
+I need to add shortcuts for update functions and reference to the org file, also need to fix the database update issue.
+
+#+BEGIN_SRC emacs-lisp
 (after! elfeed
   (setq elfeed-search-filter "@2-month-ago"))
 (defun =elfeed ()
@@ -76,12 +150,20 @@
   (elfeed)
   )
 (map! :n "SPC o e" #'=elfeed)
+#+END_SRC
+* PDF-Mode
+Need to fix the continuous scrolling package issue and add more shortcuts for general functions (maybe I should make a separate file for shortcuts, or learn about hydras :p)
 
+#+BEGIN_SRC emacs-lisp
 (add-hook 'pdf-view-mode-hook (lambda ()
         (pdf-view-midnight-minor-mode)))
 (add-hook 'pdf-view-mode-hook 'pdf-view-auto-slice-minor-mode)
 ;;(setq pdf-view-midnight-colors '("#839496" . "#002b36" ))
+#+END_SRC
+* Dashboard
+Most of the default functions have been stored in my memory, let's turn the dashboard into an /"emacs app drawer"/. (Also I need to find a better splash, there are also issues with splash and exwm which I'll look into *later*.)
 
+#+BEGIN_SRC emacs-lisp
 ;; (setq fancy-splash-image "~/.doom.d/doom_grin.png")
 (setq +doom-dashboard-menu-sections
   '(("Reload last session"
@@ -102,7 +184,10 @@
      :action =elfeed)
     )
   )
-
+#+END_SRC
+* Windmove
+Switching buffers using C-x o is a major pain, I like my arrow keys, so let's add those options.
+#+BEGIN_SRC emacs-lisp
 (use-package windmove
   :bind
   (("S-<left>". windmove-left)
@@ -115,7 +200,13 @@
 (add-hook 'org-shiftdown-final-hook 'windmove-down)
 (add-hook 'org-shiftright-final-hook 'windmove-right)
 (setq org-support-shift-select 'always)
+#+END_SRC
 
+* Mail
+# TODO Add the mbsync configuration and notmuch script
+While notmuch is satisfying the reading mails part, I still have to figure out the other basic functionalities, sending, replying, deleting et al.
+
+#+BEGIN_SRC emacs-lisp
 (setq +notmuch-sync-backend 'mbsync)
 (autoload 'notmuch "notmuch" "notmuch mail" t)
 ;; setup the mail address and use name
@@ -135,7 +226,12 @@
 (setq message-kill-buffer-on-exit t)
 ;; change the directory to store the sent mail
 (setq message-directory "~/.mail/gmail/")
+#+END_SRC
 
+* EMMS
+Although I'm not using emms on my current OS, these might prove useful if I decide to ditch ncmpcpp.
+
+#+BEGIN_SRC emacs-lisp
 ;;(use-package emms
 ;;:ensure t
 ;;:config
@@ -156,7 +252,12 @@
 ;;(setq emms-playlist-buffer-name "*Music*")
 ;;(emms-add-directory-tree emms-source-file-default-directory)
 ;;)
+#+END_SRC
 
+* C++
+Need to figure this stuff out (WIP)
+
+#+BEGIN_SRC emacs-lisp
 ;;(after! cc-mode
 ;;  (set-company-backend! 'c-mode
 ;;    '(:separate company-irony-c-headers company-irony)))
@@ -169,7 +270,11 @@
 ;;  (require 'dap-cpptools)
 ;;  (yas-global-mode)
 ;;  )
+#+END_SRC
+* Dictionary
+Need to add the search from anywhere shortcut? DO I? Just verify later.
 
+#+BEGIN_SRC emacs-lisp
 (use-package! lexic
   :commands lexic-search lexic-list-dictionary
   :config
@@ -195,10 +300,15 @@
              (read-string "Look up in dictionary: "))
          current-prefix-arg))
   (lexic-search identifier nil nil t))
+#+END_SRC
+* Openwith
+This is still finnicky, I have to configure the various formats so that they work nicely with dired.
 
+#+BEGIN_SRC emacs-lisp
 (load! "~/.doom.d/openwith")
 (require 'openwith)
 (add-hook 'dired-mode-hook 'openwith-mode 1)
 
 ;;(load! "~/.emacs.d/elegant-emacs/sanity")
 ;;(load! "~/.emacs.d/elegant-emacs/elegance")
+#+END_SRC

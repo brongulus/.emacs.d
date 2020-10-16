@@ -17,7 +17,7 @@
   (interactive)
   (eshell-command "amixer -D pulse set Master 5%+ unmute")
   (exwm/get-vol)
-  (eshell-command "notify-send Volume: $VOL")
+  (eshell-command "dunstify Volume: $VOL")
   )
 
 
@@ -26,7 +26,7 @@
   (interactive)
   (eshell-command "amixer -D pulse set Master 5%- unmute")
   (exwm/get-vol)
-  (eshell-command "notify-send Volume: $VOL")
+  (eshell-command "dunstify -a \"Volume: $(VOL)\"")
   )
 
 
