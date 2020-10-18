@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: Box
+# key: box
+# condition: t
+# --
+\boxed{$1}$0

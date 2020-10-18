@@ -23,8 +23,14 @@
 (package! systemd)
 (package! emms)
 (package! theme-magic)
+(package! counsel-spotify)
 (package! lexic
   :recipe (:host github :repo "tecosaur/lexic"))
+(package! accord
+  :recipe (:host github :repo "progfolio/accord"))
+(package! el-secretario
+  :recipe (:host github :repo "zetagon/el-secretario"))
+(package! org-ql)
 ;; FIXME
 ;;(package! pdf-continuous-scroll-mode
 ;;  :recipe (:host github :repo "dalanicolai/pdf-continuous-scroll-mode.el"))

@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: implies
+# key: =>
+# condition: t
+# --
+\implies

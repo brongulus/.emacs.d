@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: limit
+# key: lim
+# condition: t
+# --
+\lim_{n \to \infty}$0

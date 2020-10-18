@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: Sum
+# key: sum
+# condition: t
+# --
+\sum_{n=1}^{\infty}$0

@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: Infinity
+# key: ooo
+# condition: t
+# --
+\infty$0

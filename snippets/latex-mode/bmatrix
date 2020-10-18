@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: bmat
+# key: bmat
+# condition: t
+# --
+\begin{bmatrix}
+        $0
+\end{bmatrix}

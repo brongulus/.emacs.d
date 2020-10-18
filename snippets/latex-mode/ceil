@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: Ceil
+# key: ceil
+# condition: t
+# --
+\lceil$1\rceil$0

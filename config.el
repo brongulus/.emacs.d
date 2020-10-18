@@ -45,6 +45,9 @@
                (battery))
   (display-battery-mode 1))
 
+(setq evil-split-window-below t
+      evil-vsplit-window-right t)
+
 (add-hook 'Info-selection-hook 'info-colors-fontify-node)
 (add-hook 'Info-mode-hook #'mixed-pitch-mode)
 
@@ -68,6 +71,12 @@
           (λ! (yas-minor-mode)
               (yas-activate-extra-mode 'latex-mode)))
 ;; (add-hook 'org-mode-hook 'lsp-completion-mode)
+
+(setq yas-triggers-in-field t)
+
+(setq flycheck-global-modes '(not LaTeX-mode latex-mode))
+
+(setq org-preview-latex-default-process 'dvisvgm)
 
 (after! elfeed
   (setq elfeed-search-filter "@2-month-ago"))
@@ -202,3 +211,42 @@
 
 ;;(load! "~/.emacs.d/elegant-emacs/sanity")
 ;;(load! "~/.emacs.d/elegant-emacs/elegance")
+
+(setq counsel-spotify-client-id "d9d7e317a9b344a886d71643341cb796"
+      counsel-spotify-client-secret "6e91aa96e0c1451ab8ad0da705983082"
+      )
+
+(map! :n "SPC a t" #'counsel-spotify-toggle-play-pause
+      :n "SPC a <" #'counsel-spotify-previous
+      :n "SPC a >" #'counsel-spotify-next
+      :n "SPC a s" #'counsel-spotify-search-track
+      :n "SPC a p" #'counsel-spotify-search-playlist
+      )
+
+(use-package! el-secretario-org
+  :after (el-secretario))
+(use-package! el-secretario-notmuch
+  :after (el-secretario))
+
+(use-package! el-secretario
+  :config
+  (defun my/dailyreview-secretary ()
+    (list
+
+     ;; First take care of email
+     (el-secretario-notmuch-make-source "tag:unread")
+     ;; Then Take care of inbox
+     (el-secretario-org-make-source nil ("/mnt/Data/Documents/org/index.org"))
+
+     ;; Check if any waiting items are done
+    ;;(el-secretario-org-make-source (todo "WAITING") ("~/org/orgzly/Todo.org"))
+     ;; Go through TODOs
+    ;; (el-secretario-org-make-source (todo "TODO") ("~/org/orgzly/Todo.org"))
+     )
+    )
+  ;; Create a function to start the review
+  (defun el-secretario-daily-review ()
+    (interactive)
+    (el-secretario-start-session (my/dailyreview-secretary)))
+  :commands (el-secretario-daily-review)
+  )

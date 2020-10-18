@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: floor
+# key: floor
+# condition: t
+# --
+\lfloor$1\rfloor$0
