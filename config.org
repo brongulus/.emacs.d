@@ -42,7 +42,7 @@ For the lexical binding of the elisp file.
 #+END_SRC
 
 * Hack to remove EXWM Warning
-This is not functional since I moved from a ssignle EXWM file to a personal doom EXWM module but might be useful in the future if I decide to scrap that idea.
+This is not functional since I moved from a single EXWM file to a personal doom EXWM module but might be useful in the future if I decide to scrap that idea.
 
 #+BEGIN_SRC emacs-lisp
 ;;(eshell-command "setq stringvar $XDG_CURRENT_DESKTOP")
@@ -57,30 +57,29 @@ To avoid the issue of reproducing your customize options.
 
 #+BEGIN_SRC emacs-lisp
 (setq-default
-      user-full-name "Prashant Tak"
-      user-mail-address "prashantrameshtak@gmail.com"
-      doom-font (font-spec :family "Source Code Pro" :size 16)
-      doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
-      doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
-      doom-theme 'doom-dracula
-      org-directory "/mnt/Data/Documents/org/"
-      evil-escape-mode 1
-      display-line-numbers-type 'relative
-      tab-width 8
-      which-key-idle-delay 0.5
-      large-file-warning-threshold nil
-      org-latex-toc-command "\\tableofcontents \\clearpage"
-      )
-
-(display-time-mode 1)
-
-(unless (equal "Battery status not available"
-               (battery))
-  (display-battery-mode 1))
-
+ user-full-name "Prashant Tak"
+ user-mail-address "prashantrameshtak@gmail.com"
+ doom-font (font-spec :family "Source Code Pro" :size 16)
+ doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
+ doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
+ doom-theme 'doom-shades-of-purple
+ org-directory "/mnt/Data/Documents/org/"
+ evil-escape-mode 1
+ display-line-numbers-type 'relative
+ tab-width 8
+ which-key-idle-delay 0.5
+ large-file-warning-threshold nil
+ org-latex-toc-command "\\tableofcontents \\clearpage"
+ )
 #+END_SRC
 
-Higlighting the new buffer when you open one should be the default, lrt's make it that way.
+Disable background in emacs when opening terminal mode.
+
+#+BEGIN_SRC emacs-lisp
+(custom-set-faces! '(default :background nil))    
+#+END_SRC
+
+Highlighting the new buffer when you open one should be the default, let's make it that way.
 
 #+BEGIN_SRC emacs-lisp
 (setq evil-split-window-below t
@@ -129,6 +128,33 @@ Now this somehow makes notes of the changes you made using the customize wizard,
   (load custom-file))
 #+END_SRC
 
+Zen mode increases font size which is annoying, let's disable that.
+
+#+BEGIN_SRC emacs-lisp
+(when (featurep! :ui zen)
+  (after! writeroom-mode
+    (setq +zen-text-scale 0)))
+#+END_SRC
+
+* Modeline
+Modeline has lots of unnecessary information, let's remove that, also let's display battery and time.
+
+#+BEGIN_SRC emacs-lisp
+
+(after! doom-modeline
+  (setq doom-modeline-buffer-encoding nil
+        doom-modeline-buffer-modification-icon nil
+        doom-modeline-buffer-state-icon nil
+        doom-modeline-modal-icon nil))
+
+(display-time-mode 1)
+
+(unless (equal "Battery status not available"
+               (battery))
+  (display-battery-mode 1))
+
+#+END_SRC
+
 * LSP
 I've yet to look more into the different speed-up and configuration options related to LSP but these are some basics that I yanked off the discord.
 
@@ -165,6 +191,39 @@ For plotting graphs, one needs tikz and pfgplots. let's enable them by default, 
 #+BEGIN_SRC emacs-lisp
 (setq org-preview-latex-default-process 'dvisvgm)
 #+END_SRC
+
+Opening org exports automatically (TEST)
+
+#+BEGIN_SRC emacs-lisp
+(after! org
+  (map! :map org-mode-map
+        :localleader
+        :desc "View exported file" "v" #'org-view-output-file)
+
+  (defun org-view-output-file (&optional org-file-path)
+    "Visit buffer open on the first output file (if any) found, using `org-view-output-file-extensions'"
+    (interactive)
+    (let* ((org-file-path (or org-file-path (buffer-file-name) ""))
+           (dir (file-name-directory org-file-path))
+           (basename (file-name-base org-file-path))
+           (output-file nil))
+      (dolist (ext org-view-output-file-extensions)
+        (unless output-file
+          (when (file-exists-p
+                 (concat dir basename "." ext))
+            (setq output-file (concat dir basename "." ext)))))
+      (if output-file
+          (if (member (file-name-extension output-file) org-view-external-file-extensions)
+              (browse-url-xdg-open output-file)
+            (pop-to-buffer (or (find-buffer-visiting output-file)
+                               (find-file-noselect output-file))))
+        (message "No exported file found")))))
+
+(defvar org-view-output-file-extensions '("pdf" "md" "rst" "txt" "tex" "html")
+  "Search for output files with these extensions, in order, viewing the first that matches")
+(defvar org-view-external-file-extensions '("html")
+  "File formats that should be opened externally.")
+#+END_SRC
 * Elfeed
 I need to add shortcuts for update functions and reference to the org file, also need to fix the database update issue.
 
@@ -176,6 +235,8 @@ I need to add shortcuts for update functions and reference to the org file, also
   (elfeed)
   )
 (map! :n "SPC o e" #'=elfeed)
+(after! elfeed
+  (map! :n "u" #'elfeed-update))
 #+END_SRC
 * PDF-Mode
 Need to fix the continuous scrolling package issue and add more shortcuts for general functions (maybe I should make a separate file for shortcuts, or learn about hydras :p)
@@ -203,7 +264,7 @@ Most of the default functions have been stored in my memory, let's turn the dash
     ("Open notmuch"
      :icon (all-the-icons-octicon "mention" :face 'doom-dashboard-menu-title)
      :face (:inherit (doom-dashboard-menu-title bold))
-     :action =notmuch)
+     :action notmuch)
     ("Open elfeed"
      :icon (all-the-icons-octicon "book" :face 'doom-dashboard-menu-title)
      :face (:inherit (doom-dashboard-menu-title bold))
@@ -229,6 +290,10 @@ Switching buffers using C-x o is a major pain, I like my arrow keys, so let's ad
 #+END_SRC
 
 * Mail
+# TODO  Improve notmuch module
+# 1. Deleting Mails
+# 2. Delete workspace after closing (when using SPC o m)
+# 3. Colour Formatting?
 # TODO Add the mbsync configuration and notmuch script
 While notmuch is satisfying the reading mails part, I still have to figure out the other basic functionalities, sending, replying, deleting et al.
 
@@ -254,6 +319,27 @@ While notmuch is satisfying the reading mails part, I still have to figure out t
 (setq message-directory "~/.mail/gmail/")
 #+END_SRC
 
+With new doom update, notmuch hello has turned into a popup buffer which is mildly uncomfortable to use, let's disable that. Also while we're at it, default keybind for opening mail opens it in a new window, which is highly useless, let's remap it to a normal function.
+
+#+BEGIN_SRC emacs-lisp
+(after! notmuch
+(set-popup-rule! "^\\*notmuch-hello" :ignore t))
+(map! :n "SPC o n" 'notmuch)
+#+END_SRC
+
+Saved searches needs a personal touch, let's do that.
+
+#+BEGIN_SRC emacs-lisp
+(setq notmuch-saved-searches
+      '((:name "inbox"    :query "tag:inbox not tag:trash"    :key "i")
+        (:name "personal" :query "tag:personal"               :key "p")
+        (:name "bits"     :query "tag:bits"                   :key "b")
+        (:name "unread"   :query "tag:unread"                 :key "u")
+        (:name "flagged"  :query "tag:flagged"                :key "f")
+        (:name "sent"     :query "tag:sent"                   :key "s")
+        )
+      )
+#+END_SRC
 * EMMS
 Although I'm not using emms on my current OS, these might prove useful if I decide to ditch ncmpcpp.
 

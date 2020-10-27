@@ -24,26 +24,22 @@
 ;;)
 
 (setq-default
-      user-full-name "Prashant Tak"
-      user-mail-address "prashantrameshtak@gmail.com"
-      doom-font (font-spec :family "Source Code Pro" :size 16)
-      doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
-      doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
-      doom-theme 'doom-dracula
-      org-directory "/mnt/Data/Documents/org/"
-      evil-escape-mode 1
-      display-line-numbers-type 'relative
-      tab-width 8
-      which-key-idle-delay 0.5
-      large-file-warning-threshold nil
-      org-latex-toc-command "\\tableofcontents \\clearpage"
-      )
+ user-full-name "Prashant Tak"
+ user-mail-address "prashantrameshtak@gmail.com"
+ doom-font (font-spec :family "Source Code Pro" :size 16)
+ doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
+ doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
+ doom-theme 'doom-shades-of-purple
+ org-directory "/mnt/Data/Documents/org/"
+ evil-escape-mode 1
+ display-line-numbers-type 'relative
+ tab-width 8
+ which-key-idle-delay 0.5
+ large-file-warning-threshold nil
+ org-latex-toc-command "\\tableofcontents \\clearpage"
+ )
 
-(display-time-mode 1)
-
-(unless (equal "Battery status not available"
-               (battery))
-  (display-battery-mode 1))
+(custom-set-faces! '(default :background nil))
 
 (setq evil-split-window-below t
       evil-vsplit-window-right t)
@@ -66,6 +62,22 @@
 (when (file-exists-p custom-file)
   (load custom-file))
 
+(when (featurep! :ui zen)
+  (after! writeroom-mode
+    (setq +zen-text-scale 0)))
+
+(after! doom-modeline
+  (setq doom-modeline-buffer-encoding nil
+        doom-modeline-buffer-modification-icon nil
+        doom-modeline-buffer-state-icon nil
+        doom-modeline-modal-icon nil))
+
+(display-time-mode 1)
+
+(unless (equal "Battery status not available"
+               (battery))
+  (display-battery-mode 1))
+
 (add-hook 'org-mode-hook 'org-fragtog-mode)
 (add-hook 'org-mode-hook
           (λ! (yas-minor-mode)
@@ -78,6 +90,35 @@
 
 (setq org-preview-latex-default-process 'dvisvgm)
 
+(after! org
+  (map! :map org-mode-map
+        :localleader
+        :desc "View exported file" "v" #'org-view-output-file)
+
+  (defun org-view-output-file (&optional org-file-path)
+    "Visit buffer open on the first output file (if any) found, using `org-view-output-file-extensions'"
+    (interactive)
+    (let* ((org-file-path (or org-file-path (buffer-file-name) ""))
+           (dir (file-name-directory org-file-path))
+           (basename (file-name-base org-file-path))
+           (output-file nil))
+      (dolist (ext org-view-output-file-extensions)
+        (unless output-file
+          (when (file-exists-p
+                 (concat dir basename "." ext))
+            (setq output-file (concat dir basename "." ext)))))
+      (if output-file
+          (if (member (file-name-extension output-file) org-view-external-file-extensions)
+              (browse-url-xdg-open output-file)
+            (pop-to-buffer (or (find-buffer-visiting output-file)
+                               (find-file-noselect output-file))))
+        (message "No exported file found")))))
+
+(defvar org-view-output-file-extensions '("pdf" "md" "rst" "txt" "tex" "html")
+  "Search for output files with these extensions, in order, viewing the first that matches")
+(defvar org-view-external-file-extensions '("html")
+  "File formats that should be opened externally.")
+
 (after! elfeed
   (setq elfeed-search-filter "@2-month-ago"))
 (defun =elfeed ()
@@ -85,6 +126,8 @@
   (elfeed)
   )
 (map! :n "SPC o e" #'=elfeed)
+(after! elfeed
+  (map! :n "u" #'elfeed-update))
 
 (add-hook 'pdf-view-mode-hook (lambda ()
         (pdf-view-midnight-minor-mode)))
@@ -104,7 +147,7 @@
     ("Open notmuch"
      :icon (all-the-icons-octicon "mention" :face 'doom-dashboard-menu-title)
      :face (:inherit (doom-dashboard-menu-title bold))
-     :action =notmuch)
+     :action notmuch)
     ("Open elfeed"
      :icon (all-the-icons-octicon "book" :face 'doom-dashboard-menu-title)
      :face (:inherit (doom-dashboard-menu-title bold))
@@ -144,6 +187,20 @@
 (setq message-kill-buffer-on-exit t)
 ;; change the directory to store the sent mail
 (setq message-directory "~/.mail/gmail/")
+
+(after! notmuch
+(set-popup-rule! "^\\*notmuch-hello" :ignore t))
+(map! :n "SPC o n" 'notmuch)
+
+(setq notmuch-saved-searches
+      '((:name "inbox"    :query "tag:inbox not tag:trash"    :key "i")
+        (:name "personal" :query "tag:personal"               :key "p")
+        (:name "bits"     :query "tag:bits"                   :key "b")
+        (:name "unread"   :query "tag:unread"                 :key "u")
+        (:name "flagged"  :query "tag:flagged"                :key "f")
+        (:name "sent"     :query "tag:sent"                   :key "s")
+        )
+      )
 
 ;;(use-package emms
 ;;:ensure t

@@ -11,7 +11,6 @@
 ;
 ;;##########PACKAGES###########
 (unpin! doom-themes)
-(package! lispy)
 (package! org-fragtog)
 (package! xkcd)
 (package! geiser)
@@ -22,7 +21,7 @@
 (package! info-colors)
 (package! systemd)
 (package! emms)
-(package! theme-magic)
+;;(package! theme-magic)
 (package! counsel-spotify)
 (package! lexic
   :recipe (:host github :repo "tecosaur/lexic"))

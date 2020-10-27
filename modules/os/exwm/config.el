@@ -17,13 +17,22 @@
 ;; [ ] Add volume and brightness Meters in either modeline, or preferably exwm dashboard
 ;; [ ] Fix opening links
 ;; [ ] Remap Move buffer to workspace C-c RET to s-shift-X
-;; [ ] Fix Dunst notification spam
+;; [X] Fix Dunst notification spam
 
-(use-package exwm
+;;(eshell-command "setq stringvar $XDG_CURRENT_DESKTOP")
+;;(if (string= stringvar "EXWM")
+    (use-package exwm
       :config
 
       (require 'exwm-config)
       (exwm-config-example)
+(defun exwm/polybar-exwm-workspace ()
+  (pcase exwm-workspace-current-index
+    (0 "")
+    (1 "")
+    (2 "")
+    (3 "")
+    (4 "")))
 
       (require 'exwm-randr)
       (setq exwm-randr-workspace-monitor-plist '(0 "DP-4"))
@@ -36,8 +45,11 @@
       ;; systemtray
       (require 'exwm-systemtray)
       (exwm-systemtray-enable)
+      (server-start)
       (call-process-shell-command "nm-applet" nil 0)
-;; FIXME Multiple Instances
+      (start-process-shell-command "polybar example" nil "polybar panel")
+      (call-process-shell-command "mpd > /dev/null" nil 0)
+      ;; FIXME Multiple Instances
 ;; (call-process-shell-command "clipit" nil 0)
 
       ;; Function Definitions (Moved to autoload.el)
@@ -60,7 +72,7 @@
                           (eshell-command "start-process-shell-command discord nil discord")))
               ([s-return] . (lambda ()
                               (interactive)
-                              (eshell-command "terminal -e 'elvish'"))) ;; > /dev/null 2>&1")))
+                              (eshell-command "kitty > /dev/null")))
               ;; Take screenshots (saved in pwd)
               ([print] . (lambda ()
                            (interactive)
@@ -68,7 +80,7 @@
               ;; Lock
               ([?\s-l] . (lambda ()
                          (interactive)
-                         (start-process-shell-command "i3lock -i ~/Downloads/neon.png" nil lock)))
+                         (start-process-shell-command "lock" nil "i3lock -i ~/Downloads/neon.png")))
               ;; Brightness and Volume Controls
               ([XF86AudioRaiseVolume] . exwm/volume-increase)
               ([XF86AudioLowerVolume] . exwm/volume-decrease)
@@ -103,4 +115,7 @@
               )
             )
 
-   )
+      )
+;;  nil
+;;  )
+

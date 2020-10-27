@@ -1,6 +1,6 @@
 # -*- mode: snippet -*-
-# name: Overline
-# key: bar
+# name: rho
+# key: ro
 # condition: t
 # --
-\overline{$1}$0
+\rho$0
