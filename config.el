@@ -73,6 +73,13 @@
 (run-with-idle-timer 1 t #'display-workspaces-in-minibuffer)
 (+workspace/display)
 
+(defun save-and-close ()
+  (interactive)
+  (call-interactively 'save-buffer)
+  (call-interactively 'kill-current-buffer))
+
+(map! :n "SPC b w" #'save-and-close)
+
 (after! doom-modeline
   (setq doom-modeline-buffer-encoding nil
         doom-modeline-buffer-modification-icon nil
@@ -140,6 +147,9 @@
         (pdf-view-midnight-minor-mode)))
 (add-hook 'pdf-view-mode-hook 'pdf-view-auto-slice-minor-mode)
 ;;(setq pdf-view-midnight-colors '("#839496" . "#002b36" ))
+
+;;(map! pdf-view-mode-map
+;;      :niv "h" #'pdf-annot-add-markup-annotation)
 
 ;; (setq fancy-splash-image "~/.doom.d/doom_grin.png")
 (setq +doom-dashboard-menu-sections

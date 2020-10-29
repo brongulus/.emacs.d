@@ -146,6 +146,18 @@ Let's make doom workspaces pesistent in the minibuffer, so we can easily keep tr
 (run-with-idle-timer 1 t #'display-workspaces-in-minibuffer)
 (+workspace/display)
 #+END_SRC
+
+Add a save and close keybinding.
+
+#+begin_src emacs-lisp
+(defun save-and-close ()
+  (interactive)
+  (call-interactively 'save-buffer)
+  (call-interactively 'kill-current-buffer))
+
+(map! :n "SPC b w" #'save-and-close)
+#+end_src
+
 * Modeline
 Modeline has lots of unnecessary information, let's remove that, also let's display battery and time.
 
@@ -234,6 +246,7 @@ Opening org exports automatically (TEST)
 (defvar org-view-external-file-extensions '("html")
   "File formats that should be opened externally.")
 #+END_SRC
+
 * Elfeed
 I need to add shortcuts for update functions and reference to the org file, also need to fix the database update issue.
 
@@ -248,6 +261,7 @@ I need to add shortcuts for update functions and reference to the org file, also
 (after! elfeed
   (map! :n "u" #'elfeed-update))
 #+END_SRC
+
 * PDF-Mode
 Need to fix the continuous scrolling package issue and add more shortcuts for general functions (maybe I should make a separate file for shortcuts, or learn about hydras :p)
 
@@ -257,6 +271,15 @@ Need to fix the continuous scrolling package issue and add more shortcuts for ge
 (add-hook 'pdf-view-mode-hook 'pdf-view-auto-slice-minor-mode)
 ;;(setq pdf-view-midnight-colors '("#839496" . "#002b36" ))
 #+END_SRC
+
+Making highlighting easy
+
+FIXME
+#+begin_src emacs-lisp
+;;(map! pdf-view-mode-map
+;;      :niv "h" #'pdf-annot-add-markup-annotation)
+#+end_src
+
 * Dashboard
 Most of the default functions have been stored in my memory, let's turn the dashboard into an /"emacs app drawer"/. (Also I need to find a better splash, there are also issues with splash and exwm which I'll look into *later*.)
 
