@@ -104,7 +104,7 @@
 
        :os
        ;;(:cond ((string= (getenv "XDG_CURRENT_DESKTOP") "EXWM")
-               exwm
+;;               exwm
          ;;      ))
 
        :lang

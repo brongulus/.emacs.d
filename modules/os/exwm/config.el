@@ -26,13 +26,14 @@
 
       (require 'exwm-config)
       (exwm-config-example)
-(defun exwm/polybar-exwm-workspace ()
-  (pcase exwm-workspace-current-index
-    (0 "")
-    (1 "")
-    (2 "")
-    (3 "")
-    (4 "")))
+
+      (defun exwm/polybar-exwm-workspace ()
+        (pcase exwm-workspace-current-index
+          (0 "")
+          (1 "I")
+          (2 "II")
+          (3 "III")
+          (4 "IV")))
 
       (require 'exwm-randr)
       (setq exwm-randr-workspace-monitor-plist '(0 "DP-4"))
@@ -47,10 +48,10 @@
       (exwm-systemtray-enable)
       (server-start)
       (call-process-shell-command "nm-applet" nil 0)
-      (start-process-shell-command "polybar example" nil "polybar panel")
+      ;; (call-process-shell-command "killall -q polybar; polybar example &" nil "polybar panel")
       (call-process-shell-command "mpd > /dev/null" nil 0)
       ;; FIXME Multiple Instances
-;; (call-process-shell-command "clipit" nil 0)
+      ;; (call-process-shell-command "clipit" nil 0)
 
       ;; Function Definitions (Moved to autoload.el)
 

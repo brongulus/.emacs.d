@@ -26,10 +26,10 @@
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
- doom-font (font-spec :family "Source Code Pro" :size 16)
+ doom-font (font-spec :family "JetBrains Mono" :size 18) ;Nerd Font Mono
  doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
- doom-theme 'doom-shades-of-purple
+ doom-theme 'doom-plain
  org-directory "/mnt/Data/Documents/org/"
  evil-escape-mode 1
  display-line-numbers-type 'relative
@@ -65,6 +65,13 @@
 (when (featurep! :ui zen)
   (after! writeroom-mode
     (setq +zen-text-scale 0)))
+
+(defun display-workspaces-in-minibuffer ()
+  (with-current-buffer " *Minibuf-0*"
+    (erase-buffer)
+    (insert (+workspace--tabline))))
+(run-with-idle-timer 1 t #'display-workspaces-in-minibuffer)
+(+workspace/display)
 
 (after! doom-modeline
   (setq doom-modeline-buffer-encoding nil
@@ -192,15 +199,17 @@
 (set-popup-rule! "^\\*notmuch-hello" :ignore t))
 (map! :n "SPC o n" 'notmuch)
 
-(setq notmuch-saved-searches
-      '((:name "inbox"    :query "tag:inbox not tag:trash"    :key "i")
-        (:name "personal" :query "tag:personal"               :key "p")
-        (:name "bits"     :query "tag:bits"                   :key "b")
-        (:name "unread"   :query "tag:unread"                 :key "u")
-        (:name "flagged"  :query "tag:flagged"                :key "f")
-        (:name "sent"     :query "tag:sent"                   :key "s")
+(after! notmuch
+  (setq notmuch-saved-searches
+        '((:name "inbox"    :query "tag:inbox not tag:trash"    :key "i")
+          (:name "personal" :query "tag:personal"               :key "p")
+          (:name "bits"     :query "tag:bits"                   :key "b")
+          (:name "unread"   :query "tag:unread"                 :key "u")
+          (:name "flagged"  :query "tag:flagged"                :key "f")
+          (:name "sent"     :query "tag:sent"                   :key "s")
+          )
         )
-      )
+  )
 
 ;;(use-package emms
 ;;:ensure t

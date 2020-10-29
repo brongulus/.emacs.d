@@ -59,10 +59,10 @@ To avoid the issue of reproducing your customize options.
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
- doom-font (font-spec :family "Source Code Pro" :size 16)
+ doom-font (font-spec :family "JetBrains Mono" :size 18) ;Nerd Font Mono
  doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
- doom-theme 'doom-shades-of-purple
+ doom-theme 'doom-plain
  org-directory "/mnt/Data/Documents/org/"
  evil-escape-mode 1
  display-line-numbers-type 'relative
@@ -136,6 +136,16 @@ Zen mode increases font size which is annoying, let's disable that.
     (setq +zen-text-scale 0)))
 #+END_SRC
 
+Let's make doom workspaces pesistent in the minibuffer, so we can easily keep track of them (minibuffer is wasted space anyways :p)
+
+#+BEGIN_SRC emacs-lisp
+(defun display-workspaces-in-minibuffer ()
+  (with-current-buffer " *Minibuf-0*"
+    (erase-buffer)
+    (insert (+workspace--tabline))))
+(run-with-idle-timer 1 t #'display-workspaces-in-minibuffer)
+(+workspace/display)
+#+END_SRC
 * Modeline
 Modeline has lots of unnecessary information, let's remove that, also let's display battery and time.
 
@@ -272,6 +282,7 @@ Most of the default functions have been stored in my memory, let's turn the dash
     )
   )
 #+END_SRC
+
 * Windmove
 Switching buffers using C-x o is a major pain, I like my arrow keys, so let's add those options.
 #+BEGIN_SRC emacs-lisp
@@ -330,16 +341,19 @@ With new doom update, notmuch hello has turned into a popup buffer which is mild
 Saved searches needs a personal touch, let's do that.
 
 #+BEGIN_SRC emacs-lisp
-(setq notmuch-saved-searches
-      '((:name "inbox"    :query "tag:inbox not tag:trash"    :key "i")
-        (:name "personal" :query "tag:personal"               :key "p")
-        (:name "bits"     :query "tag:bits"                   :key "b")
-        (:name "unread"   :query "tag:unread"                 :key "u")
-        (:name "flagged"  :query "tag:flagged"                :key "f")
-        (:name "sent"     :query "tag:sent"                   :key "s")
+(after! notmuch
+  (setq notmuch-saved-searches
+        '((:name "inbox"    :query "tag:inbox not tag:trash"    :key "i")
+          (:name "personal" :query "tag:personal"               :key "p")
+          (:name "bits"     :query "tag:bits"                   :key "b")
+          (:name "unread"   :query "tag:unread"                 :key "u")
+          (:name "flagged"  :query "tag:flagged"                :key "f")
+          (:name "sent"     :query "tag:sent"                   :key "s")
+          )
         )
-      )
+  )
 #+END_SRC
+
 * EMMS
 Although I'm not using emms on my current OS, these might prove useful if I decide to ditch ncmpcpp.
 
@@ -383,6 +397,7 @@ Need to figure this stuff out (WIP)
 ;;  (yas-global-mode)
 ;;  )
 #+END_SRC
+
 * Dictionary
 Need to add the search from anywhere shortcut? DO I? Just verify later.
 
@@ -413,6 +428,7 @@ Need to add the search from anywhere shortcut? DO I? Just verify later.
          current-prefix-arg))
   (lexic-search identifier nil nil t))
 #+END_SRC
+
 * Openwith
 This is still finnicky, I have to configure the various formats so that they work nicely with dired.
 
@@ -424,6 +440,7 @@ This is still finnicky, I have to configure the various formats so that they wor
 ;;(load! "~/.emacs.d/elegant-emacs/sanity")
 ;;(load! "~/.emacs.d/elegant-emacs/elegance")
 #+END_SRC
+
 * Spotify
 
 Spotify's app is too slow and clunky for my taste, let's attempt to use the player within emacs. (TODO: Figure out how to start spotify with a daemon or something)

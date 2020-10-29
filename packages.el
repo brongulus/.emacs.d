@@ -11,13 +11,14 @@
 ;
 ;;##########PACKAGES###########
 (unpin! doom-themes)
+(package! solaire-mode :disable t)
+
 (package! org-fragtog)
 (package! xkcd)
 (package! geiser)
 (package! elvish-mode)
 (package! rainbow-mode)
 ;;(package! djvu)
-;;(package! exwm)
 (package! info-colors)
 (package! systemd)
 (package! emms)
@@ -29,6 +30,7 @@
   :recipe (:host github :repo "progfolio/accord"))
 (package! el-secretario
   :recipe (:host github :repo "zetagon/el-secretario"))
+(package! notmuch-maildir)
 (package! org-ql)
 ;; FIXME
 ;;(package! pdf-continuous-scroll-mode

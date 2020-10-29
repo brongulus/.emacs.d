@@ -3,6 +3,8 @@
 #+SINCE:   v2.0.9
 #+STARTUP: inlineimages nofold
 
+* TODO Look into transmission-remote-cli-git and how it can provide a better interface
+
 * Table of Contents :TOC_3:noexport:
 - [[#description][Description]]
   - [[#module-flags][Module Flags]]
