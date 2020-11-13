@@ -26,12 +26,10 @@
 (package! counsel-spotify)
 (package! lexic
   :recipe (:host github :repo "tecosaur/lexic"))
-(package! accord
-  :recipe (:host github :repo "progfolio/accord"))
 (package! el-secretario
   :recipe (:host github :repo "zetagon/el-secretario"))
-(package! notmuch-maildir)
 (package! org-ql)
+(package! lsp-julia :recipe (:host github :repo "non-jedi/lsp-julia"))
 ;; FIXME
 ;;(package! pdf-continuous-scroll-mode
 ;;  :recipe (:host github :repo "dalanicolai/pdf-continuous-scroll-mode.el"))
