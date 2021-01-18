@@ -29,10 +29,10 @@
  doom-font (font-spec :family "JetBrains Mono" :size 18) ;Nerd Font Mono
  doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
- doom-theme 'doom-gruvbox-light
+ doom-theme 'doom-rouge
  org-directory "/mnt/Data/Documents/org/"
  evil-escape-mode 1
- display-line-numbers-type 'relative
+ display-line-numbers-type 't
  tab-width 8
  which-key-idle-delay 0.5
  large-file-warning-threshold nil
@@ -96,42 +96,70 @@
               (yas-activate-extra-mode 'latex-mode)))
 ;; (add-hook 'org-mode-hook 'lsp-completion-mode)
 
+(add-hook 'org-mode-hook 'variable-pitch-mode)
+
 (setq yas-triggers-in-field t)
 
 (setq flycheck-global-modes '(not LaTeX-mode latex-mode))
 
 (setq org-preview-latex-default-process 'dvisvgm)
 
-(after! org
-  (map! :map org-mode-map
-        :localleader
-        :desc "View exported file" "v" #'org-view-output-file)
+(setq org-agenda-start-with-log-mode t
+      org-log-done 'time
+      org-log-into-drawer t
+      org-agenda-breadcrumbs-separator " ❱ ")
 
-  (defun org-view-output-file (&optional org-file-path)
-    "Visit buffer open on the first output file (if any) found, using `org-view-output-file-extensions'"
-    (interactive)
-    (let* ((org-file-path (or org-file-path (buffer-file-name) ""))
-           (dir (file-name-directory org-file-path))
-           (basename (file-name-base org-file-path))
-           (output-file nil))
-      (dolist (ext org-view-output-file-extensions)
-        (unless output-file
-          (when (file-exists-p
-                 (concat dir basename "." ext))
-            (setq output-file (concat dir basename "." ext)))))
-      (if output-file
-          (if (member (file-name-extension output-file) org-view-external-file-extensions)
-              (browse-url-xdg-open output-file)
-            (pop-to-buffer (or (find-buffer-visiting output-file)
-                               (find-file-noselect output-file))))
-        (message "No exported file found")))))
+(setq org-agenda-files
+      '("~/Dropbox/org/inbox.org"
+        "~Dropbox/org/todo.org"))
 
-(defvar org-view-output-file-extensions '("pdf" "md" "rst" "txt" "tex" "html")
-  "Search for output files with these extensions, in order, viewing the first that matches")
-(defvar org-view-external-file-extensions '("html")
-  "File formats that should be opened externally.")
+(setq org-agenda-custom-commands
+      '(("a" "My agenda"
+         ((todo "TODO" (
+                        (org-agenda-overriding-header "⚡ TODAY:\n")
+                        (org-agenda-remove-tags t)
+                        (org-agenda-prefix-format " %-15b")
+                        (org-agenda-todo-keyword-format "")))
+          (agenda "" (
+                      (org-agenda-skip-scheduled-if-done t)
+                      (org-agenda-skip-timestamp-if-done t)
+                      (org-agenda-skip-deadline-if-done t)
+                      (org-agenda-start-day "-1d")
+                      (org-agenda-span 3)
+                      (org-agenda-overriding-header "⚡ SCHEDULE:\n")
+                      (org-agenda-remove-tags t)
+                      (org-agenda-prefix-format " %-15b%t %s")
+                      (org-agenda-todo-keyword-format "")
+                      ;;         (org-agenda-time)
+                      (org-agenda-current-time-string "⮜┈┈┈┈┈┈┈ now")
+                      (org-agenda-scheduled-leaders '("" ""))
+                      (org-agenda-deadline-leaders '("" ""))
+                      (org-agenda-time-grid (quote ((today require-timed remove-match) (0800 1100 1400 1700 2000) "      " "┈┈┈┈┈┈┈┈┈┈┈┈┈")))
+                      )
+                  )
+          ;;          (todo "NEXT" (
+          ;;                       (org-agenda-overriding-header "⚡ THIS WEEK:\n")
+          ;;                        (org-agenda-prefix-format " %b")
+          ;;                        (org-agenda-todo-keyword-format "")))
+          ))))
 
+(defun my-org-agenda-format-date-aligned (DATE)
+  "Format a DATE string for display in the daily/weekly agenda, or timeline.
+This function makes sure that dates are aligned for easy reading."
+  (require 'cal-iso)
+  (let* ((dayname (calendar-day-name DATE 1 nil))
+         (day (cadr DATE))
+         (month (car DATE))
+         (monthname (calendar-month-name month 1))
+         (year (nth 2 DATE)))
+    (format " %-2s. %2d %s"
+            dayname day monthname)))
 
+(setq org-agenda-format-date 'my-org-agenda-format-date-aligned)
+
+(setq org-agenda-block-separator (string-to-char " "))
+
+(setq org-agenda-hidden-separator "‌‌ ")
 
 (after! elfeed
   (setq elfeed-search-filter "@2-month-ago"))
@@ -153,24 +181,28 @@
 
 ;; (setq fancy-splash-image "~/.doom.d/doom_grin.png")
 (setq +doom-dashboard-menu-sections
-  '(("Reload last session"
-     :icon (all-the-icons-octicon "history" :face 'doom-dashboard-menu-title)
-     :when (cond ((require 'persp-mode nil t)
-                  (file-exists-p (expand-file-name persp-auto-save-fname persp-save-dir)))
-                 ((require 'desktop nil t)
-                  (file-exists-p (desktop-full-file-name))))
-     :face (:inherit (doom-dashboard-menu-title bold))
-     :action doom/quickload-session)
-    ("Open notmuch"
-     :icon (all-the-icons-octicon "mention" :face 'doom-dashboard-menu-title)
-     :face (:inherit (doom-dashboard-menu-title bold))
-     :action notmuch)
-    ("Open elfeed"
-     :icon (all-the-icons-octicon "book" :face 'doom-dashboard-menu-title)
-     :face (:inherit (doom-dashboard-menu-title bold))
-     :action =elfeed)
-    )
-  )
+      '(("Reload last session"
+         :icon (all-the-icons-octicon "history" :face 'doom-dashboard-menu-title)
+         :when (cond ((require 'persp-mode nil t)
+                      (file-exists-p (expand-file-name persp-auto-save-fname persp-save-dir)))
+                     ((require 'desktop nil t)
+                      (file-exists-p (desktop-full-file-name))))
+         :face (:inherit (doom-dashboard-menu-title bold))
+         :action doom/quickload-session)
+        ("Open notmuch"
+         :icon (all-the-icons-octicon "mention" :face 'doom-dashboard-menu-title)
+         :face (:inherit (doom-dashboard-menu-title bold))
+         :action notmuch)
+        ("Open elfeed"
+         :icon (all-the-icons-octicon "book" :face 'doom-dashboard-menu-title)
+         :face (:inherit (doom-dashboard-menu-title bold))
+         :action =elfeed)
+        ("Open Agenda"
+         :icon (all-the-icons-octicon "check" :face 'doom-dashboard-menu-title)
+         :face (:inherit (doom-dashboard-menu-title bold))
+         :action org-agenda)
+        )
+      )
 
 (use-package windmove
   :bind

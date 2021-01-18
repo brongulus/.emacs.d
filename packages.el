@@ -24,6 +24,7 @@
 (package! emms)
 ;;(package! theme-magic)
 (package! counsel-spotify)
+(package! telega)
 (package! lexic
   :recipe (:host github :repo "tecosaur/lexic"))
 (package! el-secretario

@@ -55,7 +55,8 @@
   '(;; ("\\.pdf\\'" "acroread" (file))
     ;; ("\\.mp3\\'" "mpd" (file))
     ("\\.\\(?:mpe?g\\|avi\\|wmv\\|mp4\\|mkv\\|m4v\\)\\'" "mpv" (file))
-    ("\\.\\(?:jp?g\\|png\\)\\'" "display" (file)))
+   ;; ("\\.\\(?:jp?g\\|png\\)\\'" "display" (file))
+    )
   "Associations of file patterns to external programs.
 File pattern is a regular expression describing the files to
 associate with a program. The program arguments are a list of
