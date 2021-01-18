@@ -29,7 +29,7 @@
  doom-font (font-spec :family "JetBrains Mono" :size 18) ;Nerd Font Mono
  doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
- doom-theme 'doom-rouge
+ doom-theme 'doom-dracula
  org-directory "/mnt/Data/Documents/org/"
  evil-escape-mode 1
  display-line-numbers-type 't
