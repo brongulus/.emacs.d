@@ -12,10 +12,12 @@ The first edition of my +soon-to-be+ literate configuration :P
 1. NOTE: Run =org-babel-tangle= after making changes it to this file. Oddly enough, first time I had to run =doom sync=, need to look into this.
 2. Look into =org-babel-demarcate-block= too.
 
-* Todo
-1. [X] Turn this into a literate Configuration
+* TODO Config Improvements:
+1. [X] +Turn this into a literate Configuration+
 2. [ ] Improve the EXWM experience
 3. [ ] Incorporate elvish and other configuration stuff within this.
+4. [ ] Figure out GnuPG and magit+forge.
+5. [ ] Improve notmuch's aesthetics, it deserves the same love as mu4e.
 
 * Config File Header
 For the lexical binding of the elisp file.
@@ -251,7 +253,7 @@ Setting up agenda and capture
                       (org-agenda-skip-timestamp-if-done t)
                       (org-agenda-skip-deadline-if-done t)
                       (org-agenda-start-day "-1d")
-                      (org-agenda-span 3)
+                      (org-agenda-span 4)
                       (org-agenda-overriding-header "⚡ SCHEDULE:\n")
                       (org-agenda-remove-tags t)
                       (org-agenda-prefix-format " %-15b%t %s")
@@ -263,10 +265,10 @@ Setting up agenda and capture
                       (org-agenda-time-grid (quote ((today require-timed remove-match) (0800 1100 1400 1700 2000) "      " "┈┈┈┈┈┈┈┈┈┈┈┈┈")))
                       )
                   )
-          ;;          (todo "NEXT" (
-          ;;                       (org-agenda-overriding-header "⚡ THIS WEEK:\n")
-          ;;                        (org-agenda-prefix-format " %b")
-          ;;                        (org-agenda-todo-keyword-format "")))
+          ;;(todo "NEXT" (
+          ;;              (org-agenda-overriding-header "⚡ THIS WEEK:\n")
+          ;;              (org-agenda-prefix-format " %b")
+          ;;              (org-agenda-todo-keyword-format "")))
           ))))
 
 (defun my-org-agenda-format-date-aligned (DATE)

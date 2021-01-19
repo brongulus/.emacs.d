@@ -127,7 +127,7 @@
                       (org-agenda-skip-timestamp-if-done t)
                       (org-agenda-skip-deadline-if-done t)
                       (org-agenda-start-day "-1d")
-                      (org-agenda-span 3)
+                      (org-agenda-span 4)
                       (org-agenda-overriding-header "⚡ SCHEDULE:\n")
                       (org-agenda-remove-tags t)
                       (org-agenda-prefix-format " %-15b%t %s")
@@ -139,10 +139,10 @@
                       (org-agenda-time-grid (quote ((today require-timed remove-match) (0800 1100 1400 1700 2000) "      " "┈┈┈┈┈┈┈┈┈┈┈┈┈")))
                       )
                   )
-          ;;          (todo "NEXT" (
-          ;;                       (org-agenda-overriding-header "⚡ THIS WEEK:\n")
-          ;;                        (org-agenda-prefix-format " %b")
-          ;;                        (org-agenda-todo-keyword-format "")))
+          ;;(todo "NEXT" (
+          ;;              (org-agenda-overriding-header "⚡ THIS WEEK:\n")
+          ;;              (org-agenda-prefix-format " %b")
+          ;;              (org-agenda-todo-keyword-format "")))
           ))))
 
 (defun my-org-agenda-format-date-aligned (DATE)

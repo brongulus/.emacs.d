@@ -15,6 +15,7 @@
 
 (package! org-fragtog)
 (package! xkcd)
+(package! pocket-reader)
 (package! geiser)
 (package! elvish-mode)
 (package! rainbow-mode)
