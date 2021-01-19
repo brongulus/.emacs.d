@@ -73,6 +73,12 @@ To avoid the issue of reproducing your customize options.
  )
 #+END_SRC
 
+Projectile default behaviour change * FIXME
+
+#+begin_src emacs-lisp
+;; (setq projectile-switch-project-action #'projectile-dired)
+#+end_src
+
 Disable background in emacs when opening terminal mode.
 
 #+BEGIN_SRC emacs-lisp
@@ -234,7 +240,7 @@ Setting up agenda and capture
         "~Dropbox/org/todo.org"))
 
 (setq org-agenda-custom-commands
-      '(("a" "My agenda"
+      '(("A" "My agenda"
          ((todo "TODO" (
                         (org-agenda-overriding-header "⚡ TODAY:\n")
                         (org-agenda-remove-tags t)

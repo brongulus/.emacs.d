@@ -39,6 +39,8 @@
  org-latex-toc-command "\\tableofcontents \\clearpage"
  )
 
+;; (setq projectile-switch-project-action #'projectile-dired)
+
 (custom-set-faces! '(default :background nil))
 
 (setq evil-split-window-below t
@@ -114,7 +116,7 @@
         "~Dropbox/org/todo.org"))
 
 (setq org-agenda-custom-commands
-      '(("a" "My agenda"
+      '(("A" "My agenda"
          ((todo "TODO" (
                         (org-agenda-overriding-header "⚡ TODAY:\n")
                         (org-agenda-remove-tags t)
