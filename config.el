@@ -86,6 +86,8 @@
 (lambda ()
 (hl-line-mode -1)))
 
+(setq auth-sources '("/home/prashant/.authinfo" "/home/prashant/.emacs.d/.local/etc/authinfo.gpg" "~/.authinfo.gpg"))
+
 (display-time-mode 1)
 
 (unless (equal "Battery status not available"
@@ -99,6 +101,9 @@
 ;; (add-hook 'org-mode-hook 'lsp-completion-mode)
 
 (add-hook 'org-mode-hook 'variable-pitch-mode)
+(custom-set-faces!
+  '(org-table :inherit 'fixed-pitch))
+;;(set-face-attribute 'org-table nil :inherit 'fixed-pitch)
 
 (setq yas-triggers-in-field t)
 
@@ -107,13 +112,13 @@
 (setq org-preview-latex-default-process 'dvisvgm)
 
 (setq org-agenda-start-with-log-mode t
-      org-log-done 'time
+      org-log-done t
       org-log-into-drawer t
       org-agenda-breadcrumbs-separator " ❱ ")
 
 (setq org-agenda-files
       '("~/Dropbox/org/inbox.org"
-        "~Dropbox/org/todo.org"))
+        "~/Dropbox/org/todo.org"))
 
 (setq org-agenda-custom-commands
       '(("A" "My agenda"
@@ -123,11 +128,11 @@
                         (org-agenda-prefix-format " %-15b")
                         (org-agenda-todo-keyword-format "")))
           (agenda "" (
-                      (org-agenda-skip-scheduled-if-done t)
-                      (org-agenda-skip-timestamp-if-done t)
-                      (org-agenda-skip-deadline-if-done t)
+                      ;;           (org-agenda-skip-scheduled-if-done t)
+                      ;;           (org-agenda-skip-timestamp-if-done t)
+                      ;;           (org-agenda-skip-deadline-if-done t)
                       (org-agenda-start-day "-1d")
-                      (org-agenda-span 4)
+                      (org-agenda-span 3)
                       (org-agenda-overriding-header "⚡ SCHEDULE:\n")
                       (org-agenda-remove-tags t)
                       (org-agenda-prefix-format " %-15b%t %s")
@@ -163,6 +168,10 @@ This function makes sure that dates are aligned for easy reading."
 
 (setq org-agenda-hidden-separator "‌‌ ")
 
+;; capture
+
+(setq +org-capture-todo-file "~/Dropbox/org/todo.org")
+
 (after! elfeed
   (setq elfeed-search-filter "@2-month-ago"))
 (defun =elfeed ()
@@ -174,12 +183,21 @@ This function makes sure that dates are aligned for easy reading."
   (map! :n "u" #'elfeed-update))
 
 (add-hook 'pdf-view-mode-hook (lambda ()
-        (pdf-view-midnight-minor-mode)))
+                                (pdf-view-midnight-minor-mode)))
 (add-hook 'pdf-view-mode-hook 'pdf-view-auto-slice-minor-mode)
 ;;(setq pdf-view-midnight-colors '("#839496" . "#002b36" ))
+(add-hook 'pdf-view-mode-hook #'hide-mode-line-mode)
 
 ;;(map! pdf-view-mode-map
 ;;      :niv "h" #'pdf-annot-add-markup-annotation)
+
+(add-hook 'pdf-view-mode-hook 'pdf-continuous-scroll-mode)
+(after! pdf-tools
+  (map! :map pdf-continuous-scroll-map
+        ;; "j" nil
+        ;; "k" nil
+        :n "j" #'pdf-continuous-scroll-forward
+        :n "k" #'pdf-continuous-scroll-backward))
 
 ;; (setq fancy-splash-image "~/.doom.d/doom_grin.png")
 (setq +doom-dashboard-menu-sections
@@ -254,6 +272,8 @@ This function makes sure that dates are aligned for easy reading."
           )
         )
   )
+
+(add-hook! notmuch-search-mode-hook #'notmuch-tree-mode)
 
 ;;(use-package emms
 ;;:ensure t

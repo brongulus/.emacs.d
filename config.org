@@ -174,6 +174,12 @@ Remove highlighting
 (hl-line-mode -1)))
 #+end_src
 
+* Authentication
+This is a major WIP since my knowledge with gpg is extremely limited.
+
+#+begin_src emacs-lisp
+(setq auth-sources '("/home/prashant/.authinfo" "/home/prashant/.emacs.d/.local/etc/authinfo.gpg" "~/.authinfo.gpg"))
+#+end_src
 * Modeline
 Modeline has lots of unnecessary information, let's remove that, also let's display battery and time.
 
@@ -209,6 +215,9 @@ Org files should look beautiful while you're typing in them.
 
 #+begin_src emacs-lisp
 (add-hook 'org-mode-hook 'variable-pitch-mode)
+(custom-set-faces!
+  '(org-table :inherit 'fixed-pitch))
+;;(set-face-attribute 'org-table nil :inherit 'fixed-pitch)
 #+end_src
 
 Nested snippets are useful, let's enable them.
@@ -233,13 +242,13 @@ Setting up agenda and capture
 
 #+begin_src emacs-lisp
 (setq org-agenda-start-with-log-mode t
-      org-log-done 'time
+      org-log-done t
       org-log-into-drawer t
       org-agenda-breadcrumbs-separator " ❱ ")
 
 (setq org-agenda-files
       '("~/Dropbox/org/inbox.org"
-        "~Dropbox/org/todo.org"))
+        "~/Dropbox/org/todo.org"))
 
 (setq org-agenda-custom-commands
       '(("A" "My agenda"
@@ -249,11 +258,11 @@ Setting up agenda and capture
                         (org-agenda-prefix-format " %-15b")
                         (org-agenda-todo-keyword-format "")))
           (agenda "" (
-                      (org-agenda-skip-scheduled-if-done t)
-                      (org-agenda-skip-timestamp-if-done t)
-                      (org-agenda-skip-deadline-if-done t)
+                      ;;           (org-agenda-skip-scheduled-if-done t)
+                      ;;           (org-agenda-skip-timestamp-if-done t)
+                      ;;           (org-agenda-skip-deadline-if-done t)
                       (org-agenda-start-day "-1d")
-                      (org-agenda-span 4)
+                      (org-agenda-span 3)
                       (org-agenda-overriding-header "⚡ SCHEDULE:\n")
                       (org-agenda-remove-tags t)
                       (org-agenda-prefix-format " %-15b%t %s")
@@ -288,6 +297,10 @@ This function makes sure that dates are aligned for easy reading."
 (setq org-agenda-block-separator (string-to-char " "))
 
 (setq org-agenda-hidden-separator "‌‌ ")
+
+;; capture
+
+(setq +org-capture-todo-file "~/Dropbox/org/todo.org")
 #+end_src
 
 * Elfeed
@@ -310,9 +323,10 @@ Need to fix the continuous scrolling package issue and add more shortcuts for ge
 
 #+BEGIN_SRC emacs-lisp
 (add-hook 'pdf-view-mode-hook (lambda ()
-        (pdf-view-midnight-minor-mode)))
+                                (pdf-view-midnight-minor-mode)))
 (add-hook 'pdf-view-mode-hook 'pdf-view-auto-slice-minor-mode)
 ;;(setq pdf-view-midnight-colors '("#839496" . "#002b36" ))
+(add-hook 'pdf-view-mode-hook #'hide-mode-line-mode)
 #+END_SRC
 
 Making highlighting easy
@@ -321,6 +335,18 @@ FIXME
 #+begin_src emacs-lisp
 ;;(map! pdf-view-mode-map
 ;;      :niv "h" #'pdf-annot-add-markup-annotation)
+#+end_src
+
+PDF Files in emacs natively don't have continuous scrolling however using a package that  can be achieved.
+
+#+begin_src emacs-lisp
+(add-hook 'pdf-view-mode-hook 'pdf-continuous-scroll-mode)
+(after! pdf-tools
+  (map! :map pdf-continuous-scroll-map
+        ;; "j" nil
+        ;; "k" nil
+        :n "j" #'pdf-continuous-scroll-forward
+        :n "k" #'pdf-continuous-scroll-backward))
 #+end_src
 
 * Dashboard
@@ -370,7 +396,7 @@ Switching buffers using C-x o is a major pain, I like my arrow keys, so let's ad
 (setq org-support-shift-select 'always)
 #+END_SRC
 
-* Mail
+* TODO Mail
 # TODO  Improve notmuch module
 # 1. Deleting Mails
 # 2. Delete workspace after closing (when using SPC o m)
@@ -423,6 +449,12 @@ Saved searches needs a personal touch, let's do that.
         )
   )
 #+END_SRC
+
+Let's work towards those TODOs, one at a time.
+
+#+begin_src emacs-lisp
+(add-hook! notmuch-search-mode-hook #'notmuch-tree-mode)
+#+end_src
 
 * EMMS
 Although I'm not using emms on my current OS, these might prove useful if I decide to ditch ncmpcpp.

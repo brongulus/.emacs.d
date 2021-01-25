@@ -33,8 +33,8 @@
 (package! org-ql)
 (package! lsp-julia :recipe (:host github :repo "non-jedi/lsp-julia"))
 ;; FIXME
-;;(package! pdf-continuous-scroll-mode
-;;  :recipe (:host github :repo "dalanicolai/pdf-continuous-scroll-mode.el"))
+(package! pdf-continuous-scroll-mode
+  :recipe (:host github :repo "dalanicolai/pdf-continuous-scroll-mode.el"))
 
 
 ;; To install a package directly from a remote git repo, you must specify a
