@@ -65,9 +65,9 @@ To avoid the issue of reproducing your customize options.
  doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
  doom-theme 'doom-dracula
- org-directory "/mnt/Data/Documents/org/"
+ org-directory "/home/prashant/Dropbox/org/"
  evil-escape-mode 1
- display-line-numbers-type 't
+ display-line-numbers-type nil
  tab-width 8
  which-key-idle-delay 0.5
  large-file-warning-threshold nil
@@ -201,6 +201,7 @@ I've yet to look more into the different speed-up and configuration options rela
 #+END_SRC
 
 * Org
+** Basics
 Now I need to make all these changes coherent and consistent but for the time being I'm just dumping them here.
 
 #+BEGIN_SRC emacs-lisp
@@ -238,6 +239,7 @@ For plotting graphs, one needs tikz and pfgplots. let's enable them by default, 
 (setq org-preview-latex-default-process 'dvisvgm)
 #+END_SRC
 
+** Org-Agenda
 Setting up agenda and capture
 
 #+begin_src emacs-lisp
@@ -270,7 +272,7 @@ Setting up agenda and capture
                       ;;         (org-agenda-time)
                       (org-agenda-current-time-string "⮜┈┈┈┈┈┈┈ now")
                       (org-agenda-scheduled-leaders '("" ""))
-                      (org-agenda-deadline-leaders '("" ""))
+                      ;;       (org-agenda-deadline-leaders '("" ""))
                       (org-agenda-time-grid (quote ((today require-timed remove-match) (0800 1100 1400 1700 2000) "      " "┈┈┈┈┈┈┈┈┈┈┈┈┈")))
                       )
                   )
@@ -288,7 +290,8 @@ This function makes sure that dates are aligned for easy reading."
          (day (cadr DATE))
          (month (car DATE))
          (monthname (calendar-month-name month 1))
-         (year (nth 2 DATE)))
+         ;;   (year (nth 2 DATE))
+         )
     (format " %-2s. %2d %s"
             dayname day monthname)))
 
@@ -298,11 +301,41 @@ This function makes sure that dates are aligned for easy reading."
 
 (setq org-agenda-hidden-separator "‌‌ ")
 
-;; capture
-
-(setq +org-capture-todo-file "~/Dropbox/org/todo.org")
 #+end_src
 
+Agenda widget
+
+** Capture
+Org capture template needs a personal touch.
+
+#+begin_src emacs-lisp
+(after! org-capture
+  (setq org-capture-templates
+        '(("t" "Personal todo" entry
+           (file+headline +org-capture-todo-file "Inbox")
+           "* TODO %?\n%i\n%a" :prepend t)
+          ("n" "Personal notes" entry
+           (file+headline +org-capture-notes-file "Notes")
+           "* %u %?\n%i\n%a" :prepend t)
+          ("j" "Journal" entry
+           (file+olp+datetree +org-capture-journal-file)
+           "* %U %?\n%i\n%a" :prepend t)
+          ("p" "Templates for projects")
+          ("pt" "Project-local todo" entry
+           (file+headline +org-capture-project-todo-file "Inbox")
+           "* TODO %?\n%i\n%a" :prepend t)
+          ("pn" "Project-local notes" entry
+           (file+headline +org-capture-project-notes-file "Inbox")
+           "* %U %?\n%i\n%a" :prepend t)
+          ("pc" "Project-local changelog" entry
+           (file+headline +org-capture-project-changelog-file "Unreleased")
+           "* %U %?\n%i\n%a" :prepend t)
+          ("o" "Centralized templates for projects")
+          ("ot" "Project todo" entry #'+org-capture-central-project-todo-file "* TODO %?\n %i\n %a" :heading "Tasks" :prepend nil)
+          ("on" "Project notes" entry #'+org-capture-central-project-notes-file "* %U %?\n %i\n %a" :heading "Notes" :prepend t)
+          ("oc" "Project changelog" entry #'+org-capture-central-project-changelog-file "* %U %?\n %i\n %a" :heading "Changelog" :prepend t))
+        ))
+#+end_src
 * Elfeed
 I need to add shortcuts for update functions and reference to the org file, also need to fix the database update issue.
 
@@ -313,10 +346,19 @@ I need to add shortcuts for update functions and reference to the org file, also
   (interactive)
   (elfeed)
   )
+(add-hook! elfeed-show-mode 'variable-pitch-mode)
 (map! :n "SPC o e" #'=elfeed)
 (after! elfeed
   (map! :n "u" #'elfeed-update))
 #+END_SRC
+
+Pocket reader has some issues with pandoc meddling in its affairs, let's set it straight.
+
+#+begin_src emacs-lisp
+(add-hook! 'pocket-reader-mode-hook 'evil-insert-state)
+(setq pocket-reader-open-url-default-function #'eww
+      pocket-reader-pop-to-url-default-function #'eww)
+#+end_src
 
 * PDF-Mode
 Need to fix the continuous scrolling package issue and add more shortcuts for general functions (maybe I should make a separate file for shortcuts, or learn about hydras :p)
@@ -353,7 +395,7 @@ PDF Files in emacs natively don't have continuous scrolling however using a pack
 Most of the default functions have been stored in my memory, let's turn the dashboard into an /"emacs app drawer"/. (Also I need to find a better splash, there are also issues with splash and exwm which I'll look into *later*.)
 
 #+BEGIN_SRC emacs-lisp
-;; (setq fancy-splash-image "~/.doom.d/doom_grin.png")
+(setq fancy-splash-image "~/.doom.d/splash.png")
 (setq +doom-dashboard-menu-sections
       '(("Reload last session"
          :icon (all-the-icons-octicon "history" :face 'doom-dashboard-menu-title)
@@ -451,10 +493,16 @@ Saved searches needs a personal touch, let's do that.
 #+END_SRC
 
 Let's work towards those TODOs, one at a time.
-
+FIXME Hooks with notmuch arent working properly
 #+begin_src emacs-lisp
-(add-hook! notmuch-search-mode-hook #'notmuch-tree-mode)
+(add-hook! notmuch-show-mode-hook #'variable-pitch-mode)
+(after! notmuch
+  (add-hook! notmuch-show-mode-hook #'notmuch-tree-mode)
+  (add-hook! notmuch-search-mode-hook #'notmuch-tree-mode))
 #+end_src
+
+#+RESULTS:
+| notmuch-tree-mode |
 
 * EMMS
 Although I'm not using emms on my current OS, these might prove useful if I decide to ditch ncmpcpp.

@@ -30,9 +30,9 @@
  doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
  doom-theme 'doom-dracula
- org-directory "/mnt/Data/Documents/org/"
+ org-directory "/home/prashant/Dropbox/org/"
  evil-escape-mode 1
- display-line-numbers-type 't
+ display-line-numbers-type nil
  tab-width 8
  which-key-idle-delay 0.5
  large-file-warning-threshold nil
@@ -140,7 +140,7 @@
                       ;;         (org-agenda-time)
                       (org-agenda-current-time-string "⮜┈┈┈┈┈┈┈ now")
                       (org-agenda-scheduled-leaders '("" ""))
-                      (org-agenda-deadline-leaders '("" ""))
+                      ;;       (org-agenda-deadline-leaders '("" ""))
                       (org-agenda-time-grid (quote ((today require-timed remove-match) (0800 1100 1400 1700 2000) "      " "┈┈┈┈┈┈┈┈┈┈┈┈┈")))
                       )
                   )
@@ -158,7 +158,8 @@ This function makes sure that dates are aligned for easy reading."
          (day (cadr DATE))
          (month (car DATE))
          (monthname (calendar-month-name month 1))
-         (year (nth 2 DATE)))
+         ;;   (year (nth 2 DATE))
+         )
     (format " %-2s. %2d %s"
             dayname day monthname)))
 
@@ -168,9 +169,32 @@ This function makes sure that dates are aligned for easy reading."
 
 (setq org-agenda-hidden-separator "‌‌ ")
 
-;; capture
-
-(setq +org-capture-todo-file "~/Dropbox/org/todo.org")
+(after! org-capture
+  (setq org-capture-templates
+        '(("t" "Personal todo" entry
+           (file+headline +org-capture-todo-file "Inbox")
+           "* TODO %?\n%i\n%a" :prepend t)
+          ("n" "Personal notes" entry
+           (file+headline +org-capture-notes-file "Notes")
+           "* %u %?\n%i\n%a" :prepend t)
+          ("j" "Journal" entry
+           (file+olp+datetree +org-capture-journal-file)
+           "* %U %?\n%i\n%a" :prepend t)
+          ("p" "Templates for projects")
+          ("pt" "Project-local todo" entry
+           (file+headline +org-capture-project-todo-file "Inbox")
+           "* TODO %?\n%i\n%a" :prepend t)
+          ("pn" "Project-local notes" entry
+           (file+headline +org-capture-project-notes-file "Inbox")
+           "* %U %?\n%i\n%a" :prepend t)
+          ("pc" "Project-local changelog" entry
+           (file+headline +org-capture-project-changelog-file "Unreleased")
+           "* %U %?\n%i\n%a" :prepend t)
+          ("o" "Centralized templates for projects")
+          ("ot" "Project todo" entry #'+org-capture-central-project-todo-file "* TODO %?\n %i\n %a" :heading "Tasks" :prepend nil)
+          ("on" "Project notes" entry #'+org-capture-central-project-notes-file "* %U %?\n %i\n %a" :heading "Notes" :prepend t)
+          ("oc" "Project changelog" entry #'+org-capture-central-project-changelog-file "* %U %?\n %i\n %a" :heading "Changelog" :prepend t))
+        ))
 
 (after! elfeed
   (setq elfeed-search-filter "@2-month-ago"))
@@ -178,9 +202,14 @@ This function makes sure that dates are aligned for easy reading."
   (interactive)
   (elfeed)
   )
+(add-hook! elfeed-show-mode 'variable-pitch-mode)
 (map! :n "SPC o e" #'=elfeed)
 (after! elfeed
   (map! :n "u" #'elfeed-update))
+
+(add-hook! 'pocket-reader-mode-hook 'evil-insert-state)
+(setq pocket-reader-open-url-default-function #'eww
+      pocket-reader-pop-to-url-default-function #'eww)
 
 (add-hook 'pdf-view-mode-hook (lambda ()
                                 (pdf-view-midnight-minor-mode)))
@@ -199,7 +228,7 @@ This function makes sure that dates are aligned for easy reading."
         :n "j" #'pdf-continuous-scroll-forward
         :n "k" #'pdf-continuous-scroll-backward))
 
-;; (setq fancy-splash-image "~/.doom.d/doom_grin.png")
+(setq fancy-splash-image "~/.doom.d/splash.png")
 (setq +doom-dashboard-menu-sections
       '(("Reload last session"
          :icon (all-the-icons-octicon "history" :face 'doom-dashboard-menu-title)
@@ -273,7 +302,10 @@ This function makes sure that dates are aligned for easy reading."
         )
   )
 
-(add-hook! notmuch-search-mode-hook #'notmuch-tree-mode)
+(add-hook! notmuch-show-mode-hook #'variable-pitch-mode)
+(after! notmuch
+  (add-hook! notmuch-show-mode-hook #'notmuch-tree-mode)
+  (add-hook! notmuch-search-mode-hook #'notmuch-tree-mode))
 
 ;;(use-package emms
 ;;:ensure t
