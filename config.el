@@ -95,6 +95,8 @@
   (display-battery-mode 1))
 
 (add-hook 'org-mode-hook 'org-fragtog-mode)
+(after! org
+(add-hook! 'org-mode-hook #'writeroom-mode))
 (add-hook 'org-mode-hook
           (λ! (yas-minor-mode)
               (yas-activate-extra-mode 'latex-mode)))
@@ -252,6 +254,7 @@ This function makes sure that dates are aligned for easy reading."
          :action org-agenda)
         )
       )
+(add-hook! '+doom-dashboard-mode-hook #'hide-mode-line-mode)
 
 (use-package windmove
   :bind
@@ -289,6 +292,15 @@ This function makes sure that dates are aligned for easy reading."
 (after! notmuch
 (set-popup-rule! "^\\*notmuch-hello" :ignore t))
 (map! :n "SPC o n" 'notmuch)
+(add-hook 'notmuch-hello-refresh-hook
+              (lambda ()
+                (if (and (eq (point) (point-min))
+                         (search-forward "Saved searches:" nil t))
+                    (progn
+                      (forward-line)
+                      (widget-forward 1))
+                  (if (eq (widget-type (widget-at)) 'editable-field)
+                      (beginning-of-line)))))
 
 (after! notmuch
   (setq notmuch-saved-searches
@@ -302,31 +314,29 @@ This function makes sure that dates are aligned for easy reading."
         )
   )
 
-(add-hook! notmuch-show-mode-hook #'variable-pitch-mode)
-(after! notmuch
-  (add-hook! notmuch-show-mode-hook #'notmuch-tree-mode)
-  (add-hook! notmuch-search-mode-hook #'notmuch-tree-mode))
+;;FIXME (add-hook! 'notmuch-search-mode-hook #'notmuch-tree-mode)
+(setq mm-text-html-renderer 'shr
+      notmuch-multipart/alternative-discouraged '("text/plain" "multipart/related")
+      shr-use-colors nil
+      gnus-blocked-images nil
+      )
+;; inline images?
+;;(if (not (fboundp 'gnus-blocked-images))
+;;    (defun gnus-blocked-images () nil))
 
-;;(use-package emms
-;;:ensure t
-;;:config
-;;(require 'emms-setup)
-;;(require 'emms-player-mplayer)
-;;(emms-all)
-;;(setq emms-player-list '(
-;;                         emms-player-mpg321
-;;                         emms-player-ogg123
-;;                         emms-player-mplayer
-;;                         ))
-;;(defun emms-player-mplayer-volume(amount)
-;;  (process-send-string
-;;   emms-player-simple-process-name
-;;   (format "volume %d\n" amount)))
-;;(setq emms-volume-change-function 'emms-player-mplayer-volume)
-;;(setq emms-source-file-default-directory "D:/Music/")
-;;(setq emms-playlist-buffer-name "*Music*")
-;;(emms-add-directory-tree emms-source-file-default-directory)
-;;)
+;;FIXME
+(setq notmuch-search-result-format
+      '(("date" . "%12s | ")
+        ("authors" . "%-20s | ")
+        ("subject" . "%-54s")
+        ("tags" . ":%s:")
+        ))
+(after! notmuch
+  (setq notmuch-hello-sections
+        '(notmuch-hello-insert-header notmuch-hello-insert-saved-searches notmuch-hello-insert-search notmuch-hello-insert-recent-searches notmuch-hello-insert-alltags notmuch-hello-insert-footer)
+        notmuch-message-headers-visible nil))
+;; add check for if writeroom mode is available
+(add-hook! 'notmuch-show-mode-hook #'writeroom-mode)
 
 ;;(after! cc-mode
 ;;  (set-company-backend! 'c-mode

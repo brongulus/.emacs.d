@@ -206,6 +206,8 @@ Now I need to make all these changes coherent and consistent but for the time be
 
 #+BEGIN_SRC emacs-lisp
 (add-hook 'org-mode-hook 'org-fragtog-mode)
+(after! org
+(add-hook! 'org-mode-hook #'writeroom-mode))
 (add-hook 'org-mode-hook
           (λ! (yas-minor-mode)
               (yas-activate-extra-mode 'latex-mode)))
@@ -419,9 +421,10 @@ Most of the default functions have been stored in my memory, let's turn the dash
          :action org-agenda)
         )
       )
+(add-hook! '+doom-dashboard-mode-hook #'hide-mode-line-mode)
 #+END_SRC
 
-* Windmove
+* Buffer Management
 Switching buffers using C-x o is a major pain, I like my arrow keys, so let's add those options.
 #+BEGIN_SRC emacs-lisp
 (use-package windmove
@@ -443,6 +446,7 @@ Switching buffers using C-x o is a major pain, I like my arrow keys, so let's ad
 # 1. Deleting Mails
 # 2. Delete workspace after closing (when using SPC o m)
 # 3. Colour Formatting?
+# 4. HTML faces consistency depending on the theme (variable-pitch-faces for notmuch)
 # TODO Add the mbsync configuration and notmuch script
 While notmuch is satisfying the reading mails part, I still have to figure out the other basic functionalities, sending, replying, deleting et al.
 
@@ -474,6 +478,16 @@ With new doom update, notmuch hello has turned into a popup buffer which is mild
 (after! notmuch
 (set-popup-rule! "^\\*notmuch-hello" :ignore t))
 (map! :n "SPC o n" 'notmuch)
+(add-hook 'notmuch-hello-refresh-hook
+              (lambda ()
+                (if (and (eq (point) (point-min))
+                         (search-forward "Saved searches:" nil t))
+                    (progn
+                      (forward-line)
+                      (widget-forward 1))
+                  (if (eq (widget-type (widget-at)) 'editable-field)
+                      (beginning-of-line)))))
+
 #+END_SRC
 
 Saved searches needs a personal touch, let's do that.
@@ -493,42 +507,32 @@ Saved searches needs a personal touch, let's do that.
 #+END_SRC
 
 Let's work towards those TODOs, one at a time.
-FIXME Hooks with notmuch arent working properly
+FIXME Hooks with notmuch arent working properly, and look if shr can render images, that'll be insane!
 #+begin_src emacs-lisp
-(add-hook! notmuch-show-mode-hook #'variable-pitch-mode)
+;;FIXME (add-hook! 'notmuch-search-mode-hook #'notmuch-tree-mode)
+(setq mm-text-html-renderer 'shr
+      notmuch-multipart/alternative-discouraged '("text/plain" "multipart/related")
+      shr-use-colors nil
+      gnus-blocked-images nil
+      )
+;; inline images?
+;;(if (not (fboundp 'gnus-blocked-images))
+;;    (defun gnus-blocked-images () nil))
+
+;;FIXME
+(setq notmuch-search-result-format
+      '(("date" . "%12s | ")
+        ("authors" . "%-20s | ")
+        ("subject" . "%-54s")
+        ("tags" . ":%s:")
+        ))
 (after! notmuch
-  (add-hook! notmuch-show-mode-hook #'notmuch-tree-mode)
-  (add-hook! notmuch-search-mode-hook #'notmuch-tree-mode))
+  (setq notmuch-hello-sections
+        '(notmuch-hello-insert-header notmuch-hello-insert-saved-searches notmuch-hello-insert-search notmuch-hello-insert-recent-searches notmuch-hello-insert-alltags notmuch-hello-insert-footer)
+        notmuch-message-headers-visible nil))
+;; add check for if writeroom mode is available
+(add-hook! 'notmuch-show-mode-hook #'writeroom-mode)
 #+end_src
-
-#+RESULTS:
-| notmuch-tree-mode |
-
-* EMMS
-Although I'm not using emms on my current OS, these might prove useful if I decide to ditch ncmpcpp.
-
-#+BEGIN_SRC emacs-lisp
-;;(use-package emms
-;;:ensure t
-;;:config
-;;(require 'emms-setup)
-;;(require 'emms-player-mplayer)
-;;(emms-all)
-;;(setq emms-player-list '(
-;;                         emms-player-mpg321
-;;                         emms-player-ogg123
-;;                         emms-player-mplayer
-;;                         ))
-;;(defun emms-player-mplayer-volume(amount)
-;;  (process-send-string
-;;   emms-player-simple-process-name
-;;   (format "volume %d\n" amount)))
-;;(setq emms-volume-change-function 'emms-player-mplayer-volume)
-;;(setq emms-source-file-default-directory "D:/Music/")
-;;(setq emms-playlist-buffer-name "*Music*")
-;;(emms-add-directory-tree emms-source-file-default-directory)
-;;)
-#+END_SRC
 
 * Languages
 Need to figure this stuff out (WIP)

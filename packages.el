@@ -26,6 +26,8 @@
 ;;(package! theme-magic)
 (package! counsel-spotify)
 (package! telega)
+;;(package! modus-vivendi-theme)
+;;(package! modus-operandi-theme)
 (package! lexic
   :recipe (:host github :repo "tecosaur/lexic"))
 (package! el-secretario
