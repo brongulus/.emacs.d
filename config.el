@@ -94,9 +94,9 @@
                (battery))
   (display-battery-mode 1))
 
-(add-hook 'org-mode-hook 'org-fragtog-mode)
+(add-hook! 'org-mode-hook #'org-fragtog-mode)
 (after! org
-(add-hook! 'org-mode-hook #'writeroom-mode))
+  (add-hook! 'org-mode-hook #'writeroom-mode))
 (add-hook 'org-mode-hook
           (λ! (yas-minor-mode)
               (yas-activate-extra-mode 'latex-mode)))
@@ -112,6 +112,16 @@
 (setq flycheck-global-modes '(not LaTeX-mode latex-mode))
 
 (setq org-preview-latex-default-process 'dvisvgm)
+
+(use-package! org-appear
+  :hook (org-mode . org-appear-mode)
+  :config
+  (setq org-appear-autoemphasis t
+        org-appear-autosubmarkers t
+        org-appear-autolinks nil)
+  ;; for proper first-time setup, `org-appear--set-fragments'
+  ;; needs to be run after other hooks have acted.
+  (run-at-time nil nil #'org-appear--set-fragments))
 
 (setq org-agenda-start-with-log-mode t
       org-log-done t
@@ -171,6 +181,47 @@ This function makes sure that dates are aligned for easy reading."
 
 (setq org-agenda-hidden-separator "‌‌ ")
 
+;; FIXME
+(use-package! appt
+  :defer t
+  :config
+  (appt-activate t)
+
+  (setq appt-message-warning-time 5) ; Show notification 5 minutes before event
+  (setq appt-display-interval appt-message-warning-time) ; Disable multiple reminders
+  (setq appt-display-mode-line nil)
+
+                                        ; Use appointment data from org-mode
+  (defun my-org-agenda-to-appt ()
+    (interactive)
+    (setq appt-time-msg-list nil)
+    (org-agenda-to-appt))
+
+                                        ; (1) ... Update alarms when starting Emacs
+  (my-org-agenda-to-appt)
+
+                                        ; (2) ... Everyday at 12:05am (useful in case you keep Emacs always on)
+  (run-at-time "12:05am" (* 24 3600) 'my-org-agenda-to-appt)
+
+                                        ; (3) ... When TODO.org is saved
+  (add-hook 'after-save-hook
+            '(lambda ()
+               (if (string= (buffer-file-name) (concat (getenv "HOME") "~/Dropbox/org/todo.org"))
+                   (my-org-agenda-to-appt))))
+
+                                        ; Display appointments as a window manager notification
+  (setq appt-disp-window-function 'my-appt-display)
+  (setq appt-delete-window-function (lambda () t))
+
+  (setq my-appt-notification-app "~/appt-notification.sh")
+
+  (defun my-appt-display (min-to-app new-time msg)
+    (if (atom min-to-app)
+        (start-process "my-appt-notification-app" nil my-appt-notification-app min-to-app msg)
+      (dolist (i (number-sequence 0 (1- (length min-to-app))))
+        (start-process "my-appt-notification-app" nil my-appt-notification-app (nth i min-to-app) (nth i msg)))))
+  )
+
 (after! org-capture
   (setq org-capture-templates
         '(("t" "Personal todo" entry
@@ -223,12 +274,14 @@ This function makes sure that dates are aligned for easy reading."
 ;;      :niv "h" #'pdf-annot-add-markup-annotation)
 
 (add-hook 'pdf-view-mode-hook 'pdf-continuous-scroll-mode)
+
 (after! pdf-tools
-  (map! :map pdf-continuous-scroll-map
+  (map! :map pdf-view-mode-map
         ;; "j" nil
         ;; "k" nil
-        :n "j" #'pdf-continuous-scroll-forward
-        :n "k" #'pdf-continuous-scroll-backward))
+        :n "M-j" #'pdf-continuous-scroll-forward
+        :n "M-k" #'pdf-continuous-scroll-backward))
+(add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
 
 (setq fancy-splash-image "~/.doom.d/splash.png")
 (setq +doom-dashboard-menu-sections
@@ -269,74 +322,74 @@ This function makes sure that dates are aligned for easy reading."
 (add-hook 'org-shiftright-final-hook 'windmove-right)
 (setq org-support-shift-select 'always)
 
-(setq +notmuch-sync-backend 'mbsync)
+;;(setq +notmuch-sync-backend 'mbsync)
 (autoload 'notmuch "notmuch" "notmuch mail" t)
 ;; setup the mail address and use name
 (setq mail-user-agent 'message-user-agent)
 (setq user-mail-address "prashantrameshtak@gmail.com"
       user-full-name "Prashant Tak")
 ;; smtp config
-(setq smtpmail-smtp-server "smtp.gmail.com"
-      message-send-mail-function 'message-smtpmail-send-it)
+;;(setq smtpmail-smtp-server "smtp.gmail.com"
+;;      message-send-mail-function 'message-smtpmail-send-it)
 
 ;; report problems with the smtp server
-(setq smtpmail-debug-info t)
+;;(setq smtpmail-debug-info t)
 ;; add Cc and Bcc headers to the message buffer
-(setq message-defNotmault-mail-headers "Cc: \nBcc: \n")
+;;(setq message-defNotmault-mail-headers "Cc: \nBcc: \n")
 ;; postponed message is put in the following draft directory
 (setq message-auto-save-directory "~/.mail/gmail/draft")
-(setq message-kill-buffer-on-exit t)
+;;(setq message-kill-buffer-on-exit t)
 ;; change the directory to store the sent mail
 (setq message-directory "~/.mail/gmail/")
 
-(after! notmuch
-(set-popup-rule! "^\\*notmuch-hello" :ignore t))
+;;(after! notmuch
+;;(set-popup-rule! "^\\*notmuch-hello" :ignore t))
 (map! :n "SPC o n" 'notmuch)
-(add-hook 'notmuch-hello-refresh-hook
-              (lambda ()
-                (if (and (eq (point) (point-min))
-                         (search-forward "Saved searches:" nil t))
-                    (progn
-                      (forward-line)
-                      (widget-forward 1))
-                  (if (eq (widget-type (widget-at)) 'editable-field)
-                      (beginning-of-line)))))
+;;(add-hook 'notmuch-hello-refresh-hook
+;;              (lambda ()
+;;                (if (and (eq (point) (point-min))
+;;                         (search-forward "Saved searches:" nil t))
+;;                    (progn
+;;                     (forward-line)
+;;                      (widget-forward 1))
+;;                  (if (eq (widget-type (widget-at)) 'editable-field)
+;;                      (beginning-of-line)))))
 
-(after! notmuch
-  (setq notmuch-saved-searches
-        '((:name "inbox"    :query "tag:inbox not tag:trash"    :key "i")
-          (:name "personal" :query "tag:personal"               :key "p")
-          (:name "bits"     :query "tag:bits"                   :key "b")
-          (:name "unread"   :query "tag:unread"                 :key "u")
-          (:name "flagged"  :query "tag:flagged"                :key "f")
-          (:name "sent"     :query "tag:sent"                   :key "s")
-          )
-        )
-  )
+;;(after! notmuch
+;;  (setq notmuch-saved-searches
+;;        '((:name "inbox"    :query "tag:inbox not tag:trash"    :key "i")
+;;          (:name "personal" :query "tag:personal"               :key "p")
+;;          (:name "bits"     :query "tag:bits"                   :key "b")
+;;          (:name "unread"   :query "tag:unread"                 :key "u")
+;;          (:name "flagged"  :query "tag:flagged"                :key "f")
+;;          (:name "sent"     :query "tag:sent"                   :key "s")
+;;          )
+;;        )
+;;  )
 
 ;;FIXME (add-hook! 'notmuch-search-mode-hook #'notmuch-tree-mode)
-(setq mm-text-html-renderer 'shr
-      notmuch-multipart/alternative-discouraged '("text/plain" "multipart/related")
-      shr-use-colors nil
-      gnus-blocked-images nil
-      )
+;;(setq mm-text-html-renderer 'shr
+;;      notmuch-multipart/alternative-discouraged '("text/plain" ;;"multipart/related")
+;;      shr-use-colors nil
+;;      gnus-blocked-images nil
+;;      )
 ;; inline images?
 ;;(if (not (fboundp 'gnus-blocked-images))
 ;;    (defun gnus-blocked-images () nil))
 
 ;;FIXME
-(setq notmuch-search-result-format
-      '(("date" . "%12s | ")
-        ("authors" . "%-20s | ")
-        ("subject" . "%-54s")
-        ("tags" . ":%s:")
-        ))
-(after! notmuch
-  (setq notmuch-hello-sections
-        '(notmuch-hello-insert-header notmuch-hello-insert-saved-searches notmuch-hello-insert-search notmuch-hello-insert-recent-searches notmuch-hello-insert-alltags notmuch-hello-insert-footer)
-        notmuch-message-headers-visible nil))
-;; add check for if writeroom mode is available
-(add-hook! 'notmuch-show-mode-hook #'writeroom-mode)
+;;(setq notmuch-search-result-format
+;;      '(("date" . "%12s | ")
+;;        ("authors" . "%-20s | ")
+;;        ("subject" . "%-54s")
+;;        ("tags" . ":%s:")
+;;        ))
+;;(after! notmuch
+;;  (setq notmuch-hello-sections
+;;        '(notmuch-hello-insert-header +notmuch-hello-insert-saved-searches notmuch-hello-insert-search notmuch-hello-insert-recent-searches notmuch-hello-insert-alltags notmuch-hello-insert-footer)
+;;        notmuch-message-headers-visible nil))
+;; Look for alternate methods of centering, writeroom destroys formatting
+;;(add-hook! 'notmuch-show-mode-hook #'writeroom-mode)
 
 ;;(after! cc-mode
 ;;  (set-company-backend! 'c-mode

@@ -26,6 +26,8 @@
 ;;(package! theme-magic)
 (package! counsel-spotify)
 (package! telega)
+(package! weblorg)
+(package! nov)
 ;;(package! modus-vivendi-theme)
 ;;(package! modus-operandi-theme)
 (package! lexic
@@ -34,10 +36,16 @@
   :recipe (:host github :repo "zetagon/el-secretario"))
 (package! org-ql)
 (package! lsp-julia :recipe (:host github :repo "non-jedi/lsp-julia"))
+(package! org-appear
+  :recipe (:host github :repo "awth13/org-appear"))
 ;; FIXME
 (package! pdf-continuous-scroll-mode
   :recipe (:host github :repo "dalanicolai/pdf-continuous-scroll-mode.el"))
-
+;; If I end up testing gccemacs
+;;(package! webkit
+;;  :recipe (:type git :host github :repo "akirakyle/emacs-webkit"
+;;           :branch "main" :files (:defaults "*.js" "*.css" "*.so")
+;;           :pre-build ("make")))
 
 ;; To install a package directly from a remote git repo, you must specify a
 ;; `:recipe'. You'll find documentation on what `:recipe' accepts here:
