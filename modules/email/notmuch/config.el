@@ -1,7 +1,9 @@
 ;;; email/notmuch/config.el -*- lexical-binding: t; -*-
 
-(defvar +notmuch-sync-backend 'mbsync)
+(defvar +notmuch-sync-backend 'mbsync
+  "Backend to use; ifflineimap, mbsync or nil")
 
+;; TODO shift it to a case basis in config section
 (defvar +notmuch-sync-command nil)
 
 (defvar +notmuch-mail-folder "~/.mail/")
@@ -21,6 +23,8 @@
 
   (set-popup-rule! "^\\*notmuch-hello" :ignore t)
 
+  (set-evil-initial-state! '(notmuch-show-mode notmuch-tree-mode notmuch-search-mode) 'insert)
+
   (setq notmuch-fcc-dirs nil
         ;;  might change this
         notmuch-show-logo nil
@@ -32,12 +36,13 @@
         message-send-mail-function 'message-smtpmail-send-it
         smtpmail-debug-info t
         ;; html stuff
-        mm-text-html-renderer 'shr
+        mm-text-html-renderer 'gnus-w3m
         notmuch-multipart/alternative-discouraged
         '("text/plain" "multipart/related")
         shr-use-colors nil
+        notmuch-show-text/html-blocked-images nil ;; add maximum width so that images arent bloated
         gnus-blocked-images nil ;; not needed maybe
-        ;; search results
+        ;; search results TODO convert to tree format and fix the stuff with subject
 ;;        notmuch-search-result-format
 ;;        '(("date" . "%12s | ")
 ;;          ("authors" . "%-20s | ")
@@ -59,9 +64,12 @@
         notmuch-tag-formats
         '(("unread" (propertize tag 'face 'notmuch-tag-unread)))
         notmuch-archive-tags '("-inbox" "-unread")
+        notmuch-tree-show-out t
         )
 
   ;; hooks
+  ;; notmuch-show-command-hook
+  ;; notmuch-start-notmuch-sentinel
 
   (add-hook 'doom-real-buffer-functions #'notmuch-interesting-buffer)
 
@@ -81,6 +89,15 @@
              #'hide-mode-line-mode)
 
   (add-hook! 'notmuch-search-hook #'notmuch-tree-from-search-current-query)
+
+  (add-hook! 'notmuch-show-hook #'variable-pitch-mode #'writeroom-mode)
+  ;; TEST setup
+
+;;  (setq notmuch-show-insert-text/plain-hook
+;;  '(notmuch-wash-wrap-long-lines
+;;    notmuch-wash-tidy-citations
+;;    notmuch-wash-elide-blank-lines
+;;    notmuch-wash-excerpt-citations)
 
   ;; FIXME mappings
 

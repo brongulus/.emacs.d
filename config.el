@@ -111,6 +111,13 @@
 
 (setq flycheck-global-modes '(not LaTeX-mode latex-mode))
 
+(use-package graphviz-dot-mode
+  :ensure t
+  :config
+  (setq graphviz-dot-indent-width 4))
+
+(use-package company-graphviz-dot
+  )
 (setq org-preview-latex-default-process 'dvisvgm)
 
 (use-package! org-appear
@@ -181,35 +188,34 @@ This function makes sure that dates are aligned for easy reading."
 
 (setq org-agenda-hidden-separator "‌‌ ")
 
-;; FIXME
 (use-package! appt
-  :defer t
+  :defer-incrementally t
   :config
+
   (appt-activate t)
 
-  (setq appt-message-warning-time 5) ; Show notification 5 minutes before event
-  (setq appt-display-interval appt-message-warning-time) ; Disable multiple reminders
-  (setq appt-display-mode-line nil)
-
-                                        ; Use appointment data from org-mode
+  ;; use appointment data from org-mode
   (defun my-org-agenda-to-appt ()
     (interactive)
     (setq appt-time-msg-list nil)
     (org-agenda-to-appt))
 
-                                        ; (1) ... Update alarms when starting Emacs
-  (my-org-agenda-to-appt)
+  (setq appt-message-warning-time 5) ; Show notification 5 minutes before event
+  (setq appt-display-interval appt-message-warning-time) ; Disable multiple reminders
+  (setq appt-display-mode-line nil)
 
-                                        ; (2) ... Everyday at 12:05am (useful in case you keep Emacs always on)
+  ;; update alarms when starting emacs
+  (my-org-agenda-to-appt)
+  ;; (2) ... Everyday at 12:05am (useful in case you keep Emacs always on)
   (run-at-time "12:05am" (* 24 3600) 'my-org-agenda-to-appt)
 
-                                        ; (3) ... When TODO.org is saved
+  ;; (3) ... When TODO.org is saved
   (add-hook 'after-save-hook
             '(lambda ()
                (if (string= (buffer-file-name) (concat (getenv "HOME") "~/Dropbox/org/todo.org"))
                    (my-org-agenda-to-appt))))
 
-                                        ; Display appointments as a window manager notification
+  ;; TODO Display appointments as a window manager notification (incorporate the script within elisp)
   (setq appt-disp-window-function 'my-appt-display)
   (setq appt-delete-window-function (lambda () t))
 
@@ -260,7 +266,10 @@ This function makes sure that dates are aligned for easy reading."
 (after! elfeed
   (map! :n "u" #'elfeed-update))
 
-(add-hook! 'pocket-reader-mode-hook 'evil-insert-state)
+;; FIXME
+(after! pocket-reader
+  (set-evil-initial-state! 'pocket-reader-mode
+    'insert))
 (setq pocket-reader-open-url-default-function #'eww
       pocket-reader-pop-to-url-default-function #'eww)
 

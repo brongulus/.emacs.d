@@ -28,6 +28,7 @@
 (package! telega)
 (package! weblorg)
 (package! nov)
+(package! graphviz-dot-mode)
 ;;(package! modus-vivendi-theme)
 ;;(package! modus-operandi-theme)
 (package! lexic

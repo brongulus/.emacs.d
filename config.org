@@ -239,6 +239,13 @@ Flycheck annoys whenever I have to export to pdf, let's disable it for tex files
 For plotting graphs, one needs tikz and pfgplots. let's enable them by default, also preview of tikz graphs would be cool too.
 
 #+BEGIN_SRC emacs-lisp
+(use-package graphviz-dot-mode
+  :ensure t
+  :config
+  (setq graphviz-dot-indent-width 4))
+
+(use-package company-graphviz-dot
+  )
 (setq org-preview-latex-default-process 'dvisvgm)
 #+END_SRC
 
@@ -320,39 +327,37 @@ This function makes sure that dates are aligned for easy reading."
 
 #+end_src
 
-# FIXME Refactor using use-package doesn't work after that xD
 Notifications for Agenda
 
 #+begin_src emacs-lisp
-;; FIXME
 (use-package! appt
-  :defer t
+  :defer-incrementally t
   :config
+
   (appt-activate t)
 
-  (setq appt-message-warning-time 5) ; Show notification 5 minutes before event
-  (setq appt-display-interval appt-message-warning-time) ; Disable multiple reminders
-  (setq appt-display-mode-line nil)
-
-                                        ; Use appointment data from org-mode
+  ;; use appointment data from org-mode
   (defun my-org-agenda-to-appt ()
     (interactive)
     (setq appt-time-msg-list nil)
     (org-agenda-to-appt))
 
-                                        ; (1) ... Update alarms when starting Emacs
-  (my-org-agenda-to-appt)
+  (setq appt-message-warning-time 5) ; Show notification 5 minutes before event
+  (setq appt-display-interval appt-message-warning-time) ; Disable multiple reminders
+  (setq appt-display-mode-line nil)
 
-                                        ; (2) ... Everyday at 12:05am (useful in case you keep Emacs always on)
+  ;; update alarms when starting emacs
+  (my-org-agenda-to-appt)
+  ;; (2) ... Everyday at 12:05am (useful in case you keep Emacs always on)
   (run-at-time "12:05am" (* 24 3600) 'my-org-agenda-to-appt)
 
-                                        ; (3) ... When TODO.org is saved
+  ;; (3) ... When TODO.org is saved
   (add-hook 'after-save-hook
             '(lambda ()
                (if (string= (buffer-file-name) (concat (getenv "HOME") "~/Dropbox/org/todo.org"))
                    (my-org-agenda-to-appt))))
 
-                                        ; Display appointments as a window manager notification
+  ;; TODO Display appointments as a window manager notification (incorporate the script within elisp)
   (setq appt-disp-window-function 'my-appt-display)
   (setq appt-delete-window-function (lambda () t))
 
@@ -366,11 +371,12 @@ Notifications for Agenda
   )
 #+end_src
 
-Agenda widget
+TODO Agenda widget
 
 ** Capture
-Org capture template needs a personal touch.
 
+Org capture template needs a personal touch.
+TODO Add better templates for notes and journal.
 #+begin_src emacs-lisp
 (after! org-capture
   (setq org-capture-templates
@@ -418,10 +424,14 @@ I need to add shortcuts for update functions and reference to the org file, also
 Pocket reader has some issues with pandoc meddling in its affairs, let's set it straight.
 
 #+begin_src emacs-lisp
-(add-hook! 'pocket-reader-mode-hook 'evil-insert-state)
+;; FIXME
+(after! pocket-reader
+  (set-evil-initial-state! 'pocket-reader-mode
+    'insert))
 (setq pocket-reader-open-url-default-function #'eww
       pocket-reader-pop-to-url-default-function #'eww)
 #+end_src
+
 
 * PDF-Mode
 Need to fix the continuous scrolling package issue and add more shortcuts for general functions (maybe I should make a separate file for shortcuts, or learn about hydras :p)
