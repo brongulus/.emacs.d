@@ -18,6 +18,7 @@
 ;; [ ] Fix opening links
 ;; [ ] Remap Move buffer to workspace C-c RET to s-shift-X
 ;; [X] Fix Dunst notification spam
+;; [ ] Add support for polybar under a flag
 
 ;;(eshell-command "setq stringvar $XDG_CURRENT_DESKTOP")
 ;;(if (string= stringvar "EXWM")
@@ -35,6 +36,7 @@
           (3 "III")
           (4 "IV")))
 
+      ;;; Display Configurations
       (require 'exwm-randr)
       (setq exwm-randr-workspace-monitor-plist '(0 "DP-4"))
       (add-hook 'exwm-randr-screen-change-hook
@@ -43,7 +45,20 @@
                    "xrandr" nil "xrandr --output DP-4 --mode 1920x1080 --pos 0x0 --rotate normal")))
       (exwm-randr-enable)
 
-      ;; systemtray
+      (start-process-shell-command "feh" nil "feh --bg-scale ~/Pictures/scenery.png")
+
+      (start-process-shell-command "picom" nil "picom")
+
+      ;; Fix for ivy posframe bing covered by X windows
+      (after! ivy-posframe
+      (setq ivy-posframe-parameters '((parent-frame nil)))
+      )
+
+      ;; Hide modeline on X windows
+      (add-hook 'exwm-manage-finish-hook #'hide-mode-line-mode)
+
+
+      ;;; Systemtray
       (require 'exwm-systemtray)
       (exwm-systemtray-enable)
       (server-start)
@@ -57,7 +72,7 @@
 
       ;; Window split on new buffer
 
-      ;; Keybindings
+      ;;; Keybindings
       (setq exwm-input-global-keys
             `(
               ;; Open app launcher
@@ -93,7 +108,11 @@
               ([s-left] . windmove-left)
               ([s-up] . windmove-up)
               ([s-down] . windmove-down)
-              ([?\s-f] . doom/window-enlargen)
+              ([C-s-left] . windmove-swap-states-left)
+              ([C-s-right] . windmove-swap-states-right)
+              ([C-s-up] . windmove-swap-states-up)
+              ([C-s-down] . windmove-swap-states-down)
+              ([?\s-f] . exwm-layout-toggle-fullscreen)
               ([?\s-q] . kill-this-buffer)
               ;;([s-SPC] . exwm-floating-toggle-floating)
 

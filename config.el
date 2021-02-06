@@ -86,13 +86,28 @@
 (lambda ()
 (hl-line-mode -1)))
 
+(doom/set-frame-opacity 90)
+(add-hook! 'writeroom-mode-hook
+  (doom/set-frame-opacity (if writeroom-mode 90 100)))
+
 (setq auth-sources '("/home/prashant/.authinfo" "/home/prashant/.emacs.d/.local/etc/authinfo.gpg" "~/.authinfo.gpg"))
+
+(remove-hook! doom-modeline-mode-hook #'size-indication-mode
+  #'column-number-mode)
+
+(setq doom-modeline-buffer-encoding nil
+      doom-modeline-project-detection 'project)
+;; displaying useful information
+(setq appt-display-mode-line t
+      global-mode-string '("" display-time-string appt-mode-string))
 
 (display-time-mode 1)
 
 (unless (equal "Battery status not available"
                (battery))
   (display-battery-mode 1))
+
+(add-hook! 'Info-mode-hook #'hide-mode-line-mode)
 
 (add-hook! 'org-mode-hook #'org-fragtog-mode)
 (after! org
@@ -399,6 +414,16 @@ This function makes sure that dates are aligned for easy reading."
 ;;        notmuch-message-headers-visible nil))
 ;; Look for alternate methods of centering, writeroom destroys formatting
 ;;(add-hook! 'notmuch-show-mode-hook #'writeroom-mode)
+
+(setq projectile-project-root "/mnt/Documents/code/codeforces"
+      lsp-file-watch-threshold 2000)
+(after! c++-mode
+  ;; Disable naive completion of angle brackets <>
+  (sp-local-pair 'c++-mode "<" ">" :actions :rem)
+  ;; Disable built-in "smart" completion of tags
+  (map! :map c++-mode-map
+        "<" nil
+        ">" nil))
 
 ;;(after! cc-mode
 ;;  (set-company-backend! 'c-mode

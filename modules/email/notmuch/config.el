@@ -31,27 +31,40 @@
         notmuch-message-headers-visible nil
         notmuch-search-oldest-first nil
         message-defNotmault-mail-headers "Cc: \nBcc: \n"
+
         ;;  smtp
         smtpmail-smtp-server "smtp.gmail.com"
         message-send-mail-function 'message-smtpmail-send-it
         smtpmail-debug-info t
-        ;; html stuff
+
+        ;; html stuff TODO add different colour for links for improved visibility
         mm-text-html-renderer 'gnus-w3m
         notmuch-multipart/alternative-discouraged
         '("text/plain" "multipart/related")
-        shr-use-colors nil
-        notmuch-show-text/html-blocked-images nil ;; add maximum width so that images arent bloated
-        gnus-blocked-images nil ;; not needed maybe
+        notmuch-show-text/html-blocked-images nil
+        gnus-max-image-proportion 0.7
+        ;;shr-use-colors nil
+        ;;gnus-blocked-images nil ;; not needed maybe
+
         ;; search results TODO convert to tree format and fix the stuff with subject
 ;;        notmuch-search-result-format
 ;;        '(("date" . "%12s | ")
 ;;          ("authors" . "%-20s | ")
 ;;          ("subject" . "%-54s")
 ;;          ("tags" . ":%s:"))
+        notmuch-tree-result-format
+        '(("date" . "%12s  ")
+         ("authors" . "%-20s")
+         ((("tree" . "%s")
+           ("subject" . "%s"))
+          . " %-120s ") ;;-54s
+         ("tags" . "(%s)"))
+
         notmuch-hello-sections
-        '(notmuch-hello-insert-header +notmuch-hello-insert-saved-searches
+        '(notmuch-hello-insert-header notmuch-hello-insert-saved-searches
         notmuch-hello-insert-search notmuch-hello-insert-recent-searches
         notmuch-hello-insert-alltags notmuch-hello-insert-footer)
+
         ;;  tags
         notmuch-saved-searches
         '((:name "inbox"    :query "tag:inbox not tag:trash"    :key "i")
@@ -68,8 +81,6 @@
         )
 
   ;; hooks
-  ;; notmuch-show-command-hook
-  ;; notmuch-start-notmuch-sentinel
 
   (add-hook 'doom-real-buffer-functions #'notmuch-interesting-buffer)
 

@@ -174,6 +174,14 @@ Remove highlighting
 (hl-line-mode -1)))
 #+end_src
 
+Set opacity
+
+#+begin_src emacs-lisp
+(doom/set-frame-opacity 90)
+(add-hook! 'writeroom-mode-hook
+  (doom/set-frame-opacity (if writeroom-mode 90 100)))
+#+end_src
+
 * Authentication
 This is a major WIP since my knowledge with gpg is extremely limited.
 
@@ -185,14 +193,23 @@ This is a major WIP since my knowledge with gpg is extremely limited.
 Modeline has lots of unnecessary information, let's remove that, also let's display battery and time.
 
 #+BEGIN_SRC emacs-lisp
+(remove-hook! doom-modeline-mode-hook #'size-indication-mode
+  #'column-number-mode)
+
+(setq doom-modeline-buffer-encoding nil
+      doom-modeline-project-detection 'project)
+;; displaying useful information
+(setq appt-display-mode-line t
+      global-mode-string '("" display-time-string appt-mode-string))
 
 (display-time-mode 1)
 
 (unless (equal "Battery status not available"
                (battery))
   (display-battery-mode 1))
-#+END_SRC
 
+(add-hook! 'Info-mode-hook #'hide-mode-line-mode)
+#+END_SRC
 * LSP
 I've yet to look more into the different speed-up and configuration options related to LSP but these are some basics that I yanked off the discord.
 
@@ -373,7 +390,7 @@ Notifications for Agenda
 
 TODO Agenda widget
 
-** Capture
+** TODO Capture
 
 Org capture template needs a personal touch.
 TODO Add better templates for notes and journal.
@@ -431,7 +448,6 @@ Pocket reader has some issues with pandoc meddling in its affairs, let's set it 
 (setq pocket-reader-open-url-default-function #'eww
       pocket-reader-pop-to-url-default-function #'eww)
 #+end_src
-
 
 * PDF-Mode
 Need to fix the continuous scrolling package issue and add more shortcuts for general functions (maybe I should make a separate file for shortcuts, or learn about hydras :p)
@@ -609,10 +625,20 @@ FIXME Consistency while opening mails, for future work look into org-mime for ht
 ;;(add-hook! 'notmuch-show-mode-hook #'writeroom-mode)
 #+end_src
 
-* Languages
+* Code
 Need to figure this stuff out (WIP)
 
 #+BEGIN_SRC emacs-lisp
+(setq projectile-project-root "/mnt/Documents/code/codeforces"
+      lsp-file-watch-threshold 2000)
+(after! c++-mode
+  ;; Disable naive completion of angle brackets <>
+  (sp-local-pair 'c++-mode "<" ">" :actions :rem)
+  ;; Disable built-in "smart" completion of tags
+  (map! :map c++-mode-map
+        "<" nil
+        ">" nil))
+
 ;;(after! cc-mode
 ;;  (set-company-backend! 'c-mode
 ;;    '(:separate company-irony-c-headers company-irony)))

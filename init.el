@@ -22,7 +22,7 @@
        company ; the ultimate code completion backend
        ;;helm              ; the *other* search engine for love and life
        ;;ido               ; the other *other* search engine...
-       (ivy +prescient +icons)                              ; a search engine for love and life
+       (ivy +prescient +icons +childframe)                              ; a search engine for love and life
 
        :ui
        ;;deft              ; notational velocity for Emacs
@@ -104,7 +104,7 @@
 
        :os
        ;;(:cond ((string= (getenv "XDG_CURRENT_DESKTOP") "EXWM")
-;;               exwm
+       exwm
          ;;      ))
 
        :lang
@@ -175,7 +175,7 @@
        ;;irc               ; how neckbeards socialize
        (rss +org)                       ; emacs as an RSS reader
        twitter           ; twitter client https://twitter.com/vnought
-       torrent
+       torrent             ; private module
 
        :config
        literate

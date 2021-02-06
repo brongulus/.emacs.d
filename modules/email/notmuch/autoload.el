@@ -1,8 +1,5 @@
 ;;; email/notmuch/autoload.el -*- lexical-binding: t; -*-
 
-;; advice
-;; FIXME
-(advice-add notmuch-tree-show-out :after #'other-window)
 
 ;;;###autoload
 (defun +notmuch-hello-insert-saved-searches ()
@@ -15,11 +12,16 @@
 		   :show-empty-searches notmuch-show-empty-saved-searches)))
     (when searches
       (widget-insert "Saved searches: ")
-      ;;(widget-create 'push-button
-		;;     :notify (lambda (&rest ignore)
-		;;	       (customize-variable 'notmuch-saved-searches))
-		;;     "edit")
+      (widget-create 'push-button
+		     :notify (lambda (&rest ignore)
+			       (customize-variable 'notmuch-saved-searches))
+		     "edit")
       (widget-insert "\n\n")
       (let ((start (point)))
 	(notmuch-hello-insert-buttons searches)
 	(indent-rigidly start (point) notmuch-hello-indent)))))
+
+;; TODO add an unread count in modeline
+
+(defvar notmuch-unread-string "")
+(defvar notmuch-unread-mail-count nil)
