@@ -18,6 +18,8 @@
     (add-to-list 'org-modules 'ol-notmuch))
   :config
 
+;;  (pixel-scroll-mode)
+
   (set-company-backend! 'notmuch-message-mode
     'notmuch-company '(company-ispell company-yasnippet))
 
@@ -31,6 +33,7 @@
         notmuch-message-headers-visible nil
         notmuch-search-oldest-first nil
         message-defNotmault-mail-headers "Cc: \nBcc: \n"
+        message-kill-buffer-on-exit t
 
         ;;  smtp
         smtpmail-smtp-server "smtp.gmail.com"
@@ -45,6 +48,12 @@
         gnus-max-image-proportion 0.7
         ;;shr-use-colors nil
         ;;gnus-blocked-images nil ;; not needed maybe
+
+        ;; Image hacks
+        pixel-resolution-fine-flag t
+        mouse-wheel-progressive-speed nil
+;;        mouse-wheel-scroll-amount '(1 ((shift) . 1))
+        mouse-wheel-follow-mouse 't
 
         ;; search results TODO convert to tree format and fix the stuff with subject
 ;;        notmuch-search-result-format
@@ -101,7 +110,7 @@
 
   (add-hook! 'notmuch-search-hook #'notmuch-tree-from-search-current-query)
 
-  (add-hook! 'notmuch-show-hook #'variable-pitch-mode #'writeroom-mode)
+  (add-hook! 'notmuch-show-hook #'variable-pitch-mode #'writeroom-mode #'iscroll-mode)
   ;; TEST setup
 
 ;;  (setq notmuch-show-insert-text/plain-hook

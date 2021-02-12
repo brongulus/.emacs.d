@@ -18,6 +18,8 @@
 (package! pocket-reader)
 (package! geiser)
 (package! elvish-mode)
+(package! guix)
+(package! iscroll)
 (package! rainbow-mode)
 ;;(package! djvu)
 (package! info-colors)

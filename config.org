@@ -61,7 +61,7 @@ To avoid the issue of reproducing your customize options.
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
- doom-font (font-spec :family "JetBrains Mono" :size 18) ;Nerd Font Mono
+ doom-font  (font-spec :family "JetBrains Mono" :size 18);Nerd Font Mono
  doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
  doom-theme 'doom-dracula
@@ -85,13 +85,6 @@ Disable background in emacs when opening terminal mode.
 
 #+BEGIN_SRC emacs-lisp
 (custom-set-faces! '(default :background nil))    
-#+END_SRC
-
-Highlighting the new buffer when you open one should be the default, let's make it that way.
-
-#+BEGIN_SRC emacs-lisp
-(setq evil-split-window-below t
-      evil-vsplit-window-right t)
 #+END_SRC
 
 Add some highlighting to woman pages
@@ -257,7 +250,6 @@ For plotting graphs, one needs tikz and pfgplots. let's enable them by default, 
 
 #+BEGIN_SRC emacs-lisp
 (use-package graphviz-dot-mode
-  :ensure t
   :config
   (setq graphviz-dot-indent-width 4))
 
@@ -274,7 +266,7 @@ Org-appear is a nice package that allows for visibility improvements in org file
   :config
   (setq org-appear-autoemphasis t
         org-appear-autosubmarkers t
-        org-appear-autolinks nil)
+        org-appear-autolinks t)
   ;; for proper first-time setup, `org-appear--set-fragments'
   ;; needs to be run after other hooks have acted.
   (run-at-time nil nil #'org-appear--set-fragments))
@@ -426,6 +418,7 @@ TODO Add better templates for notes and journal.
 I need to add shortcuts for update functions and reference to the org file, also need to fix the database update issue.
 
 #+BEGIN_SRC emacs-lisp
+(setq rmh-elfeed-org-files '("~/.doom.d/elfeed.org"))
 (after! elfeed
   (setq elfeed-search-filter "@2-month-ago"))
 (defun =elfeed ()
@@ -530,6 +523,34 @@ Switching buffers using C-x o is a major pain, I like my arrow keys, so let's ad
 (setq org-support-shift-select 'always)
 #+END_SRC
 
+Highlighting the new buffer when you open one should be the default, let's make it that way.
+#+begin_src emacs-lisp
+(setq evil-split-window-below t
+      evil-vsplit-window-right t)
+#+end_src
+
+FIXME Window Configurations
+#+begin_src emacs-lisp
+  (setq display-buffer-alist
+   '(("\\*\\(e?shell\\|doom:vterm-popup:#.\\)\\*"
+      (display-buffer-in-side-window)
+      (window-height . 0.25)
+      (side . bottom)
+      (slot . -1))
+     ("\\*\\(Backtrace\\|Warnings\\|Compile-log\\|[Hh]elp\\|Messages\\)\\*"
+      (display-buffer-in-side-window)
+      (window-height . 0.25)
+      (side . bottom)
+      (slot . 0))
+     ("\\*Faces\\*"
+      (display-buffer-in-side-window)
+      (window-height . 0.25)
+      (side . bottom)
+      (slot . 1))
+     )
+   )
+#+end_src
+
 * TODO Mail
 # TODO  Improve notmuch module
 # 1. Deleting Mails
@@ -629,8 +650,7 @@ FIXME Consistency while opening mails, for future work look into org-mime for ht
 Need to figure this stuff out (WIP)
 
 #+BEGIN_SRC emacs-lisp
-(setq projectile-project-root "/mnt/Documents/code/codeforces"
-      lsp-file-watch-threshold 2000)
+(setq lsp-file-watch-threshold 2000)
 (after! c++-mode
   ;; Disable naive completion of angle brackets <>
   (sp-local-pair 'c++-mode "<" ">" :actions :rem)
@@ -756,57 +776,3 @@ This is a trial run for a package.
   )
 
 #+END_SRC
-
-* xwidget
-Let's try enabling xwidget browser support inside emacs
-
-#+begin_src emacs-lisp
-(require 'xwidget)
-
-(when
-    (featurep 'xwidget-internal)
-  (easy-menu-define my-xwidget-tools-menu nil "Menu for Xwidget Webkit."
-    `("Xwidget Webkit" :visible
-      (featurep 'xwidget-internal)
-      ["Browse Url ..." xwidget-webkit-browse-url :help "Ask xwidget-webkit to browse URL"]
-      ["End Edit Textarea" xwidget-webkit-end-edit-textarea :help "End editing of a webkit text area"]))
-  (easy-menu-add-item menu-bar-tools-menu nil my-xwidget-tools-menu 'separator-net)
-  (easy-menu-define my-xwidget-menu xwidget-webkit-mode-map "Menu for Xwidget Webkit."
-    '("Xwidget Webkit"
-      ["Browse Url" xwidget-webkit-browse-url :help "Ask xwidget-webkit to browse URL"]
-      ["Reload" xwidget-webkit-reload :help "Reload current url"]
-      ["Back" xwidget-webkit-back :help "Go back in history"]
-      "--"
-      ["Insert String" xwidget-webkit-insert-string :help "current webkit widget"]
-      ["End Edit Textarea" xwidget-webkit-end-edit-textarea :help "End editing of a webkit text area"]
-      "--"
-      ["Scroll Forward" xwidget-webkit-scroll-forward :help "Scroll webkit forwards"]
-      ["Scroll Backward" xwidget-webkit-scroll-backward :help "Scroll webkit backwards"]
-      "--"
-      ["Scroll Up" xwidget-webkit-scroll-up :help "Scroll webkit up"]
-      ["Scroll Down" xwidget-webkit-scroll-down :help "Scroll webkit down"]
-      "--"
-      ["Scroll Top" xwidget-webkit-scroll-top :help "Scroll webkit to the very top"]
-      ["Scroll Bottom" xwidget-webkit-scroll-bottom :help "Scroll webkit to the very bottom"]
-      "--"
-      ["Zoom In" xwidget-webkit-zoom-in :help "Increase webkit view zoom factor"]
-      ["Zoom Out" xwidget-webkit-zoom-out :help "Decrease webkit view zoom factor"]
-      "--"
-      ["Fit Width" xwidget-webkit-fit-width :help "Adjust width of webkit to window width"]
-      ["Adjust Size" xwidget-webkit-adjust-size :help "Manually set webkit size to width W, height H"]
-      ["Adjust Size Dispatch" xwidget-webkit-adjust-size-dispatch :help "Adjust size according to mode"]
-      ["Adjust Size To Content" xwidget-webkit-adjust-size-to-content :help "Adjust webkit to content size"]
-      "--"
-      ["Copy Selection As Kill" xwidget-webkit-copy-selection-as-kill :help "Get the webkit selection and put it on the kill-ring"]
-      ["Current Url" xwidget-webkit-current-url :help "Get the webkit url and place it on the kill-ring"]
-      "--"
-      ["Show Element" xwidget-webkit-show-element :help "Make webkit xwidget XW show a named element ELEMENT-SELECTOR"]
-      ["Show Id Element" xwidget-webkit-show-id-element :help "Make webkit xwidget XW show an id-element ELEMENT-ID"]
-      ["Show Id Or Named Element" xwidget-webkit-show-id-or-named-element :help "Make webkit xwidget XW show a name or element id ELEMENT-ID"]
-      ["Show Named Element" xwidget-webkit-show-named-element :help "Make webkit xwidget XW show a named element ELEMENT-NAME"]
-      "--"
-      ["Cleanup" xwidget-cleanup :help "Delete zombie xwidgets"]
-      ["Event Handler" xwidget-event-handler :help "Receive xwidget event"]
-      "--"
-      ["Xwidget Webkit Mode" xwidget-webkit-mode :style toggle :selected xwidget-webkit-mode :help "Xwidget webkit view mode"])))
-#+end_src

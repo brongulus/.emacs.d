@@ -22,7 +22,18 @@
 
 ;;(eshell-command "setq stringvar $XDG_CURRENT_DESKTOP")
 ;;(if (string= stringvar "EXWM")
-    (use-package exwm
+
+(when (get-buffer "*window-manager*")
+  (kill-buffer "*window-manager*"))
+(when (get-buffer "*window-manager-error*")
+  (kill-buffer "*window-manager-error*"))
+(when (executable-find "wmctrl")
+  (shell-command "wmctrl -m ; echo $?" "*window-manager*" "*window-manager-error*"))
+
+
+  (when (and (get-buffer "*window-manager-error*")
+             (eq window-system 'x))
+(use-package exwm
       :config
 
       (require 'exwm-config)
@@ -45,9 +56,10 @@
                    "xrandr" nil "xrandr --output DP-4 --mode 1920x1080 --pos 0x0 --rotate normal")))
       (exwm-randr-enable)
 
+      ;;startup process
       (start-process-shell-command "feh" nil "feh --bg-scale ~/Pictures/scenery.png")
-
       (start-process-shell-command "picom" nil "picom")
+      (start-process-shell-command "gnome-authentication" nil "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
 
       ;; Fix for ivy posframe bing covered by X windows
       (after! ivy-posframe
@@ -88,7 +100,7 @@
                           (eshell-command "start-process-shell-command discord nil discord")))
               ([s-return] . (lambda ()
                               (interactive)
-                              (eshell-command "kitty > /dev/null")))
+                              (eshell-command "urxvt > /dev/null")))
               ;; Take screenshots (saved in pwd)
               ([print] . (lambda ()
                            (interactive)
@@ -114,11 +126,13 @@
               ([C-s-down] . windmove-swap-states-down)
               ([?\s-f] . exwm-layout-toggle-fullscreen)
               ([?\s-q] . kill-this-buffer)
-              ;;([s-SPC] . exwm-floating-toggle-floating)
+   ;;           ([s-space] . exwm-floating-toggle-floating)
 
               ;; TODO Add window split shortcuts, and possibly improve it
               ;; 's-r': Reset (to line-mode).
               ([?\s-r] . exwm-reset)
+              ;; 's-c': Switch to char-mode
+              ([?\s-c] . exwm-input-release-keyboard)
               ;; 's-w': Switch workspace.
               ([?\s-w] . exwm-workspace-switch)
               ;; 's-&': Launch application.
@@ -136,6 +150,7 @@
             )
 
       )
+)
 ;;  nil
 ;;  )
 
