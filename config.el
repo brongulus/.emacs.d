@@ -346,24 +346,24 @@ This function makes sure that dates are aligned for easy reading."
 (setq evil-split-window-below t
       evil-vsplit-window-right t)
 
-  (setq display-buffer-alist
-   '(("\\*\\(e?shell\\|doom:vterm-popup:#.\\)\\*"
-      (display-buffer-in-side-window)
-      (window-height . 0.25)
-      (side . bottom)
-      (slot . -1))
-     ("\\*\\(Backtrace\\|Warnings\\|Compile-log\\|[Hh]elp\\|Messages\\)\\*"
-      (display-buffer-in-side-window)
-      (window-height . 0.25)
-      (side . bottom)
-      (slot . 0))
-     ("\\*Faces\\*"
-      (display-buffer-in-side-window)
-      (window-height . 0.25)
-      (side . bottom)
-      (slot . 1))
-     )
+(setq display-buffer-alist
+ '(("\\*\\(e?shell\\|doom:vterm-popup:#.\\)\\*"
+    (display-buffer-in-side-window)
+    (window-height . 0.25)
+    (side . bottom)
+    (slot . -1))
+   ("\\*\\(Backtrace\\|Warnings\\|Compile-log\\|[Hh]elp\\|Messages\\)\\*"
+    (display-buffer-in-side-window)
+    (window-height . 0.25)
+    (side . bottom)
+    (slot . 0))
+   ("\\*Faces\\*"
+    (display-buffer-in-side-window)
+    (window-height . 0.25)
+    (side . bottom)
+    (slot . 1))
    )
+ )
 
 ;;(setq +notmuch-sync-backend 'mbsync)
 (autoload 'notmuch "notmuch" "notmuch mail" t)
@@ -491,10 +491,6 @@ This function makes sure that dates are aligned for easy reading."
 
 ;;(load! "~/.emacs.d/elegant-emacs/sanity")
 ;;(load! "~/.emacs.d/elegant-emacs/elegance")
-
-(setq counsel-spotify-client-id "d9d7e317a9b344a886d71643341cb796"
-      counsel-spotify-client-secret "6e91aa96e0c1451ab8ad0da705983082"
-      )
 
 (map! :n "SPC a t" #'counsel-spotify-toggle-play-pause
       :n "SPC a <" #'counsel-spotify-previous
