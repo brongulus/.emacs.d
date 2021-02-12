@@ -9,6 +9,8 @@
 *** [[http://lars.ingebrigtsen.no/][Random Thoughts]]
 *** [[https://www.hamvocke.com/feed.xml][Ham Vocke]]
 *** [[https://ag91.github.io/rss.xml][When Parallels Cross]]
+*** [[https://www.murilopereira.com/index.xml][mpereira]]
+*** [[https://ambrevar.xyz/atom.xml][Ambrevar]]
 ** Random :code:
 *** entry-title: \(code\)
 *** [[http://reasonablypolymorphic.com/][Reasonably Polymorphic]]
