@@ -20,13 +20,14 @@
 (package! elvish-mode)
 (package! guix)
 (package! iscroll)
+(package! texfrag)
 (package! rainbow-mode)
 ;;(package! djvu)
 (package! info-colors)
 (package! systemd)
 (package! emms)
 ;;(package! theme-magic)
-(package! counsel-spotify)
+;;(package! counsel-spotify)
 (package! telega)
 (package! weblorg)
 (package! nov)
@@ -39,6 +40,8 @@
   :recipe (:host github :repo "zetagon/el-secretario"))
 (package! org-ql)
 (package! lsp-julia :recipe (:host github :repo "non-jedi/lsp-julia"))
+;;(package! doom-nano-testing
+;;  :recipe (:host github :repo "brongulus/doom-nano-testing"))
 (package! org-appear
   :recipe (:host github :repo "awth13/org-appear"))
 ;; FIXME

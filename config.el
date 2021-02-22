@@ -1,3 +1,8 @@
+(add-hook! 'writeroom-mode-hook
+  (if writeroom-mode
+      (add-hook 'post-command-hook #'recenter nil t)
+    (remove-hook 'post-command-hook #'recenter t)))
+
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
 ;; Here are some additional functions/macros that could help you configure Doom:
@@ -29,7 +34,7 @@
  doom-font  (font-spec :family "JetBrains Mono" :size 18);Nerd Font Mono
  doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
- doom-theme 'doom-dracula
+ doom-theme 'doom-ephemeral
  org-directory "/home/prashant/Dropbox/org/"
  evil-escape-mode 1
  display-line-numbers-type nil
@@ -42,9 +47,6 @@
 ;; (setq projectile-switch-project-action #'projectile-dired)
 
 (custom-set-faces! '(default :background nil))
-
-(add-hook 'Info-selection-hook 'info-colors-fontify-node)
-(add-hook 'Info-mode-hook #'mixed-pitch-mode)
 
 (add-hook! 'window-setup-hook
   (select-frame-set-input-focus (selected-frame)))
@@ -266,6 +268,8 @@ This function makes sure that dates are aligned for easy reading."
           ("oc" "Project changelog" entry #'+org-capture-central-project-changelog-file "* %U %?\n %i\n %a" :heading "Changelog" :prepend t))
         ))
 
+(add-hook 'markdown-mode-hook #'texfrag-mode)
+
 (setq rmh-elfeed-org-files '("~/.doom.d/elfeed.org"))
 (after! elfeed
   (setq elfeed-search-filter "@2-month-ago"))
@@ -273,10 +277,9 @@ This function makes sure that dates are aligned for easy reading."
   (interactive)
   (elfeed)
   )
-(add-hook! elfeed-show-mode 'variable-pitch-mode)
-(map! :n "SPC o e" #'=elfeed)
-(after! elfeed
-  (map! :n "u" #'elfeed-update))
+(add-hook! 'elfeed-show-mode 'variable-pitch-mode)
+(map! :n "SPC o F" #'=elfeed)
+(map! :map elfeed-search-mode-map :localleader "u" #'elfeed-update)
 
 ;; FIXME
 (after! pocket-reader
@@ -304,7 +307,7 @@ This function makes sure that dates are aligned for easy reading."
         :n "M-k" #'pdf-continuous-scroll-backward))
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
 
-(setq fancy-splash-image "~/.doom.d/splash.png")
+(setq fancy-splash-image "~/.doom.d/doom-trans.png")
 (setq +doom-dashboard-menu-sections
       '(("Reload last session"
          :icon (all-the-icons-octicon "history" :face 'doom-dashboard-menu-title)
@@ -330,6 +333,12 @@ This function makes sure that dates are aligned for easy reading."
       )
 (add-hook! '+doom-dashboard-mode-hook #'hide-mode-line-mode)
 
+(use-package! info-colors
+  :commands (info-colors-fontify-node))
+
+(add-hook 'Info-selection-hook 'info-colors-fontify-node)
+(add-hook 'Info-mode-hook 'writeroom-mode)
+
 (use-package windmove
   :bind
   (("S-<left>". windmove-left)
@@ -346,24 +355,24 @@ This function makes sure that dates are aligned for easy reading."
 (setq evil-split-window-below t
       evil-vsplit-window-right t)
 
-(setq display-buffer-alist
- '(("\\*\\(e?shell\\|doom:vterm-popup:#.\\)\\*"
-    (display-buffer-in-side-window)
-    (window-height . 0.25)
-    (side . bottom)
-    (slot . -1))
-   ("\\*\\(Backtrace\\|Warnings\\|Compile-log\\|[Hh]elp\\|Messages\\)\\*"
-    (display-buffer-in-side-window)
-    (window-height . 0.25)
-    (side . bottom)
-    (slot . 0))
-   ("\\*Faces\\*"
-    (display-buffer-in-side-window)
-    (window-height . 0.25)
-    (side . bottom)
-    (slot . 1))
+  (setq display-buffer-alist
+   '(("\\*\\(e?shell\\|doom:vterm-popup:#.\\)\\*"
+      (display-buffer-in-side-window)
+      (window-height . 0.25)
+      (side . bottom)
+      (slot . -1))
+     ("\\*\\(Backtrace\\|Warnings\\|Compile-log\\|[Hh]elp\\|Messages\\)\\*"
+      (display-buffer-in-side-window)
+      (window-height . 0.25)
+      (side . bottom)
+      (slot . 0))
+     ("\\*Faces\\*"
+      (display-buffer-in-side-window)
+      (window-height . 0.25)
+      (side . bottom)
+      (slot . 1))
+     )
    )
- )
 
 ;;(setq +notmuch-sync-backend 'mbsync)
 (autoload 'notmuch "notmuch" "notmuch mail" t)
@@ -459,6 +468,10 @@ This function makes sure that dates are aligned for easy reading."
 ;;(setq lsp-julia-default-environment "~/.julia/environments/v1.0")
 (setq lsp-enable-folding t)
 
+(after! scheme
+  ;;(put 'test-group 'scheme-indent-function 1)
+  (setq geiser-mode-start-repl-p t))
+
 (use-package! lexic
   :commands lexic-search lexic-list-dictionary
   :config
@@ -526,3 +539,5 @@ This function makes sure that dates are aligned for easy reading."
     (el-secretario-start-session (my/dailyreview-secretary)))
   :commands (el-secretario-daily-review)
   )
+
+;;(require' load-nano)

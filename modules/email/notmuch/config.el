@@ -67,7 +67,7 @@
          ((("tree" . "%s")
            ("subject" . "%s"))
           . " %-120s ") ;;-54s
-         ("tags" . "(%s)"))
+         ("tags" . "[%s]"))
 
         notmuch-hello-sections
         '(notmuch-hello-insert-header notmuch-hello-insert-saved-searches
