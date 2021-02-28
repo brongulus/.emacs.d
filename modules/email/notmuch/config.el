@@ -9,6 +9,7 @@
 (defvar +notmuch-mail-folder "~/.mail/")
 
 
+
 ;;; Packages
 
 (use-package! notmuch
@@ -19,6 +20,10 @@
   :config
 
 ;;  (pixel-scroll-mode)
+
+  ;; advice
+  (advice-add #'notmuch-search-insert-field :override #'+notmuch-search-insert-field-a)
+  (advice-add #'notmuch-tree-quit :after #'notmuch-bury-or-kill-this-buffer)
 
   (set-company-backend! 'notmuch-message-mode
     'notmuch-company '(company-ispell company-yasnippet))
@@ -56,11 +61,11 @@
         mouse-wheel-follow-mouse 't
 
         ;; search results TODO convert to tree format and fix the stuff with subject
-;;        notmuch-search-result-format
-;;        '(("date" . "%12s | ")
-;;          ("authors" . "%-20s | ")
-;;          ("subject" . "%-54s")
-;;          ("tags" . ":%s:"))
+        notmuch-search-result-format
+        '(("date" . "%12s ")
+          ("authors" . "%-20s")
+          ("subject" . "%-120s")
+          ("tags" . "[%s]"))
         notmuch-tree-result-format
         '(("date" . "%12s  ")
          ("authors" . "%-20s")
@@ -112,6 +117,7 @@
 
   (add-hook! 'notmuch-show-hook #'variable-pitch-mode #'writeroom-mode #'iscroll-mode)
   ;; TEST setup
+
 
 ;;  (setq notmuch-show-insert-text/plain-hook
 ;;  '(notmuch-wash-wrap-long-lines

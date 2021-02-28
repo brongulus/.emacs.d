@@ -71,7 +71,7 @@ To avoid the issue of reproducing your customize options.
  doom-font  (font-spec :family "JetBrains Mono" :size 18);Nerd Font Mono
  doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
- doom-theme 'doom-ephemeral
+ doom-theme 'doom-plain
  org-directory "/home/prashant/Dropbox/org/"
  evil-escape-mode 1
  display-line-numbers-type nil
@@ -208,8 +208,8 @@ Modeline has lots of unnecessary information, let's remove that, also let's disp
 I've yet to look more into the different speed-up and configuration options related to LSP but these are some basics that I yanked off the discord.
 
 #+BEGIN_SRC
-(after! lsp-ui (setq lsp-ui-doc-enable t))
-(after! lsp-mode (setq lsp-enable-semantic-highlighting t))
+;; (after! lsp-ui (setq lsp-ui-doc-enable t))
+;; (after! lsp-mode (setq lsp-enable-semantic-highlighting t))
 #+END_SRC
 
 * TODO Org
@@ -551,24 +551,65 @@ Highlighting the new buffer when you open one should be the default, let's make 
 
 FIXME Window Configurations
 #+begin_src emacs-lisp
-  (setq display-buffer-alist
-   '(("\\*\\(e?shell\\|doom:vterm-popup:#.\\)\\*"
-      (display-buffer-in-side-window)
-      (window-height . 0.25)
-      (side . bottom)
-      (slot . -1))
-     ("\\*\\(Backtrace\\|Warnings\\|Compile-log\\|[Hh]elp\\|Messages\\)\\*"
-      (display-buffer-in-side-window)
-      (window-height . 0.25)
-      (side . bottom)
-      (slot . 0))
-     ("\\*Faces\\*"
-      (display-buffer-in-side-window)
-      (window-height . 0.25)
-      (side . bottom)
-      (slot . 1))
-     )
-   )
+;;  (setq display-buffer-alist
+;;        '(("\\*\\(e?shell\\|doom:vterm-popup:#.\\)\\*"
+;;          (display-buffer-in-side-window)
+;;           (window-height . 0.25)
+;;           (side . bottom)
+;;           (slot . -1))
+;;("\\*\\(Backtrace\\|Warnings\\|Compile-log\\|[Hh]elp\\|Messages\\)\\*"
+;; (display-buffer-in-side-window)
+;; (window-height . 0.25)
+;; (side . bottom)
+;; (slot . 0))
+;;("\\*Faces\\*"
+;; (display-buffer-in-side-window)
+;; (window-height . 0.25)
+;; (side . bottom)
+;; (slot . 1))
+;; )
+;; )
+
+
+(set-popup-rules!
+;;  (when (featurep! +all)
+;;    '(("^\\*"  :slot 1 :vslot -1 :select t)
+;;      ("^ \\*" :slot 1 :vslot -1 :size +popup-shrink-to-fit)))
+;;  (when (featurep! +defaults)
+    '(("^\\*Completions" :ignore t)
+      ("^\\*Local variables\\*$"
+       :vslot -1 :slot 1 :size +popup-shrink-to-fit)
+      ("^\\*\\(?:[Cc]ompil\\(?:ation\\|e-Log\\)\\|Messages\\)"
+       :vslot -2 :size 0.3  :autosave t :quit t :ttl nil)
+      ("^\\*\\(?:doom \\|Pp E\\)"  ; transient buffers (no interaction required)
+       :vslot -3 :size +popup-shrink-to-fit :autosave t :select ignore :quit t :ttl 0)
+      ("^\\*doom:"  ; editing buffers (interaction required)
+       :vslot -4 :size 0.35 :autosave t :select t :modeline t :quit nil :ttl t)
+      ("^\\*doom:\\(?:v?term\\|e?shell\\)-popup"  ; editing buffers (interaction required)
+       :vslot -5 :size 0.35 :select t :modeline nil :quit nil :ttl nil)
+      ("^\\*\\(?:Wo\\)?Man "
+       :vslot -6 :size 0.45 :select t :quit t :ttl 0)
+      ("^\\*Calc"
+       :vslot -7 :side bottom :size 0.4 :select t :quit nil :ttl 0)
+      ("^\\*Customize"
+       :slot 2 :side right :size 0.5 :select t :quit nil)
+      ("^ \\*undo-tree\\*"
+       :slot 2 :side left :size 20 :select t :quit t)
+      ;; `help-mode', `helpful-mode'
+      ("^\\*[Hh]elp"
+       :slot 2 :vslot -8 :size 0.35 :select t)
+      ("^\\*eww\\*"  ; `eww' (and used by dash docsets)
+       :vslot -11 :size 0.35 :select t)
+      ;; ("^\\*info\\*$"  ; `Info-mode'
+      ;;  :slot 2 :vslot 2 :size 0.45 :select t)
+  ;;    ))
+  ;;'(
+    ("^\\*Warnings" :vslot 99 :size 0.25)
+    ("^\\*Backtrace" :vslot 99 :size 0.4 :quit nil)
+    ("^\\*CPU-Profiler-Report "    :side bottom :vslot 100 :slot 1 :height 0.4 :width 0.5 :quit nil)
+    ("^\\*Memory-Profiler-Report " :side bottom :vslot 100 :slot 2 :height 0.4 :width 0.5 :quit nil)
+    ("^\\*Process List\\*" :side bottom :vslot 101 :size 0.25 :select t :quit t)
+    ("^\\*\\(?:Proced\\|timer-list\\|Abbrevs\\|Output\\|Occur\\|unsent mail\\|info\\)\\*" :ignore t)))
 #+end_src
 
 * TODO Mail
@@ -670,7 +711,7 @@ FIXME Consistency while opening mails, for future work look into org-mime for ht
 Need to figure this stuff out (WIP)
 
 #+BEGIN_SRC emacs-lisp
-(setq lsp-file-watch-threshold 2000)
+;;(setq lsp-file-watch-threshold 2000)
 (after! c++-mode
   ;; Disable naive completion of angle brackets <>
   (sp-local-pair 'c++-mode "<" ">" :actions :rem)
@@ -751,6 +792,10 @@ This is still finnicky, I have to configure the various formats so that they wor
 ;;(load! "~/.emacs.d/elegant-emacs/elegance")
 #+END_SRC
 
+#+begin_src emacs-lisp
+(setq eshell-visual-commands '("spt" "ncmpcpp" "nvim" "vim" "vi" "screen" "tmux" "top" "htop" "less" "more" "lynx" "links" "ncftp" "mutt" "pine" "tin" "trn" "elm"))
+#+end_src
+
 * Spotify
 
 Also let's add some keybinds.
@@ -768,33 +813,33 @@ Also let's add some keybinds.
 This is a trial run for a package.
 
 #+BEGIN_SRC emacs-lisp
-(use-package! el-secretario-org
-  :after (el-secretario))
-(use-package! el-secretario-notmuch
-  :after (el-secretario))
+;;(use-package! el-secretario-org
+;;  :after (el-secretario))
+;;(use-package! el-secretario-notmuch
+;;  :after (el-secretario))
 
-(use-package! el-secretario
-  :config
-  (defun my/dailyreview-secretary ()
-    (list
+;;(use-package! el-secretario
+;;  :config
+;;  (defun my/dailyreview-secretary ()
+;;    (list
 
      ;; First take care of email
-     (el-secretario-notmuch-make-source "tag:unread")
+;;     (el-secretario-notmuch-make-source "tag:unread")
      ;; Then Take care of inbox
-     (el-secretario-org-make-source nil ("/mnt/Data/Documents/org/index.org"))
+;;     (el-secretario-org-make-source nil ("/mnt/Data/Documents/org/index.org"))
 
      ;; Check if any waiting items are done
     ;;(el-secretario-org-make-source (todo "WAITING") ("~/org/orgzly/Todo.org"))
      ;; Go through TODOs
     ;; (el-secretario-org-make-source (todo "TODO") ("~/org/orgzly/Todo.org"))
-     )
-    )
+;;     )
+;;    )
   ;; Create a function to start the review
-  (defun el-secretario-daily-review ()
-    (interactive)
-    (el-secretario-start-session (my/dailyreview-secretary)))
-  :commands (el-secretario-daily-review)
-  )
+;;  (defun el-secretario-daily-review ()
+;;    (interactive)
+;;    (el-secretario-start-session (my/dailyreview-secretary)))
+;;  :commands (el-secretario-daily-review)
+;;  )
 
 #+END_SRC
 

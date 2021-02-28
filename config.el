@@ -34,7 +34,7 @@
  doom-font  (font-spec :family "JetBrains Mono" :size 18);Nerd Font Mono
  doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
- doom-theme 'doom-ephemeral
+ doom-theme 'doom-plain
  org-directory "/home/prashant/Dropbox/org/"
  evil-escape-mode 1
  display-line-numbers-type nil
@@ -355,24 +355,65 @@ This function makes sure that dates are aligned for easy reading."
 (setq evil-split-window-below t
       evil-vsplit-window-right t)
 
-  (setq display-buffer-alist
-   '(("\\*\\(e?shell\\|doom:vterm-popup:#.\\)\\*"
-      (display-buffer-in-side-window)
-      (window-height . 0.25)
-      (side . bottom)
-      (slot . -1))
-     ("\\*\\(Backtrace\\|Warnings\\|Compile-log\\|[Hh]elp\\|Messages\\)\\*"
-      (display-buffer-in-side-window)
-      (window-height . 0.25)
-      (side . bottom)
-      (slot . 0))
-     ("\\*Faces\\*"
-      (display-buffer-in-side-window)
-      (window-height . 0.25)
-      (side . bottom)
-      (slot . 1))
-     )
-   )
+;;  (setq display-buffer-alist
+;;        '(("\\*\\(e?shell\\|doom:vterm-popup:#.\\)\\*"
+;;          (display-buffer-in-side-window)
+;;           (window-height . 0.25)
+;;           (side . bottom)
+;;           (slot . -1))
+;;("\\*\\(Backtrace\\|Warnings\\|Compile-log\\|[Hh]elp\\|Messages\\)\\*"
+;; (display-buffer-in-side-window)
+;; (window-height . 0.25)
+;; (side . bottom)
+;; (slot . 0))
+;;("\\*Faces\\*"
+;; (display-buffer-in-side-window)
+;; (window-height . 0.25)
+;; (side . bottom)
+;; (slot . 1))
+;; )
+;; )
+
+
+(set-popup-rules!
+;;  (when (featurep! +all)
+;;    '(("^\\*"  :slot 1 :vslot -1 :select t)
+;;      ("^ \\*" :slot 1 :vslot -1 :size +popup-shrink-to-fit)))
+;;  (when (featurep! +defaults)
+    '(("^\\*Completions" :ignore t)
+      ("^\\*Local variables\\*$"
+       :vslot -1 :slot 1 :size +popup-shrink-to-fit)
+      ("^\\*\\(?:[Cc]ompil\\(?:ation\\|e-Log\\)\\|Messages\\)"
+       :vslot -2 :size 0.3  :autosave t :quit t :ttl nil)
+      ("^\\*\\(?:doom \\|Pp E\\)"  ; transient buffers (no interaction required)
+       :vslot -3 :size +popup-shrink-to-fit :autosave t :select ignore :quit t :ttl 0)
+      ("^\\*doom:"  ; editing buffers (interaction required)
+       :vslot -4 :size 0.35 :autosave t :select t :modeline t :quit nil :ttl t)
+      ("^\\*doom:\\(?:v?term\\|e?shell\\)-popup"  ; editing buffers (interaction required)
+       :vslot -5 :size 0.35 :select t :modeline nil :quit nil :ttl nil)
+      ("^\\*\\(?:Wo\\)?Man "
+       :vslot -6 :size 0.45 :select t :quit t :ttl 0)
+      ("^\\*Calc"
+       :vslot -7 :side bottom :size 0.4 :select t :quit nil :ttl 0)
+      ("^\\*Customize"
+       :slot 2 :side right :size 0.5 :select t :quit nil)
+      ("^ \\*undo-tree\\*"
+       :slot 2 :side left :size 20 :select t :quit t)
+      ;; `help-mode', `helpful-mode'
+      ("^\\*[Hh]elp"
+       :slot 2 :vslot -8 :size 0.35 :select t)
+      ("^\\*eww\\*"  ; `eww' (and used by dash docsets)
+       :vslot -11 :size 0.35 :select t)
+      ;; ("^\\*info\\*$"  ; `Info-mode'
+      ;;  :slot 2 :vslot 2 :size 0.45 :select t)
+  ;;    ))
+  ;;'(
+    ("^\\*Warnings" :vslot 99 :size 0.25)
+    ("^\\*Backtrace" :vslot 99 :size 0.4 :quit nil)
+    ("^\\*CPU-Profiler-Report "    :side bottom :vslot 100 :slot 1 :height 0.4 :width 0.5 :quit nil)
+    ("^\\*Memory-Profiler-Report " :side bottom :vslot 100 :slot 2 :height 0.4 :width 0.5 :quit nil)
+    ("^\\*Process List\\*" :side bottom :vslot 101 :size 0.25 :select t :quit t)
+    ("^\\*\\(?:Proced\\|timer-list\\|Abbrevs\\|Output\\|Occur\\|unsent mail\\|info\\)\\*" :ignore t)))
 
 ;;(setq +notmuch-sync-backend 'mbsync)
 (autoload 'notmuch "notmuch" "notmuch mail" t)
@@ -443,7 +484,7 @@ This function makes sure that dates are aligned for easy reading."
 ;; Look for alternate methods of centering, writeroom destroys formatting
 ;;(add-hook! 'notmuch-show-mode-hook #'writeroom-mode)
 
-(setq lsp-file-watch-threshold 2000)
+;;(setq lsp-file-watch-threshold 2000)
 (after! c++-mode
   ;; Disable naive completion of angle brackets <>
   (sp-local-pair 'c++-mode "<" ">" :actions :rem)
@@ -505,6 +546,8 @@ This function makes sure that dates are aligned for easy reading."
 ;;(load! "~/.emacs.d/elegant-emacs/sanity")
 ;;(load! "~/.emacs.d/elegant-emacs/elegance")
 
+(setq eshell-visual-commands '("spt" "ncmpcpp" "nvim" "vim" "vi" "screen" "tmux" "top" "htop" "less" "more" "lynx" "links" "ncftp" "mutt" "pine" "tin" "trn" "elm"))
+
 (map! :n "SPC a t" #'counsel-spotify-toggle-play-pause
       :n "SPC a <" #'counsel-spotify-previous
       :n "SPC a >" #'counsel-spotify-next
@@ -512,32 +555,32 @@ This function makes sure that dates are aligned for easy reading."
       :n "SPC a p" #'counsel-spotify-search-playlist
       )
 
-(use-package! el-secretario-org
-  :after (el-secretario))
-(use-package! el-secretario-notmuch
-  :after (el-secretario))
+;;(use-package! el-secretario-org
+;;  :after (el-secretario))
+;;(use-package! el-secretario-notmuch
+;;  :after (el-secretario))
 
-(use-package! el-secretario
-  :config
-  (defun my/dailyreview-secretary ()
-    (list
+;;(use-package! el-secretario
+;;  :config
+;;  (defun my/dailyreview-secretary ()
+;;    (list
 
      ;; First take care of email
-     (el-secretario-notmuch-make-source "tag:unread")
+;;     (el-secretario-notmuch-make-source "tag:unread")
      ;; Then Take care of inbox
-     (el-secretario-org-make-source nil ("/mnt/Data/Documents/org/index.org"))
+;;     (el-secretario-org-make-source nil ("/mnt/Data/Documents/org/index.org"))
 
      ;; Check if any waiting items are done
     ;;(el-secretario-org-make-source (todo "WAITING") ("~/org/orgzly/Todo.org"))
      ;; Go through TODOs
     ;; (el-secretario-org-make-source (todo "TODO") ("~/org/orgzly/Todo.org"))
-     )
-    )
+;;     )
+;;    )
   ;; Create a function to start the review
-  (defun el-secretario-daily-review ()
-    (interactive)
-    (el-secretario-start-session (my/dailyreview-secretary)))
-  :commands (el-secretario-daily-review)
-  )
+;;  (defun el-secretario-daily-review ()
+;;    (interactive)
+;;    (el-secretario-start-session (my/dailyreview-secretary)))
+;;  :commands (el-secretario-daily-review)
+;;  )
 
 ;;(require' load-nano)

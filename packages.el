@@ -36,9 +36,9 @@
 ;;(package! modus-operandi-theme)
 (package! lexic
   :recipe (:host github :repo "tecosaur/lexic"))
-(package! el-secretario
-  :recipe (:host github :repo "zetagon/el-secretario"))
-(package! org-ql)
+;;(package! el-secretario
+;;  :recipe (:host github :repo "zetagon/el-secretario"))
+;;(package! org-ql)
 (package! lsp-julia :recipe (:host github :repo "non-jedi/lsp-julia"))
 ;;(package! doom-nano-testing
 ;;  :recipe (:host github :repo "brongulus/doom-nano-testing"))
@@ -47,6 +47,7 @@
 ;; FIXME
 (package! pdf-continuous-scroll-mode
   :recipe (:host github :repo "dalanicolai/pdf-continuous-scroll-mode.el"))
+
 ;; If I end up testing gccemacs
 ;;(package! webkit
 ;;  :recipe (:type git :host github :repo "akirakyle/emacs-webkit"
