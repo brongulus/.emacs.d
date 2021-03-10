@@ -3,6 +3,16 @@
       (add-hook 'post-command-hook #'recenter nil t)
     (remove-hook 'post-command-hook #'recenter t)))
 
+(setq yequake-frames
+      '(("Yequake & scratch" .
+         ((width . 0.75)
+          (height . 0.5)
+          (alpha . 0.90)
+          (buffer-fns . ("~/.emacs.d/.local/straight/build-27.1/yequake/yequake.el"
+                         split-window-horizontally
+                         "*scratch*"))
+          (frame-parameters . ((undecorated . t)))))))
+
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
 ;; Here are some additional functions/macros that could help you configure Doom:
@@ -34,7 +44,7 @@
  doom-font  (font-spec :family "JetBrains Mono" :size 18);Nerd Font Mono
  doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
- doom-theme 'doom-plain
+ doom-theme 'doom-city-lights
  org-directory "/home/prashant/Dropbox/org/"
  evil-escape-mode 1
  display-line-numbers-type nil
@@ -142,6 +152,21 @@
   ;; for proper first-time setup, `org-appear--set-fragments'
   ;; needs to be run after other hooks have acted.
   (run-at-time nil nil #'org-appear--set-fragments))
+
+(after! org
+  (plist-put org-format-latex-options :background "Transparent")
+  (setq org-src-block-faces '(("latex" (:inherit default :extend t))))
+  (setq org-format-latex-options '(:foreground default :background "Transparent" :scale 1.0 :html-foreground "Black" :html-background "Transparent" :html-scale 1.0 :matchers ("begin" "$1" "$" "$$" "\\(" "\\[")))
+  )
+(add-hook! 'doom-load-theme-hook
+  (setq org-preview-latex-image-directory
+        (concat doom-cache-dir "org-latex/" (symbol-name doom-theme) "/"))
+  (dolist (buffer (doom-buffers-in-mode 'org-mode (buffer-list)))
+    (with-current-buffer buffer
+      (+org--toggle-inline-images-in-subtree (point-min) (point-max) 'refresh)
+      (org-clear-latex-preview (point-min) (point-max))
+      (org--latex-preview-region (point-min) (point-max))
+      )))
 
 (setq org-agenda-start-with-log-mode t
       org-log-done t
@@ -290,8 +315,7 @@ This function makes sure that dates are aligned for easy reading."
 
 (add-hook 'pdf-view-mode-hook (lambda ()
                                 (pdf-view-midnight-minor-mode)))
-(add-hook 'pdf-view-mode-hook 'pdf-view-auto-slice-minor-mode)
-;;(setq pdf-view-midnight-colors '("#839496" . "#002b36" ))
+;;(add-hook 'pdf-view-mode-hook 'pdf-view-auto-slice-minor-mode)
 (add-hook 'pdf-view-mode-hook #'hide-mode-line-mode)
 
 ;;(map! pdf-view-mode-map
