@@ -149,7 +149,7 @@ Zen mode increases font size which is annoying, let's disable that.
     (setq +zen-text-scale 0)))
 #+END_SRC
 
-Let's make doom workspaces pesistent in the minibuffer, so we can easily keep track of them (minibuffer is wasted space anyways :p)
+Let's make doom workspaces persistent in the minibuffer, so we can easily keep track of them (minibuffer is wasted space anyways :p)
 
 #+BEGIN_SRC emacs-lisp
 ;;(defun display-workspaces-in-minibuffer ()
