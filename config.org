@@ -8,6 +8,7 @@
 :END:
 
 The first edition of my +soon-to-be+ literate configuration :P
+(+Might be deprecated in favour of neovim?+ Never!)
 
 1. NOTE: Run =org-babel-tangle= after making changes it to this file. Oddly enough, first time I had to run =doom sync=, need to look into this.
 2. Look into =org-babel-demarcate-block= too.
