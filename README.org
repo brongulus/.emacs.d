@@ -3,14 +3,30 @@
 #+email: prashantrameshtak@gmail.com
 #+startup: fold
 
-:DOC-CONFIG:
-#+property: header-args:emacs-lisp :tangle config.el
-:END:
-
 The first edition of my +soon-to-be+ literate configuration :P
+(+Might be deprecated in favour of neovim?+ Never!)
 
 1. NOTE: Run =org-babel-tangle= after making changes it to this file. Oddly enough, first time I had to run =doom sync=, need to look into this.
 2. Look into =org-babel-demarcate-block= too.
+
+#+begin_src emacs-lisp
+(add-hook! 'writeroom-mode-hook
+  (if writeroom-mode
+      (add-hook 'post-command-hook #'recenter nil t)
+    (remove-hook 'post-command-hook #'recenter t)))
+#+end_src
+
+#+begin_src emacs-lisp
+(setq yequake-frames
+      '(("Yequake & scratch" .
+         ((width . 0.75)
+          (height . 0.5)
+          (alpha . 0.90)
+          (buffer-fns . ("~/.emacs.d/.local/straight/build-27.1/yequake/yequake.el"
+                         split-window-horizontally
+                         "*scratch*"))
+          (frame-parameters . ((undecorated . t)))))))
+#+end_src
 
 * TODO Config Improvements:
 1. [X] +Turn this into a literate Configuration+
@@ -61,14 +77,16 @@ To avoid the issue of reproducing your customize options.
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
- doom-font  (font-spec :family "JetBrains Mono" :size 18);Nerd Font Mono
- doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
- doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
- doom-theme 'doom-dracula
+ doom-font  (font-spec :family "MesloLGS Nerd Font Mono" :size 17)
+ doom-variable-pitch-font (font-spec :family "iA writer Quattro S" :weight 'regular)
+ doom-serif-font (font-spec :family "iA writer Quattro S" :weight 'regular)
+ doom-theme 'doom-nord
  org-directory "/home/prashant/Dropbox/org/"
+ ;;org-indent-mode t
  evil-escape-mode 1
  display-line-numbers-type nil
- tab-width 8
+ rainbow-mode t
+ tab-width 2
  which-key-idle-delay 0.5
  large-file-warning-threshold nil
  org-latex-toc-command "\\tableofcontents \\clearpage"
@@ -84,14 +102,7 @@ Projectile default behaviour change * FIXME
 Disable background in emacs when opening terminal mode.
 
 #+BEGIN_SRC emacs-lisp
-(custom-set-faces! '(default :background nil))    
-#+END_SRC
-
-Add some highlighting to woman pages
-
-#+BEGIN_SRC emacs-lisp
-(add-hook 'Info-selection-hook 'info-colors-fontify-node)
-(add-hook 'Info-mode-hook #'mixed-pitch-mode)
+(custom-set-faces! '(default :background nil))
 #+END_SRC
 
 Ensuring that emacs is focused after restarting
@@ -118,7 +129,8 @@ Company's completion dialog frame takes a long time to show up, making it look s
 Also, I don't need the details dired provides all the time, so I disabled that.
 
 #+BEGIN_SRC emacs-lisp
-(add-hook 'dired-mode-hook 'dired-hide-details-mode)
+;;(add-hook 'dired-mode-hook 'dired-hide-details-mode)
+(add-hook 'dired-mode-hook 'writeroom-mode)
 #+END_SRC
 
 Now this somehow makes notes of the changes you made using the customize wizard, but I need to look into its working yet.
@@ -137,7 +149,7 @@ Zen mode increases font size which is annoying, let's disable that.
     (setq +zen-text-scale 0)))
 #+END_SRC
 
-Let's make doom workspaces pesistent in the minibuffer, so we can easily keep track of them (minibuffer is wasted space anyways :p)
+Let's make doom workspaces persistent in the minibuffer, so we can easily keep track of them (minibuffer is wasted space anyways :p)
 
 #+BEGIN_SRC emacs-lisp
 ;;(defun display-workspaces-in-minibuffer ()
@@ -203,12 +215,13 @@ Modeline has lots of unnecessary information, let's remove that, also let's disp
 
 (add-hook! 'Info-mode-hook #'hide-mode-line-mode)
 #+END_SRC
+
 * LSP
 I've yet to look more into the different speed-up and configuration options related to LSP but these are some basics that I yanked off the discord.
 
 #+BEGIN_SRC
-(after! lsp-ui (setq lsp-ui-doc-enable t))
-(after! lsp-mode (setq lsp-enable-semantic-highlighting t))
+;; (after! lsp-ui (setq lsp-ui-doc-enable t))
+;; (after! lsp-mode (setq lsp-enable-semantic-highlighting t))
 #+END_SRC
 
 * TODO Org
@@ -258,22 +271,37 @@ For plotting graphs, one needs tikz and pfgplots. let's enable them by default, 
 (setq org-preview-latex-default-process 'dvisvgm)
 #+END_SRC
 
-Org-appear is a nice package that allows for visibility improvements in org files.
+Org latex fragments have a weird tint around them which looks awful, let's attempt to remove that.
 
 #+begin_src emacs-lisp
-(use-package! org-appear
-  :hook (org-mode . org-appear-mode)
-  :config
-  (setq org-appear-autoemphasis t
-        org-appear-autosubmarkers t
-        org-appear-autolinks t)
-  ;; for proper first-time setup, `org-appear--set-fragments'
-  ;; needs to be run after other hooks have acted.
-  (run-at-time nil nil #'org-appear--set-fragments))
+(after! org
+  (plist-put org-format-latex-options :background "Transparent")
+  (setq org-src-block-faces '(("latex" (:inherit default :extend t))))
+  (setq org-format-latex-options '(:foreground default :background "Transparent" :scale 1.0 :html-foreground "Black" :html-background "Transparent" :html-scale 1.0 :matchers ("begin" "$1" "$" "$$" "\\(" "\\[")))
+  )
+(add-hook! 'doom-load-theme-hook
+  (setq org-preview-latex-image-directory
+        (concat doom-cache-dir "org-latex/" (symbol-name doom-theme) "/"))
+  (dolist (buffer (doom-buffers-in-mode 'org-mode (buffer-list)))
+    (with-current-buffer buffer
+      (+org--toggle-inline-images-in-subtree (point-min) (point-max) 'refresh)
+      (org-clear-latex-preview (point-min) (point-max))
+      (org--latex-preview-region (point-min) (point-max))
+      )))
+#+end_src
+
+Using org in terminal mode doesn't work nicely with headings, so let's fix that.
+#+begin_src emacs-lisp
+(map! :after evil-org
+      :map evil-org-mode-map
+      :ni "C-RET"   #'+org/insert-item-below
+      :ni "C-S-RET" #'+org/insert-item-above)
 #+end_src
 
 ** TODO Org-Agenda
-Setting up a custom agenda view.
+[[file:./calender.png][Calender]]
+
+*** Setting up a custom agenda view
 
 #+begin_src emacs-lisp
 (setq org-agenda-start-with-log-mode t
@@ -336,7 +364,7 @@ This function makes sure that dates are aligned for easy reading."
 
 #+end_src
 
-Notifications for Agenda
+*** Notifications for Agenda
 
 #+begin_src emacs-lisp
 (use-package! appt
@@ -362,7 +390,7 @@ Notifications for Agenda
 
   ;; (3) ... When TODO.org is saved
   (add-hook 'after-save-hook
-            '(lambda ()
+            #'(lambda ()
                (if (string= (buffer-file-name) (concat (getenv "HOME") "~/Dropbox/org/todo.org"))
                    (my-org-agenda-to-appt))))
 
@@ -380,7 +408,7 @@ Notifications for Agenda
   )
 #+end_src
 
-TODO Agenda widget
+*** TODO Agenda widget
 
 ** TODO Capture
 
@@ -390,7 +418,7 @@ TODO Add better templates for notes and journal.
 (after! org-capture
   (setq org-capture-templates
         '(("t" "Personal todo" entry
-           (file+headline +org-capture-todo-file "Inbox")
+           (file+headline +org-capture-todo-file "todo")
            "* TODO %?\n%i\n%a" :prepend t)
           ("n" "Personal notes" entry
            (file+headline +org-capture-notes-file "Notes")
@@ -414,6 +442,19 @@ TODO Add better templates for notes and journal.
           ("oc" "Project changelog" entry #'+org-capture-central-project-changelog-file "* %U %?\n %i\n %a" :heading "Changelog" :prepend t))
         ))
 #+end_src
+** FIXME Org-ol Tree
+
+#+begin_src emacs-lisp
+(add-hook! 'treemacs-mode-hook #'hl-todo-mode #'org-fragtog-mode #'org-mode)
+#+end_src
+
+* Faces
+
+#+begin_src emacs-lisp
+(custom-set-faces!
+'(ein:cell-input-area :background "bg-alt" :extend t))
+#+end_src
+
 * Elfeed
 I need to add shortcuts for update functions and reference to the org file, also need to fix the database update issue.
 
@@ -425,10 +466,9 @@ I need to add shortcuts for update functions and reference to the org file, also
   (interactive)
   (elfeed)
   )
-(add-hook! elfeed-show-mode 'variable-pitch-mode)
-(map! :n "SPC o e" #'=elfeed)
-(after! elfeed
-  (map! :n "u" #'elfeed-update))
+(add-hook! 'elfeed-show-mode 'variable-pitch-mode)
+(map! :n "SPC o l" #'=elfeed)
+(map! :map elfeed-search-mode-map :localleader "u" #'elfeed-update)
 #+END_SRC
 
 Pocket reader has some issues with pandoc meddling in its affairs, let's set it straight.
@@ -448,8 +488,7 @@ Need to fix the continuous scrolling package issue and add more shortcuts for ge
 #+BEGIN_SRC emacs-lisp
 (add-hook 'pdf-view-mode-hook (lambda ()
                                 (pdf-view-midnight-minor-mode)))
-(add-hook 'pdf-view-mode-hook 'pdf-view-auto-slice-minor-mode)
-;;(setq pdf-view-midnight-colors '("#839496" . "#002b36" ))
+;;(add-hook 'pdf-view-mode-hook 'pdf-view-auto-slice-minor-mode)
 (add-hook 'pdf-view-mode-hook #'hide-mode-line-mode)
 #+END_SRC
 
@@ -479,7 +518,7 @@ PDF Files in emacs natively don't have continuous scrolling however using a pack
 Most of the default functions have been stored in my memory, let's turn the dashboard into an /"emacs app drawer"/. (Also I need to find a better splash, there are also issues with splash and exwm which I'll look into *later*.)
 
 #+BEGIN_SRC emacs-lisp
-(setq fancy-splash-image "~/.doom.d/splash.png")
+(setq fancy-splash-image "~/.doom.d/doom-trans.png")
 (setq +doom-dashboard-menu-sections
       '(("Reload last session"
          :icon (all-the-icons-octicon "history" :face 'doom-dashboard-menu-title)
@@ -506,6 +545,17 @@ Most of the default functions have been stored in my memory, let's turn the dash
 (add-hook! '+doom-dashboard-mode-hook #'hide-mode-line-mode)
 #+END_SRC
 
+* Info Pages
+Better looking info pages
+
+#+begin_src emacs-lisp
+(use-package! info-colors
+  :commands (info-colors-fontify-node))
+
+(add-hook 'Info-selection-hook 'info-colors-fontify-node)
+(add-hook 'Info-mode-hook 'writeroom-mode)
+#+end_src
+
 * TODO Buffer Management
 Switching buffers using C-x o is a major pain, I like my arrow keys, so let's add those options.
 #+BEGIN_SRC emacs-lisp
@@ -531,24 +581,65 @@ Highlighting the new buffer when you open one should be the default, let's make 
 
 FIXME Window Configurations
 #+begin_src emacs-lisp
-  (setq display-buffer-alist
-   '(("\\*\\(e?shell\\|doom:vterm-popup:#.\\)\\*"
-      (display-buffer-in-side-window)
-      (window-height . 0.25)
-      (side . bottom)
-      (slot . -1))
-     ("\\*\\(Backtrace\\|Warnings\\|Compile-log\\|[Hh]elp\\|Messages\\)\\*"
-      (display-buffer-in-side-window)
-      (window-height . 0.25)
-      (side . bottom)
-      (slot . 0))
-     ("\\*Faces\\*"
-      (display-buffer-in-side-window)
-      (window-height . 0.25)
-      (side . bottom)
-      (slot . 1))
-     )
-   )
+;;  (setq display-buffer-alist
+;;        '(("\\*\\(e?shell\\|doom:vterm-popup:#.\\)\\*"
+;;          (display-buffer-in-side-window)
+;;           (window-height . 0.25)
+;;           (side . bottom)
+;;           (slot . -1))
+;;("\\*\\(Backtrace\\|Warnings\\|Compile-log\\|[Hh]elp\\|Messages\\)\\*"
+;; (display-buffer-in-side-window)
+;; (window-height . 0.25)
+;; (side . bottom)
+;; (slot . 0))
+;;("\\*Faces\\*"
+;; (display-buffer-in-side-window)
+;; (window-height . 0.25)
+;; (side . bottom)
+;; (slot . 1))
+;; )
+;; )
+
+
+(set-popup-rules!
+;;  (when (featurep! +all)
+;;    '(("^\\*"  :slot 1 :vslot -1 :select t)
+;;      ("^ \\*" :slot 1 :vslot -1 :size +popup-shrink-to-fit)))
+;;  (when (featurep! +defaults)
+    '(("^\\*Completions" :ignore t)
+      ("^\\*Local variables\\*$"
+       :vslot -1 :slot 1 :size +popup-shrink-to-fit)
+      ("^\\*\\(?:[Cc]ompil\\(?:ation\\|e-Log\\)\\|Messages\\)"
+       :vslot -2 :size 0.3  :autosave t :quit t :ttl nil)
+      ("^\\*\\(?:doom \\|Pp E\\)"  ; transient buffers (no interaction required)
+       :vslot -3 :size +popup-shrink-to-fit :autosave t :select ignore :quit t :ttl 0)
+      ("^\\*doom:"  ; editing buffers (interaction required)
+       :vslot -4 :size 0.35 :autosave t :select t :modeline t :quit nil :ttl t)
+      ("^\\*doom:\\(?:v?term\\|e?shell\\)-popup"  ; editing buffers (interaction required)
+       :vslot -5 :size 0.35 :select t :modeline nil :quit nil :ttl nil)
+      ("^\\*\\(?:Wo\\)?Man "
+       :vslot -6 :size 0.45 :select t :quit t :ttl 0)
+      ("^\\*Calc"
+       :vslot -7 :side bottom :size 0.4 :select t :quit nil :ttl 0)
+      ("^\\*Customize"
+       :slot 2 :side right :size 0.5 :select t :quit nil)
+      ("^ \\*undo-tree\\*"
+       :slot 2 :side left :size 20 :select t :quit t)
+      ;; `help-mode', `helpful-mode'
+      ("^\\*[Hh]elp"
+       :slot 2 :vslot -8 :size 0.35 :select t)
+      ("^\\*eww\\*"  ; `eww' (and used by dash docsets)
+       :vslot -11 :size 0.35 :select t)
+      ;; ("^\\*info\\*$"  ; `Info-mode'
+      ;;  :slot 2 :vslot 2 :size 0.45 :select t)
+  ;;    ))
+  ;;'(
+    ("^\\*Warnings" :vslot 99 :size 0.25)
+    ("^\\*Backtrace" :vslot 99 :size 0.4 :quit nil)
+    ("^\\*CPU-Profiler-Report "    :side bottom :vslot 100 :slot 1 :height 0.4 :width 0.5 :quit nil)
+    ("^\\*Memory-Profiler-Report " :side bottom :vslot 100 :slot 2 :height 0.4 :width 0.5 :quit nil)
+    ("^\\*Process List\\*" :side bottom :vslot 101 :size 0.25 :select t :quit t)
+    ("^\\*\\(?:Proced\\|timer-list\\|Abbrevs\\|Output\\|Occur\\|unsent mail\\|info\\)\\*" :ignore t)))
 #+end_src
 
 * TODO Mail
@@ -650,7 +741,7 @@ FIXME Consistency while opening mails, for future work look into org-mime for ht
 Need to figure this stuff out (WIP)
 
 #+BEGIN_SRC emacs-lisp
-(setq lsp-file-watch-threshold 2000)
+;;(setq lsp-file-watch-threshold 2000)
 (after! c++-mode
   ;; Disable naive completion of angle brackets <>
   (sp-local-pair 'c++-mode "<" ">" :actions :rem)
@@ -678,6 +769,40 @@ Julia requires setting environment, let's do that
 #+begin_src emacs-lisp
 ;;(setq lsp-julia-default-environment "~/.julia/environments/v1.0")
 (setq lsp-enable-folding t)
+#+end_src
+
+Attach a geiser repl whenever a scheme file is opened.
+
+#+begin_src emacs-lisp
+(after! scheme
+  ;;(put 'test-group 'scheme-indent-function 1)
+  (setq geiser-mode-start-repl-p t))
+#+end_src
+
+* IRC
+
+#+begin_src emacs-lisp
+;; (after! circe
+;;   (set-irc-server! "chat.freenode.net"
+;;                    `(:tls t
+;;                      :port 6697
+;;                      :nick "neovim"
+;;                      :sasl-username "brongulus"
+;;                      ;;                 :sasl-password "mypassword"
+;;                      :channels ("#neovim"))
+;;                    `(:tls t
+;;                      :port 6697
+;;                      :nick "mlpack"
+;;                      :sasl-username "brongulus"
+;;                      ;;                   :sasl-password "mypassword"
+;;                      :channels ("#mlpack"))
+;;                    `(:tls t
+;;                      :port 6697
+;;                      :nick "emacs"
+;;                      :sasl-username "brongulus"
+;;                      ;;               :sasl-password "mypassword"
+;;                      :channels ("#emacs"))
+;;                    ))
 #+end_src
 
 * Dictionary
@@ -723,6 +848,10 @@ This is still finnicky, I have to configure the various formats so that they wor
 ;;(load! "~/.emacs.d/elegant-emacs/elegance")
 #+END_SRC
 
+#+begin_src emacs-lisp
+(setq eshell-visual-commands '("spt" "ncmpcpp" "nvim" "vim" "vi" "screen" "tmux" "top" "htop" "less" "more" "lynx" "links" "ncftp" "mutt" "pine" "tin" "trn" "elm"))
+#+end_src
+
 * Spotify
 
 Also let's add some keybinds.
@@ -740,32 +869,76 @@ Also let's add some keybinds.
 This is a trial run for a package.
 
 #+BEGIN_SRC emacs-lisp
-(use-package! el-secretario-org
-  :after (el-secretario))
-(use-package! el-secretario-notmuch
-  :after (el-secretario))
+;;(use-package! el-secretario-org
+;;  :after (el-secretario))
+;;(use-package! el-secretario-notmuch
+;;  :after (el-secretario))
 
-(use-package! el-secretario
-  :config
-  (defun my/dailyreview-secretary ()
-    (list
+;;(use-package! el-secretario
+;;  :config
+;;  (defun my/dailyreview-secretary ()
+;;    (list
 
      ;; First take care of email
-     (el-secretario-notmuch-make-source "tag:unread")
+;;     (el-secretario-notmuch-make-source "tag:unread")
      ;; Then Take care of inbox
-     (el-secretario-org-make-source nil ("/mnt/Data/Documents/org/index.org"))
+;;     (el-secretario-org-make-source nil ("/mnt/Data/Documents/org/index.org"))
 
      ;; Check if any waiting items are done
     ;;(el-secretario-org-make-source (todo "WAITING") ("~/org/orgzly/Todo.org"))
      ;; Go through TODOs
     ;; (el-secretario-org-make-source (todo "TODO") ("~/org/orgzly/Todo.org"))
-     )
-    )
+;;     )
+;;    )
   ;; Create a function to start the review
-  (defun el-secretario-daily-review ()
-    (interactive)
-    (el-secretario-start-session (my/dailyreview-secretary)))
-  :commands (el-secretario-daily-review)
-  )
+;;  (defun el-secretario-daily-review ()
+;;    (interactive)
+;;    (el-secretario-start-session (my/dailyreview-secretary)))
+;;  :commands (el-secretario-daily-review)
+;;  )
 
 #+END_SRC
+
+* Doom-nano
+
+#+begin_src emacs-lisp
+;;(require' load-nano)
+#+end_src
+* Treesitter
+
+#+begin_src emacs-lisp
+(use-package! tree-sitter
+  :when (bound-and-true-p module-file-suffix)
+  :hook (prog-mode . tree-sitter-mode)
+  :hook (tree-sitter-after-on . tree-sitter-hl-mode)
+  :config
+  (require 'tree-sitter-langs)
+  (defadvice! doom-tree-sitter-fail-gracefully-a (orig-fn &rest args)
+    "Don't break with errors when current major mode lacks tree-sitter support."
+    :around #'tree-sitter-mode
+    (condition-case e
+        (apply orig-fn args)
+      (error
+       (unless (string-match-p (concat "^Cannot find shared library\\|"
+                                       "^No language registered\\|"
+                                       "cannot open shared object file")
+                               (error-message-string e))
+         (signal (car e) (cadr e)))))))
+#+end_src
+
+* Terminal Specific Keybinds
+#+begin_src emacs-lisp
+(unless (display-graphic-p)
+  (map! :map org-mode-map
+        :ni "C-c C-<down>" '+org/insert-item-below
+        :ni "C-c C-<up>" '+org/insert-item-above
+        :ni "C-c C-<left>" 'org-insert-heading
+        :ni "C-c C-<right>" 'org-insert-subheading)
+  )
+#+end_src
+* Blog Setup?
+
+#+begin_src emacs-lisp
+(use-package ox-hugo
+  :after ox)
+#+end_src
