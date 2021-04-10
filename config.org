@@ -32,6 +32,7 @@ The first edition of my +soon-to-be+ literate configuration :P
           (frame-parameters . ((undecorated . t)))))))
 #+end_src
 
+
 * TODO Config Improvements:
 1. [X] +Turn this into a literate Configuration+
 2. [ ] Improve the EXWM experience
@@ -81,14 +82,16 @@ To avoid the issue of reproducing your customize options.
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
- doom-font  (font-spec :family "JetBrains Mono" :size 18);Nerd Font Mono
- doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
- doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
- doom-theme 'doom-city-lights
+ doom-font  (font-spec :family "MesloLGS Nerd Font Mono" :size 17)
+ doom-variable-pitch-font (font-spec :family "iA writer Quattro S" :weight 'regular)
+ doom-serif-font (font-spec :family "iA writer Quattro S" :weight 'regular)
+ doom-theme 'doom-nord
  org-directory "/home/prashant/Dropbox/org/"
+ ;;org-indent-mode t
  evil-escape-mode 1
  display-line-numbers-type nil
- tab-width 8
+ rainbow-mode t
+ tab-width 2
  which-key-idle-delay 0.5
  large-file-warning-threshold nil
  org-latex-toc-command "\\tableofcontents \\clearpage"
@@ -131,7 +134,8 @@ Company's completion dialog frame takes a long time to show up, making it look s
 Also, I don't need the details dired provides all the time, so I disabled that.
 
 #+BEGIN_SRC emacs-lisp
-(add-hook 'dired-mode-hook 'dired-hide-details-mode)
+;;(add-hook 'dired-mode-hook 'dired-hide-details-mode)
+(add-hook 'dired-mode-hook 'writeroom-mode)
 #+END_SRC
 
 Now this somehow makes notes of the changes you made using the customize wizard, but I need to look into its working yet.
@@ -272,20 +276,6 @@ For plotting graphs, one needs tikz and pfgplots. let's enable them by default, 
 (setq org-preview-latex-default-process 'dvisvgm)
 #+END_SRC
 
-Org-appear is a nice package that allows for visibility improvements in org files.
-
-#+begin_src emacs-lisp
-(use-package! org-appear
-  :hook (org-mode . org-appear-mode)
-  :config
-  (setq org-appear-autoemphasis t
-        org-appear-autosubmarkers t
-        org-appear-autolinks t)
-  ;; for proper first-time setup, `org-appear--set-fragments'
-  ;; needs to be run after other hooks have acted.
-  (run-at-time nil nil #'org-appear--set-fragments))
-#+end_src
-
 Org latex fragments have a weird tint around them which looks awful, let's attempt to remove that.
 
 #+begin_src emacs-lisp
@@ -303,6 +293,14 @@ Org latex fragments have a weird tint around them which looks awful, let's attem
       (org-clear-latex-preview (point-min) (point-max))
       (org--latex-preview-region (point-min) (point-max))
       )))
+#+end_src
+
+Using org in terminal mode doesn't work nicely with headings, so let's fix that.
+#+begin_src emacs-lisp
+(map! :after evil-org
+      :map evil-org-mode-map
+      :ni "C-RET"   #'+org/insert-item-below
+      :ni "C-S-RET" #'+org/insert-item-above)
 #+end_src
 
 ** TODO Org-Agenda
@@ -397,7 +395,7 @@ This function makes sure that dates are aligned for easy reading."
 
   ;; (3) ... When TODO.org is saved
   (add-hook 'after-save-hook
-            '(lambda ()
+            #'(lambda ()
                (if (string= (buffer-file-name) (concat (getenv "HOME") "~/Dropbox/org/todo.org"))
                    (my-org-agenda-to-appt))))
 
@@ -425,7 +423,7 @@ TODO Add better templates for notes and journal.
 (after! org-capture
   (setq org-capture-templates
         '(("t" "Personal todo" entry
-           (file+headline +org-capture-todo-file "Inbox")
+           (file+headline +org-capture-todo-file "todo")
            "* TODO %?\n%i\n%a" :prepend t)
           ("n" "Personal notes" entry
            (file+headline +org-capture-notes-file "Notes")
@@ -449,11 +447,17 @@ TODO Add better templates for notes and journal.
           ("oc" "Project changelog" entry #'+org-capture-central-project-changelog-file "* %U %?\n %i\n %a" :heading "Changelog" :prepend t))
         ))
 #+end_src
-
-* Markdown
+** FIXME Org-ol Tree
 
 #+begin_src emacs-lisp
-(add-hook 'markdown-mode-hook #'texfrag-mode)
+(add-hook! 'treemacs-mode-hook #'hl-todo-mode #'org-fragtog-mode #'org-mode)
+#+end_src
+
+* Faces
+
+#+begin_src emacs-lisp
+(custom-set-faces!
+'(ein:cell-input-area :background "bg-alt" :extend t))
 #+end_src
 
 * Elfeed
@@ -468,7 +472,7 @@ I need to add shortcuts for update functions and reference to the org file, also
   (elfeed)
   )
 (add-hook! 'elfeed-show-mode 'variable-pitch-mode)
-(map! :n "SPC o F" #'=elfeed)
+(map! :n "SPC o l" #'=elfeed)
 (map! :map elfeed-search-mode-map :localleader "u" #'elfeed-update)
 #+END_SRC
 
@@ -780,6 +784,32 @@ Attach a geiser repl whenever a scheme file is opened.
   (setq geiser-mode-start-repl-p t))
 #+end_src
 
+* IRC
+
+#+begin_src emacs-lisp
+;; (after! circe
+;;   (set-irc-server! "chat.freenode.net"
+;;                    `(:tls t
+;;                      :port 6697
+;;                      :nick "neovim"
+;;                      :sasl-username "brongulus"
+;;                      ;;                 :sasl-password "mypassword"
+;;                      :channels ("#neovim"))
+;;                    `(:tls t
+;;                      :port 6697
+;;                      :nick "mlpack"
+;;                      :sasl-username "brongulus"
+;;                      ;;                   :sasl-password "mypassword"
+;;                      :channels ("#mlpack"))
+;;                    `(:tls t
+;;                      :port 6697
+;;                      :nick "emacs"
+;;                      :sasl-username "brongulus"
+;;                      ;;               :sasl-password "mypassword"
+;;                      :channels ("#emacs"))
+;;                    ))
+#+end_src
+
 * Dictionary
 Need to add the search from anywhere shortcut? DO I? Just verify later.
 
@@ -878,4 +908,42 @@ This is a trial run for a package.
 
 #+begin_src emacs-lisp
 ;;(require' load-nano)
+#+end_src
+* Treesitter
+
+#+begin_src emacs-lisp
+(use-package! tree-sitter
+  :when (bound-and-true-p module-file-suffix)
+  :hook (prog-mode . tree-sitter-mode)
+  :hook (tree-sitter-after-on . tree-sitter-hl-mode)
+  :config
+  (require 'tree-sitter-langs)
+  (defadvice! doom-tree-sitter-fail-gracefully-a (orig-fn &rest args)
+    "Don't break with errors when current major mode lacks tree-sitter support."
+    :around #'tree-sitter-mode
+    (condition-case e
+        (apply orig-fn args)
+      (error
+       (unless (string-match-p (concat "^Cannot find shared library\\|"
+                                       "^No language registered\\|"
+                                       "cannot open shared object file")
+                               (error-message-string e))
+         (signal (car e) (cadr e)))))))
+#+end_src
+
+* Terminal Specific Keybinds
+#+begin_src emacs-lisp
+(unless (display-graphic-p)
+  (map! :map org-mode-map
+        :ni "C-c C-<down>" '+org/insert-item-below
+        :ni "C-c C-<up>" '+org/insert-item-above
+        :ni "C-c C-<left>" 'org-insert-heading
+        :ni "C-c C-<right>" 'org-insert-subheading)
+  )
+#+end_src
+* Blog Setup?
+
+#+begin_src emacs-lisp
+(use-package ox-hugo
+  :after ox)
 #+end_src

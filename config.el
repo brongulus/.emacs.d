@@ -41,14 +41,16 @@
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
- doom-font  (font-spec :family "JetBrains Mono" :size 18);Nerd Font Mono
- doom-variable-pitch-font (font-spec :family "iA Writer Quattro S")
- doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
- doom-theme 'doom-city-lights
+ doom-font  (font-spec :family "MesloLGS Nerd Font Mono" :size 17)
+ doom-variable-pitch-font (font-spec :family "iA writer Quattro S" :weight 'regular)
+ doom-serif-font (font-spec :family "iA writer Quattro S" :weight 'regular)
+ doom-theme 'doom-nord
  org-directory "/home/prashant/Dropbox/org/"
+ ;;org-indent-mode t
  evil-escape-mode 1
  display-line-numbers-type nil
- tab-width 8
+ rainbow-mode t
+ tab-width 2
  which-key-idle-delay 0.5
  large-file-warning-threshold nil
  org-latex-toc-command "\\tableofcontents \\clearpage"
@@ -67,7 +69,8 @@
 (after! company
   (setq company-idle-delay 0.2))
 
-(add-hook 'dired-mode-hook 'dired-hide-details-mode)
+;;(add-hook 'dired-mode-hook 'dired-hide-details-mode)
+(add-hook 'dired-mode-hook 'writeroom-mode)
 
 (setq-default custom-file (expand-file-name ".custom.el" doom-private-dir))
 (when (file-exists-p custom-file)
@@ -143,16 +146,6 @@
   )
 (setq org-preview-latex-default-process 'dvisvgm)
 
-(use-package! org-appear
-  :hook (org-mode . org-appear-mode)
-  :config
-  (setq org-appear-autoemphasis t
-        org-appear-autosubmarkers t
-        org-appear-autolinks t)
-  ;; for proper first-time setup, `org-appear--set-fragments'
-  ;; needs to be run after other hooks have acted.
-  (run-at-time nil nil #'org-appear--set-fragments))
-
 (after! org
   (plist-put org-format-latex-options :background "Transparent")
   (setq org-src-block-faces '(("latex" (:inherit default :extend t))))
@@ -167,6 +160,11 @@
       (org-clear-latex-preview (point-min) (point-max))
       (org--latex-preview-region (point-min) (point-max))
       )))
+
+(map! :after evil-org
+      :map evil-org-mode-map
+      :ni "C-RET"   #'+org/insert-item-below
+      :ni "C-S-RET" #'+org/insert-item-above)
 
 (setq org-agenda-start-with-log-mode t
       org-log-done t
@@ -249,7 +247,7 @@ This function makes sure that dates are aligned for easy reading."
 
   ;; (3) ... When TODO.org is saved
   (add-hook 'after-save-hook
-            '(lambda ()
+            #'(lambda ()
                (if (string= (buffer-file-name) (concat (getenv "HOME") "~/Dropbox/org/todo.org"))
                    (my-org-agenda-to-appt))))
 
@@ -269,7 +267,7 @@ This function makes sure that dates are aligned for easy reading."
 (after! org-capture
   (setq org-capture-templates
         '(("t" "Personal todo" entry
-           (file+headline +org-capture-todo-file "Inbox")
+           (file+headline +org-capture-todo-file "todo")
            "* TODO %?\n%i\n%a" :prepend t)
           ("n" "Personal notes" entry
            (file+headline +org-capture-notes-file "Notes")
@@ -293,7 +291,10 @@ This function makes sure that dates are aligned for easy reading."
           ("oc" "Project changelog" entry #'+org-capture-central-project-changelog-file "* %U %?\n %i\n %a" :heading "Changelog" :prepend t))
         ))
 
-(add-hook 'markdown-mode-hook #'texfrag-mode)
+(add-hook! 'treemacs-mode-hook #'hl-todo-mode #'org-fragtog-mode #'org-mode)
+
+(custom-set-faces!
+'(ein:cell-input-area :background "bg-alt" :extend t))
 
 (setq rmh-elfeed-org-files '("~/.doom.d/elfeed.org"))
 (after! elfeed
@@ -303,7 +304,7 @@ This function makes sure that dates are aligned for easy reading."
   (elfeed)
   )
 (add-hook! 'elfeed-show-mode 'variable-pitch-mode)
-(map! :n "SPC o F" #'=elfeed)
+(map! :n "SPC o l" #'=elfeed)
 (map! :map elfeed-search-mode-map :localleader "u" #'elfeed-update)
 
 ;; FIXME
@@ -537,6 +538,28 @@ This function makes sure that dates are aligned for easy reading."
   ;;(put 'test-group 'scheme-indent-function 1)
   (setq geiser-mode-start-repl-p t))
 
+;; (after! circe
+;;   (set-irc-server! "chat.freenode.net"
+;;                    `(:tls t
+;;                      :port 6697
+;;                      :nick "neovim"
+;;                      :sasl-username "brongulus"
+;;                      ;;                 :sasl-password "mypassword"
+;;                      :channels ("#neovim"))
+;;                    `(:tls t
+;;                      :port 6697
+;;                      :nick "mlpack"
+;;                      :sasl-username "brongulus"
+;;                      ;;                   :sasl-password "mypassword"
+;;                      :channels ("#mlpack"))
+;;                    `(:tls t
+;;                      :port 6697
+;;                      :nick "emacs"
+;;                      :sasl-username "brongulus"
+;;                      ;;               :sasl-password "mypassword"
+;;                      :channels ("#emacs"))
+;;                    ))
+
 (use-package! lexic
   :commands lexic-search lexic-list-dictionary
   :config
@@ -608,3 +631,32 @@ This function makes sure that dates are aligned for easy reading."
 ;;  )
 
 ;;(require' load-nano)
+
+(use-package! tree-sitter
+  :when (bound-and-true-p module-file-suffix)
+  :hook (prog-mode . tree-sitter-mode)
+  :hook (tree-sitter-after-on . tree-sitter-hl-mode)
+  :config
+  (require 'tree-sitter-langs)
+  (defadvice! doom-tree-sitter-fail-gracefully-a (orig-fn &rest args)
+    "Don't break with errors when current major mode lacks tree-sitter support."
+    :around #'tree-sitter-mode
+    (condition-case e
+        (apply orig-fn args)
+      (error
+       (unless (string-match-p (concat "^Cannot find shared library\\|"
+                                       "^No language registered\\|"
+                                       "cannot open shared object file")
+                               (error-message-string e))
+         (signal (car e) (cadr e)))))))
+
+(unless (display-graphic-p)
+  (map! :map org-mode-map
+        :ni "C-c C-<down>" '+org/insert-item-below
+        :ni "C-c C-<up>" '+org/insert-item-above
+        :ni "C-c C-<left>" 'org-insert-heading
+        :ni "C-c C-<right>" 'org-insert-subheading)
+  )
+
+(use-package ox-hugo
+  :after ox)

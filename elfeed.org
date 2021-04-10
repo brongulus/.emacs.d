@@ -9,6 +9,7 @@
 *** [[http://lars.ingebrigtsen.no/][Random Thoughts]]
 *** [[https://www.hamvocke.com/feed.xml][Ham Vocke]]
 *** [[https://ag91.github.io/rss.xml][When Parallels Cross]]
+*** [[https://two-wrongs.com/feed][Two Wrongs]]
 *** [[https://www.murilopereira.com/index.xml][mpereira]]
 ** Random :code:
 *** entry-title: \(code\)

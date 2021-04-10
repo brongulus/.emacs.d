@@ -52,8 +52,12 @@
   :group 'processes)
 
 (defcustom openwith-associations
-  '(;; ("\\.pdf\\'" "acroread" (file))
+  '(
+    ;; (unless (display-graphic-p)
+      ("\\.pdf\\'" "zathura" (file))
+    ;;   )
     ;; ("\\.mp3\\'" "mpd" (file))
+    ("\\.\\(?:ppt\\|pptx\\)\\'" "libreoffice" (file))
     ("\\.\\(?:mpe?g\\|avi\\|wmv\\|mp4\\|mkv\\|m4v\\)\\'" "mpv" (file))
    ;; ("\\.\\(?:jp?g\\|png\\)\\'" "display" (file))
     )

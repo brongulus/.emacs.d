@@ -22,7 +22,10 @@
 (package! guix)
 (package! iscroll)
 (package! rainbow-mode)
-;;(package! djvu)
+(package! ox-hugo)
+;; (package! vuiet)
+(package! tree-sitter)
+(package! tree-sitter-langs)
 (package! info-colors)
 (package! yequake)
 ;;(package! systemd)
@@ -30,7 +33,6 @@
 ;;(package! theme-magic)
 ;;(package! counsel-spotify)
 (package! telega)
-;;(package! weblorg)
 (package! nov)
 (package! graphviz-dot-mode)
 ;;(package! modus-vivendi-theme)
@@ -43,17 +45,17 @@
 (package! lsp-julia :recipe (:host github :repo "non-jedi/lsp-julia"))
 ;;(package! doom-nano-testing
 ;;  :recipe (:host github :repo "brongulus/doom-nano-testing"))
-(package! org-appear
-  :recipe (:host github :repo "awth13/org-appear"))
 ;; FIXME
 (package! pdf-continuous-scroll-mode
   :recipe (:host github :repo "dalanicolai/pdf-continuous-scroll-mode.el"))
+(package! org-ol-tree
+  :recipe (:host github :repo "Townk/org-ol-tree"))
 
 ;; If I end up testing gccemacs
-;;(package! webkit
-;;  :recipe (:type git :host github :repo "akirakyle/emacs-webkit"
-;;           :branch "main" :files (:defaults "*.js" "*.css" "*.so")
-;;           :pre-build ("make")))
+(package! webkit
+ :recipe (:type git :host github :repo "akirakyle/emacs-webkit"
+          :branch "main" :files (:defaults "*.js" "*.css" "*.so")
+          :pre-build ("make")))
 
 ;; To install a package directly from a remote git repo, you must specify a
 ;; `:recipe'. You'll find documentation on what `:recipe' accepts here:

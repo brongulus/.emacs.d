@@ -30,9 +30,10 @@
 
   (set-popup-rule! "^\\*notmuch-hello" :ignore t)
 
-  (set-evil-initial-state! '(notmuch-show-mode notmuch-tree-mode notmuch-search-mode) 'insert)
+;;  (set-evil-initial-state! '(notmuch-show-mode notmuch-tree-mode notmuch-search-mode) 'insert)
 
   (setq notmuch-fcc-dirs nil
+
         ;;  might change this
         notmuch-show-logo nil
         notmuch-message-headers-visible nil
@@ -52,7 +53,6 @@
         notmuch-show-text/html-blocked-images nil
         gnus-max-image-proportion 0.7
         ;;shr-use-colors nil
-        ;;gnus-blocked-images nil ;; not needed maybe
 
         ;; Image hacks
         pixel-resolution-fine-flag t
@@ -113,7 +113,7 @@
                notmuch-search-mode-hook)
              #'hide-mode-line-mode)
 
-  (add-hook! 'notmuch-search-hook #'notmuch-tree-from-search-current-query)
+;;  (add-hook! 'notmuch-search-hook #'notmuch-tree-from-search-current-query)
 
   (add-hook! 'notmuch-show-hook #'variable-pitch-mode #'writeroom-mode #'iscroll-mode)
   ;; TEST setup
