@@ -41,14 +41,15 @@
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
- doom-font  (font-spec :family "MesloLGS Nerd Font Mono" :size 17)
- doom-variable-pitch-font (font-spec :family "iA writer Quattro S" :weight 'regular)
- doom-serif-font (font-spec :family "iA writer Quattro S" :weight 'regular)
+ doom-font (font-spec :family "DejaVu Sans Mono" :size 15 :weight 'normal)
+ ;;MesloLGS Nerd Font Mono
+ ;;doom-variable-pitch-font (font-spec :family "FreightSansProLight-Regular" :weight 'light :size 18)
  doom-theme 'doom-nord
+ doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
  org-directory "/home/prashant/Dropbox/org/"
  ;;org-indent-mode t
  evil-escape-mode 1
- display-line-numbers-type nil
+ display-line-numbers-type 'relative
  rainbow-mode t
  tab-width 2
  which-key-idle-delay 0.5
@@ -107,11 +108,7 @@
 (remove-hook! doom-modeline-mode-hook #'size-indication-mode
   #'column-number-mode)
 
-(setq doom-modeline-buffer-encoding nil
-      doom-modeline-project-detection 'project)
 ;; displaying useful information
-(setq appt-display-mode-line t
-      global-mode-string '("" display-time-string appt-mode-string))
 
 (display-time-mode 1)
 
@@ -121,9 +118,28 @@
 
 (add-hook! 'Info-mode-hook #'hide-mode-line-mode)
 
+(after! doom-modeline
+  (doom-modeline-def-segment buffer-name
+    (concat
+     (doom-modeline-spc)
+     (doom-modeline--buffer-name)))
+  (setq-default doom-modeline-enable-word-count nil
+                doom-modeline-buffer-encoding nil
+                doom-modeline-buffer-file-name-style 'file-name
+                line-number-mode nil
+                column-number-mode nil
+                size-indication-mode nil)
+  ;; (doom-modeline-def-modeline 'personal
+  ;; '(bar workspace-name window-number modals matches buffer-name remote-host  parrot selection-info)
+  ;; '(objed-state misc-info battery grip irc mu4e debug repl lsp input-method indent-info major-mode process vcs checker))
+  ;; (defun setup-custom-doom-modeline ()
+  ;;  (doom-modeline-set-modeline 'personal 'default))
+  ;; (add-hook 'doom-modeline-mode-hook 'setup-custom-doom-modeline)
+  )
+
 (add-hook! 'org-mode-hook #'org-fragtog-mode)
-(after! org
-  (add-hook! 'org-mode-hook #'writeroom-mode))
+;; (after! org
+;; (add-hook! 'org-mode-hook #'writeroom-mode))
 (add-hook 'org-mode-hook
           (λ! (yas-minor-mode)
               (yas-activate-extra-mode 'latex-mode)))
@@ -264,6 +280,7 @@ This function makes sure that dates are aligned for easy reading."
         (start-process "my-appt-notification-app" nil my-appt-notification-app (nth i min-to-app) (nth i msg)))))
   )
 
+(setq +org-capture-readings-file "~/Dropbox/org/links.org")
 (after! org-capture
   (setq org-capture-templates
         '(("t" "Personal todo" entry
@@ -272,6 +289,9 @@ This function makes sure that dates are aligned for easy reading."
           ("n" "Personal notes" entry
            (file+headline +org-capture-notes-file "Notes")
            "* %u %?\n%i\n%a" :prepend t)
+          ("r" "Readings" entry
+           (file+headline +org-capture-readings-file "Readings")
+           "* " :prepend t)
           ("j" "Journal" entry
            (file+olp+datetree +org-capture-journal-file)
            "* %U %?\n%i\n%a" :prepend t)
@@ -294,7 +314,11 @@ This function makes sure that dates are aligned for easy reading."
 (add-hook! 'treemacs-mode-hook #'hl-todo-mode #'org-fragtog-mode #'org-mode)
 
 (custom-set-faces!
-'(ein:cell-input-area :background "bg-alt" :extend t))
+  '(ein:cell-input-area :background "bg-alt" :extend t)
+  '(company-tooltip :family "doom-font"))
+
+(custom-set-faces!
+  '((font-lock-comment-face font-lock-doc-face) :slant italic))
 
 (setq rmh-elfeed-org-files '("~/.doom.d/elfeed.org"))
 (after! elfeed
@@ -331,6 +355,9 @@ This function makes sure that dates are aligned for easy reading."
         :n "M-j" #'pdf-continuous-scroll-forward
         :n "M-k" #'pdf-continuous-scroll-backward))
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
+
+(use-package! nov
+  :mode ("\\.epub\\'" . nov-mode))
 
 (setq fancy-splash-image "~/.doom.d/doom-trans.png")
 (setq +doom-dashboard-menu-sections
@@ -401,44 +428,44 @@ This function makes sure that dates are aligned for easy reading."
 
 
 (set-popup-rules!
-;;  (when (featurep! +all)
-;;    '(("^\\*"  :slot 1 :vslot -1 :select t)
-;;      ("^ \\*" :slot 1 :vslot -1 :size +popup-shrink-to-fit)))
-;;  (when (featurep! +defaults)
-    '(("^\\*Completions" :ignore t)
-      ("^\\*Local variables\\*$"
-       :vslot -1 :slot 1 :size +popup-shrink-to-fit)
-      ("^\\*\\(?:[Cc]ompil\\(?:ation\\|e-Log\\)\\|Messages\\)"
-       :vslot -2 :size 0.3  :autosave t :quit t :ttl nil)
-      ("^\\*\\(?:doom \\|Pp E\\)"  ; transient buffers (no interaction required)
-       :vslot -3 :size +popup-shrink-to-fit :autosave t :select ignore :quit t :ttl 0)
-      ("^\\*doom:"  ; editing buffers (interaction required)
-       :vslot -4 :size 0.35 :autosave t :select t :modeline t :quit nil :ttl t)
-      ("^\\*doom:\\(?:v?term\\|e?shell\\)-popup"  ; editing buffers (interaction required)
-       :vslot -5 :size 0.35 :select t :modeline nil :quit nil :ttl nil)
-      ("^\\*\\(?:Wo\\)?Man "
-       :vslot -6 :size 0.45 :select t :quit t :ttl 0)
-      ("^\\*Calc"
-       :vslot -7 :side bottom :size 0.4 :select t :quit nil :ttl 0)
-      ("^\\*Customize"
-       :slot 2 :side right :size 0.5 :select t :quit nil)
-      ("^ \\*undo-tree\\*"
-       :slot 2 :side left :size 20 :select t :quit t)
-      ;; `help-mode', `helpful-mode'
-      ("^\\*[Hh]elp"
-       :slot 2 :vslot -8 :size 0.35 :select t)
-      ("^\\*eww\\*"  ; `eww' (and used by dash docsets)
-       :vslot -11 :size 0.35 :select t)
-      ;; ("^\\*info\\*$"  ; `Info-mode'
-      ;;  :slot 2 :vslot 2 :size 0.45 :select t)
-  ;;    ))
-  ;;'(
+  ;;  (when (featurep! +all)
+  ;;    '(("^\\*"  :slot 1 :vslot -1 :select t)
+  ;;      ("^ \\*" :slot 1 :vslot -1 :size +popup-shrink-to-fit)))
+  ;;  (when (featurep! +defaults)
+  '(("^\\*Completions" :ignore t)
+    ("^\\*Local variables\\*$"
+     :vslot -1 :slot 1 :size +popup-shrink-to-fit)
+    ("^\\*\\(?:[Cc]ompil\\(?:ation\\|e-Log\\)\\|Messages\\)"
+     :vslot -2 :size 0.3  :autosave t :quit t :ttl nil)
+    ("^\\*\\(?:doom \\|Pp E\\)"  ; transient buffers (no interaction required)
+     :vslot -3 :size +popup-shrink-to-fit :autosave t :select ignore :quit t :ttl 0)
+    ("^\\*doom:"  ; editing buffers (interaction required)
+     :vslot -4 :size 0.35 :autosave t :select t :modeline t :quit nil :ttl t)
+    ("^\\*doom:\\(?:v?term\\|e?shell\\)-popup"  ; editing buffers (interaction required)
+     :vslot -5 :size 0.35 :select t :modeline nil :quit nil :ttl nil)
+    ("^\\*\\(?:Wo\\)?Man "
+     :vslot -6 :size 0.45 :select t :quit t :ttl 0)
+    ("^\\*Calc"
+     :vslot -7 :side bottom :size 0.4 :select t :quit nil :ttl 0)
+    ("^\\*Customize"
+     :slot 2 :side right :size 0.5 :select t :quit nil)
+    ("^ \\*undo-tree\\*"
+     :slot 2 :side left :size 20 :select t :quit t)
+    ;; `help-mode', `helpful-mode'
+    ("^\\*[Hh]elp"
+     :slot 2 :vslot -8 :size 0.35 :select t)
+    ;; ("^\\*eww\\*"  ; `eww' (and used by dash docsets)
+    ;;  :vslot -11 :size 0.35 :select t)
+    ;; ("^\\*info\\*$"  ; `Info-mode'
+    ;;  :slot 2 :vslot 2 :size 0.45 :select t)
+    ;;    ))
+    ;;'(
     ("^\\*Warnings" :vslot 99 :size 0.25)
     ("^\\*Backtrace" :vslot 99 :size 0.4 :quit nil)
     ("^\\*CPU-Profiler-Report "    :side bottom :vslot 100 :slot 1 :height 0.4 :width 0.5 :quit nil)
     ("^\\*Memory-Profiler-Report " :side bottom :vslot 100 :slot 2 :height 0.4 :width 0.5 :quit nil)
     ("^\\*Process List\\*" :side bottom :vslot 101 :size 0.25 :select t :quit t)
-    ("^\\*\\(?:Proced\\|timer-list\\|Abbrevs\\|Output\\|Occur\\|unsent mail\\|info\\)\\*" :ignore t)))
+    ("^\\*\\(?:Proced\\|timer-list\\|Abbrevs\\|Output\\|Occur\\|unsent mail\\|info\\|eww\\)\\*" :ignore t)))
 
 ;;(setq +notmuch-sync-backend 'mbsync)
 (autoload 'notmuch "notmuch" "notmuch mail" t)
@@ -538,27 +565,52 @@ This function makes sure that dates are aligned for easy reading."
   ;;(put 'test-group 'scheme-indent-function 1)
   (setq geiser-mode-start-repl-p t))
 
-;; (after! circe
-;;   (set-irc-server! "chat.freenode.net"
-;;                    `(:tls t
-;;                      :port 6697
-;;                      :nick "neovim"
-;;                      :sasl-username "brongulus"
-;;                      ;;                 :sasl-password "mypassword"
-;;                      :channels ("#neovim"))
-;;                    `(:tls t
-;;                      :port 6697
-;;                      :nick "mlpack"
-;;                      :sasl-username "brongulus"
-;;                      ;;                   :sasl-password "mypassword"
-;;                      :channels ("#mlpack"))
-;;                    `(:tls t
-;;                      :port 6697
-;;                      :nick "emacs"
-;;                      :sasl-username "brongulus"
-;;                      ;;               :sasl-password "mypassword"
-;;                      :channels ("#emacs"))
-;;                    ))
+(after! circe
+  (set-irc-server! "chat.freenode.net"
+                   `(:tls t
+                     :port 6697
+                     :nick "neovim"
+                     :sasl-username "brongulus"
+                     ;; :sasl-password "mypassword"
+                     :channels ("#neovim")))
+  (set-irc-server! "chat.freenode.net"
+                   `(:tls t
+                     :port 6697
+                     :nick "mlpack"
+                     :sasl-username "brongulus"
+                     ;; :sasl-password "mypassword"
+                     :channels ("#mlpack")))
+  (set-irc-server! "chat.freenode.net"
+                   `(:tls t
+                     :port 6697
+                     :nick "emacs"
+                     :sasl-username "brongulus"
+                     ;; :sasl-password "mypassword"
+                     :channels ("#emacs"))
+                   )
+
+  (setq-default circe-use-tls t)
+  (setq circe-notifications-alert-icon "/usr/share/icons/breeze/actions/24/network-connect.svg"
+        lui-logging-directory "~/.emacs.d/.local/etc/irc"
+        lui-logging-file-format "{buffer}/%Y/%m-%d.txt"
+        circe-format-self-say "{nick:+13s} ┃ {body}")
+
+  (custom-set-faces!
+    '(circe-my-message-face :weight unspecified))
+
+  (enable-lui-logging-globally)
+  (enable-circe-display-images)
+
+  (defun named-circe-prompt ()
+    (lui-set-prompt
+     (concat (propertize (format "%13s > " (circe-nick))
+                         'face 'circe-prompt-face)
+             "")))
+  (add-hook 'circe-chat-mode-hook #'named-circe-prompt)
+
+  (appendq! all-the-icons-mode-icon-alist
+            '((circe-channel-mode all-the-icons-material "message" :face all-the-icons-lblue)
+              (circe-server-mode all-the-icons-material "chat_bubble_outline" :face all-the-icons-purple))))
 
 (use-package! lexic
   :commands lexic-search lexic-list-dictionary
@@ -630,25 +682,46 @@ This function makes sure that dates are aligned for easy reading."
 ;;  :commands (el-secretario-daily-review)
 ;;  )
 
-;;(require' load-nano)
-
-(use-package! tree-sitter
-  :when (bound-and-true-p module-file-suffix)
-  :hook (prog-mode . tree-sitter-mode)
-  :hook (tree-sitter-after-on . tree-sitter-hl-mode)
+(use-package paper
+  ;; you could also add html, png, jpg
+  :mode ("\\.pdf\\'"  . paper-mode)
+  :mode ("\\.epub\\'"  . paper-mode)
+  :mode ("\\.cbz\\'"  . paper-mode)
   :config
-  (require 'tree-sitter-langs)
-  (defadvice! doom-tree-sitter-fail-gracefully-a (orig-fn &rest args)
-    "Don't break with errors when current major mode lacks tree-sitter support."
-    :around #'tree-sitter-mode
-    (condition-case e
-        (apply orig-fn args)
-      (error
-       (unless (string-match-p (concat "^Cannot find shared library\\|"
-                                       "^No language registered\\|"
-                                       "cannot open shared object file")
-                               (error-message-string e))
-         (signal (car e) (cadr e)))))))
+  (require 'evil-collection-paper)
+  (evil-collection-paper-setup))
+
+(use-package nano
+  :init
+  (require 'nano-base-colors)
+  (require 'nano-colors)
+  (require 'nano-faces)
+  (require 'nano-theme)
+  (require 'nano-theme-light)
+  (require 'nano-theme-dark)
+  (require 'nano-splash)
+  (require 'nano-modeline)
+  (nano-faces)
+  (nano-theme)
+  )
+
+;; (use-package! tree-sitter
+;;   :when (bound-and-true-p module-file-suffix)
+;;   :hook (prog-mode . tree-sitter-mode)
+;;   :hook (tree-sitter-after-on . tree-sitter-hl-mode)
+;;   :config
+;;   (require 'tree-sitter-langs)
+;;   (defadvice! doom-tree-sitter-fail-gracefully-a (orig-fn &rest args)
+;;     "Don't break with errors when current major mode lacks tree-sitter support."
+;;     :around #'tree-sitter-mode
+;;     (condition-case e
+;;         (apply orig-fn args)
+;;       (error
+;;        (unless (string-match-p (concat "^Cannot find shared library\\|"
+;;                                        "^No language registered\\|"
+;;                                        "cannot open shared object file")
+;;                                (error-message-string e))
+;;          (signal (car e) (cadr e)))))))
 
 (unless (display-graphic-p)
   (map! :map org-mode-map

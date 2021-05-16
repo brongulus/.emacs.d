@@ -14,6 +14,7 @@
 (package! solaire-mode :disable t)
 
 (package! org-fragtog)
+(package! anki-editor)
 ;;(package! xkcd)
 ;;(package! pocket-reader)
 (package! geiser)
@@ -24,8 +25,8 @@
 (package! rainbow-mode)
 (package! ox-hugo)
 ;; (package! vuiet)
-(package! tree-sitter)
-(package! tree-sitter-langs)
+;; (package! tree-sitter)
+;; (package! tree-sitter-langs)
 (package! info-colors)
 (package! yequake)
 ;;(package! systemd)
@@ -34,6 +35,7 @@
 ;;(package! counsel-spotify)
 (package! telega)
 (package! nov)
+(package! conllu-mode)
 (package! graphviz-dot-mode)
 ;;(package! modus-vivendi-theme)
 ;;(package! modus-operandi-theme)
@@ -45,17 +47,25 @@
 (package! lsp-julia :recipe (:host github :repo "non-jedi/lsp-julia"))
 ;;(package! doom-nano-testing
 ;;  :recipe (:host github :repo "brongulus/doom-nano-testing"))
+(package! nano-emacs
+  :recipe (:host github :repo "rougier/nano-emacs"))
 ;; FIXME
 (package! pdf-continuous-scroll-mode
   :recipe (:host github :repo "dalanicolai/pdf-continuous-scroll-mode.el"))
 (package! org-ol-tree
   :recipe (:host github :repo "Townk/org-ol-tree"))
+;; TEMP
+;; (package! company-box
+;;   :recipe (:host github :repo "brongulus/company-box"))
 
 ;; If I end up testing gccemacs
 (package! webkit
  :recipe (:type git :host github :repo "akirakyle/emacs-webkit"
           :branch "main" :files (:defaults "*.js" "*.css" "*.so")
           :pre-build ("make")))
+(package! paper-mode
+  :recipe (:host github :repo "ymarco/paper-mode"))
+
 
 ;; To install a package directly from a remote git repo, you must specify a
 ;; `:recipe'. You'll find documentation on what `:recipe' accepts here:

@@ -20,7 +20,7 @@
        ;;layout            ; auie,ctsrnm is the superior home row
 
        :completion
-       (company +childframe) ; the ultimate code completion backend
+       company ; the ultimate code completion backend
        ;;helm              ; the *other* search engine for love and life
        ;;ido               ; the other *other* search engine...
        (ivy +prescient +icons +childframe)                              ; a search engine for love and life
@@ -39,11 +39,11 @@
        ;;minimap           ; show a map of the code on the side
        modeline    ; snazzy, Atom-inspired modeline, plus API
        nav-flash   ; blink cursor line after big motions
-       ;;neotree           ; a project drawer, like NERDTree for vim
+       neotree           ; a project drawer, like NERDTree for vim
        ophints                ; highlight the region an operation acts on
        (popup +defaults)      ; tame sudden yet inevitable temporary windows
        ;;tabs              ; an tab bar for Emacs
-       treemacs                      ; a project drawer, like neotree but cooler
+       ;; treemacs                      ; a project drawer, like neotree but cooler
        ;;unicode           ; extended unicode support for various languages
        vc-gutter              ; vcs diff in the fringe
        vi-tilde-fringe        ; fringe tildes to mark beyond EOB
@@ -146,9 +146,9 @@
        lua               ; one-based indices? one-based indices
        (markdown +grip)          ; writing docs for people to ignore
        ;;nim               ; python + lisp at the speed of c
-       ;;nix               ; I hereby declare "nix geht mehr!"
+       nix               ; I hereby declare "nix geht mehr!"
        ;;ocaml             ; an objective camel
-       (org +pretty +dragndrop +jupyter +present) ; organize your plain life in plain text
+       (org +pretty +dragndrop +jupyter +pandoc +present) ; organize your plain life in plain text
        ;;perl              ; write code no one else can comprehend
        ;;php               ; perl's insecure younger brother
        ;;plantuml          ; diagrams for confusing people more
@@ -160,7 +160,7 @@
        ;;rest              ; Emacs as a REST client
        ;;rst               ; ReST in peace
        ;;(ruby +rails)     ; 1.step {|i| p "Ruby is #{i.even? ? 'love' : 'life'}"}
-       ;;rust              ; Fe2O3.unwrap().unwrap().unwrap().unwrap()
+       (rust +lsp)              ; Fe2O3.unwrap().unwrap().unwrap().unwrap()
        ;;scala             ; java, but good
        scheme ; a fully conniving family of lisps
        sh     ; she sells {ba,z,fi}sh shells on the C xor
