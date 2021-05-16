@@ -56,6 +56,7 @@
     ;; (unless (display-graphic-p)
       ("\\.pdf\\'" "zathura" (file))
     ;;   )
+    ("\\.epub\\'" "mupdf" (file))
     ;; ("\\.mp3\\'" "mpd" (file))
     ("\\.\\(?:ppt\\|pptx\\)\\'" "libreoffice" (file))
     ("\\.\\(?:mpe?g\\|avi\\|wmv\\|mp4\\|mkv\\|m4v\\)\\'" "mpv" (file))

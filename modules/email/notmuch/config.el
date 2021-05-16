@@ -115,7 +115,14 @@
 
 ;;  (add-hook! 'notmuch-search-hook #'notmuch-tree-from-search-current-query)
 
-  (add-hook! 'notmuch-show-hook #'variable-pitch-mode #'writeroom-mode #'iscroll-mode)
+  (defun left-padding ()
+    "Add padding to the left side of the current buffer."
+    (progn
+      (setq left-margin-width 6)
+      (setq right-margin-width 6)
+      (set-window-buffer nil (current-buffer))))
+
+  (add-hook! 'notmuch-show-hook #'variable-pitch-mode #'left-padding #'iscroll-mode)
   ;; TEST setup
 
 

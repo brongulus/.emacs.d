@@ -19,6 +19,11 @@
 *** [[https://ambrevar.xyz/atom.xml][Ambrevar]]
 *** [[https://lexi-lambda.github.io/feeds/all.rss.xml][Lexi-Lambda]]
 *** [[https://haskellweekly.news/newsletter.atom][Haskell Weekly]]
+*** [[https://weekly.nixos.org/feeds/all.rss.xml][NixOS Weekly]]
+*** [[https://fasterthanli.me/index.xml][Amos - fasterthananli]]
+** MLDL :nn:
+*** entry-title: \(neural-networks\)
+*** [[https://ljvmiranda921.github.io/feed.xml][LJ Miranda Notebook]]
 ** Math :math:
 *** entry-title: \(math\)
 *** [[https://jeremykun.com/feed/][Math \cap Programming]]
