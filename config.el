@@ -119,7 +119,7 @@
 
 ;; displaying useful information
 
-;; (display-time-mode 1)
+(display-time-mode 1)
 
 (unless (equal "Battery status not available"
                (battery))
