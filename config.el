@@ -8,7 +8,7 @@
          ((width . 0.75)
           (height . 0.5)
           (alpha . 0.90)
-          (buffer-fns . ("~/.emacs.d/.local/straight/build-27.1/yequake/yequake.el"
+          (buffer-fns . ("~/doom-emacs/.local/straight/build-27.1/yequake/yequake.el"
                          split-window-horizontally
                          "*scratch*"))
           (frame-parameters . ((undecorated . t)))))))
@@ -41,21 +41,30 @@
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
- doom-font (font-spec :family "DejaVu Sans Mono" :size 15 :weight 'normal)
+ doom-font (font-spec :family "Comic Mono" :size 18 :weight 'light)
  ;;MesloLGS Nerd Font Mono
- ;;doom-variable-pitch-font (font-spec :family "FreightSansProLight-Regular" :weight 'light :size 18)
+ doom-variable-pitch-font (font-spec :family "FreightSansProLight-Regular" :size 20)
  doom-theme 'doom-nord
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
  org-directory "/home/prashant/Dropbox/org/"
  ;;org-indent-mode t
  evil-escape-mode 1
- display-line-numbers-type 'relative
+ display-line-numbers-type nil
  rainbow-mode t
+ left-margin-width 2
  tab-width 2
+ doom-fallback-buffer-name "*doom*"
  which-key-idle-delay 0.5
  large-file-warning-threshold nil
  org-latex-toc-command "\\tableofcontents \\clearpage"
  )
+
+(map! :i "C-y" #'evil-paste-after)
+(map! :map image-mode-map
+      :ni "r" #'image-rotate)
+
+(after! evil
+  (setq evil-move-cursor-back nil))
 
 ;; (setq projectile-switch-project-action #'projectile-dired)
 
@@ -99,9 +108,9 @@
 (lambda ()
 (hl-line-mode -1)))
 
-(doom/set-frame-opacity 90)
+(doom/set-frame-opacity 98)
 (add-hook! 'writeroom-mode-hook
-  (doom/set-frame-opacity (if writeroom-mode 90 100)))
+  (doom/set-frame-opacity (if writeroom-mode 98 100)))
 
 (setq auth-sources '("/home/prashant/.authinfo" "/home/prashant/.emacs.d/.local/etc/authinfo.gpg" "~/.authinfo.gpg"))
 
@@ -145,7 +154,7 @@
               (yas-activate-extra-mode 'latex-mode)))
 ;; (add-hook 'org-mode-hook 'lsp-completion-mode)
 
-(add-hook 'org-mode-hook 'variable-pitch-mode)
+(add-hook! 'org-mode-hook #'mixed-pitch-mode)
 (custom-set-faces!
   '(org-table :inherit 'fixed-pitch))
 ;;(set-face-attribute 'org-table nil :inherit 'fixed-pitch)
@@ -199,9 +208,9 @@
                         (org-agenda-prefix-format " %-15b")
                         (org-agenda-todo-keyword-format "")))
           (agenda "" (
-                      ;;           (org-agenda-skip-scheduled-if-done t)
-                      ;;           (org-agenda-skip-timestamp-if-done t)
-                      ;;           (org-agenda-skip-deadline-if-done t)
+                      (org-agenda-skip-scheduled-if-done t)
+                      (org-agenda-skip-timestamp-if-done t)
+                      (org-agenda-skip-deadline-if-done t)
                       (org-agenda-start-day "-1d")
                       (org-agenda-span 3)
                       (org-agenda-overriding-header "⚡ SCHEDULE:\n")
@@ -240,47 +249,48 @@ This function makes sure that dates are aligned for easy reading."
 
 (setq org-agenda-hidden-separator "‌‌ ")
 
-(use-package! appt
-  :defer-incrementally t
-  :config
+;; (use-package! appt
+;;   :defer-incrementally t
+;;   :config
 
-  (appt-activate t)
+;;   (appt-activate t)
 
-  ;; use appointment data from org-mode
-  (defun my-org-agenda-to-appt ()
-    (interactive)
-    (setq appt-time-msg-list nil)
-    (org-agenda-to-appt))
+;;   ;; use appointment data from org-mode
+;;   (defun my-org-agenda-to-appt ()
+;;     (interactive)
+;;     (setq appt-time-msg-list nil)
+;;     (org-agenda-to-appt))
 
-  (setq appt-message-warning-time 5) ; Show notification 5 minutes before event
-  (setq appt-display-interval appt-message-warning-time) ; Disable multiple reminders
-  (setq appt-display-mode-line nil)
+;;   (setq appt-message-warning-time 5) ; Show notification 5 minutes before event
+;;   (setq appt-display-interval appt-message-warning-time) ; Disable multiple reminders
+;;   (setq appt-display-mode-line nil)
 
-  ;; update alarms when starting emacs
-  (my-org-agenda-to-appt)
-  ;; (2) ... Everyday at 12:05am (useful in case you keep Emacs always on)
-  (run-at-time "12:05am" (* 24 3600) 'my-org-agenda-to-appt)
+;;   ;; update alarms when starting emacs
+;;   (my-org-agenda-to-appt)
+;;   ;; (2) ... Everyday at 12:05am (useful in case you keep Emacs always on)
+;;   (run-at-time "12:05am" (* 24 3600) 'my-org-agenda-to-appt)
 
-  ;; (3) ... When TODO.org is saved
-  (add-hook 'after-save-hook
-            #'(lambda ()
-               (if (string= (buffer-file-name) (concat (getenv "HOME") "~/Dropbox/org/todo.org"))
-                   (my-org-agenda-to-appt))))
+;;   ;; (3) ... When TODO.org is saved
+;;   (add-hook 'after-save-hook
+;;             #'(lambda ()
+;;                (if (string= (buffer-file-name) (concat (getenv "HOME") "~/Dropbox/org/todo.org"))
+;;                    (my-org-agenda-to-appt))))
 
-  ;; TODO Display appointments as a window manager notification (incorporate the script within elisp)
-  (setq appt-disp-window-function 'my-appt-display)
-  (setq appt-delete-window-function (lambda () t))
+;;   ;; TODO Display appointments as a window manager notification (incorporate the script within elisp)
+;;   (setq appt-disp-window-function 'my-appt-display)
+;;   (setq appt-delete-window-function (lambda () t))
 
-  (setq my-appt-notification-app "~/appt-notification.sh")
+;;   (setq my-appt-notification-app "~/appt-notification.sh")
 
-  (defun my-appt-display (min-to-app new-time msg)
-    (if (atom min-to-app)
-        (start-process "my-appt-notification-app" nil my-appt-notification-app min-to-app msg)
-      (dolist (i (number-sequence 0 (1- (length min-to-app))))
-        (start-process "my-appt-notification-app" nil my-appt-notification-app (nth i min-to-app) (nth i msg)))))
-  )
+;;   (defun my-appt-display (min-to-app new-time msg)
+;;     (if (atom min-to-app)
+;;         (start-process "my-appt-notification-app" nil my-appt-notification-app min-to-app msg)
+;;       (dolist (i (number-sequence 0 (1- (length min-to-app))))
+;;         (start-process "my-appt-notification-app" nil my-appt-notification-app (nth i min-to-app) (nth i msg)))))
+  ;; )
 
-(setq +org-capture-readings-file "~/Dropbox/org/links.org")
+(setq +org-capture-readings-file "~/Dropbox/org/links.org"
+      +org-capture-todo-file "~/Dropbox/org/inbox.org")
 (after! org-capture
   (setq org-capture-templates
         '(("t" "Personal todo" entry
@@ -294,7 +304,7 @@ This function makes sure that dates are aligned for easy reading."
            "* " :prepend t)
           ("j" "Journal" entry
            (file+olp+datetree +org-capture-journal-file)
-           "* %U %?\n%i\n%a" :prepend t)
+           "* %U %?\n** What happened \n** What is going through your mind? \n** What emotions are you feeling? \n** What thought pattern do you recognize? \n** How can you think about the situation differently? " :prepend t)
           ("p" "Templates for projects")
           ("pt" "Project-local todo" entry
            (file+headline +org-capture-project-todo-file "Inbox")
@@ -356,8 +366,8 @@ This function makes sure that dates are aligned for easy reading."
         :n "M-k" #'pdf-continuous-scroll-backward))
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
 
-(use-package! nov
-  :mode ("\\.epub\\'" . nov-mode))
+;; (use-package! nov
+;;   :mode ("\\.epub\\'" . nov-mode))
 
 (setq fancy-splash-image "~/.doom.d/doom-trans.png")
 (setq +doom-dashboard-menu-sections
@@ -389,14 +399,14 @@ This function makes sure that dates are aligned for easy reading."
   :commands (info-colors-fontify-node))
 
 (add-hook 'Info-selection-hook 'info-colors-fontify-node)
-(add-hook 'Info-mode-hook 'writeroom-mode)
+(add-hook 'Info-mode-hook #'writeroom-mode)
 
 (use-package windmove
   :bind
-  (("S-<left>". windmove-left)
-   ("S-<right>". windmove-right)
-   ("S-<up>". windmove-up)
-   ("S-<down>". windmove-down)))
+  (("S-<left>" . windmove-left)
+   ("S-<right>" . windmove-right)
+   ("S-<up>" . windmove-up)
+   ("S-<down>" . windmove-down)))
 
 (add-hook 'org-shiftup-final-hook 'windmove-up)
 (add-hook 'org-shiftleft-final-hook 'windmove-left)
@@ -537,13 +547,18 @@ This function makes sure that dates are aligned for easy reading."
 ;;(add-hook! 'notmuch-show-mode-hook #'writeroom-mode)
 
 ;;(setq lsp-file-watch-threshold 2000)
-(after! c++-mode
-  ;; Disable naive completion of angle brackets <>
+(add-hook! c++-mode
+  ;; FIXED (Finally) Disable naive completion of angle brackets <>
   (sp-local-pair 'c++-mode "<" ">" :actions :rem)
   ;; Disable built-in "smart" completion of tags
   (map! :map c++-mode-map
         "<" nil
         ">" nil))
+
+;; Start c++ files in insert state, why would one want it any other way...
+(add-to-list 'evil-insert-state-modes 'c++-mode)
+
+;; (set-file-template! "/main\\.c\\(?:c\\|pp\\)$" :trigger "__main.cpp" :mode 'c++-mode)
 
 ;;(after! cc-mode
 ;;  (set-company-backend! 'c-mode
@@ -565,52 +580,52 @@ This function makes sure that dates are aligned for easy reading."
   ;;(put 'test-group 'scheme-indent-function 1)
   (setq geiser-mode-start-repl-p t))
 
-(after! circe
-  (set-irc-server! "chat.freenode.net"
-                   `(:tls t
-                     :port 6697
-                     :nick "neovim"
-                     :sasl-username "brongulus"
-                     ;; :sasl-password "mypassword"
-                     :channels ("#neovim")))
-  (set-irc-server! "chat.freenode.net"
-                   `(:tls t
-                     :port 6697
-                     :nick "mlpack"
-                     :sasl-username "brongulus"
-                     ;; :sasl-password "mypassword"
-                     :channels ("#mlpack")))
-  (set-irc-server! "chat.freenode.net"
-                   `(:tls t
-                     :port 6697
-                     :nick "emacs"
-                     :sasl-username "brongulus"
-                     ;; :sasl-password "mypassword"
-                     :channels ("#emacs"))
-                   )
+;; (after! circe
+;;   (set-irc-server! "chat.freenode.net"
+;;                    `(:tls t
+;;                      :port 6697
+;;                      :nick "neovim"
+;;                      :sasl-username "brongulus"
+;;                      ;; :sasl-password "mypassword"
+;;                      :channels ("#neovim")))
+;;   (set-irc-server! "chat.freenode.net"
+;;                    `(:tls t
+;;                      :port 6697
+;;                      :nick "mlpack"
+;;                      :sasl-username "brongulus"
+;;                      ;; :sasl-password "mypassword"
+;;                      :channels ("#mlpack")))
+;;   (set-irc-server! "chat.freenode.net"
+;;                    `(:tls t
+;;                      :port 6697
+;;                      :nick "emacs"
+;;                      :sasl-username "brongulus"
+;;                      ;; :sasl-password "mypassword"
+;;                      :channels ("#emacs"))
+;;                    )
 
   (setq-default circe-use-tls t)
-  (setq circe-notifications-alert-icon "/usr/share/icons/breeze/actions/24/network-connect.svg"
-        lui-logging-directory "~/.emacs.d/.local/etc/irc"
-        lui-logging-file-format "{buffer}/%Y/%m-%d.txt"
-        circe-format-self-say "{nick:+13s} ┃ {body}")
+;;   (setq circe-notifications-alert-icon "/usr/share/icons/breeze/actions/24/network-connect.svg"
+;;         lui-logging-directory "~/.emacs.d/.local/etc/irc"
+;;         lui-logging-file-format "{buffer}/%Y/%m-%d.txt"
+;;         circe-format-self-say "{nick:+13s} ┃ {body}")
 
-  (custom-set-faces!
-    '(circe-my-message-face :weight unspecified))
+;;   (custom-set-faces!
+;;     '(circe-my-message-face :weight unspecified))
 
-  (enable-lui-logging-globally)
-  (enable-circe-display-images)
+;;   (enable-lui-logging-globally)
+;;   (enable-circe-display-images)
 
-  (defun named-circe-prompt ()
-    (lui-set-prompt
-     (concat (propertize (format "%13s > " (circe-nick))
-                         'face 'circe-prompt-face)
-             "")))
-  (add-hook 'circe-chat-mode-hook #'named-circe-prompt)
+;;   (defun named-circe-prompt ()
+;;     (lui-set-prompt
+;;      (concat (propertize (format "%13s > " (circe-nick))
+;;                          'face 'circe-prompt-face)
+;;              "")))
+;;   (add-hook 'circe-chat-mode-hook #'named-circe-prompt)
 
-  (appendq! all-the-icons-mode-icon-alist
-            '((circe-channel-mode all-the-icons-material "message" :face all-the-icons-lblue)
-              (circe-server-mode all-the-icons-material "chat_bubble_outline" :face all-the-icons-purple))))
+;;   (appendq! all-the-icons-mode-icon-alist
+;;             '((circe-channel-mode all-the-icons-material "message" :face all-the-icons-lblue)
+;;               (circe-server-mode all-the-icons-material "chat_bubble_outline" :face all-the-icons-purple))))
 
 (use-package! lexic
   :commands lexic-search lexic-list-dictionary
@@ -682,28 +697,30 @@ This function makes sure that dates are aligned for easy reading."
 ;;  :commands (el-secretario-daily-review)
 ;;  )
 
-(use-package paper
-  ;; you could also add html, png, jpg
-  :mode ("\\.pdf\\'"  . paper-mode)
-  :mode ("\\.epub\\'"  . paper-mode)
-  :mode ("\\.cbz\\'"  . paper-mode)
-  :config
-  (require 'evil-collection-paper)
-  (evil-collection-paper-setup))
+;; (use-package paper
+;;   ;; you could also add html, png, jpg
+;;   :mode ("\\.pdf\\'"  . paper-mode)
+;;   :mode ("\\.epub\\'"  . paper-mode)
+;;   :mode ("\\.cbz\\'"  . paper-mode)
+;;   :config
+;;   (require 'evil-collection-paper)
+;;   (evil-collection-paper-setup))
 
-(use-package nano
-  :init
-  (require 'nano-base-colors)
-  (require 'nano-colors)
-  (require 'nano-faces)
-  (require 'nano-theme)
-  (require 'nano-theme-light)
-  (require 'nano-theme-dark)
-  (require 'nano-splash)
-  (require 'nano-modeline)
-  (nano-faces)
-  (nano-theme)
-  )
+;;(use-package nano
+;;  :init
+;;  (require 'nano-base-colors)
+;;  (require 'nano-colors)
+;;  (require 'nano-faces)
+;;  (require 'nano-theme)
+;;  (require 'nano-theme-light)
+;;  (require 'nano-theme-dark)
+  ;; (require 'nano-splash)
+  ;; (require 'nano-modeline)
+;;  (nano-faces)
+;;  (nano-theme)
+;;  :config
+;;  (menu-bar-mode -1)
+;;  )
 
 ;; (use-package! tree-sitter
 ;;   :when (bound-and-true-p module-file-suffix)

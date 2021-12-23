@@ -11,7 +11,7 @@
 ;
 ;;##########PACKAGES###########
 (unpin! doom-themes)
-(package! solaire-mode :disable t)
+;; (package! solaire-mode :disable t)
 
 (package! org-fragtog)
 (package! anki-editor)
@@ -29,12 +29,13 @@
 ;; (package! tree-sitter-langs)
 (package! info-colors)
 (package! yequake)
+(package! devdocs)
 ;;(package! systemd)
 ;;(package! emms)
 ;;(package! theme-magic)
 ;;(package! counsel-spotify)
-(package! telega)
-(package! nov)
+;; (package! telega)
+;;(package! nov)
 (package! conllu-mode)
 (package! graphviz-dot-mode)
 ;;(package! modus-vivendi-theme)
@@ -63,8 +64,8 @@
  :recipe (:type git :host github :repo "akirakyle/emacs-webkit"
           :branch "main" :files (:defaults "*.js" "*.css" "*.so")
           :pre-build ("make")))
-(package! paper-mode
-  :recipe (:host github :repo "ymarco/paper-mode"))
+;; (package! paper-mode
+;;   :recipe (:host github :repo "ymarco/paper-mode"))
 
 
 ;; To install a package directly from a remote git repo, you must specify a

@@ -54,7 +54,7 @@
 (defcustom openwith-associations
   '(
     ;; (unless (display-graphic-p)
-      ("\\.pdf\\'" "zathura" (file))
+      ;; ("\\.pdf\\'" "zathura" (file))
     ;;   )
     ("\\.epub\\'" "mupdf" (file))
     ;; ("\\.mp3\\'" "mpd" (file))

@@ -122,7 +122,7 @@
       (setq right-margin-width 6)
       (set-window-buffer nil (current-buffer))))
 
-  (add-hook! 'notmuch-show-hook #'variable-pitch-mode #'left-padding #'iscroll-mode)
+  (add-hook! 'notmuch-show-hook #'writeroom-mode #'mixed-pitch-mode #'left-padding #'iscroll-mode)
   ;; TEST setup
 
 
