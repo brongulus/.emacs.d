@@ -226,7 +226,7 @@ Modeline has lots of unnecessary information, let's remove that, also let's disp
 
 ;; displaying useful information
 
-(display-time-mode 1)
+;; (display-time-mode 1)
 
 (unless (equal "Battery status not available"
                (battery))
@@ -810,6 +810,24 @@ Need to figure this stuff out (WIP)
 ;; Start c++ files in insert state, why would one want it any other way...
 (add-to-list 'evil-insert-state-modes 'c++-mode)
 
+;; (map! :map c++-mode-map
+;;       :localleader "c" (cmd! (compile (concat "g++ -std=c++17 -O2" buffer-file-name " -Wall"))))
+
+;; Compile Command
+(defun cpp-compile-command (f-name)
+  (when f-name
+    (setq compile-command
+          (concat "g++ -std=c++17 -O2 -o "
+                  (shell-quote-argument (file-name-sans-extension f-name))
+                  " "
+                  (shell-quote-argument f-name)
+                  " -Wall;"))))
+(after! 'c++-mode
+  (setq compile-command (cpp-compile-command (buffer-file-name))))
+
+;; (after! 'c++-mode
+;;   (set (make-local-variable 'compile-command)
+;;        (concat "g++ -std=c++17 -O2 " buffer-file-name " -Wall")))
 ;; (set-file-template! "/main\\.c\\(?:c\\|pp\\)$" :trigger "__main.cpp" :mode 'c++-mode)
 
 ;;(after! cc-mode
