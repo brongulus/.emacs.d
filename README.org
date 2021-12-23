@@ -1,1 +1,1 @@
-/home/prashant/.doom.d/config.org
+config.org
