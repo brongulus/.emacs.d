@@ -1,21 +1,3 @@
-<<<<<<< HEAD
-# -*- mode: snippet -*-
-# --
-/**
- *   author: brongulus
- *   created: `(format-time-string "%Y-%m-%d %H:%M:%S")`
-**/
-#include <bits/stdc++.h>
-
-using namespace std;
-
-int main(){
-    ios::sync_with_stdio(false);
-    cin.tie(0);
-    $0
-    return 0;
-}
-=======
 # -*- mode: snippet -*-
 # --
 /**
@@ -36,4 +18,3 @@ int main(){
     }
     return 0;
 }
->>>>>>> 2d1abe7 (C++: changed template, fixed <> completion)
