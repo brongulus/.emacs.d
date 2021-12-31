@@ -21,6 +21,9 @@
 *** [[https://haskellweekly.news/newsletter.atom][Haskell Weekly]]
 *** [[https://weekly.nixos.org/feeds/all.rss.xml][NixOS Weekly]]
 *** [[https://fasterthanli.me/index.xml][Amos - fasterthananli]]
+** Competitive :cp:
+*** entry-title: \(cp\)
+*** [[http://feeds2.feedburner.com/PetrMitrichev?fmt=xml][Algorithms Weekly - Petr]]
 ** MLDL :nn:
 *** entry-title: \(neural-networks\)
 *** [[https://ljvmiranda921.github.io/feed.xml][LJ Miranda Notebook]]

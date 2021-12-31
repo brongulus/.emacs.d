@@ -41,10 +41,10 @@
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
- doom-font (font-spec :family "Comic Mono" :size 18 :weight 'light)
+ doom-font "Comic Mono:size 20 :weight 'light"
  ;;MesloLGS Nerd Font Mono
- doom-variable-pitch-font (font-spec :family "FreightSansProLight-Regular" :size 20)
- doom-theme 'doom-nord
+ doom-variable-pitch-font (font-spec :family "FreightSansProLight-Regular" :size 14.0)
+ doom-theme 'doom-one
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
  org-directory "/home/prashant/Dropbox/org/"
  ;;org-indent-mode t
@@ -68,6 +68,9 @@
 
 ;; (setq projectile-switch-project-action #'projectile-dired)
 
+(after! warnings
+        (add-to-list 'warning-suppress-types '(defvaralias)))
+
 (custom-set-faces! '(default :background nil))
 
 (add-hook! 'window-setup-hook
@@ -80,7 +83,9 @@
   (setq company-idle-delay 0.2))
 
 ;;(add-hook 'dired-mode-hook 'dired-hide-details-mode)
-(add-hook 'dired-mode-hook 'writeroom-mode)
+;; (add-hook 'dired-mode-hook 'writeroom-mode)
+(add-hook! 'ranger-mode-hook
+  (setq hl-line-mode 1))
 
 (setq-default custom-file (expand-file-name ".custom.el" doom-private-dir))
 (when (file-exists-p custom-file)
@@ -114,12 +119,9 @@
 
 (setq auth-sources '("/home/prashant/.authinfo" "/home/prashant/.emacs.d/.local/etc/authinfo.gpg" "~/.authinfo.gpg"))
 
-(remove-hook! doom-modeline-mode-hook #'size-indication-mode
-  #'column-number-mode)
-
 ;; displaying useful information
 
-(display-time-mode 1)
+;; (display-time-mode 1)
 
 (unless (equal "Battery status not available"
                (battery))
@@ -128,13 +130,15 @@
 (add-hook! 'Info-mode-hook #'hide-mode-line-mode)
 
 (after! doom-modeline
+  (remove-hook! 'doom-modeline-mode-hook #'column-number-mode)
   (doom-modeline-def-segment buffer-name
     (concat
      (doom-modeline-spc)
      (doom-modeline--buffer-name)))
-  (setq-default doom-modeline-enable-word-count nil
+  (setq-default doom-modeline-major-mode-icon t
+                doom-modeline-enable-word-count nil
                 doom-modeline-buffer-encoding nil
-                doom-modeline-buffer-file-name-style 'file-name
+                doom-modeline-buffer-file-name-style 'relative-to-project
                 line-number-mode nil
                 column-number-mode nil
                 size-indication-mode nil)
@@ -333,6 +337,8 @@ This function makes sure that dates are aligned for easy reading."
 (setq rmh-elfeed-org-files '("~/.doom.d/elfeed.org"))
 (after! elfeed
   (setq elfeed-search-filter "@2-month-ago"))
+(add-hook! 'elfeed-show-mode-hook
+  (setq left-margin-width 2))
 (defun =elfeed ()
   (interactive)
   (elfeed)
@@ -547,6 +553,8 @@ This function makes sure that dates are aligned for easy reading."
 ;;(add-hook! 'notmuch-show-mode-hook #'writeroom-mode)
 
 ;;(setq lsp-file-watch-threshold 2000)
+(setq oj-home-dir "/mnt/Data/Documents/problems")
+
 (add-hook! c++-mode
   ;; FIXED (Finally) Disable naive completion of angle brackets <>
   (sp-local-pair 'c++-mode "<" ">" :actions :rem)
@@ -570,8 +578,21 @@ This function makes sure that dates are aligned for easy reading."
                   " "
                   (shell-quote-argument f-name)
                   " -Wall;"))))
-(after! 'c++-mode
-  (setq compile-command (cpp-compile-command (buffer-file-name))))
+;; HACK DOESN'T WORK LMFAO For now, disabling adding codeforces dir to lsp, but look into it later
+;; (with-eval-after-load 'projectile
+;;   (add-to-list 'projectile-globally-ignored-directories "/mnt/Data/Documents/code/codeforces"))
+
+(add-hook! 'c++-mode-hook
+  (setq-local compile-command (cpp-compile-command (buffer-file-name))))
+
+(after! projectile
+(projectile-register-project-type 'cpp '("*.cpp")
+                                  :compile "g++ -std=c++17 -O2 -o "))
+;; (defun proj-cpp-compile-command ()
+;;   (cond
+;;    ((and (eq major-mode 'c++-mode)
+;;          (not (string-match-p (regexp-quote "\\.*/atcoder/\\.*") (buffer-file-name (current-buffer)))))
+;;     "./g++ -std=c++17 -O2 -o ")))
 
 ;; (after! 'c++-mode
 ;;   (set (make-local-variable 'compile-command)

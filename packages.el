@@ -19,7 +19,9 @@
 ;;(package! pocket-reader)
 (package! geiser)
 (package! elvish-mode)
+(package! dirvish)
 (package! spray)
+(package! oj)
 (package! guix)
 (package! iscroll)
 (package! rainbow-mode)
@@ -50,6 +52,8 @@
 ;;  :recipe (:host github :repo "brongulus/doom-nano-testing"))
 (package! nano-emacs
   :recipe (:host github :repo "rougier/nano-emacs"))
+(package! notebook-mode
+  :recipe (:host github :repo "rougier/notebook-mode"))
 ;; FIXME
 (package! pdf-continuous-scroll-mode
   :recipe (:host github :repo "dalanicolai/pdf-continuous-scroll-mode.el"))
