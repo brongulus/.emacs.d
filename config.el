@@ -13,6 +13,13 @@
                          "*scratch*"))
           (frame-parameters . ((undecorated . t)))))))
 
+(use-package! vertico-posframe
+  :config
+  (vertico-posframe-mode 1)
+  (setq vertico-posframe-parameters
+      '((left-fringe . 8)
+        (right-fringe . 8))))
+
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
 ;; Here are some additional functions/macros that could help you configure Doom:
@@ -41,10 +48,11 @@
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
- doom-font "Comic Mono:size 20 :weight 'light"
+ doom-font (font-spec :family "FantasqueSansMono Nerd Font Mono" :size 14.0)
+ ;; doom-font "Comic Mono:size 20 :weight 'light"
  ;;MesloLGS Nerd Font Mono
  doom-variable-pitch-font (font-spec :family "FreightSansProLight-Regular" :size 14.0)
- doom-theme 'doom-one
+ doom-theme 'doom-tokyo-night
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
  org-directory "/home/prashant/Dropbox/org/"
  ;;org-indent-mode t
@@ -117,6 +125,7 @@
 (add-hook! 'writeroom-mode-hook
   (doom/set-frame-opacity (if writeroom-mode 98 100)))
 
+(setq forge-owned-accounts '(("brongulus")))
 (setq auth-sources '("/home/prashant/.authinfo" "/home/prashant/.emacs.d/.local/etc/authinfo.gpg" "~/.authinfo.gpg"))
 
 ;; displaying useful information

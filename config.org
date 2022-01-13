@@ -39,6 +39,15 @@ The first edition of my +soon-to-be+ literate configuration :P
 4. [ ] Figure out GnuPG and magit+forge.
 5. [ ] Improve notmuch's aesthetics, it deserves the same love as mu4e.
 
+#+begin_src emacs-lisp
+(use-package! vertico-posframe
+  :config
+  (vertico-posframe-mode 1)
+  (setq vertico-posframe-parameters
+      '((left-fringe . 8)
+        (right-fringe . 8))))
+#+end_src
+
 * Config File Header
 For the lexical binding of the elisp file.
 
@@ -81,10 +90,11 @@ To avoid the issue of reproducing your customize options.
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
- doom-font "Comic Mono:size 20 :weight 'light"
+ doom-font (font-spec :family "FantasqueSansMono Nerd Font Mono" :size 14.0)
+ ;; doom-font "Comic Mono:size 20 :weight 'light"
  ;;MesloLGS Nerd Font Mono
  doom-variable-pitch-font (font-spec :family "FreightSansProLight-Regular" :size 14.0)
- doom-theme 'doom-one
+ doom-theme 'doom-tokyo-night
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
  org-directory "/home/prashant/Dropbox/org/"
  ;;org-indent-mode t
@@ -222,6 +232,7 @@ Set opacity
 This is a major WIP since my knowledge with gpg is extremely limited.
 
 #+begin_src emacs-lisp
+(setq forge-owned-accounts '(("brongulus")))
 (setq auth-sources '("/home/prashant/.authinfo" "/home/prashant/.emacs.d/.local/etc/authinfo.gpg" "~/.authinfo.gpg"))
 #+END_SRC
 

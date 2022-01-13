@@ -32,6 +32,7 @@
 (package! info-colors)
 (package! yequake)
 (package! devdocs)
+(package! vertico-posframe)
 ;;(package! systemd)
 ;;(package! emms)
 ;;(package! theme-magic)

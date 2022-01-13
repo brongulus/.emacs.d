@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: println
+# key: scan
+# condition: t
+# --
+Scanner scanner = new Scanner(System.in);
+$0
