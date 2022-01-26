@@ -32,6 +32,20 @@ The first edition of my +soon-to-be+ literate configuration :P
           (frame-parameters . ((undecorated . t)))))))
 #+end_src
 
+Move over rofi.
+
+#+begin_src emacs-lisp
+(defun emacs-run-launcher ()
+"Create and select a frame called emacs-run-launcher which consists only of a minibuffer and has specific dimensions. Run counsel-linux-app on that frame, which is an emacs command that prompts you to select an app and open it in a dmenu like behaviour. Delete the frame after that command has exited"
+(interactive)
+(with-selected-frame (make-frame '((name . "emacs-run-launcher")
+(minibuffer . only)
+(width . 120)
+(height . 11)))
+(counsel-linux-app)
+(delete-frame)))
+#+end_src
+
 * TODO Config Improvements:
 1. [X] +Turn this into a literate Configuration+
 2. [ ] Improve the EXWM experience
@@ -40,12 +54,12 @@ The first edition of my +soon-to-be+ literate configuration :P
 5. [ ] Improve notmuch's aesthetics, it deserves the same love as mu4e.
 
 #+begin_src emacs-lisp
-(use-package! vertico-posframe
-  :config
-  (vertico-posframe-mode 1)
-  (setq vertico-posframe-parameters
-      '((left-fringe . 8)
-        (right-fringe . 8))))
+;; (use-package! vertico-posframe
+;;   :config
+;;   (vertico-posframe-mode 1)
+;;   (setq vertico-posframe-parameters
+;;       '((left-fringe . 8)
+;;         (right-fringe . 8))))
 #+end_src
 
 * Config File Header
@@ -90,11 +104,11 @@ To avoid the issue of reproducing your customize options.
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
- doom-font (font-spec :family "FantasqueSansMono Nerd Font Mono" :size 14.0)
+ doom-font (font-spec :family "FantasqueSansMono Nerd Font Mono" :size 11.0)
  ;; doom-font "Comic Mono:size 20 :weight 'light"
  ;;MesloLGS Nerd Font Mono
- doom-variable-pitch-font (font-spec :family "FreightSansProLight-Regular" :size 14.0)
- doom-theme 'doom-tokyo-night
+ doom-variable-pitch-font (font-spec :family "NotoSans Nerd Font" :size 10.0 :weight 'light)
+ doom-theme 'doom-flatwhite
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
  org-directory "/home/prashant/Dropbox/org/"
  ;;org-indent-mode t
@@ -109,6 +123,19 @@ To avoid the issue of reproducing your customize options.
  org-latex-toc-command "\\tableofcontents \\clearpage"
  )
 #+END_SRC
+
+Fix theme faces
+
+#+begin_src emacs-lisp
+(custom-theme-set-faces! 'doom-flatwhite
+  '(font-lock-comment-face  :background "#fcf2bf")
+  '(hi-yellow :background "#d9c6c3")
+  '(org-block :background "#fcf2bf")
+  '(org-block-begin-line :background "#fcf2bf" :extend t)
+  '(org-block-end-line :background "#fcf2bf" :extend t)
+  '(cursor :background "#614c61")
+  )
+#+end_src
 
 Really, really need a keybind for pasting stuff while in insert mode and rotating images.
 
@@ -161,8 +188,8 @@ Also =doom/window enlargen= has some freezing issues, this HACK attempts to fix 
 Company's completion dialog frame takes a long time to show up, making it look slow, hence we reduce the idle delay.
 
 #+BEGIN_SRC emacs-lisp
-(after! company
-  (setq company-idle-delay 0.2))
+;; (after! company
+;;   (setq company-idle-delay 0.2))
 #+END_SRC
 
 Also, I don't need the details dired provides all the time, so I disabled that.
@@ -215,9 +242,9 @@ Add a save and close keybinding.
 Remove highlighting
 
 #+begin_src emacs-lisp
-(add-hook 'after-change-major-mode-hook
-(lambda ()
-(hl-line-mode -1)))
+;;(add-hook 'after-change-major-mode-hook
+;;(lambda ()
+;;(hl-line-mode -1)))
 #+end_src
 
 Set opacity
@@ -295,6 +322,10 @@ Now I need to make all these changes coherent and consistent but for the time be
 ;; (add-hook 'org-mode-hook 'lsp-completion-mode)
 #+END_SRC
 
+#+begin_src emacs-lisp
+(setq org-startup-with-inline-images t)
+#+end_src
+
 Org files should look beautiful while you're typing in them.
 
 #+begin_src emacs-lisp
@@ -302,6 +333,10 @@ Org files should look beautiful while you're typing in them.
 (custom-set-faces!
   '(org-table :inherit 'fixed-pitch))
 ;;(set-face-attribute 'org-table nil :inherit 'fixed-pitch)
+#+end_src
+
+#+begin_src emacs-lisp
+(setq org-fontify-quote-and-verse-blocks t)
 #+end_src
 
 Nested snippets are useful, let's enable them.
@@ -316,15 +351,21 @@ Flycheck annoys whenever I have to export to pdf, let's disable it for tex files
 (setq flycheck-global-modes '(not LaTeX-mode latex-mode))
 #+END_SRC
 
+Ditched texlive in favour of tectonic for the time being, need to change latex export command
+
+#+begin_src emacs-lisp
+(setq-default org-latex-pdf-process '("tectonic -Z shell-escape --outdir=%o %f"))
+#+end_src
+
 For plotting graphs, one needs tikz and pfgplots. let's enable them by default, also preview of tikz graphs would be cool too.
 
 #+BEGIN_SRC emacs-lisp
-(use-package graphviz-dot-mode
-  :config
-  (setq graphviz-dot-indent-width 4))
+;; (use-package graphviz-dot-mode
+;;   :config
+;;   (setq graphviz-dot-indent-width 4))
 
-(use-package company-graphviz-dot
-  )
+;; (use-package company-graphviz-dot
+;;   )
 (setq org-preview-latex-default-process 'dvisvgm)
 #+END_SRC
 
@@ -507,7 +548,7 @@ TODO Add better templates for notes and journal.
 ** FIXME Org-ol Tree
 
 #+begin_src emacs-lisp
-(add-hook! 'treemacs-mode-hook #'hl-todo-mode #'org-fragtog-mode #'org-mode)
+;; (add-hook! 'treemacs-mode-hook #'hl-todo-mode #'org-fragtog-mode #'org-mode)
 #+end_src
 
 * Faces
@@ -515,7 +556,8 @@ TODO Add better templates for notes and journal.
 #+begin_src emacs-lisp
 (custom-set-faces!
   '(ein:cell-input-area :background "bg-alt" :extend t)
-  '(company-tooltip :family "doom-font"))
+  ;;'(company-tooltip :family doom-font)
+  )
 #+end_src
 
 Italicized Comments
@@ -523,6 +565,13 @@ Italicized Comments
 #+begin_src emacs-lisp
 (custom-set-faces!
   '((font-lock-comment-face font-lock-doc-face) :slant italic))
+#+end_src
+
+Fix treemacs ugly variable-pitch
+
+#+begin_src emacs-lisp
+(custom-set-faces!
+  '(treemacs-git-unmodified-face :inherit treemacs-file-face))
 #+end_src
 
 * Elfeed
@@ -820,7 +869,27 @@ Need to figure this stuff out (WIP)
 
 #+BEGIN_SRC emacs-lisp
 ;;(setq lsp-file-watch-threshold 2000)
+(defun java-ide-view-enable ()
+  (interactive)
+  (progn
+    (lsp-treemacs-symbols)
+    (lsp-treemacs-java-deps-list)))
+
+(map! :map java-mode-map
+      :n "SPC m p" #'java-ide-view-enable)
+
+
 (setq oj-home-dir "/mnt/Data/Documents/problems")
+
+(defun end-process ()
+  (interactive)
+  (progn
+    (delete-process (get-buffer-process (current-buffer)))
+    (kill-current-buffer)
+    (+workspace/close-window-or-workspace)))
+
+(map! :map comint-mode-map
+      :ni "q" #'end-process)
 
 (add-hook! c++-mode
   ;; FIXED (Finally) Disable naive completion of angle brackets <>
@@ -898,31 +967,18 @@ Attach a geiser repl whenever a scheme file is opened.
 * IRC
 
 #+begin_src emacs-lisp
-;; (after! circe
-;;   (set-irc-server! "chat.freenode.net"
-;;                    `(:tls t
-;;                      :port 6697
-;;                      :nick "neovim"
-;;                      :sasl-username "brongulus"
-;;                      ;; :sasl-password "mypassword"
-;;                      :channels ("#neovim")))
-;;   (set-irc-server! "chat.freenode.net"
-;;                    `(:tls t
-;;                      :port 6697
-;;                      :nick "mlpack"
-;;                      :sasl-username "brongulus"
-;;                      ;; :sasl-password "mypassword"
-;;                      :channels ("#mlpack")))
-;;   (set-irc-server! "chat.freenode.net"
-;;                    `(:tls t
-;;                      :port 6697
-;;                      :nick "emacs"
-;;                      :sasl-username "brongulus"
-;;                      ;; :sasl-password "mypassword"
-;;                      :channels ("#emacs"))
-;;                    )
+(add-to-list 'evil-insert-state-modes #'circe-mode)
+(after! circe
+  (set-irc-server! "irc.libera.chat"
+                   `(:tls t
+                     :port 6697
+                     :nick "brongulus"
+                     :sasl-username "brongulus"
+                     ;; :sasl-password "mypassword"
+                     :channels ("#mlpack")))
+  )
 
-  (setq-default circe-use-tls t)
+  ;; (setq-default circe-use-tls t)
 ;;   (setq circe-notifications-alert-icon "/usr/share/icons/breeze/actions/24/network-connect.svg"
 ;;         lui-logging-directory "~/.emacs.d/.local/etc/irc"
 ;;         lui-logging-file-format "{buffer}/%Y/%m-%d.txt"
@@ -1106,9 +1162,3 @@ This is a trial run for a package.
   )
 #+end_src
 
-* Blog Setup?
-
-#+begin_src emacs-lisp
-(use-package ox-hugo
-  :after ox)
-#+end_src

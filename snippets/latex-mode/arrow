@@ -1,6 +1,6 @@
 # -*- mode: snippet -*-
 # name: arrow
-# key: ri
+# key: ->
 # condition: t
 # --
 \rightarrow $0

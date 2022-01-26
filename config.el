@@ -13,12 +13,22 @@
                          "*scratch*"))
           (frame-parameters . ((undecorated . t)))))))
 
-(use-package! vertico-posframe
-  :config
-  (vertico-posframe-mode 1)
-  (setq vertico-posframe-parameters
-      '((left-fringe . 8)
-        (right-fringe . 8))))
+(defun emacs-run-launcher ()
+"Create and select a frame called emacs-run-launcher which consists only of a minibuffer and has specific dimensions. Run counsel-linux-app on that frame, which is an emacs command that prompts you to select an app and open it in a dmenu like behaviour. Delete the frame after that command has exited"
+(interactive)
+(with-selected-frame (make-frame '((name . "emacs-run-launcher")
+(minibuffer . only)
+(width . 120)
+(height . 11)))
+(counsel-linux-app)
+(delete-frame)))
+
+;; (use-package! vertico-posframe
+;;   :config
+;;   (vertico-posframe-mode 1)
+;;   (setq vertico-posframe-parameters
+;;       '((left-fringe . 8)
+;;         (right-fringe . 8))))
 
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
@@ -48,11 +58,11 @@
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
- doom-font (font-spec :family "FantasqueSansMono Nerd Font Mono" :size 14.0)
+ doom-font (font-spec :family "FantasqueSansMono Nerd Font Mono" :size 11.0)
  ;; doom-font "Comic Mono:size 20 :weight 'light"
  ;;MesloLGS Nerd Font Mono
- doom-variable-pitch-font (font-spec :family "FreightSansProLight-Regular" :size 14.0)
- doom-theme 'doom-tokyo-night
+ doom-variable-pitch-font (font-spec :family "NotoSans Nerd Font" :size 10.0 :weight 'light)
+ doom-theme 'doom-flatwhite
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
  org-directory "/home/prashant/Dropbox/org/"
  ;;org-indent-mode t
@@ -66,6 +76,15 @@
  large-file-warning-threshold nil
  org-latex-toc-command "\\tableofcontents \\clearpage"
  )
+
+(custom-theme-set-faces! 'doom-flatwhite
+  '(font-lock-comment-face  :background "#fcf2bf")
+  '(hi-yellow :background "#d9c6c3")
+  '(org-block :background "#fcf2bf")
+  '(org-block-begin-line :background "#fcf2bf" :extend t)
+  '(org-block-end-line :background "#fcf2bf" :extend t)
+  '(cursor :background "#614c61")
+  )
 
 (map! :i "C-y" #'evil-paste-after)
 (map! :map image-mode-map
@@ -87,8 +106,8 @@
 (setq window-resize-pixelwise nil
       frame-resize-pixelwise nil)
 
-(after! company
-  (setq company-idle-delay 0.2))
+;; (after! company
+;;   (setq company-idle-delay 0.2))
 
 ;;(add-hook 'dired-mode-hook 'dired-hide-details-mode)
 ;; (add-hook 'dired-mode-hook 'writeroom-mode)
@@ -117,9 +136,9 @@
 
 (map! :n "SPC b w" #'save-and-close)
 
-(add-hook 'after-change-major-mode-hook
-(lambda ()
-(hl-line-mode -1)))
+;;(add-hook 'after-change-major-mode-hook
+;;(lambda ()
+;;(hl-line-mode -1)))
 
 (doom/set-frame-opacity 98)
 (add-hook! 'writeroom-mode-hook
@@ -167,21 +186,27 @@
               (yas-activate-extra-mode 'latex-mode)))
 ;; (add-hook 'org-mode-hook 'lsp-completion-mode)
 
+(setq org-startup-with-inline-images t)
+
 (add-hook! 'org-mode-hook #'mixed-pitch-mode)
 (custom-set-faces!
   '(org-table :inherit 'fixed-pitch))
 ;;(set-face-attribute 'org-table nil :inherit 'fixed-pitch)
 
+(setq org-fontify-quote-and-verse-blocks t)
+
 (setq yas-triggers-in-field t)
 
 (setq flycheck-global-modes '(not LaTeX-mode latex-mode))
 
-(use-package graphviz-dot-mode
-  :config
-  (setq graphviz-dot-indent-width 4))
+(setq-default org-latex-pdf-process '("tectonic -Z shell-escape --outdir=%o %f"))
 
-(use-package company-graphviz-dot
-  )
+;; (use-package graphviz-dot-mode
+;;   :config
+;;   (setq graphviz-dot-indent-width 4))
+
+;; (use-package company-graphviz-dot
+;;   )
 (setq org-preview-latex-default-process 'dvisvgm)
 
 (after! org
@@ -334,14 +359,18 @@ This function makes sure that dates are aligned for easy reading."
           ("oc" "Project changelog" entry #'+org-capture-central-project-changelog-file "* %U %?\n %i\n %a" :heading "Changelog" :prepend t))
         ))
 
-(add-hook! 'treemacs-mode-hook #'hl-todo-mode #'org-fragtog-mode #'org-mode)
+;; (add-hook! 'treemacs-mode-hook #'hl-todo-mode #'org-fragtog-mode #'org-mode)
 
 (custom-set-faces!
   '(ein:cell-input-area :background "bg-alt" :extend t)
-  '(company-tooltip :family "doom-font"))
+  ;;'(company-tooltip :family doom-font)
+  )
 
 (custom-set-faces!
   '((font-lock-comment-face font-lock-doc-face) :slant italic))
+
+(custom-set-faces!
+  '(treemacs-git-unmodified-face :inherit treemacs-file-face))
 
 (setq rmh-elfeed-org-files '("~/.doom.d/elfeed.org"))
 (after! elfeed
@@ -562,7 +591,27 @@ This function makes sure that dates are aligned for easy reading."
 ;;(add-hook! 'notmuch-show-mode-hook #'writeroom-mode)
 
 ;;(setq lsp-file-watch-threshold 2000)
+(defun java-ide-view-enable ()
+  (interactive)
+  (progn
+    (lsp-treemacs-symbols)
+    (lsp-treemacs-java-deps-list)))
+
+(map! :map java-mode-map
+      :n "SPC m p" #'java-ide-view-enable)
+
+
 (setq oj-home-dir "/mnt/Data/Documents/problems")
+
+(defun end-process ()
+  (interactive)
+  (progn
+    (delete-process (get-buffer-process (current-buffer)))
+    (kill-current-buffer)
+    (+workspace/close-window-or-workspace)))
+
+(map! :map comint-mode-map
+      :ni "q" #'end-process)
 
 (add-hook! c++-mode
   ;; FIXED (Finally) Disable naive completion of angle brackets <>
@@ -628,31 +677,18 @@ This function makes sure that dates are aligned for easy reading."
   ;;(put 'test-group 'scheme-indent-function 1)
   (setq geiser-mode-start-repl-p t))
 
-;; (after! circe
-;;   (set-irc-server! "chat.freenode.net"
-;;                    `(:tls t
-;;                      :port 6697
-;;                      :nick "neovim"
-;;                      :sasl-username "brongulus"
-;;                      ;; :sasl-password "mypassword"
-;;                      :channels ("#neovim")))
-;;   (set-irc-server! "chat.freenode.net"
-;;                    `(:tls t
-;;                      :port 6697
-;;                      :nick "mlpack"
-;;                      :sasl-username "brongulus"
-;;                      ;; :sasl-password "mypassword"
-;;                      :channels ("#mlpack")))
-;;   (set-irc-server! "chat.freenode.net"
-;;                    `(:tls t
-;;                      :port 6697
-;;                      :nick "emacs"
-;;                      :sasl-username "brongulus"
-;;                      ;; :sasl-password "mypassword"
-;;                      :channels ("#emacs"))
-;;                    )
+(add-to-list 'evil-insert-state-modes #'circe-mode)
+(after! circe
+  (set-irc-server! "irc.libera.chat"
+                   `(:tls t
+                     :port 6697
+                     :nick "brongulus"
+                     :sasl-username "brongulus"
+                     ;; :sasl-password "mypassword"
+                     :channels ("#mlpack")))
+  )
 
-  (setq-default circe-use-tls t)
+  ;; (setq-default circe-use-tls t)
 ;;   (setq circe-notifications-alert-icon "/usr/share/icons/breeze/actions/24/network-connect.svg"
 ;;         lui-logging-directory "~/.emacs.d/.local/etc/irc"
 ;;         lui-logging-file-format "{buffer}/%Y/%m-%d.txt"
@@ -795,6 +831,3 @@ This function makes sure that dates are aligned for easy reading."
         :ni "C-c C-<left>" 'org-insert-heading
         :ni "C-c C-<right>" 'org-insert-subheading)
   )
-
-(use-package ox-hugo
-  :after ox)
