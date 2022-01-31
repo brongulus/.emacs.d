@@ -12,5 +12,8 @@
         :ni "<" #'mpc-prev
         :ni "f" #'mpc-ffwd             ;; toggles
         :ni "b" #'mpc-rewind           ;; toggles
-        :ni "u" #'mpc-update)
+        :ni "u" #'mpc-update
+        :ni "l" #'windmove-right
+        :ni "h" #'windmove-left
+        :ni "RET" #'mpc-select-toggle)
   )

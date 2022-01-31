@@ -62,7 +62,7 @@
  ;; doom-font "Comic Mono:size 20 :weight 'light"
  ;;MesloLGS Nerd Font Mono
  doom-variable-pitch-font (font-spec :family "NotoSans Nerd Font" :size 10.0 :weight 'light)
- doom-theme 'doom-flatwhite
+ doom-theme 'doom-ephemeral
  doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
  org-directory "/home/prashant/Dropbox/org/"
  ;;org-indent-mode t
@@ -186,6 +186,7 @@
               (yas-activate-extra-mode 'latex-mode)))
 ;; (add-hook 'org-mode-hook 'lsp-completion-mode)
 
+;; (setq org-latex-listings 'minted) ;; Doesn't work with tectonic fml
 (setq org-startup-with-inline-images t)
 
 (add-hook! 'org-mode-hook #'mixed-pitch-mode)
@@ -612,6 +613,9 @@ This function makes sure that dates are aligned for easy reading."
 
 (map! :map comint-mode-map
       :ni "q" #'end-process)
+(map! :map compilation-mode-map
+      :ni "q" #'+workspace/close-window-or-workspace
+      :ni "<escape>" #'+workspace/close-window-or-workspace)
 
 (add-hook! c++-mode
   ;; FIXED (Finally) Disable naive completion of angle brackets <>
@@ -626,6 +630,31 @@ This function makes sure that dates are aligned for easy reading."
 
 ;; (map! :map c++-mode-map
 ;;       :localleader "c" (cmd! (compile (concat "g++ -std=c++17 -O2" buffer-file-name " -Wall"))))
+
+(setq dap-cpptools-extension-version "1.5.1")
+
+  (with-eval-after-load 'lsp-rust
+    (require 'dap-cpptools))
+
+  (with-eval-after-load 'dap-cpptools
+    ;; Add a template specific for debugging Rust programs.
+    ;; It is used for new projects, where I can M-x dap-edit-debug-template
+    (dap-register-debug-template "Rust::CppTools Run Configuration"
+                                 (list :type "cppdbg"
+                                       :request "launch"
+                                       :name "Rust::Run"
+                                       :MIMode "gdb"
+                                       :miDebuggerPath "rust-gdb"
+                                       :environment []
+                                       :program "${workspaceFolder}/target/debug/hello / replace with binary"
+                                       :cwd "${workspaceFolder}"
+                                       :console "external"
+                                       :dap-compilation "cargo build"
+                                       :dap-compilation-dir "${workspaceFolder}")))
+
+  (with-eval-after-load 'dap-mode
+    (setq dap-default-terminal-kind "integrated") ;; Make sure that terminal programs open a term for I/O in an Emacs buffer
+    (dap-auto-configure-mode +1))
 
 ;; Compile Command
 (defun cpp-compile-command (f-name)

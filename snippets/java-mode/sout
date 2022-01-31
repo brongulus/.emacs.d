@@ -1,7 +1,7 @@
 # -*- mode: snippet -*-
 # name: println
-# key: scan
+# key: sout
 # condition: t
 # --
-Scanner scanner = new Scanner(System.in);
+System.out.println($1);
 $0
