@@ -1,35 +1,3 @@
-(add-hook! 'writeroom-mode-hook
-  (if writeroom-mode
-      (add-hook 'post-command-hook #'recenter nil t)
-    (remove-hook 'post-command-hook #'recenter t)))
-
-(setq yequake-frames
-      '(("Yequake & scratch" .
-         ((width . 0.75)
-          (height . 0.5)
-          (alpha . 0.90)
-          (buffer-fns . ("~/doom-emacs/.local/straight/build-27.1/yequake/yequake.el"
-                         split-window-horizontally
-                         "*scratch*"))
-          (frame-parameters . ((undecorated . t)))))))
-
-(defun emacs-run-launcher ()
-"Create and select a frame called emacs-run-launcher which consists only of a minibuffer and has specific dimensions. Run counsel-linux-app on that frame, which is an emacs command that prompts you to select an app and open it in a dmenu like behaviour. Delete the frame after that command has exited"
-(interactive)
-(with-selected-frame (make-frame '((name . "emacs-run-launcher")
-(minibuffer . only)
-(width . 120)
-(height . 11)))
-(counsel-linux-app)
-(delete-frame)))
-
-;; (use-package! vertico-posframe
-;;   :config
-;;   (vertico-posframe-mode 1)
-;;   (setq vertico-posframe-parameters
-;;       '((left-fringe . 8)
-;;         (right-fringe . 8))))
-
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
 ;; Here are some additional functions/macros that could help you configure Doom:
@@ -49,42 +17,94 @@
 ;; You can also try 'gd' (or 'C-c g d') to jump to their definition and see how
 ;; they are implemented.
 
-;;(eshell-command "setq stringvar $XDG_CURRENT_DESKTOP")
-;;(if (string= stringvar "EXWM")
-;;   (load! "+exwm")
-;;nil
-;;)
+;; TODO Fix treemacs symbols, indent guide continuation,
+;; font size, variable pitch modeline, faces for palenight
 
+;;; Commentary:
+;; Hello there weary traveller? What brings you to these wild parts?
+;; Stop and turn around, what lies ahead is madness and a pit of
+;; despair and disappointments. Consider yourself warned.
+
+;;; Basics
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
- doom-font (font-spec :family "FantasqueSansMono Nerd Font Mono" :size 11.0)
- ;; doom-font "Comic Mono:size 20 :weight 'light"
- ;;MesloLGS Nerd Font Mono
- doom-variable-pitch-font (font-spec :family "NotoSans Nerd Font" :size 10.0 :weight 'light)
- doom-theme 'doom-ephemeral
- doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
+ forge-owned-accounts '(("brongulus"))
+ auth-sources '("/home/prashant/.authinfo" "/home/prashant/.emacs.d/.local/etc/authinfo.gpg" "~/.authinfo.gpg")
+ doom-font "Hack:pixelsize=15"
+ doom-theme 'doom-palenight
  org-directory "/home/prashant/Dropbox/org/"
- ;;org-indent-mode t
+ bookmark-file "~/.doom.d/bookmarks"
  evil-escape-mode 1
- display-line-numbers-type nil
- rainbow-mode t
- left-margin-width 2
+ display-line-numbers-type 'relative
  tab-width 2
  doom-fallback-buffer-name "*doom*"
  which-key-idle-delay 0.5
  large-file-warning-threshold nil
+ custom-file (expand-file-name ".custom.el" doom-private-dir)
  org-latex-toc-command "\\tableofcontents \\clearpage"
- )
+ window-resize-pixelwise nil
+ evil-split-window-below t
+ evil-vsplit-window-right t
+ frame-resize-pixelwise nil
+ treemacs-width 30
+ doom-themes-treemacs-theme "doom-colors"
+ +treemacs-git-mode 'deferred)
 
-(custom-theme-set-faces! 'doom-flatwhite
-  '(font-lock-comment-face  :background "#fcf2bf")
-  '(hi-yellow :background "#d9c6c3")
-  '(org-block :background "#fcf2bf")
-  '(org-block-begin-line :background "#fcf2bf" :extend t)
-  '(org-block-end-line :background "#fcf2bf" :extend t)
-  '(cursor :background "#614c61")
-  )
+;; HACK Fixes font sizing issue
+(add-to-list 'default-frame-alist '(font . "Hack-8"))
+
+(when (file-exists-p custom-file)
+  (load custom-file))
+
+(add-hook! 'writeroom-mode-hook
+  (if writeroom-mode
+      (add-hook 'post-command-hook #'recenter nil t)
+    (remove-hook 'post-command-hook #'recenter t)))
+
+(setq yequake-frames
+      '(("Yequake & scratch" .
+         ((width . 0.75)
+          (height . 0.5)
+          (alpha . 0.90)
+          (buffer-fns . ("~/doom-emacs/.local/straight/build-27.1/yequake/yequake.el"
+                         split-window-horizontally
+                         "*scratch*"))
+          (frame-parameters . ((undecorated . t)))))))
+
+(defun emacs-run-launcher ()
+"Create and select a frame called emacs-run-launcher which
+ consists only of a minibuffer and has specific dimensions.
+ Run counsel-linux-app on that frame, which is an emacs
+ command that prompts you to select an app and open it in a
+ dmenu like behaviour. Delete the frame after that command has exited"
+        (interactive)
+        (with-selected-frame
+            (make-frame '((name . "emacs-run-launcher")
+                          (minibuffer . only)
+                          (width . 120)
+                          (height . 11)))
+            (counsel-linux-app)
+            (delete-frame)))
+
+
+(add-to-list 'load-path "~/.doom.d/selectric")
+(add-to-list 'load-path "~/.emacs.d/.local/straight/repos/movie.el")
+(load! "~/.doom.d/openwith")
+;; (require 'selectric-mode)
+;; (selectric-mode 1)
+(require 'movie)
+(require 'openwith)
+(add-hook 'dired-mode-hook 'openwith-mode 1)
+(add-hook! 'ranger-mode-hook
+  (setq hl-line-mode 1))
+
+(defun hugo-build ()
+  (interactive)
+  (eshell-command "cd /mnt/manjaro/home/prashant/blog & hugo" nil))
+
+(setq eshell-visual-commands
+      '("spt" "ncmpcpp" "nvim" "vim" "vi" "screen" "tmux" "top" "htop" "less" "more" "lynx" "links" "ncftp" "mutt" "pine" "tin" "trn" "elm"))
 
 (map! :i "C-y" #'evil-paste-after)
 (map! :map image-mode-map
@@ -93,41 +113,16 @@
 (after! evil
   (setq evil-move-cursor-back nil))
 
-;; (setq projectile-switch-project-action #'projectile-dired)
-
 (after! warnings
         (add-to-list 'warning-suppress-types '(defvaralias)))
-
-(custom-set-faces! '(default :background nil))
 
 (add-hook! 'window-setup-hook
   (select-frame-set-input-focus (selected-frame)))
 
-(setq window-resize-pixelwise nil
-      frame-resize-pixelwise nil)
-
-;; (after! company
-;;   (setq company-idle-delay 0.2))
-
-;;(add-hook 'dired-mode-hook 'dired-hide-details-mode)
-;; (add-hook 'dired-mode-hook 'writeroom-mode)
-(add-hook! 'ranger-mode-hook
-  (setq hl-line-mode 1))
-
-(setq-default custom-file (expand-file-name ".custom.el" doom-private-dir))
-(when (file-exists-p custom-file)
-  (load custom-file))
-
 (when (featurep! :ui zen)
   (after! writeroom-mode
-    (setq +zen-text-scale 0)))
-
-;;(defun display-workspaces-in-minibuffer ()
-;;  (with-current-buffer " *Minibuf-0*"
-;;    (erase-buffer)
-;;    (insert (+workspace--tabline))))
-;;(run-with-idle-timer 1 t #'display-workspaces-in-minibuffer)
-;;(+workspace/display)
+    (setq +zen-text-scale 0)
+    (setq display-line-numbers nil)))
 
 (defun save-and-close ()
   (interactive)
@@ -136,26 +131,75 @@
 
 (map! :n "SPC b w" #'save-and-close)
 
-;;(add-hook 'after-change-major-mode-hook
-;;(lambda ()
-;;(hl-line-mode -1)))
+;; (doom/set-frame-opacity 98)
+;; (add-hook! 'writeroom-mode-hook
+;;   (doom/set-frame-opacity (if writeroom-mode 98 100)))
 
-(doom/set-frame-opacity 98)
-(add-hook! 'writeroom-mode-hook
-  (doom/set-frame-opacity (if writeroom-mode 98 100)))
+;;;; Outline minor mode
+(defvar-local outline-folded nil)
 
-(setq forge-owned-accounts '(("brongulus")))
-(setq auth-sources '("/home/prashant/.authinfo" "/home/prashant/.emacs.d/.local/etc/authinfo.gpg" "~/.authinfo.gpg"))
+(defun toggle-outline-entry (&optional arg)
+        (interactive)
+        (if (setq outline-folded (not outline-folded))
+            (outline-show-subtree)
+          (outline-hide-subtree)))
 
-;; displaying useful information
+(add-hook! 'emacs-lisp-mode-hook #'outline-minor-mode)
+(map! :map outline-minor-mode-map
+      :n [backtab] #'outline-hide-body
+      :n [tab] #'toggle-outline-entry
+      :n "SPC m o" #'consult-outline)
 
-;; (display-time-mode 1)
+(setq-default imenu-list-position 'left)
+(setq imenu-list-position 'left)
+(map! :map doom-leader-map
+      "s i" nil
+      "s i" #'imenu-list)
 
-(unless (equal "Battery status not available"
-               (battery))
-  (display-battery-mode 1))
+(add-hook! 'imenu-list-major-mode-hook #'hide-mode-line-mode)
 
-(add-hook! 'Info-mode-hook #'hide-mode-line-mode)
+;;; Webkit
+
+(map! :n "SPC o w" 'webkit)
+
+;; HACK add checks for last window then dont close workspace
+;; TODO insert mode, vertico freeze fix
+(defun webkit-close-tab(&optional arg)
+  (interactive)
+  (progn
+    (kill-current-buffer)
+    (+workspace/close-window-or-workspace)))
+
+(map! :map webkit-mode-map :n "q" #'webkit-close-tab)
+
+(use-package! webkit
+  :init
+  (when (eq window-system 'x)
+        (modify-frame-parameters nil '((inhibit-double-buffering . t))))
+  (require 'ol)
+  ;; (setq webkit-own-window t) ;; Pls no
+  :config
+  (setq browse-url-browser-function 'webkit-browse-url
+        webkit-cookie-file "~/.doom.d/webkit/cookies"
+        webkit-history-file "~/.doom.d/webkit/history"
+        webkit-browse-url-force-new t)
+  (defun webkit--display-progress (progress)
+  (setq webkit--progress-formatted
+        (if (equal progress 100.0)
+            ""
+          (format "%s%.0f%%  " (all-the-icons-faicon "spinner") progress)))
+  (force-mode-line-update)))
+
+(use-package webkit-dark)
+
+(use-package evil-collection-webkit
+  :config
+  (evil-collection-xwidget-setup))
+
+;;; Modeline
+(map! :n "SPC t m" #'hide-mode-line-mode)
+
+(remove-hook! 'doom-modeline-mode-hook #'size-indication-mode)
 
 (after! doom-modeline
   (remove-hook! 'doom-modeline-mode-hook #'column-number-mode)
@@ -169,46 +213,34 @@
                 doom-modeline-buffer-file-name-style 'relative-to-project
                 line-number-mode nil
                 column-number-mode nil
-                size-indication-mode nil)
-  ;; (doom-modeline-def-modeline 'personal
-  ;; '(bar workspace-name window-number modals matches buffer-name remote-host  parrot selection-info)
-  ;; '(objed-state misc-info battery grip irc mu4e debug repl lsp input-method indent-info major-mode process vcs checker))
-  ;; (defun setup-custom-doom-modeline ()
-  ;;  (doom-modeline-set-modeline 'personal 'default))
-  ;; (add-hook 'doom-modeline-mode-hook 'setup-custom-doom-modeline)
-  )
+                size-indication-mode nil))
+
+;;; Org
+
+(unless (display-graphic-p)
+  (map! :map org-mode-map
+        :ni "C-c C-<down>" '+org/insert-item-below
+        :ni "C-c C-<up>" '+org/insert-item-above
+        :ni "C-c C-<left>" 'org-insert-heading
+        :ni "C-c C-<right>" 'org-insert-subheading))
 
 (add-hook! 'org-mode-hook #'org-fragtog-mode)
-;; (after! org
-;; (add-hook! 'org-mode-hook #'writeroom-mode))
 (add-hook 'org-mode-hook
           (λ! (yas-minor-mode)
               (yas-activate-extra-mode 'latex-mode)))
-;; (add-hook 'org-mode-hook 'lsp-completion-mode)
 
-;; (setq org-latex-listings 'minted) ;; Doesn't work with tectonic fml
-(setq org-startup-with-inline-images t)
+(add-hook! 'org-mode-hook
+    (add-hook 'post-command-hook #'recenter nil t))
 
 (add-hook! 'org-mode-hook #'mixed-pitch-mode)
-(custom-set-faces!
-  '(org-table :inherit 'fixed-pitch))
-;;(set-face-attribute 'org-table nil :inherit 'fixed-pitch)
 
-(setq org-fontify-quote-and-verse-blocks t)
-
-(setq yas-triggers-in-field t)
-
-(setq flycheck-global-modes '(not LaTeX-mode latex-mode))
-
-(setq-default org-latex-pdf-process '("tectonic -Z shell-escape --outdir=%o %f"))
-
-;; (use-package graphviz-dot-mode
-;;   :config
-;;   (setq graphviz-dot-indent-width 4))
-
-;; (use-package company-graphviz-dot
-;;   )
-(setq org-preview-latex-default-process 'dvisvgm)
+(setq org-fontify-quote-and-verse-blocks t
+      yas-triggers-in-field t
+      org-startup-with-inline-images t
+      +latex-viewers nil
+      flycheck-global-modes '(not LaTeX-mode latex-mode)
+      org-latex-pdf-process '("tectonic -Z shell-escape --outdir=%o %f")
+      org-preview-latex-default-process 'dvisvgm)
 
 (after! org
   (plist-put org-format-latex-options :background "Transparent")
@@ -233,9 +265,8 @@
 (setq org-agenda-start-with-log-mode t
       org-log-done t
       org-log-into-drawer t
-      org-agenda-breadcrumbs-separator " ❱ ")
-
-(setq org-agenda-files
+      org-agenda-breadcrumbs-separator " ❱ "
+      org-agenda-files
       '("~/Dropbox/org/inbox.org"
         "~/Dropbox/org/todo.org"))
 
@@ -282,54 +313,12 @@ This function makes sure that dates are aligned for easy reading."
     (format " %-2s. %2d %s"
             dayname day monthname)))
 
-(setq org-agenda-format-date 'my-org-agenda-format-date-aligned)
-
-(setq org-agenda-block-separator (string-to-char " "))
-
-(setq org-agenda-hidden-separator "‌‌ ")
-
-;; (use-package! appt
-;;   :defer-incrementally t
-;;   :config
-
-;;   (appt-activate t)
-
-;;   ;; use appointment data from org-mode
-;;   (defun my-org-agenda-to-appt ()
-;;     (interactive)
-;;     (setq appt-time-msg-list nil)
-;;     (org-agenda-to-appt))
-
-;;   (setq appt-message-warning-time 5) ; Show notification 5 minutes before event
-;;   (setq appt-display-interval appt-message-warning-time) ; Disable multiple reminders
-;;   (setq appt-display-mode-line nil)
-
-;;   ;; update alarms when starting emacs
-;;   (my-org-agenda-to-appt)
-;;   ;; (2) ... Everyday at 12:05am (useful in case you keep Emacs always on)
-;;   (run-at-time "12:05am" (* 24 3600) 'my-org-agenda-to-appt)
-
-;;   ;; (3) ... When TODO.org is saved
-;;   (add-hook 'after-save-hook
-;;             #'(lambda ()
-;;                (if (string= (buffer-file-name) (concat (getenv "HOME") "~/Dropbox/org/todo.org"))
-;;                    (my-org-agenda-to-appt))))
-
-;;   ;; TODO Display appointments as a window manager notification (incorporate the script within elisp)
-;;   (setq appt-disp-window-function 'my-appt-display)
-;;   (setq appt-delete-window-function (lambda () t))
-
-;;   (setq my-appt-notification-app "~/appt-notification.sh")
-
-;;   (defun my-appt-display (min-to-app new-time msg)
-;;     (if (atom min-to-app)
-;;         (start-process "my-appt-notification-app" nil my-appt-notification-app min-to-app msg)
-;;       (dolist (i (number-sequence 0 (1- (length min-to-app))))
-;;         (start-process "my-appt-notification-app" nil my-appt-notification-app (nth i min-to-app) (nth i msg)))))
-  ;; )
-
-(setq +org-capture-readings-file "~/Dropbox/org/links.org"
+(setq org-agenda-format-date 'my-org-agenda-format-date-aligned
+      org-agenda-block-separator (string-to-char " ")
+      org-agenda-hidden-separator "‌‌ "
+      +org-capture-readings-file "~/Dropbox/org/links.org"
       +org-capture-todo-file "~/Dropbox/org/inbox.org")
+
 (after! org-capture
   (setq org-capture-templates
         '(("t" "Personal todo" entry
@@ -360,29 +349,41 @@ This function makes sure that dates are aligned for easy reading."
           ("oc" "Project changelog" entry #'+org-capture-central-project-changelog-file "* %U %?\n %i\n %a" :heading "Changelog" :prepend t))
         ))
 
-;; (add-hook! 'treemacs-mode-hook #'hl-todo-mode #'org-fragtog-mode #'org-mode)
-
-(custom-set-faces!
-  '(ein:cell-input-area :background "bg-alt" :extend t)
-  ;;'(company-tooltip :family doom-font)
+;;; Faces
+;; Flatwhite
+(custom-theme-set-faces! 'doom-flatwhite
+  '(font-lock-comment-face  :background "#fcf2bf")
+  '(hi-yellow :background "#d9c6c3")
+  '(org-block :background "#fff9db")
+  '(org-block-begin-line :background "#fff9db" :extend t)
+  '(org-block-end-line :background "#fff9db" :extend t)
+  '(cursor :background "#614c61")
   )
 
 (custom-set-faces!
-  '((font-lock-comment-face font-lock-doc-face) :slant italic))
+  '(mode-line :font "Open Sans" :weight regular)
+  '(default :background nil)
+  '(ein:cell-input-area :background "bg-alt" :extend t)
+  '((font-lock-comment-face font-lock-doc-face) :slant italic)
+  '(treemacs-git-unmodified-face :inherit treemacs-file-face)
+  '(org-table :inherit 'fixed-pitch))
 
-(custom-set-faces!
-  '(treemacs-git-unmodified-face :inherit treemacs-file-face))
+;;; Readers
 
 (setq rmh-elfeed-org-files '("~/.doom.d/elfeed.org"))
+(set-popup-rule! "^\\*elfeed-entry" :ignore t)
 (after! elfeed
-  (setq elfeed-search-filter "@2-month-ago"))
+  (setq elfeed-search-filter "@2-month-ago")
+  (add-hook! elfeed-show-mode-hook #'mixed-pitch-mode)
+  (set-popup-rule! "^\\*elfeed-entry" :ignore t))
 (add-hook! 'elfeed-show-mode-hook
   (setq left-margin-width 2))
 (defun =elfeed ()
   (interactive)
   (elfeed)
   )
-(add-hook! 'elfeed-show-mode 'variable-pitch-mode)
+
+(add-hook! elfeed-show-mode-hook #'mixed-pitch-mode)
 (map! :n "SPC o l" #'=elfeed)
 (map! :map elfeed-search-mode-map :localleader "u" #'elfeed-update)
 
@@ -393,28 +394,13 @@ This function makes sure that dates are aligned for easy reading."
 (setq pocket-reader-open-url-default-function #'eww
       pocket-reader-pop-to-url-default-function #'eww)
 
-(add-hook 'pdf-view-mode-hook (lambda ()
-                                (pdf-view-midnight-minor-mode)))
-;;(add-hook 'pdf-view-mode-hook 'pdf-view-auto-slice-minor-mode)
-(add-hook 'pdf-view-mode-hook #'hide-mode-line-mode)
-
-;;(map! pdf-view-mode-map
-;;      :niv "h" #'pdf-annot-add-markup-annotation)
-
-(add-hook 'pdf-view-mode-hook 'pdf-continuous-scroll-mode)
-
-(after! pdf-tools
-  (map! :map pdf-view-mode-map
-        ;; "j" nil
-        ;; "k" nil
-        :n "M-j" #'pdf-continuous-scroll-forward
-        :n "M-k" #'pdf-continuous-scroll-backward))
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
 
-;; (use-package! nov
-;;   :mode ("\\.epub\\'" . nov-mode))
+(map! :map pdf-view-mode-map :localleader "h" #'pdf-annot-add-highlight-markup-annotation)
 
-(setq fancy-splash-image "~/.doom.d/doom-trans.png")
+;;; Dashboard
+
+(setq fancy-splash-image "~/.doom.d/sink.png")
 (setq +doom-dashboard-menu-sections
       '(("Reload last session"
          :icon (all-the-icons-octicon "history" :face 'doom-dashboard-menu-title)
@@ -428,15 +414,14 @@ This function makes sure that dates are aligned for easy reading."
          :icon (all-the-icons-octicon "mention" :face 'doom-dashboard-menu-title)
          :face (:inherit (doom-dashboard-menu-title bold))
          :action notmuch)
-        ("Open elfeed"
+        ("Open browser"
          :icon (all-the-icons-octicon "book" :face 'doom-dashboard-menu-title)
          :face (:inherit (doom-dashboard-menu-title bold))
-         :action =elfeed)
+         :action webkit)
         ("Open Agenda"
          :icon (all-the-icons-octicon "check" :face 'doom-dashboard-menu-title)
          :face (:inherit (doom-dashboard-menu-title bold))
-         :action org-agenda)
-        )
+         :action org-agenda))
       )
 (add-hook! '+doom-dashboard-mode-hook #'hide-mode-line-mode)
 
@@ -444,7 +429,12 @@ This function makes sure that dates are aligned for easy reading."
   :commands (info-colors-fontify-node))
 
 (add-hook 'Info-selection-hook 'info-colors-fontify-node)
-(add-hook 'Info-mode-hook #'writeroom-mode)
+
+(add-hook 'Info-mode-hook #'info-variable-pitch-mode)
+;;; Window Management
+
+;; FIXME
+(set-popup-rule! "^\\*info\\*$" :ignore t)
 
 (use-package windmove
   :bind
@@ -459,54 +449,8 @@ This function makes sure that dates are aligned for easy reading."
 (add-hook 'org-shiftright-final-hook 'windmove-right)
 (setq org-support-shift-select 'always)
 
-(setq evil-split-window-below t
-      evil-vsplit-window-right t)
-
-;;  (setq display-buffer-alist
-;;        '(("\\*\\(e?shell\\|doom:vterm-popup:#.\\)\\*"
-;;          (display-buffer-in-side-window)
-;;           (window-height . 0.25)
-;;           (side . bottom)
-;;           (slot . -1))
-;;("\\*\\(Backtrace\\|Warnings\\|Compile-log\\|[Hh]elp\\|Messages\\)\\*"
-;; (display-buffer-in-side-window)
-;; (window-height . 0.25)
-;; (side . bottom)
-;; (slot . 0))
-;;("\\*Faces\\*"
-;; (display-buffer-in-side-window)
-;; (window-height . 0.25)
-;; (side . bottom)
-;; (slot . 1))
-;; )
-;; )
-
-
 (set-popup-rules!
-  ;;  (when (featurep! +all)
-  ;;    '(("^\\*"  :slot 1 :vslot -1 :select t)
-  ;;      ("^ \\*" :slot 1 :vslot -1 :size +popup-shrink-to-fit)))
-  ;;  (when (featurep! +defaults)
   '(("^\\*Completions" :ignore t)
-    ("^\\*Local variables\\*$"
-     :vslot -1 :slot 1 :size +popup-shrink-to-fit)
-    ("^\\*\\(?:[Cc]ompil\\(?:ation\\|e-Log\\)\\|Messages\\)"
-     :vslot -2 :size 0.3  :autosave t :quit t :ttl nil)
-    ("^\\*\\(?:doom \\|Pp E\\)"  ; transient buffers (no interaction required)
-     :vslot -3 :size +popup-shrink-to-fit :autosave t :select ignore :quit t :ttl 0)
-    ("^\\*doom:"  ; editing buffers (interaction required)
-     :vslot -4 :size 0.35 :autosave t :select t :modeline t :quit nil :ttl t)
-    ("^\\*doom:\\(?:v?term\\|e?shell\\)-popup"  ; editing buffers (interaction required)
-     :vslot -5 :size 0.35 :select t :modeline nil :quit nil :ttl nil)
-    ("^\\*\\(?:Wo\\)?Man "
-     :vslot -6 :size 0.45 :select t :quit t :ttl 0)
-    ("^\\*Calc"
-     :vslot -7 :side bottom :size 0.4 :select t :quit nil :ttl 0)
-    ("^\\*Customize"
-     :slot 2 :side right :size 0.5 :select t :quit nil)
-    ("^ \\*undo-tree\\*"
-     :slot 2 :side left :size 20 :select t :quit t)
-    ;; `help-mode', `helpful-mode'
     ("^\\*[Hh]elp"
      :slot 2 :vslot -8 :size 0.35 :select t)
     ;; ("^\\*eww\\*"  ; `eww' (and used by dash docsets)
@@ -515,83 +459,52 @@ This function makes sure that dates are aligned for easy reading."
     ;;  :slot 2 :vslot 2 :size 0.45 :select t)
     ;;    ))
     ;;'(
-    ("^\\*Warnings" :vslot 99 :size 0.25)
-    ("^\\*Backtrace" :vslot 99 :size 0.4 :quit nil)
-    ("^\\*CPU-Profiler-Report "    :side bottom :vslot 100 :slot 1 :height 0.4 :width 0.5 :quit nil)
-    ("^\\*Memory-Profiler-Report " :side bottom :vslot 100 :slot 2 :height 0.4 :width 0.5 :quit nil)
-    ("^\\*Process List\\*" :side bottom :vslot 101 :size 0.25 :select t :quit t)
-    ("^\\*\\(?:Proced\\|timer-list\\|Abbrevs\\|Output\\|Occur\\|unsent mail\\|info\\|eww\\)\\*" :ignore t)))
+    ("^\\*OrgOutlineTree\\:$" :side left)
+    ("^\\*\\(?:Proced\\|timer-list\\|Abbrevs\\|Output\\|Occur\\|unsent mail\\|info\\|eww\\)\\*$" :ignore t)))
+
+;;; Mail
 
 ;;(setq +notmuch-sync-backend 'mbsync)
 (autoload 'notmuch "notmuch" "notmuch mail" t)
 ;; setup the mail address and use name
-(setq mail-user-agent 'message-user-agent)
-(setq user-mail-address "prashantrameshtak@gmail.com"
-      user-full-name "Prashant Tak")
-;; smtp config
-;;(setq smtpmail-smtp-server "smtp.gmail.com"
-;;      message-send-mail-function 'message-smtpmail-send-it)
+(setq mail-user-agent 'message-user-agent
+      user-mail-address "prashantrameshtak@gmail.com"
+      user-full-name "Prashant Tak"
+      ;; postponed message is put in the following draft directory
+      message-auto-save-directory "~/.mail/gmail/draft"
+      ;; change the directory to store the sent mail
+      message-directory "~/.mail/gmail/")
 
-;; report problems with the smtp server
-;;(setq smtpmail-debug-info t)
-;; add Cc and Bcc headers to the message buffer
-;;(setq message-defNotmault-mail-headers "Cc: \nBcc: \n")
-;; postponed message is put in the following draft directory
-(setq message-auto-save-directory "~/.mail/gmail/draft")
-;;(setq message-kill-buffer-on-exit t)
-;; change the directory to store the sent mail
-(setq message-directory "~/.mail/gmail/")
-
-;;(after! notmuch
-;;(set-popup-rule! "^\\*notmuch-hello" :ignore t))
 (map! :n "SPC o n" 'notmuch)
-;;(add-hook 'notmuch-hello-refresh-hook
-;;              (lambda ()
-;;                (if (and (eq (point) (point-min))
-;;                         (search-forward "Saved searches:" nil t))
-;;                    (progn
-;;                     (forward-line)
-;;                      (widget-forward 1))
-;;                  (if (eq (widget-type (widget-at)) 'editable-field)
-;;                      (beginning-of-line)))))
 
-;;(after! notmuch
-;;  (setq notmuch-saved-searches
-;;        '((:name "inbox"    :query "tag:inbox not tag:trash"    :key "i")
-;;          (:name "personal" :query "tag:personal"               :key "p")
-;;          (:name "bits"     :query "tag:bits"                   :key "b")
-;;          (:name "unread"   :query "tag:unread"                 :key "u")
-;;          (:name "flagged"  :query "tag:flagged"                :key "f")
-;;          (:name "sent"     :query "tag:sent"                   :key "s")
-;;          )
-;;        )
-;;  )
+;;; Code
+;;;; LSP Test
+(setq lsp-ui-doc-enable t
+      lsp-ui-doc-use-childframe t
+      lsp-ui-doc-use-webkit nil)
 
-;;FIXME (add-hook! 'notmuch-search-mode-hook #'notmuch-tree-mode)
-;;(setq mm-text-html-renderer 'shr
-;;      notmuch-multipart/alternative-discouraged '("text/plain" ;;"multipart/related")
-;;      shr-use-colors nil
-;;      gnus-blocked-images nil
-;;      )
-;; inline images?
-;;(if (not (fboundp 'gnus-blocked-images))
-;;    (defun gnus-blocked-images () nil))
+(defun lsp-ui-popup-focus(&optional arg)
+  (interactive)
+  (progn
+    (lsp-ui-doc-show)
+    (lsp-ui-doc-focus-frame)))
 
-;;FIXME
-;;(setq notmuch-search-result-format
-;;      '(("date" . "%12s | ")
-;;        ("authors" . "%-20s | ")
-;;        ("subject" . "%-54s")
-;;        ("tags" . ":%s:")
-;;        ))
-;;(after! notmuch
-;;  (setq notmuch-hello-sections
-;;        '(notmuch-hello-insert-header +notmuch-hello-insert-saved-searches notmuch-hello-insert-search notmuch-hello-insert-recent-searches notmuch-hello-insert-alltags notmuch-hello-insert-footer)
-;;        notmuch-message-headers-visible nil))
-;; Look for alternate methods of centering, writeroom destroys formatting
-;;(add-hook! 'notmuch-show-mode-hook #'writeroom-mode)
+(defun lsp-ui-popup-kill(&optional arg)
+  (interactive)
+  (progn
+    (lsp-ui-doc-unfocus-frame)
+    (lsp-ui-doc-hide)))
 
-;;(setq lsp-file-watch-threshold 2000)
+(map! :map lsp-mode-map :localleader "k" #'lsp-ui-popup-focus)
+(map! :map lsp-mode-map
+      "ESC" nil
+      "ESC" #'lsp-ui-popup-kill)
+
+(after! lsp-mode
+  (set-lookup-handlers! 'lsp-mode
+    :documentation '(lsp-ui-doc-show :async t)))
+
+;;;; Languages 
 (defun java-ide-view-enable ()
   (interactive)
   (progn
@@ -601,6 +514,8 @@ This function makes sure that dates are aligned for easy reading."
 (map! :map java-mode-map
       :n "SPC m p" #'java-ide-view-enable)
 
+(set-file-template! "\\.pl$" :trigger "__pl" :mode 'perl-mode)
+(add-to-list 'evil-insert-state-modes 'perl-mode)
 
 (setq oj-home-dir "/mnt/Data/Documents/problems")
 
@@ -627,9 +542,6 @@ This function makes sure that dates are aligned for easy reading."
 
 ;; Start c++ files in insert state, why would one want it any other way...
 (add-to-list 'evil-insert-state-modes 'c++-mode)
-
-;; (map! :map c++-mode-map
-;;       :localleader "c" (cmd! (compile (concat "g++ -std=c++17 -O2" buffer-file-name " -Wall"))))
 
 (setq dap-cpptools-extension-version "1.5.1")
 
@@ -665,198 +577,25 @@ This function makes sure that dates are aligned for easy reading."
                   " "
                   (shell-quote-argument f-name)
                   " -Wall;"))))
-;; HACK DOESN'T WORK LMFAO For now, disabling adding codeforces dir to lsp, but look into it later
-;; (with-eval-after-load 'projectile
-;;   (add-to-list 'projectile-globally-ignored-directories "/mnt/Data/Documents/code/codeforces"))
 
 (add-hook! 'c++-mode-hook
   (setq-local compile-command (cpp-compile-command (buffer-file-name))))
 
+(add-hook! 'python-mode-hook
+  (setq-local compile-command (concat "python "(shell-quote-argument buffer-file-name))))
+
 (after! projectile
 (projectile-register-project-type 'cpp '("*.cpp")
                                   :compile "g++ -std=c++17 -O2 -o "))
-;; (defun proj-cpp-compile-command ()
-;;   (cond
-;;    ((and (eq major-mode 'c++-mode)
-;;          (not (string-match-p (regexp-quote "\\.*/atcoder/\\.*") (buffer-file-name (current-buffer)))))
-;;     "./g++ -std=c++17 -O2 -o ")))
-
-;; (after! 'c++-mode
-;;   (set (make-local-variable 'compile-command)
-;;        (concat "g++ -std=c++17 -O2 " buffer-file-name " -Wall")))
-;; (set-file-template! "/main\\.c\\(?:c\\|pp\\)$" :trigger "__main.cpp" :mode 'c++-mode)
-
-;;(after! cc-mode
-;;  (set-company-backend! 'c-mode
-;;    '(:separate company-irony-c-headers company-irony)))
-;;Windows
-;;(after! lsp-mode
-;;  (set-lsp-priority! 'clangd 1))
-;;
-;;Linux
-;;(after! lsp-mode
-;;  (require 'dap-cpptools)
-;;  (yas-global-mode)
-;;  )
-
-;;(setq lsp-julia-default-environment "~/.julia/environments/v1.0")
 (setq lsp-enable-folding t)
 
 (after! scheme
   ;;(put 'test-group 'scheme-indent-function 1)
   (setq geiser-mode-start-repl-p t))
+;;; Insert Package Name here
 
-(add-to-list 'evil-insert-state-modes #'circe-mode)
-(after! circe
-  (set-irc-server! "irc.libera.chat"
-                   `(:tls t
-                     :port 6697
-                     :nick "brongulus"
-                     :sasl-username "brongulus"
-                     ;; :sasl-password "mypassword"
-                     :channels ("#mlpack")))
-  )
+(load! "./agenda-sidebar")
 
-  ;; (setq-default circe-use-tls t)
-;;   (setq circe-notifications-alert-icon "/usr/share/icons/breeze/actions/24/network-connect.svg"
-;;         lui-logging-directory "~/.emacs.d/.local/etc/irc"
-;;         lui-logging-file-format "{buffer}/%Y/%m-%d.txt"
-;;         circe-format-self-say "{nick:+13s} ┃ {body}")
+(add-to-list 'evil-insert-state-modes 'nano-agenda-mode)
 
-;;   (custom-set-faces!
-;;     '(circe-my-message-face :weight unspecified))
-
-;;   (enable-lui-logging-globally)
-;;   (enable-circe-display-images)
-
-;;   (defun named-circe-prompt ()
-;;     (lui-set-prompt
-;;      (concat (propertize (format "%13s > " (circe-nick))
-;;                          'face 'circe-prompt-face)
-;;              "")))
-;;   (add-hook 'circe-chat-mode-hook #'named-circe-prompt)
-
-;;   (appendq! all-the-icons-mode-icon-alist
-;;             '((circe-channel-mode all-the-icons-material "message" :face all-the-icons-lblue)
-;;               (circe-server-mode all-the-icons-material "chat_bubble_outline" :face all-the-icons-purple))))
-
-(use-package! lexic
-  :commands lexic-search lexic-list-dictionary
-  :config
-  (map! :map lexic-mode-map
-        :n "q" #'lexic-return-from-lexic
-        :nv "RET" #'lexic-search-word-at-point
-        :n "a" #'outline-show-all
-        :n "h" (cmd! (outline-hide-sublevels 3))
-        :n "o" #'lexic-toggle-entry
-        :n "n" #'lexic-next-entry
-        :n "N" (cmd! (lexic-next-entry t))
-        :n "p" #'lexic-previous-entry
-        :n "P" (cmd! (lexic-previous-entry t))
-        :n "C-p" #'lexic-search-history-backwards
-        :n "C-n" #'lexic-search-history-forwards
-        :n "/" (cmd! (call-interactively #'lexic-search))))
-
-(defadvice! +lookup/dictionary-definition-lexic (identifier &optional arg)
-  "Look up the definition of the word at point (or selection) using `lexic-search'."
-  :override #'+lookup/dictionary-definition
-  (interactive
-   (list (or (doom-thing-at-point-or-region 'word)
-             (read-string "Look up in dictionary: "))
-         current-prefix-arg))
-  (lexic-search identifier nil nil t))
-
-(load! "~/.doom.d/openwith")
-(require 'openwith)
-(add-hook 'dired-mode-hook 'openwith-mode 1)
-
-;;(load! "~/.emacs.d/elegant-emacs/sanity")
-;;(load! "~/.emacs.d/elegant-emacs/elegance")
-
-(setq eshell-visual-commands '("spt" "ncmpcpp" "nvim" "vim" "vi" "screen" "tmux" "top" "htop" "less" "more" "lynx" "links" "ncftp" "mutt" "pine" "tin" "trn" "elm"))
-
-(map! :n "SPC a t" #'counsel-spotify-toggle-play-pause
-      :n "SPC a <" #'counsel-spotify-previous
-      :n "SPC a >" #'counsel-spotify-next
-      :n "SPC a s" #'counsel-spotify-search-track
-      :n "SPC a p" #'counsel-spotify-search-playlist
-      )
-
-;;(use-package! el-secretario-org
-;;  :after (el-secretario))
-;;(use-package! el-secretario-notmuch
-;;  :after (el-secretario))
-
-;;(use-package! el-secretario
-;;  :config
-;;  (defun my/dailyreview-secretary ()
-;;    (list
-
-     ;; First take care of email
-;;     (el-secretario-notmuch-make-source "tag:unread")
-     ;; Then Take care of inbox
-;;     (el-secretario-org-make-source nil ("/mnt/Data/Documents/org/index.org"))
-
-     ;; Check if any waiting items are done
-    ;;(el-secretario-org-make-source (todo "WAITING") ("~/org/orgzly/Todo.org"))
-     ;; Go through TODOs
-    ;; (el-secretario-org-make-source (todo "TODO") ("~/org/orgzly/Todo.org"))
-;;     )
-;;    )
-  ;; Create a function to start the review
-;;  (defun el-secretario-daily-review ()
-;;    (interactive)
-;;    (el-secretario-start-session (my/dailyreview-secretary)))
-;;  :commands (el-secretario-daily-review)
-;;  )
-
-;; (use-package paper
-;;   ;; you could also add html, png, jpg
-;;   :mode ("\\.pdf\\'"  . paper-mode)
-;;   :mode ("\\.epub\\'"  . paper-mode)
-;;   :mode ("\\.cbz\\'"  . paper-mode)
-;;   :config
-;;   (require 'evil-collection-paper)
-;;   (evil-collection-paper-setup))
-
-;;(use-package nano
-;;  :init
-;;  (require 'nano-base-colors)
-;;  (require 'nano-colors)
-;;  (require 'nano-faces)
-;;  (require 'nano-theme)
-;;  (require 'nano-theme-light)
-;;  (require 'nano-theme-dark)
-  ;; (require 'nano-splash)
-  ;; (require 'nano-modeline)
-;;  (nano-faces)
-;;  (nano-theme)
-;;  :config
-;;  (menu-bar-mode -1)
-;;  )
-
-;; (use-package! tree-sitter
-;;   :when (bound-and-true-p module-file-suffix)
-;;   :hook (prog-mode . tree-sitter-mode)
-;;   :hook (tree-sitter-after-on . tree-sitter-hl-mode)
-;;   :config
-;;   (require 'tree-sitter-langs)
-;;   (defadvice! doom-tree-sitter-fail-gracefully-a (orig-fn &rest args)
-;;     "Don't break with errors when current major mode lacks tree-sitter support."
-;;     :around #'tree-sitter-mode
-;;     (condition-case e
-;;         (apply orig-fn args)
-;;       (error
-;;        (unless (string-match-p (concat "^Cannot find shared library\\|"
-;;                                        "^No language registered\\|"
-;;                                        "cannot open shared object file")
-;;                                (error-message-string e))
-;;          (signal (car e) (cadr e)))))))
-
-(unless (display-graphic-p)
-  (map! :map org-mode-map
-        :ni "C-c C-<down>" '+org/insert-item-below
-        :ni "C-c C-<up>" '+org/insert-item-above
-        :ni "C-c C-<left>" 'org-insert-heading
-        :ni "C-c C-<right>" 'org-insert-subheading)
-  )
+(add-hook! 'nano-agenda-mode-hook #'hide-mode-line-mode #'display-line-numbers-mode '+org-pretty-mode)

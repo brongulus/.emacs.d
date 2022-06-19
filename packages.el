@@ -13,65 +13,53 @@
 (unpin! doom-themes)
 ;; (package! solaire-mode :disable t)
 
-
+(package! gruber-darker-theme)
 (package! org-fragtog)
 (package! anki-editor)
-;;(package! xkcd)
-;;(package! pocket-reader)
 (package! geiser)
 (package! elvish-mode)
 (package! dirvish)
-(package! spray)
 (package! oj)
 (package! guix)
 (package! iscroll)
-(package! rainbow-mode)
 (package! ox-hugo)
-;; (package! vuiet)
-;; (package! tree-sitter)
-;; (package! tree-sitter-langs)
 (package! info-colors)
 (package! yequake)
 (package! devdocs)
-(package! vertico-posframe)
-;;(package! systemd)
-;;(package! emms)
-;;(package! theme-magic)
-;;(package! counsel-spotify)
-;; (package! telega)
-;;(package! nov)
+(package! debbugs)
 (package! conllu-mode)
 (package! graphviz-dot-mode)
-;;(package! modus-vivendi-theme)
-;;(package! modus-operandi-theme)
+(package! imenu-list)
+(package! nano-agenda)
+;; (package! leetcode)
+;; (package! pocket-reader)
+;; (package! vuiet)
+;; (package! emms)
+;; (package! org-ql)
 (package! lexic
   :recipe (:host github :repo "tecosaur/lexic"))
-;;(package! el-secretario
-;;  :recipe (:host github :repo "zetagon/el-secretario"))
-;;(package! org-ql)
 (package! lsp-julia :recipe (:host github :repo "non-jedi/lsp-julia"))
-;;(package! doom-nano-testing
-;;  :recipe (:host github :repo "brongulus/doom-nano-testing"))
-(package! nano-emacs
-  :recipe (:host github :repo "rougier/nano-emacs"))
-(package! notebook-mode
-  :recipe (:host github :repo "rougier/notebook-mode"))
-;; FIXME
+;; FIXME / TESTING
 (package! pdf-continuous-scroll-mode
   :recipe (:host github :repo "dalanicolai/pdf-continuous-scroll-mode.el"))
 (package! org-ol-tree
   :recipe (:host github :repo "Townk/org-ol-tree"))
-;; TEMP
-;; (package! company-box
-;;   :recipe (:host github :repo "brongulus/company-box"))
-
+(package! movie
+  :recipe (:host github :repo "larsmagne/movie.el"))
+(package! pvr
+  :recipe (:host github :repo "larsmagne/pvr.el"))
+(package! imdb
+  :recipe (:host github :repo "larsmagne/imdb.el"))
+(package! touchgrid
+  :recipe (:host github :repo "larsmagne/touchgrid.el"))
+(package! info-variable-pitch
+  :recipe (:type git :host github
+   :repo "kisaragi-hiu/info-variable-pitch"))
 ;; If I end up testing gccemacs
 (package! webkit
  :recipe (:type git :host github :repo "akirakyle/emacs-webkit"
           :branch "main" :files (:defaults "*.js" "*.css" "*.so")
           :pre-build ("make")))
-;; (package! paper-mode
-;;   :recipe (:host github :repo "ymarco/paper-mode"))
 
 
 ;; To install a package directly from a remote git repo, you must specify a

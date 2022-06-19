@@ -7,12 +7,10 @@
 #+property: header-args:emacs-lisp :tangle config.el
 :END:
 
-The first edition of my +soon-to-be+ literate configuration :P
-(+Might be deprecated in favour of neovim?+ Never!)
-
 1. NOTE: Run =org-babel-tangle= after making changes it to this file. Oddly enough, first time I had to run =doom sync=, need to look into this.
 2. Look into =org-babel-demarcate-block= too.
 
+* Random Stuff
 #+begin_src emacs-lisp
 (add-hook! 'writeroom-mode-hook
   (if writeroom-mode
@@ -44,6 +42,42 @@ Move over rofi.
 (height . 11)))
 (counsel-linux-app)
 (delete-frame)))
+
+;;; :app everywhere
+(after! emacs-everywhere
+  ;; Easier to match with a bspwm rule:
+  ;;   bspc rule -a 'Emacs:emacs-everywhere' state=floating sticky=on
+  (setq emacs-everywhere-frame-name-format "emacs-anywhere")
+
+  ;; The modeline is not useful to me in the popup window. It looks much nicer
+  ;; to hide it.
+  (remove-hook 'emacs-everywhere-init-hooks #'hide-mode-line-mode)
+
+  ;; Semi-center it over the target window, rather than at the cursor position
+  ;; (which could be anywhere).
+  ;; (defadvice! center-emacs-everywhere-in-origin-window (frame window-info)
+  ;;   :override #'emacs-everywhere-set-frame-position
+  ;;   (cl-destructuring-bind (x y width height)
+  ;;       (emacs-everywhere-window-geometry window-info)
+  ;;     (set-frame-position frame
+  ;;                         (+ x (/ width 2) (- (/ width 2)))
+  ;;                         (+ y (/ height 2)))))
+  )
+#+end_src
+
+#+begin_src emacs-lisp
+(add-to-list 'load-path "~/.doom.d/selectric")
+(require 'selectric-mode)
+(selectric-mode 1)
+#+end_src
+
+* Testing
+
+** Lars - Movie.el
+
+#+begin_src emacs-lisp
+(add-to-list 'load-path "~/.emacs.d/.local/straight/repos/movie.el")
+(require 'movie)
 #+end_src
 
 * TODO Config Improvements:
@@ -52,15 +86,6 @@ Move over rofi.
 3. [ ] Incorporate elvish and other configuration stuff within this.
 4. [ ] Figure out GnuPG and magit+forge.
 5. [ ] Improve notmuch's aesthetics, it deserves the same love as mu4e.
-
-#+begin_src emacs-lisp
-;; (use-package! vertico-posframe
-;;   :config
-;;   (vertico-posframe-mode 1)
-;;   (setq vertico-posframe-parameters
-;;       '((left-fringe . 8)
-;;         (right-fringe . 8))))
-#+end_src
 
 * Config File Header
 For the lexical binding of the elisp file.
@@ -86,17 +111,6 @@ For the lexical binding of the elisp file.
 ;; they are implemented.
 #+END_SRC
 
-* Hack to remove EXWM Warning
-This is not functional since I moved from a single EXWM file to a personal doom EXWM module but might be useful in the future if I decide to scrap that idea.
-
-#+BEGIN_SRC emacs-lisp
-;;(eshell-command "setq stringvar $XDG_CURRENT_DESKTOP")
-;;(if (string= stringvar "EXWM")
-;;   (load! "+exwm")
-;;nil
-;;)
-#+END_SRC
-
 * Customized Variables
 To avoid the issue of reproducing your customize options.
 
@@ -104,18 +118,13 @@ To avoid the issue of reproducing your customize options.
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
- doom-font (font-spec :family "FantasqueSansMono Nerd Font Mono" :size 11.0)
- ;; doom-font "Comic Mono:size 20 :weight 'light"
- ;;MesloLGS Nerd Font Mono
- doom-variable-pitch-font (font-spec :family "NotoSans Nerd Font" :size 10.0 :weight 'light)
- doom-theme 'doom-ephemeral
- doom-serif-font (font-spec :family "iA Writer Quattro S" :weight 'regular)
+ doom-font (font-spec :family "Hack" :size 10.0)
+ doom-theme 'doom-palenight
  org-directory "/home/prashant/Dropbox/org/"
  ;;org-indent-mode t
  evil-escape-mode 1
- display-line-numbers-type nil
- rainbow-mode t
- left-margin-width 2
+ display-line-numbers-type 'relative
+ ;; left-margin-width 2
  tab-width 2
  doom-fallback-buffer-name "*doom*"
  which-key-idle-delay 0.5
@@ -124,15 +133,23 @@ To avoid the issue of reproducing your customize options.
  )
 #+END_SRC
 
+Run hugo using M-x, using a termina/shell is a PITA
+
+#+begin_src emacs-lisp
+(defun hugo-build ()
+  (interactive)
+  (eshell-command "cd /mnt/manjaro/home/prashant/blog & hugo" nil))
+#+end_src
+
 Fix theme faces
 
 #+begin_src emacs-lisp
 (custom-theme-set-faces! 'doom-flatwhite
   '(font-lock-comment-face  :background "#fcf2bf")
   '(hi-yellow :background "#d9c6c3")
-  '(org-block :background "#fcf2bf")
-  '(org-block-begin-line :background "#fcf2bf" :extend t)
-  '(org-block-end-line :background "#fcf2bf" :extend t)
+  '(org-block :background "#fff9db")
+  '(org-block-begin-line :background "#fff9db" :extend t)
+  '(org-block-end-line :background "#fff9db" :extend t)
   '(cursor :background "#614c61")
   )
 #+end_src
@@ -214,7 +231,8 @@ Zen mode increases font size which is annoying, let's disable that.
 #+BEGIN_SRC emacs-lisp
 (when (featurep! :ui zen)
   (after! writeroom-mode
-    (setq +zen-text-scale 0)))
+    (setq +zen-text-scale 0)
+    (setq display-line-numbers nil)))
 #+END_SRC
 
 Let's make doom workspaces persistent in the minibuffer, so we can easily keep track of them (minibuffer is wasted space anyways :p)
@@ -237,14 +255,6 @@ Add a save and close keybinding.
   (call-interactively 'kill-current-buffer))
 
 (map! :n "SPC b w" #'save-and-close)
-#+end_src
-
-Remove highlighting
-
-#+begin_src emacs-lisp
-;;(add-hook 'after-change-major-mode-hook
-;;(lambda ()
-;;(hl-line-mode -1)))
 #+end_src
 
 Set opacity
@@ -272,9 +282,9 @@ Modeline has lots of unnecessary information, let's remove that, also let's disp
 
 ;; (display-time-mode 1)
 
-(unless (equal "Battery status not available"
-               (battery))
-  (display-battery-mode 1))
+;; (unless (equal "Battery status not available"
+;;                (battery))
+;;   (display-battery-mode 1))
 
 (add-hook! 'Info-mode-hook #'hide-mode-line-mode)
 
@@ -291,12 +301,6 @@ Modeline has lots of unnecessary information, let's remove that, also let's disp
                 line-number-mode nil
                 column-number-mode nil
                 size-indication-mode nil)
-  ;; (doom-modeline-def-modeline 'personal
-  ;; '(bar workspace-name window-number modals matches buffer-name remote-host  parrot selection-info)
-  ;; '(objed-state misc-info battery grip irc mu4e debug repl lsp input-method indent-info major-mode process vcs checker))
-  ;; (defun setup-custom-doom-modeline ()
-  ;;  (doom-modeline-set-modeline 'personal 'default))
-  ;; (add-hook 'doom-modeline-mode-hook 'setup-custom-doom-modeline)
   )
 #+END_SRC
 
@@ -320,11 +324,15 @@ Now I need to make all these changes coherent and consistent but for the time be
           (λ! (yas-minor-mode)
               (yas-activate-extra-mode 'latex-mode)))
 ;; (add-hook 'org-mode-hook 'lsp-completion-mode)
+
+(add-hook! 'org-mode-hook
+    (add-hook 'post-command-hook #'recenter nil t))
 #+END_SRC
 
 #+begin_src emacs-lisp
 ;; (setq org-latex-listings 'minted) ;; Doesn't work with tectonic fml
 (setq org-startup-with-inline-images t)
+(setq +latex-viewers nil)
 #+end_src
 
 Org files should look beautiful while you're typing in them.
@@ -559,6 +567,7 @@ TODO Add better templates for notes and journal.
   '(ein:cell-input-area :background "bg-alt" :extend t)
   ;;'(company-tooltip :family doom-font)
   )
+
 #+end_src
 
 Italicized Comments
@@ -580,15 +589,19 @@ I need to add shortcuts for update functions and reference to the org file, also
 
 #+BEGIN_SRC emacs-lisp
 (setq rmh-elfeed-org-files '("~/.doom.d/elfeed.org"))
+(set-popup-rule! "^\\*elfeed-entry" :ignore t)
 (after! elfeed
-  (setq elfeed-search-filter "@2-month-ago"))
+  (setq elfeed-search-filter "@2-month-ago")
+  (add-hook! elfeed-show-mode-hook #'mixed-pitch-mode)
+  (set-popup-rule! "^\\*elfeed-entry" :ignore t))
 (add-hook! 'elfeed-show-mode-hook
   (setq left-margin-width 2))
 (defun =elfeed ()
   (interactive)
   (elfeed)
   )
-(add-hook! 'elfeed-show-mode 'variable-pitch-mode)
+
+(add-hook! elfeed-show-mode-hook #'mixed-pitch-mode)
 (map! :n "SPC o l" #'=elfeed)
 (map! :map elfeed-search-mode-map :localleader "u" #'elfeed-update)
 #+END_SRC
@@ -636,12 +649,6 @@ PDF Files in emacs natively don't have continuous scrolling however using a pack
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
 #+end_src
 
-* Epub
- #+begin_src emacs-lisp
-;; (use-package! nov
-;;   :mode ("\\.epub\\'" . nov-mode))
- #+end_src
-
 * Dashboard
 Most of the default functions have been stored in my memory, let's turn the dashboard into an /"emacs app drawer"/. (Also I need to find a better splash, there are also issues with splash and exwm which I'll look into *later*.)
 
@@ -682,6 +689,9 @@ Better looking info pages
 
 (add-hook 'Info-selection-hook 'info-colors-fontify-node)
 (add-hook 'Info-mode-hook #'writeroom-mode)
+;; FIXME
+(set-popup-rule! "^\\*info\\*$" :ignore t)
+
 #+end_src
 
 * TODO Buffer Management
@@ -709,51 +719,9 @@ Highlighting the new buffer when you open one should be the default, let's make 
 
 FIXME Window Configurations
 #+begin_src emacs-lisp
-;;  (setq display-buffer-alist
-;;        '(("\\*\\(e?shell\\|doom:vterm-popup:#.\\)\\*"
-;;          (display-buffer-in-side-window)
-;;           (window-height . 0.25)
-;;           (side . bottom)
-;;           (slot . -1))
-;;("\\*\\(Backtrace\\|Warnings\\|Compile-log\\|[Hh]elp\\|Messages\\)\\*"
-;; (display-buffer-in-side-window)
-;; (window-height . 0.25)
-;; (side . bottom)
-;; (slot . 0))
-;;("\\*Faces\\*"
-;; (display-buffer-in-side-window)
-;; (window-height . 0.25)
-;; (side . bottom)
-;; (slot . 1))
-;; )
-;; )
-
 
 (set-popup-rules!
-  ;;  (when (featurep! +all)
-  ;;    '(("^\\*"  :slot 1 :vslot -1 :select t)
-  ;;      ("^ \\*" :slot 1 :vslot -1 :size +popup-shrink-to-fit)))
-  ;;  (when (featurep! +defaults)
   '(("^\\*Completions" :ignore t)
-    ("^\\*Local variables\\*$"
-     :vslot -1 :slot 1 :size +popup-shrink-to-fit)
-    ("^\\*\\(?:[Cc]ompil\\(?:ation\\|e-Log\\)\\|Messages\\)"
-     :vslot -2 :size 0.3  :autosave t :quit t :ttl nil)
-    ("^\\*\\(?:doom \\|Pp E\\)"  ; transient buffers (no interaction required)
-     :vslot -3 :size +popup-shrink-to-fit :autosave t :select ignore :quit t :ttl 0)
-    ("^\\*doom:"  ; editing buffers (interaction required)
-     :vslot -4 :size 0.35 :autosave t :select t :modeline t :quit nil :ttl t)
-    ("^\\*doom:\\(?:v?term\\|e?shell\\)-popup"  ; editing buffers (interaction required)
-     :vslot -5 :size 0.35 :select t :modeline nil :quit nil :ttl nil)
-    ("^\\*\\(?:Wo\\)?Man "
-     :vslot -6 :size 0.45 :select t :quit t :ttl 0)
-    ("^\\*Calc"
-     :vslot -7 :side bottom :size 0.4 :select t :quit nil :ttl 0)
-    ("^\\*Customize"
-     :slot 2 :side right :size 0.5 :select t :quit nil)
-    ("^ \\*undo-tree\\*"
-     :slot 2 :side left :size 20 :select t :quit t)
-    ;; `help-mode', `helpful-mode'
     ("^\\*[Hh]elp"
      :slot 2 :vslot -8 :size 0.35 :select t)
     ;; ("^\\*eww\\*"  ; `eww' (and used by dash docsets)
@@ -762,12 +730,8 @@ FIXME Window Configurations
     ;;  :slot 2 :vslot 2 :size 0.45 :select t)
     ;;    ))
     ;;'(
-    ("^\\*Warnings" :vslot 99 :size 0.25)
-    ("^\\*Backtrace" :vslot 99 :size 0.4 :quit nil)
-    ("^\\*CPU-Profiler-Report "    :side bottom :vslot 100 :slot 1 :height 0.4 :width 0.5 :quit nil)
-    ("^\\*Memory-Profiler-Report " :side bottom :vslot 100 :slot 2 :height 0.4 :width 0.5 :quit nil)
-    ("^\\*Process List\\*" :side bottom :vslot 101 :size 0.25 :select t :quit t)
-    ("^\\*\\(?:Proced\\|timer-list\\|Abbrevs\\|Output\\|Occur\\|unsent mail\\|info\\|eww\\)\\*" :ignore t)))
+    ("^\\*OrgOutlineTree\\:$" :side left)
+    ("^\\*\\(?:Proced\\|timer-list\\|Abbrevs\\|Output\\|Occur\\|unsent mail\\|info\\|eww\\)\\*$" :ignore t)))
 #+end_src
 
 * TODO Mail
@@ -870,6 +834,9 @@ Need to figure this stuff out (WIP)
 
 #+BEGIN_SRC emacs-lisp
 ;;(setq lsp-file-watch-threshold 2000)
+;; (use-package! leetcode
+;;   :commands leetcode)
+
 (defun java-ide-view-enable ()
   (interactive)
   (progn
@@ -879,6 +846,8 @@ Need to figure this stuff out (WIP)
 (map! :map java-mode-map
       :n "SPC m p" #'java-ide-view-enable)
 
+(set-file-template! "\\.pl$" :trigger "__pl" :mode 'perl-mode)
+(add-to-list 'evil-insert-state-modes 'perl-mode)
 
 (setq oj-home-dir "/mnt/Data/Documents/problems")
 
@@ -950,6 +919,9 @@ Need to figure this stuff out (WIP)
 (add-hook! 'c++-mode-hook
   (setq-local compile-command (cpp-compile-command (buffer-file-name))))
 
+(add-hook! 'python-mode-hook
+  (setq-local compile-command (concat "python "(shell-quote-argument buffer-file-name))))
+
 (after! projectile
 (projectile-register-project-type 'cpp '("*.cpp")
                                   :compile "g++ -std=c++17 -O2 -o "))
@@ -981,7 +953,12 @@ Need to figure this stuff out (WIP)
 Julia requires setting environment, let's do that
 
 #+begin_src emacs-lisp
-;;(setq lsp-julia-default-environment "~/.julia/environments/v1.0")
+;; (setq lsp-julia-default-environment "~/.julia/environments/v1.0")
+;; (after! julia-mode
+;;   (add-hook 'julia-mode-hook #'rainbow-delimiters-mode-enable)
+;;   (add-hook! 'julia-mode-hook
+;;     (setq-local lsp-enable-folding t
+;;                 lsp-folding-range-limit 100)))
 (setq lsp-enable-folding t)
 #+end_src
 
@@ -1078,108 +1055,6 @@ This is still finnicky, I have to configure the various formats so that they wor
 (setq eshell-visual-commands '("spt" "ncmpcpp" "nvim" "vim" "vi" "screen" "tmux" "top" "htop" "less" "more" "lynx" "links" "ncftp" "mutt" "pine" "tin" "trn" "elm"))
 #+end_src
 
-* Spotify
-
-Also let's add some keybinds.
-
-#+BEGIN_SRC emacs-lisp
-(map! :n "SPC a t" #'counsel-spotify-toggle-play-pause
-      :n "SPC a <" #'counsel-spotify-previous
-      :n "SPC a >" #'counsel-spotify-next
-      :n "SPC a s" #'counsel-spotify-search-track
-      :n "SPC a p" #'counsel-spotify-search-playlist
-      )
-#+END_SRC
-
-* El Secretario
-This is a trial run for a package.
-
-#+BEGIN_SRC emacs-lisp
-;;(use-package! el-secretario-org
-;;  :after (el-secretario))
-;;(use-package! el-secretario-notmuch
-;;  :after (el-secretario))
-
-;;(use-package! el-secretario
-;;  :config
-;;  (defun my/dailyreview-secretary ()
-;;    (list
-
-     ;; First take care of email
-;;     (el-secretario-notmuch-make-source "tag:unread")
-     ;; Then Take care of inbox
-;;     (el-secretario-org-make-source nil ("/mnt/Data/Documents/org/index.org"))
-
-     ;; Check if any waiting items are done
-    ;;(el-secretario-org-make-source (todo "WAITING") ("~/org/orgzly/Todo.org"))
-     ;; Go through TODOs
-    ;; (el-secretario-org-make-source (todo "TODO") ("~/org/orgzly/Todo.org"))
-;;     )
-;;    )
-  ;; Create a function to start the review
-;;  (defun el-secretario-daily-review ()
-;;    (interactive)
-;;    (el-secretario-start-session (my/dailyreview-secretary)))
-;;  :commands (el-secretario-daily-review)
-;;  )
-
-#+END_SRC
-
-* Paper Mode
-
-#+begin_src emacs-lisp
-;; (use-package paper
-;;   ;; you could also add html, png, jpg
-;;   :mode ("\\.pdf\\'"  . paper-mode)
-;;   :mode ("\\.epub\\'"  . paper-mode)
-;;   :mode ("\\.cbz\\'"  . paper-mode)
-;;   :config
-;;   (require 'evil-collection-paper)
-;;   (evil-collection-paper-setup))
-#+end_src
-
-* Doom-nano
-
-#+begin_src emacs-lisp
-;;(use-package nano
-;;  :init
-;;  (require 'nano-base-colors)
-;;  (require 'nano-colors)
-;;  (require 'nano-faces)
-;;  (require 'nano-theme)
-;;  (require 'nano-theme-light)
-;;  (require 'nano-theme-dark)
-  ;; (require 'nano-splash)
-  ;; (require 'nano-modeline)
-;;  (nano-faces)
-;;  (nano-theme)
-;;  :config
-;;  (menu-bar-mode -1)
-;;  )
-#+end_src
-
-* Treesitter
-
-#+begin_src emacs-lisp
-;; (use-package! tree-sitter
-;;   :when (bound-and-true-p module-file-suffix)
-;;   :hook (prog-mode . tree-sitter-mode)
-;;   :hook (tree-sitter-after-on . tree-sitter-hl-mode)
-;;   :config
-;;   (require 'tree-sitter-langs)
-;;   (defadvice! doom-tree-sitter-fail-gracefully-a (orig-fn &rest args)
-;;     "Don't break with errors when current major mode lacks tree-sitter support."
-;;     :around #'tree-sitter-mode
-;;     (condition-case e
-;;         (apply orig-fn args)
-;;       (error
-;;        (unless (string-match-p (concat "^Cannot find shared library\\|"
-;;                                        "^No language registered\\|"
-;;                                        "cannot open shared object file")
-;;                                (error-message-string e))
-;;          (signal (car e) (cadr e)))))))
-#+end_src
-
 * Terminal Specific Keybinds
 #+begin_src emacs-lisp
 (unless (display-graphic-p)
@@ -1191,3 +1066,13 @@ This is a trial run for a package.
   )
 #+end_src
 
+* Hack to remove EXWM Warning
+This is not functional since I moved from a single EXWM file to a personal doom EXWM module but might be useful in the future if I decide to scrap that idea.
+
+#+BEGIN_SRC emacs-lisp
+;;(eshell-command "setq stringvar $XDG_CURRENT_DESKTOP")
+;;(if (string= stringvar "EXWM")
+;;   (load! "+exwm")
+;;nil
+;;)
+#+END_SRC

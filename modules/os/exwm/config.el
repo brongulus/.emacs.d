@@ -150,7 +150,6 @@
             )
       (map! exwm-mode-map
             "C-q" 'exwm-input-send-next-key)
-
       )
 )
 ;;  nil

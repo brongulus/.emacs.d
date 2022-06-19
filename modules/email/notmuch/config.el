@@ -15,8 +15,8 @@
 (use-package! notmuch
   :defer t
   :init
-  (after! org
-    (add-to-list 'org-modules 'ol-notmuch))
+  ;; (after! org
+  ;;   (add-to-list 'org-modules 'ol-notmuch))
   :config
 
 ;;  (pixel-scroll-mode)

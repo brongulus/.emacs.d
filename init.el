@@ -16,7 +16,7 @@
 
 (doom! :input
        ;;chinese
-       ;;japanese
+       japanese
        ;;layout            ; auie,ctsrnm is the superior home row
 
        :completion
@@ -35,20 +35,20 @@
        ;;(emoji +unicode)  ; 🙂
        ;;fill-column       ; a `fill-column' indicator
        hl-todo     ; highlight TODO/FIXME/NOTE/DEPRECATED/HACK/REVIEW
-       hydra
-       ;;indent-guides     ; highlighted indent columns
+       ;; hydra
+       indent-guides     ; highlighted indent columns
        ligatures          ; ligatures and symbols to make your code pretty again
-       ;;minimap           ; show a map of the code on the side
+       ;; minimap           ; show a map of the code on the side
        modeline    ; snazzy, Atom-inspired modeline, plus API
        ;; nav-flash   ; blink cursor line after big motions
        ;; neotree           ; a project drawer, like NERDTree for vim
        ophints                ; highlight the region an operation acts on
        (popup +defaults)      ; tame sudden yet inevitable temporary windows
-       ;;tabs              ; an tab bar for Emacs
+       ;; tabs              ; an tab bar for Emacs
        (treemacs +lsp)                      ; a project drawer, like neotree but cooler
        ;;unicode           ; extended unicode support for various languages
        vc-gutter              ; vcs diff in the fringe
-       vi-tilde-fringe        ; fringe tildes to mark beyond EOB
+       ;; vi-tilde-fringe        ; fringe tildes to mark beyond EOB
        ;;window-select     ; visually switch windows
        workspaces             ; tab emulation, persistence & separate workspaces
        zen                    ; distraction-free coding or writing
@@ -81,7 +81,7 @@
        vterm                            ; the best terminal emulation in Emacs
 
        :checkers
-       syntax                        ; tasing you for every semicolon you forget
+       (syntax +childframe)                        ; tasing you for every semicolon you forget
        spell               ; tasing you for misspelling mispelling
        ;;grammar           ; tasing grammar mistake every you make
 
@@ -90,8 +90,8 @@
        (debugger +lsp)              ; FIXME stepping through code, to help you add bugs
        direnv
        ;;docker
-       ;;editorconfig      ; let someone else argue about tabs vs spaces
-       ein               ; tame Jupyter notebooks with emacs
+       editorconfig      ; let someone else argue about tabs vs spaces
+       ;; ein               ; tame Jupyter notebooks with emacs
        (eval +overlay)       ; run code, run (also, repls)
        ;;gist              ; interacting with github gists
        (lookup +dictionary +docsets)           ; navigate your code and its documentation
@@ -102,9 +102,10 @@
        ;;pass              ; password manager for nerds
        pdf                              ; pdf enhancements
        ;;prodigy           ; FIXME managing external services & code builders
-       ;;rgb               ; creating color strings
+       rgb               ; creating color strings
        ;;terraform         ; infrastructure as code
        ;;tmux              ; an API for interacting with tmux
+       tree-sitter       ; syntax and parsing, sitting in a tree...
        ;;upload            ; map local to remote projects via ssh/ftp
 
        :os
@@ -116,8 +117,8 @@
        :lang
        ;;agda              ; types of types of types of types...
        ;;beancount         ; mind the GAAP
-       (cc +lsp)                        ; C/C++/Obj-C madness
-       clojure           ; java with a lisp
+       (cc +lsp +tree-sitter)                        ; C/C++/Obj-C madness
+       (clojure +lsp)           ; java with a lisp
        ;;common-lisp       ; if you've seen one lisp, you've seen them all
        ;;coq               ; proofs-as-programs
        ;;crystal           ; ruby at the speed of c
@@ -140,9 +141,9 @@
        ;;hy                ; readability of scheme w/ speed of python
        ;;idris             ;
        ;;json              ; At least it ain't XML
-       (java +lsp) ; the poster child for carpal tunnel syndrome
+       (java +lsp +tree-sitter) ; the poster child for carpal tunnel syndrome
        (javascript +lsp)        ; all(hope(abandon(ye(who(enter(here))))))
-       (julia +lsp)             ; a better, faster MATLAB
+       (julia +lsp +tree-sitter)             ; a better, faster MATLAB
        ;;kotlin            ; a better, slicker Java(Script)
        (latex +latexmk +cdlatex) ; writing papers in Emacs has never been so fun
        ;;lean
@@ -151,24 +152,23 @@
        lua               ; one-based indices? one-based indices
        markdown          ; writing docs for people to ignore
        ;;nim               ; python + lisp at the speed of c
-       nix               ; I hereby declare "nix geht mehr!"
+       (nix +tree-sitter)               ; I hereby declare "nix geht mehr!"
        ;;ocaml             ; an objective camel
        (org +hugo +pretty +dragndrop +jupyter +pandoc +present +pomodoro) ; organize your plain life in plain text
-       ;;perl              ; write code no one else can comprehend
        ;;php               ; perl's insecure younger brother
        ;;plantuml          ; diagrams for confusing people more
        ;;purescript        ; javascript, but functional
-       (python +lsp +pyright)           ; beautiful is better than ugly
+       (python +lsp +pyright +tree-sitter)           ; beautiful is better than ugly
        ;;qt                ; the 'cutest' gui framework ever
        ;;racket            ; a DSL for DSLs
-       ;;raku              ; the artist formerly known as perl6
+       raku              ; the artist formerly known as perl6
        ;;rest              ; Emacs as a REST client
        ;;rst               ; ReST in peace
-       ;;(ruby +rails)     ; 1.step {|i| p "Ruby is #{i.even? ? 'love' : 'life'}"}
-       (rust +lsp)              ; Fe2O3.unwrap().unwrap().unwrap().unwrap()
+       (ruby +rails +lsp +tree-sitter)     ; 1.step {|i| p "Ruby is #{i.even? ? 'love' : 'life'}"}
+       (rust +lsp +tree-sitter)              ; Fe2O3.unwrap().unwrap().unwrap().unwrap()
        ;;scala             ; java, but good
        scheme ; a fully conniving family of lisps
-       sh     ; she sells {ba,z,fi}sh shells on the C xor
+       (sh +tree-sitter)     ; she sells {ba,z,fi}sh shells on the C xor
        ;;sml
        ;;solidity          ; do you need a blockchain? No.
        ;;swift             ; who asked for emoji variables?
@@ -186,13 +186,14 @@
        ;;calendar
        music
        ;; emms
-       everywhere        ; *leave* Emacs!? You must be joking
-       irc               ; how neckbeards socialize
-       (rss +org)                       ; emacs as an RSS reader
+       ;; everywhere        ; *leave* Emacs!? You must be joking
+       ;; irc               ; how neckbeards socialize
+       ;; (rss +org)                       ; emacs as an RSS reader
        ;; twitter           ; twitter client https://twitter.com/vnought
        ;; torrent             ; private module
 
        :config
-       literate
+       ;; literate
        (default +bindings +smartparens)
    )
+(setq straight-disable-native-compile t)

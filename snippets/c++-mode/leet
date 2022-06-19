@@ -1,4 +1,7 @@
 # -*- mode: snippet -*-
+# name: leet
+# key: leet
+# condition: t
 # --
 /**
  *   author: brongulus
@@ -8,9 +11,20 @@
 
 using namespace std;
 
+class Solution {
+public:
+  ${1:retType} ${2:fnName}(${3:retArg} ${4:id}){
+  $5
+  }
+};
+
 int main(){
     ios::sync_with_stdio(false);
     cin.tie(0);
-    $0
+
+    $3 $4;
+    cin >> $4;
+    Solution sol;
+    sol.$2($4);
     return 0;
 }
