@@ -11,9 +11,11 @@
 ;
 ;;##########PACKAGES###########
 (unpin! doom-themes)
+(unpin! doom-modeline)
 ;; (package! solaire-mode :disable t)
 
 (package! gruber-darker-theme)
+(package! vdiff)
 (package! org-fragtog)
 (package! anki-editor)
 (package! geiser)
@@ -22,7 +24,6 @@
 (package! oj)
 (package! guix)
 (package! iscroll)
-(package! ox-hugo)
 (package! info-colors)
 (package! yequake)
 (package! devdocs)
@@ -31,8 +32,8 @@
 (package! graphviz-dot-mode)
 (package! imenu-list)
 (package! nano-agenda)
-;; (package! leetcode)
 ;; (package! pocket-reader)
+;; (package! leetcode)
 ;; (package! vuiet)
 ;; (package! emms)
 ;; (package! org-ql)

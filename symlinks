@@ -1,0 +1,2 @@
+ln -s ~/doom-configs/.dev.d/ ~
+ln -s ~/doom-configs/.doom.d/ ~

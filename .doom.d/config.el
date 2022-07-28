@@ -17,6 +17,8 @@
 ;; You can also try 'gd' (or 'C-c g d') to jump to their definition and see how
 ;; they are implemented.
 
+;; TODO Add fragtog compatible with tectonic, add nice rendering
+;; capabilities to elfeed, mixed pitch, latex frag
 ;; TODO Fix treemacs symbols, indent guide continuation,
 ;; font size, variable pitch modeline, faces for palenight
 
@@ -26,19 +28,23 @@
 ;; despair and disappointments. Consider yourself warned.
 
 ;;; Basics
+
+;; (doom/reload-font)
+
 (setq-default
  user-full-name "Prashant Tak"
  user-mail-address "prashantrameshtak@gmail.com"
  forge-owned-accounts '(("brongulus"))
  auth-sources '("/home/prashant/.authinfo" "/home/prashant/.emacs.d/.local/etc/authinfo.gpg" "~/.authinfo.gpg")
  doom-font "Hack:pixelsize=15"
- doom-theme 'doom-palenight
+ doom-theme 'doom-ephemeral
  org-directory "/home/prashant/Dropbox/org/"
  bookmark-file "~/.doom.d/bookmarks"
  evil-escape-mode 1
- display-line-numbers-type 'relative
+ display-line-numbers-type 'nil
  tab-width 2
  doom-fallback-buffer-name "*doom*"
+ left-margin-width 2
  which-key-idle-delay 0.5
  large-file-warning-threshold nil
  custom-file (expand-file-name ".custom.el" doom-private-dir)
@@ -52,10 +58,10 @@
  +treemacs-git-mode 'deferred)
 
 ;; HACK Fixes font sizing issue
-(add-to-list 'default-frame-alist '(font . "Hack-8"))
+;; (add-to-list 'default-frame-alist '(font . "Hack-8"))
 
-(when (file-exists-p custom-file)
-  (load custom-file))
+;; (when (file-exists-p custom-file)
+;;   (load custom-file))
 
 (add-hook! 'writeroom-mode-hook
   (if writeroom-mode
@@ -131,7 +137,7 @@
 
 (map! :n "SPC b w" #'save-and-close)
 
-;; (doom/set-frame-opacity 98)
+(doom/set-frame-opacity 95)
 ;; (add-hook! 'writeroom-mode-hook
 ;;   (doom/set-frame-opacity (if writeroom-mode 98 100)))
 
@@ -174,8 +180,8 @@
 
 (use-package! webkit
   :init
-  (when (eq window-system 'x)
-        (modify-frame-parameters nil '((inhibit-double-buffering . t))))
+  ;; (when (eq window-system 'x)
+  ;;       (modify-frame-parameters nil '((inhibit-double-buffering . t))))
   (require 'ol)
   ;; (setq webkit-own-window t) ;; Pls no
   :config
@@ -228,6 +234,9 @@
 (add-hook 'org-mode-hook
           (λ! (yas-minor-mode)
               (yas-activate-extra-mode 'latex-mode)))
+
+(add-hook! 'org-mode-hook
+  (setq left-margin-width 2))
 
 (add-hook! 'org-mode-hook
     (add-hook 'post-command-hook #'recenter nil t))
@@ -371,7 +380,6 @@ This function makes sure that dates are aligned for easy reading."
 ;;; Readers
 
 (setq rmh-elfeed-org-files '("~/.doom.d/elfeed.org"))
-(set-popup-rule! "^\\*elfeed-entry" :ignore t)
 (after! elfeed
   (setq elfeed-search-filter "@2-month-ago")
   (add-hook! elfeed-show-mode-hook #'mixed-pitch-mode)
@@ -380,8 +388,7 @@ This function makes sure that dates are aligned for easy reading."
   (setq left-margin-width 2))
 (defun =elfeed ()
   (interactive)
-  (elfeed)
-  )
+  (elfeed))
 
 (add-hook! elfeed-show-mode-hook #'mixed-pitch-mode)
 (map! :n "SPC o l" #'=elfeed)
@@ -426,15 +433,14 @@ This function makes sure that dates are aligned for easy reading."
 (add-hook! '+doom-dashboard-mode-hook #'hide-mode-line-mode)
 
 (use-package! info-colors
-  :commands (info-colors-fontify-node))
-
-(add-hook 'Info-selection-hook 'info-colors-fontify-node)
+  :after info
+  :hook (Info-selection . info-colors-fontify-node))
 
 (add-hook 'Info-mode-hook #'info-variable-pitch-mode)
 ;;; Window Management
 
-;; FIXME
-(set-popup-rule! "^\\*info\\*$" :ignore t)
+(after! info
+  (set-popup-rule! "^\\*info\\*$" :ignore t))
 
 (use-package windmove
   :bind
@@ -482,6 +488,8 @@ This function makes sure that dates are aligned for easy reading."
 (setq lsp-ui-doc-enable t
       lsp-ui-doc-use-childframe t
       lsp-ui-doc-use-webkit nil)
+
+
 
 (defun lsp-ui-popup-focus(&optional arg)
   (interactive)
@@ -541,9 +549,12 @@ This function makes sure that dates are aligned for easy reading."
         ">" nil))
 
 ;; Start c++ files in insert state, why would one want it any other way...
-(add-to-list 'evil-insert-state-modes 'c++-mode)
+;; (add-to-list 'evil-insert-state-modes 'c++-mode)
 
 (setq dap-cpptools-extension-version "1.5.1")
+
+(with-eval-after-load 'lsp-mode
+  (require 'dap-cpptools))
 
   (with-eval-after-load 'lsp-rust
     (require 'dap-cpptools))
@@ -559,7 +570,7 @@ This function makes sure that dates are aligned for easy reading."
                                        :miDebuggerPath "rust-gdb"
                                        :environment []
                                        :program "${workspaceFolder}/target/debug/hello / replace with binary"
-                                       :cwd "${workspaceFolder}"
+                                      :cwd "${workspaceFolder}"
                                        :console "external"
                                        :dap-compilation "cargo build"
                                        :dap-compilation-dir "${workspaceFolder}")))
@@ -592,6 +603,15 @@ This function makes sure that dates are aligned for easy reading."
 (after! scheme
   ;;(put 'test-group 'scheme-indent-function 1)
   (setq geiser-mode-start-repl-p t))
+;;; Tramp and SSH
+(setq tramp-default-method "sshx"
+      remote-file-name-inhibit-cache nil
+      vc-ignore-dir-regexp (format "\\(%s\\)\\|\\(%s\\)" vc-ignore-dir-regexp tramp-file-name-regexp)
+      tramp-verbose 6)
+
+;; TODO Make it so that format on save is disabled for c++ buffers only over tramp
+(setq +format-on-save-enabled-modes '(not c-mode c++-mode cpp-mode emacs-lisp-mode sql-mode tex-mode latex-mode org-msg-edit-mode))
+
 ;;; Insert Package Name here
 
 (load! "./agenda-sidebar")
@@ -599,3 +619,71 @@ This function makes sure that dates are aligned for easy reading."
 (add-to-list 'evil-insert-state-modes 'nano-agenda-mode)
 
 (add-hook! 'nano-agenda-mode-hook #'hide-mode-line-mode #'display-line-numbers-mode '+org-pretty-mode)
+
+;;;; Insert em-dash
+(defun help/real-insert (char)
+  (cl-flet ((do-insert
+             () (if (bound-and-true-p org-mode)
+                    (org-self-insert-command 1)
+                  (self-insert-command 1))))
+    (setq last-command-event char)
+    (do-insert)))
+(defun help/insert-em-dash ()
+  "Insert a EM-DASH.
+- \"best limited to two appearances per sentence\"
+- \"can be used in place of commas to enhance readability.
+   Note, however, that dashes are always more emphatic than
+   commas\"
+- \"can replace a pair of parentheses. Dashes are considered
+   less formal than parentheses; they are also more intrusive.
+   If you want to draw attention to the parenthetical content,
+   use dashes. If you want to include the parenthetical content
+   more subtly, use parentheses.\"
+  - \"Note that when dashes are used in place of parentheses,
+     surrounding punctuation should be omitted.\"
+- \"can be used in place of a colon when you want to emphasize
+   the conclusion of your sentence. The dash is less formal than
+   the colon.\"
+- \"Two em dashes can be used to indicate missing portions of a
+   word, whether unknown or intentionally omitted.\"
+  - \"When an entire word is missing, either two or three em
+     dashes can be used. Whichever length you choose, use it
+     consistently throughout your document. Surrounding punctuation
+     should be placed as usual.\"
+- \"The em dash is typically used without spaces on either side,
+   and that is the style used in this guide. Most newspapers,
+   however, set the em dash off with a single space on each side.\"
+Source: URL `https://www.thepunctuationguide.com/em-dash.html'"
+  (interactive)
+  (help/real-insert ?—))
+(defun help/insert-en-dash ()
+  "Insert a EN-DASH.
+- \"is used to represent a span or range of numbers, dates,
+   or time. There should be no space between the en dash and
+   the adjacent material. Depending on the context, the en
+   dash is read as “to” or “through.”\"
+  - \"If you introduce a span or range with words such as
+     'from' or 'between', do not use the en dash.\"
+- \"is used to report scores or results of contests.\"
+- \"an also be used between words to represent conflict,
+   connection, or direction.\"
+- \"When a compound adjective is formed with an element that
+   is itself an open compound or hyphenated compound, some
+   writers replace the customary hyphen with an en dash. This
+   is an aesthetic choice more than anything.
+Source: URL `https://www.thepunctuationguide.com/en-dash.html'"
+  (interactive)
+  (help/real-insert ?–))
+(defun help/insert-hyphen ()
+  "Insert a HYPHEN
+- \"For most writers, the hyphen’s primary function is the
+   formation of certain compound terms. The hyphen is also
+   used for word division [in typesetting].
+- \"Compound terms are those that consist of more than one
+   word but represent a single item or idea.\"
+Source: URL `https://www.thepunctuationguide.com/hyphen.html'"
+  (interactive)
+  (help/real-insert ?-))
+(global-set-key (kbd "-") #'help/insert-hyphen)
+(global-set-key (kbd "s-_") #'help/insert-em-dash)
+(global-set-key (kbd "s--") #'help/insert-en-dash)

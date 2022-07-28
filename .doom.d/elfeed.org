@@ -11,9 +11,14 @@
 *** [[https://ag91.github.io/rss.xml][When Parallels Cross]]
 *** [[https://two-wrongs.com/feed][Two Wrongs]]
 *** [[https://www.murilopereira.com/index.xml][mpereira]]
+** Personal :personal:
+*** entry-title: \(personal\)
+*** [[https://brongulus.github.io/index.xml][bacchanalian madness]]
 ** Random :code:
 *** entry-title: \(code\)
+*** [[https://www.gwern.net/docs/personal/rss-subscriptions.opml][gwern]]
 *** [[http://reasonablypolymorphic.com/][Reasonably Polymorphic]]
+*** [[http://brendandawes.com/blog/feed/][Brendan Dawes]]
 *** [[http://mango.pdf.zone/][Work by a hacker]]
 *** [[https://www.microsoft.com/en-us/research/feed/][Microsoft Research]]
 *** [[https://ambrevar.xyz/atom.xml][Ambrevar]]

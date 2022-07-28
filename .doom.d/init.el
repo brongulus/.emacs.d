@@ -154,7 +154,7 @@
        ;;nim               ; python + lisp at the speed of c
        (nix +tree-sitter)               ; I hereby declare "nix geht mehr!"
        ;;ocaml             ; an objective camel
-       (org +hugo +pretty +dragndrop +jupyter +pandoc +present +pomodoro) ; organize your plain life in plain text
+       (org +hugo +pandoc) ; organize your plain life in plain text
        ;;php               ; perl's insecure younger brother
        ;;plantuml          ; diagrams for confusing people more
        ;;purescript        ; javascript, but functional
@@ -173,7 +173,7 @@
        ;;solidity          ; do you need a blockchain? No.
        ;;swift             ; who asked for emoji variables?
        ;;terra             ; Earth and Moon in alignment for performance.
-       ;;web               ; the tubes
+       (web +html +css)               ; the tubes
        ;;yaml              ; JSON, but readable
        ;;zig               ; C, but simpler
 
@@ -186,9 +186,9 @@
        ;;calendar
        music
        ;; emms
-       ;; everywhere        ; *leave* Emacs!? You must be joking
+       everywhere        ; *leave* Emacs!? You must be joking
        ;; irc               ; how neckbeards socialize
-       ;; (rss +org)                       ; emacs as an RSS reader
+       (rss +org)                       ; emacs as an RSS reader
        ;; twitter           ; twitter client https://twitter.com/vnought
        ;; torrent             ; private module
 
