@@ -4,7 +4,7 @@
 
 (setq-default
  auth-sources '("~/.authinfo")
- doom-theme 'doom-nord
+ doom-theme 'doom-palenight
  bookmark-file "~/.doom.d/bookmarks"
  display-line-numbers-type 'relative
  tab-width 2
@@ -43,6 +43,8 @@
   '(mode-line :font "Open Sans" :weight regular))
 
 ;; TODO Popup Rules
+
+;;; Better Keymaps - FAR, MC etc
 
 ;;; LSP
 
