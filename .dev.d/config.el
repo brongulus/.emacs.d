@@ -13,7 +13,7 @@
  evil-vsplit-window-right t)
 
 ;;FIXME
-(add-hook! 'after-init-hook
+(add-hook! 'text-mode-hook
   (add-hook 'post-command-hook #'recenter nil t)
   (remove-hook 'post-command-hook #'recenter t))
 
