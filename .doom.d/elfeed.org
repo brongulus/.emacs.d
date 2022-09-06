@@ -20,6 +20,7 @@
 *** [[http://reasonablypolymorphic.com/][Reasonably Polymorphic]]
 *** [[http://brendandawes.com/blog/feed/][Brendan Dawes]]
 *** [[http://mango.pdf.zone/][Work by a hacker]]
+*** [[https://venam.nixers.net/blog/feed.xml][Venam's Blog]]
 *** [[https://www.microsoft.com/en-us/research/feed/][Microsoft Research]]
 *** [[https://ambrevar.xyz/atom.xml][Ambrevar]]
 *** [[https://lexi-lambda.github.io/feeds/all.rss.xml][Lexi-Lambda]]
