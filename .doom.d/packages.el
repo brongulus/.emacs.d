@@ -12,17 +12,13 @@
 ;;##########PACKAGES###########
 (unpin! doom-themes)
 (unpin! doom-modeline)
+(unpin! tramp)
 ;; (package! solaire-mode :disable t)
 
-(package! gruber-darker-theme)
 (package! vdiff)
-(package! org-fragtog)
 (package! anki-editor)
 (package! geiser)
-(package! elvish-mode)
-(package! dirvish)
 (package! oj)
-(package! guix)
 (package! iscroll)
 (package! info-colors)
 (package! yequake)
@@ -31,15 +27,19 @@
 (package! conllu-mode)
 (package! graphviz-dot-mode)
 (package! imenu-list)
-(package! nano-agenda)
-;; (package! pocket-reader)
-;; (package! leetcode)
-;; (package! vuiet)
-;; (package! emms)
-;; (package! org-ql)
+(package! good-scroll)
+(package! org-modern)
+(package! org-appear)
+(package! org-fragtog)
+(package! svg-lib)
+(package! leetcode)
+
 (package! lexic
   :recipe (:host github :repo "tecosaur/lexic"))
-(package! lsp-julia :recipe (:host github :repo "non-jedi/lsp-julia"))
+(package! lsp-julia
+  :recipe (:host github :repo "non-jedi/lsp-julia"))
+(package! info-variable-pitch
+  :recipe (:type git :host github :repo "kisaragi-hiu/info-variable-pitch"))
 ;; FIXME / TESTING
 (package! pdf-continuous-scroll-mode
   :recipe (:host github :repo "dalanicolai/pdf-continuous-scroll-mode.el"))
@@ -53,9 +53,7 @@
   :recipe (:host github :repo "larsmagne/imdb.el"))
 (package! touchgrid
   :recipe (:host github :repo "larsmagne/touchgrid.el"))
-(package! info-variable-pitch
-  :recipe (:type git :host github
-   :repo "kisaragi-hiu/info-variable-pitch"))
+
 ;; If I end up testing gccemacs
 (package! webkit
  :recipe (:type git :host github :repo "akirakyle/emacs-webkit"

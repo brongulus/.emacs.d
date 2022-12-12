@@ -2,16 +2,16 @@
 ;;; This format is meant to be slightly human-readable;
 ;;; nevertheless, you probably don't want to edit it.
 ;;; -*- End Of Bookmark File Format Version Stamp -*-
-(("klib"
- (filename . "/sshx:iprashant@vendor03.dc.kinara.ai:/auto/xwork/iprashant/klib/")
- (front-context-string . "ara1/\n  drwxr-x-")
+(("kinara"
+ (filename . "/sshx:iprashant@vendor03.dc.kinara.ai:/auto/xwork/iprashant/")
+ (front-context-string . "kinara/\n  drwxr-x-")
  (rear-context-string . "84k 07-20 12:01 ")
  (position . 82))
 ("2015 Fall: 15-213 Introduction to Computer Systems : Panopto"
  (filename . "https://scs.hosted.panopto.com/Panopto/Pages/Sessions/List.aspx#folderID=%22b96d90ae-9871-4fae-91e2-b1627b43e25e%22")
  (handler . webkit--bookmark-handler)
  (defaults "2015 Fall: 15-213 Introduction to Computer Systems : Panopto"))
-("ranger-p"
+("Manjaro"
  (filename . "/mnt/manjaro/home/prashant/")
  (front-context-string . "s\n  drwxrwxrwx  ")
  (rear-context-string . "03-29  archetype")
@@ -22,10 +22,10 @@
  (rear-context-string . "2021-03-22 Mon>\n")
  (position . 5021))
 ("org-capture-last-stored"
- (filename . "~/Dropbox/org/journal.org")
- (front-context-string . "**** [2022-05-29")
- (rear-context-string . "22-05-29 Sunday\n")
- (position . 10893))
+ (filename . "~/Dropbox/org/notes.org")
+ (front-context-string . "** [2022-11-18 F")
+ (rear-context-string)
+ (position . 9))
 ("blog"
  (filename . "~/blog/org/")
  (front-context-string . "assets\n  -rwxr-x")

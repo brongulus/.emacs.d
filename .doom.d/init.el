@@ -32,7 +32,7 @@
        doom                   ; what makes DOOM look the way it does
        doom-dashboard         ; a nifty splash screen for Emacs
        doom-quit              ; DOOM quit-message prompts when you quit Emacs
-       ;;(emoji +unicode)  ; 🙂
+       (emoji +unicode)  ; 🙂
        ;;fill-column       ; a `fill-column' indicator
        hl-todo     ; highlight TODO/FIXME/NOTE/DEPRECATED/HACK/REVIEW
        ;; hydra
@@ -47,7 +47,7 @@
        ;; tabs              ; an tab bar for Emacs
        (treemacs +lsp)                      ; a project drawer, like neotree but cooler
        ;;unicode           ; extended unicode support for various languages
-       vc-gutter              ; vcs diff in the fringe
+       (vc-gutter +pretty)              ; vcs diff in the fringe
        ;; vi-tilde-fringe        ; fringe tildes to mark beyond EOB
        ;;window-select     ; visually switch windows
        workspaces             ; tab emulation, persistence & separate workspaces
@@ -68,8 +68,8 @@
        word-wrap                      ; soft wrapping with language-aware indent
 
        :emacs
-       (dired +ranger +icons)  ; making dired pretty [functional]
-       electric                ; smarter, keyword-based electric-indent
+       dired             ; making dired pretty [functional]
+       ;; electric                ; smarter, keyword-based electric-indent
        ;;ibuffer         ; interactive buffer management
        (undo +tree)              ; persistent, smarter undo for your inevitable mistakes
        vc                ; version-control and Emacs, sitting in a tree
@@ -82,7 +82,7 @@
 
        :checkers
        (syntax +childframe)                        ; tasing you for every semicolon you forget
-       spell               ; tasing you for misspelling mispelling
+       ;; spell               ; tasing you for misspelling mispelling
        ;;grammar           ; tasing grammar mistake every you make
 
        :tools
@@ -130,7 +130,7 @@
        ;;elm               ; care for a cup of TEA?
        emacs-lisp                       ; drown in parentheses
        ;;erlang            ; an elegant language for a more civilized age
-       ;;ess               ; emacs speaks statistics
+       (ess +stan +lsp)               ; emacs speaks statistics
        ;;factor
        ;;faust             ; dsp, but you get to keep your soul
        ;;fsharp           ; ML stands for Microsoft's Language
@@ -154,7 +154,7 @@
        ;;nim               ; python + lisp at the speed of c
        (nix +tree-sitter)               ; I hereby declare "nix geht mehr!"
        ;;ocaml             ; an objective camel
-       (org +hugo +pandoc) ; organize your plain life in plain text
+       (org +hugo +pandoc +noter) ; organize your plain life in plain text
        ;;php               ; perl's insecure younger brother
        ;;plantuml          ; diagrams for confusing people more
        ;;purescript        ; javascript, but functional

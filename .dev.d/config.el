@@ -5,12 +5,19 @@
 (setq-default
  auth-sources '("~/.authinfo")
  doom-theme 'doom-palenight
- bookmark-file "~/.doom.d/bookmarks"
+ bookmark-default-file "~/.doom.d/bookmarks"
  display-line-numbers-type 'relative
  tab-width 2
  large-file-warning-threshold nil
  evil-split-window-below t
  evil-vsplit-window-right t)
+
+(custom-set-variables
+ '(mini-frame-show-parameters
+   '((top . 0)
+     (width . 0.75)
+     (left . 0.5)
+     (height . 15))))
 
 ;;FIXME
 (add-hook! 'text-mode-hook
@@ -44,7 +51,9 @@
 
 ;; TODO Popup Rules
 
-;;; Better Keymaps - FAR, MC etc
+;;; TODO Better Keymaps - FAR, MC etc
+(map! :ni "<f2>" #'basic-save-buffer
+      :ni "<f10>" #'kill-current-buffer)
 
 ;;; LSP
 
@@ -56,7 +65,7 @@
 (after! lsp-mode
   (require 'dap-cpptools))
 
-(setq tramp-default-method "mosh"
+(setq tramp-default-method "ssh"
       remote-file-name-inhibit-cache nil
       vc-ignore-dir-regexp (format "\\(%s\\)\\|\\(%s\\)" vc-ignore-dir-regexp tramp-file-name-regexp)
       tramp-verbose 6)

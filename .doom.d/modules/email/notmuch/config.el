@@ -153,12 +153,12 @@
 
 
 (use-package! counsel-notmuch
-  :when (featurep! :completion ivy)
+  :when (modulep! :completion ivy)
   :commands counsel-notmuch
   :after notmuch)
 
 
 (use-package! helm-notmuch
-  :when (featurep! :completion helm)
+  :when (modulep! :completion helm)
   :commands helm-notmuch
   :after notmuch)

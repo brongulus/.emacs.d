@@ -36,10 +36,10 @@
  user-mail-address "prashantrameshtak@gmail.com"
  forge-owned-accounts '(("brongulus"))
  auth-sources '("/home/prashant/.authinfo" "/home/prashant/.emacs.d/.local/etc/authinfo.gpg" "~/.authinfo.gpg")
- doom-font "Hack:pixelsize=15"
- doom-theme 'doom-ephemeral
+ doom-font "Victor Mono:pixelsize=18"
+ doom-theme 'doom-material
  org-directory "/home/prashant/Dropbox/org/"
- bookmark-file "~/.doom.d/bookmarks"
+ bookmark-default-file "~/.doom.d/bookmarks"
  evil-escape-mode 1
  display-line-numbers-type 'nil
  tab-width 2
@@ -47,7 +47,7 @@
  left-margin-width 2
  which-key-idle-delay 0.5
  large-file-warning-threshold nil
- custom-file (expand-file-name ".custom.el" doom-private-dir)
+ custom-file (expand-file-name ".custom.el" doom-user-dir)
  org-latex-toc-command "\\tableofcontents \\clearpage"
  window-resize-pixelwise nil
  evil-split-window-below t
@@ -63,10 +63,14 @@
 ;; (when (file-exists-p custom-file)
 ;;   (load custom-file))
 
-(add-hook! 'writeroom-mode-hook
-  (if writeroom-mode
-      (add-hook 'post-command-hook #'recenter nil t)
-    (remove-hook 'post-command-hook #'recenter t)))
+(good-scroll-mode 1)
+
+(setq tab-width 2)
+
+;; (add-hook! 'writeroom-mode-hook
+;;   (if writeroom-mode
+;;       (add-hook 'post-command-hook #'recenter nil t)
+;;     (remove-hook 'post-command-hook #'recenter t)))
 
 (setq yequake-frames
       '(("Yequake & scratch" .
@@ -79,31 +83,29 @@
           (frame-parameters . ((undecorated . t)))))))
 
 (defun emacs-run-launcher ()
-"Create and select a frame called emacs-run-launcher which
+  "Create and select a frame called emacs-run-launcher which
  consists only of a minibuffer and has specific dimensions.
  Run counsel-linux-app on that frame, which is an emacs
  command that prompts you to select an app and open it in a
  dmenu like behaviour. Delete the frame after that command has exited"
-        (interactive)
-        (with-selected-frame
-            (make-frame '((name . "emacs-run-launcher")
-                          (minibuffer . only)
-                          (width . 120)
-                          (height . 11)))
-            (counsel-linux-app)
-            (delete-frame)))
+  (interactive)
+  (with-selected-frame
+      (make-frame '((name . "emacs-run-launcher")
+                    (minibuffer . only)
+                    (width . 120)
+                    (height . 11)))
+    (counsel-linux-app)
+    (delete-frame)))
 
 
 (add-to-list 'load-path "~/.doom.d/selectric")
 (add-to-list 'load-path "~/.emacs.d/.local/straight/repos/movie.el")
-(load! "~/.doom.d/openwith")
+(load! "openwith")
 ;; (require 'selectric-mode)
 ;; (selectric-mode 1)
 (require 'movie)
-(require 'openwith)
-(add-hook 'dired-mode-hook 'openwith-mode 1)
-(add-hook! 'ranger-mode-hook
-  (setq hl-line-mode 1))
+;; (require 'openwith)
+;; (add-hook 'dired-mode-hook 'openwith-mode 1)
 
 (defun hugo-build ()
   (interactive)
@@ -111,6 +113,12 @@
 
 (setq eshell-visual-commands
       '("spt" "ncmpcpp" "nvim" "vim" "vi" "screen" "tmux" "top" "htop" "less" "more" "lynx" "links" "ncftp" "mutt" "pine" "tin" "trn" "elm"))
+
+;;; TODO Better Keymaps - FAR, MC etc
+(map! :ni "<f2>" #'basic-save-buffer
+      :ni "<f10>" #'kill-current-buffer
+      :n "-" #'dired-jump)
+
 
 (map! :i "C-y" #'evil-paste-after)
 (map! :map image-mode-map
@@ -120,12 +128,12 @@
   (setq evil-move-cursor-back nil))
 
 (after! warnings
-        (add-to-list 'warning-suppress-types '(defvaralias)))
+  (add-to-list 'warning-suppress-types '(defvaralias)))
 
 (add-hook! 'window-setup-hook
   (select-frame-set-input-focus (selected-frame)))
 
-(when (featurep! :ui zen)
+(when (modulep! :ui zen)
   (after! writeroom-mode
     (setq +zen-text-scale 0)
     (setq display-line-numbers nil)))
@@ -137,7 +145,7 @@
 
 (map! :n "SPC b w" #'save-and-close)
 
-(doom/set-frame-opacity 95)
+;; (doom/set-frame-opacity 95)
 ;; (add-hook! 'writeroom-mode-hook
 ;;   (doom/set-frame-opacity (if writeroom-mode 98 100)))
 
@@ -145,10 +153,10 @@
 (defvar-local outline-folded nil)
 
 (defun toggle-outline-entry (&optional arg)
-        (interactive)
-        (if (setq outline-folded (not outline-folded))
-            (outline-show-subtree)
-          (outline-hide-subtree)))
+  (interactive)
+  (if (setq outline-folded (not outline-folded))
+      (outline-show-subtree)
+    (outline-hide-subtree)))
 
 (add-hook! 'emacs-lisp-mode-hook #'outline-minor-mode)
 (map! :map outline-minor-mode-map
@@ -180,21 +188,20 @@
 
 (use-package! webkit
   :init
-  ;; (when (eq window-system 'x)
-  ;;       (modify-frame-parameters nil '((inhibit-double-buffering . t))))
+  (when (eq window-system 'x)
+        (modify-frame-parameters nil '((inhibit-double-buffering . t))))
   (require 'ol)
-  ;; (setq webkit-own-window t) ;; Pls no
   :config
   (setq browse-url-browser-function 'webkit-browse-url
         webkit-cookie-file "~/.doom.d/webkit/cookies"
         webkit-history-file "~/.doom.d/webkit/history"
         webkit-browse-url-force-new t)
   (defun webkit--display-progress (progress)
-  (setq webkit--progress-formatted
-        (if (equal progress 100.0)
-            ""
-          (format "%s%.0f%%  " (all-the-icons-faicon "spinner") progress)))
-  (force-mode-line-update)))
+    (setq webkit--progress-formatted
+          (if (equal progress 100.0)
+              ""
+            (format "%s%.0f%%  " (all-the-icons-faicon "spinner") progress)))
+    (force-mode-line-update)))
 
 (use-package webkit-dark)
 
@@ -203,6 +210,7 @@
   (evil-collection-xwidget-setup))
 
 ;;; Modeline
+
 (map! :n "SPC t m" #'hide-mode-line-mode)
 
 (remove-hook! 'doom-modeline-mode-hook #'size-indication-mode)
@@ -217,7 +225,7 @@
                 doom-modeline-enable-word-count nil
                 doom-modeline-buffer-encoding nil
                 doom-modeline-buffer-file-name-style 'relative-to-project
-                line-number-mode nil
+                line-number-mode t
                 column-number-mode nil
                 size-indication-mode nil))
 
@@ -230,7 +238,11 @@
         :ni "C-c C-<left>" 'org-insert-heading
         :ni "C-c C-<right>" 'org-insert-subheading))
 
-(add-hook! 'org-mode-hook #'org-fragtog-mode)
+(add-hook! 'org-mode-hook #'org-appear-mode #'org-fragtog-mode)
+
+(setq org-appear-autoemphasis t
+      org-appear-autolinks t)
+
 (add-hook 'org-mode-hook
           (λ! (yas-minor-mode)
               (yas-activate-extra-mode 'latex-mode)))
@@ -238,33 +250,29 @@
 (add-hook! 'org-mode-hook
   (setq left-margin-width 2))
 
-(add-hook! 'org-mode-hook
-    (add-hook 'post-command-hook #'recenter nil t))
-
-(add-hook! 'org-mode-hook #'mixed-pitch-mode)
-
 (setq org-fontify-quote-and-verse-blocks t
       yas-triggers-in-field t
       org-startup-with-inline-images t
       +latex-viewers nil
       flycheck-global-modes '(not LaTeX-mode latex-mode)
-      org-latex-pdf-process '("tectonic -Z shell-escape --outdir=%o %f")
+      org-latex-pdf-process '("tectonic -X compile %f --outdir=%o -Z shell-escape")
       org-preview-latex-default-process 'dvisvgm)
 
-(after! org
-  (plist-put org-format-latex-options :background "Transparent")
-  (setq org-src-block-faces '(("latex" (:inherit default :extend t))))
-  (setq org-format-latex-options '(:foreground default :background "Transparent" :scale 1.0 :html-foreground "Black" :html-background "Transparent" :html-scale 1.0 :matchers ("begin" "$1" "$" "$$" "\\(" "\\[")))
-  )
-(add-hook! 'doom-load-theme-hook
-  (setq org-preview-latex-image-directory
-        (concat doom-cache-dir "org-latex/" (symbol-name doom-theme) "/"))
-  (dolist (buffer (doom-buffers-in-mode 'org-mode (buffer-list)))
-    (with-current-buffer buffer
-      (+org--toggle-inline-images-in-subtree (point-min) (point-max) 'refresh)
-      (org-clear-latex-preview (point-min) (point-max))
-      (org--latex-preview-region (point-min) (point-max))
-      )))
+;; (after! org
+;;   (plist-put org-format-latex-options :background "Transparent")
+;;   (setq org-src-block-faces '(("latex" (:inherit default :extend t))))
+;;   (setq org-format-latex-options
+;;         '(:foreground default :background "Transparent" :scale 1.0 :html-foreground "Black"
+;;           :html-background "Transparent" :html-scale 1.0 :matchers ("begin" "$1" "$" "$$" "\\(" "\\["))))
+
+;; (add-hook! 'doom-load-theme-hook
+;;   (setq org-preview-latex-image-directory
+;;         (concat doom-cache-dir "org-latex/" (symbol-name doom-theme) "/"))
+;;   (dolist (buffer (doom-buffers-in-mode 'org-mode (buffer-list)))
+;;     (with-current-buffer buffer
+;;       (+org--toggle-inline-images-in-subtree (point-min) (point-max) 'refresh)
+;;       (org-clear-latex-preview (point-min) (point-max))
+;;       (org--latex-preview-region (point-min) (point-max)))))
 
 (map! :after evil-org
       :map evil-org-mode-map
@@ -281,33 +289,62 @@
 
 (setq org-agenda-custom-commands
       '(("A" "My agenda"
-         ((todo "TODO" (
-                        (org-agenda-overriding-header "⚡ TODAY:\n")
+         ((todo "TODO" ((org-agenda-overriding-header
+                         (insert(concat
+                                (insert (all-the-icons-faicon "star" :v-adjust 0.1 :face 'all-the-icons-yellow))
+                                (propertize "  Today" 'face '(:height 1.3 :inherit 'variable-pitch)))))
                         (org-agenda-remove-tags t)
                         (org-agenda-prefix-format " %-15b")
                         (org-agenda-todo-keyword-format "")))
-          (agenda "" (
+          (agenda "" ((org-agenda-overriding-header "")
+                               ;; (insert (all-the-icons-faicon "calendar" :v-adjust 0.1 :face 'all-the-icons-red)
+                               ;; (propertize "  Schedule" 'face '(:height 1.3 :inherit 'variable-pitch))))
                       (org-agenda-skip-scheduled-if-done t)
                       (org-agenda-skip-timestamp-if-done t)
                       (org-agenda-skip-deadline-if-done t)
                       (org-agenda-start-day "-1d")
                       (org-agenda-span 3)
-                      (org-agenda-overriding-header "⚡ SCHEDULE:\n")
                       (org-agenda-remove-tags t)
                       (org-agenda-prefix-format " %-15b%t %s")
                       (org-agenda-todo-keyword-format "")
                       ;;         (org-agenda-time)
-                      (org-agenda-current-time-string "⮜┈┈┈┈┈┈┈ now")
+                      (org-agenda-current-time-string "⭠ now ─────────────────────────────────────────────────")
                       (org-agenda-scheduled-leaders '("" ""))
                       ;;       (org-agenda-deadline-leaders '("" ""))
-                      (org-agenda-time-grid (quote ((today require-timed remove-match) (0800 1100 1400 1700 2000) "      " "┈┈┈┈┈┈┈┈┈┈┈┈┈")))
-                      )
+                      (org-agenda-time-grid (quote ((today require-timed remove-match) (0800 1100 1400 1700 2000) "      " "┈┈┈┈┈┈┈┈┈┈┈┈┈"))))
                   )
           ;;(todo "NEXT" (
           ;;              (org-agenda-overriding-header "⚡ THIS WEEK:\n")
           ;;              (org-agenda-prefix-format " %b")
           ;;              (org-agenda-todo-keyword-format "")))
           ))))
+
+;; Org-modern setup --------------
+(setq
+ ;; Edit settings
+ org-auto-align-tags nil
+ org-tags-column 0
+ org-fold-catch-invisible-edits 'show-and-error
+ org-special-ctrl-a/e t
+ org-insert-heading-respect-content t
+
+ ;; Org styling, hide markup etc.
+ org-hide-emphasis-markers t
+ org-pretty-entities t
+ org-ellipsis "…"
+
+ ;; Agenda styling
+ org-agenda-tags-column 0
+ org-agenda-block-separator ?─
+ org-agenda-time-grid
+ '((daily today require-timed)
+   (800 1000 1200 1400 1600 1800 2000)
+   " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+ org-agenda-current-time-string
+ "⭠ now ─────────────────────────────────────────────────")
+
+(if (display-graphic-p)
+    (global-org-modern-mode))
 
 (defun my-org-agenda-format-date-aligned (DATE)
   "Format a DATE string for display in the daily/weekly agenda, or timeline.
@@ -370,12 +407,14 @@ This function makes sure that dates are aligned for easy reading."
   )
 
 (custom-set-faces!
-  '(mode-line :font "Open Sans" :weight regular)
+  ;; '(mode-line :font "Open Sans" :weight regular)
   '(default :background nil)
   '(ein:cell-input-area :background "bg-alt" :extend t)
   '((font-lock-comment-face font-lock-doc-face) :slant italic)
   '(treemacs-git-unmodified-face :inherit treemacs-file-face)
-  '(org-table :inherit 'fixed-pitch))
+  '(org-table :inherit 'fixed-pitch)
+  '(tooltip :font "VictorMono:pixelsize=18" ))
+
 
 ;;; Readers
 
@@ -436,8 +475,7 @@ This function makes sure that dates are aligned for easy reading."
   :after info
   :hook (Info-selection . info-colors-fontify-node))
 
-(add-hook 'Info-mode-hook #'info-variable-pitch-mode)
-;;; Window Management
+(add-hook 'Info-mode-hook #'info-variable-pitch-mode) ;;; Window Management
 
 (after! info
   (set-popup-rule! "^\\*info\\*$" :ignore t))
@@ -489,7 +527,10 @@ This function makes sure that dates are aligned for easy reading."
       lsp-ui-doc-use-childframe t
       lsp-ui-doc-use-webkit nil)
 
-
+(setq leetcode-prefer-language "cpp"
+      leetcode-prefer-sql "mssql"
+      leetcode-save-solutions t
+      leetcode-directory "/mnt/Data/Documents/problems/leetcode/")
 
 (defun lsp-ui-popup-focus(&optional arg)
   (interactive)
@@ -512,7 +553,7 @@ This function makes sure that dates are aligned for easy reading."
   (set-lookup-handlers! 'lsp-mode
     :documentation '(lsp-ui-doc-show :async t)))
 
-;;;; Languages 
+;;;; Languages
 (defun java-ide-view-enable ()
   (interactive)
   (progn
@@ -541,51 +582,60 @@ This function makes sure that dates are aligned for easy reading."
       :ni "<escape>" #'+workspace/close-window-or-workspace)
 
 (add-hook! c++-mode
-  ;; FIXED (Finally) Disable naive completion of angle brackets <>
-  (sp-local-pair 'c++-mode "<" ">" :actions :rem)
-  ;; Disable built-in "smart" completion of tags
-  (map! :map c++-mode-map
-        "<" nil
-        ">" nil))
+           ;; FIXED (Finally) Disable naive completion of angle brackets <>
+           (sp-local-pair 'c++-mode "<" ">" :actions :rem)
+           ;; Disable built-in "smart" completion of tags
+           (map! :map c++-mode-map
+                 "<" nil
+                 ">" nil))
 
 ;; Start c++ files in insert state, why would one want it any other way...
 ;; (add-to-list 'evil-insert-state-modes 'c++-mode)
 
 (setq dap-cpptools-extension-version "1.5.1")
 
-(with-eval-after-load 'lsp-mode
+(after! lsp-mode
   (require 'dap-cpptools))
 
-  (with-eval-after-load 'lsp-rust
-    (require 'dap-cpptools))
+(with-eval-after-load 'lsp-rust
+  (require 'dap-cpptools))
 
-  (with-eval-after-load 'dap-cpptools
-    ;; Add a template specific for debugging Rust programs.
-    ;; It is used for new projects, where I can M-x dap-edit-debug-template
-    (dap-register-debug-template "Rust::CppTools Run Configuration"
-                                 (list :type "cppdbg"
-                                       :request "launch"
-                                       :name "Rust::Run"
-                                       :MIMode "gdb"
-                                       :miDebuggerPath "rust-gdb"
-                                       :environment []
-                                       :program "${workspaceFolder}/target/debug/hello / replace with binary"
-                                      :cwd "${workspaceFolder}"
-                                       :console "external"
-                                       :dap-compilation "cargo build"
-                                       :dap-compilation-dir "${workspaceFolder}")))
+(after! dap-cpptools
+  ;; Add a template specific for debugging Rust programs.
+  ;; It is used for new projects, where I can M-x dap-edit-debug-template
+  (dap-register-debug-template "test"
+                               (list :type "cppdbg"
+                                     :request "launch"
+                                     :program "${fileDirname}${fileBasenameNoExtension}"
+                                     :cwd "${workspaceFolder}"
+                                     :dap-compilation "g++ -g ${file} -o ${fileBasenameNoExtension}"
+                                     :dap-compilation-dir "${fileDirname}"
+                                     ;; FIXME
+                                     ))
+  (dap-register-debug-template "Rust::CppTools Run Configuration"
+                               (list :type "cppdbg"
+                                     :request "launch"
+                                     :name "Rust::Run"
+                                     :MIMode "gdb"
+                                     :miDebuggerPath "rust-gdb"
+                                     :environment []
+                                     :program "${workspaceFolder}/target/debug/hello / replace with binary"
+                                     :cwd "${workspaceFolder}"
+                                     :console "external"
+                                     :dap-compilation "cargo build"
+                                     :dap-compilation-dir "${workspaceFolder}")))
 
-  (with-eval-after-load 'dap-mode
-    (setq dap-default-terminal-kind "integrated") ;; Make sure that terminal programs open a term for I/O in an Emacs buffer
-    (dap-auto-configure-mode +1))
+(after! dap-mode
+  (setq dap-default-terminal-kind "integrated") ;; Make sure that terminal programs open a term for I/O in an Emacs buffer
+  (dap-auto-configure-mode +1))
 
 ;; Compile Command
 (defun cpp-compile-command (f-name)
   (when f-name
     (setq compile-command
-          (concat "g++ -std=c++17 -O2 -o "
-                  (shell-quote-argument (file-name-sans-extension f-name))
-                  " "
+          (concat "g++ -std=c++17 -O2 -DLOCAL -I/mnt/Data/Documents/problems/include "
+                  ;; (shell-quote-argument (file-name-sans-extension f-name))
+                  ;; " "
                   (shell-quote-argument f-name)
                   " -Wall;"))))
 
@@ -596,29 +646,47 @@ This function makes sure that dates are aligned for easy reading."
   (setq-local compile-command (concat "python "(shell-quote-argument buffer-file-name))))
 
 (after! projectile
-(projectile-register-project-type 'cpp '("*.cpp")
-                                  :compile "g++ -std=c++17 -O2 -o "))
+  (projectile-register-project-type 'cpp '("*.cpp")
+                                    :compile "g++ -std=c++17 -O2 -o "))
 (setq lsp-enable-folding t)
 
 (after! scheme
   ;;(put 'test-group 'scheme-indent-function 1)
   (setq geiser-mode-start-repl-p t))
-;;; Tramp and SSH
+
+;;; --------- SSH STUFFF ---------------
+(eval-after-load 'tramp '(setenv "SHELL" "/bin/bash"))
+
+;; (after! tramp-mode
+(add-to-list 'auto-mode-alist '("\\.j2\\'" . cpp-mode))
+(setq lsp-warn-no-matched-clients nil
+      +format-on-save-enabled-modes '(not c-mode c++-mode cpp-mode emacs-lisp-mode sql-mode tex-mode latex-mode org-msg-edit-mode)
+      projectile-enable-caching t
+      vc-handled-backends '(Git)
+      projectile-file-exists-remote-cache-expire nil)
+;; )
+
+(defadvice projectile-project-root (around ignore-remote first activate)
+  (unless (file-remote-p default-directory) ad-do-it))
+
+(add-hook 'find-file-hook
+          (lambda ()
+            (when (file-remote-p default-directory)
+              (setq-local projectile-mode-line "Projectile"))))
+
+;; Tramp and SSH
+(customize-set-variable 'tramp-encoding-shell "/bin/bash")
+
 (setq tramp-default-method "sshx"
       remote-file-name-inhibit-cache nil
       vc-ignore-dir-regexp (format "\\(%s\\)\\|\\(%s\\)" vc-ignore-dir-regexp tramp-file-name-regexp)
-      tramp-verbose 6)
+      tramp-verbose 3)
 
-;; TODO Make it so that format on save is disabled for c++ buffers only over tramp
-(setq +format-on-save-enabled-modes '(not c-mode c++-mode cpp-mode emacs-lisp-mode sql-mode tex-mode latex-mode org-msg-edit-mode))
+(add-hook! 'dired-mode-hook #'dired-hide-details-mode)
 
 ;;; Insert Package Name here
 
-(load! "./agenda-sidebar")
-
-(add-to-list 'evil-insert-state-modes 'nano-agenda-mode)
-
-(add-hook! 'nano-agenda-mode-hook #'hide-mode-line-mode #'display-line-numbers-mode '+org-pretty-mode)
+(load! "agenda-sidebar")
 
 ;;;; Insert em-dash
 (defun help/real-insert (char)
@@ -684,6 +752,6 @@ Source: URL `https://www.thepunctuationguide.com/en-dash.html'"
 Source: URL `https://www.thepunctuationguide.com/hyphen.html'"
   (interactive)
   (help/real-insert ?-))
-(global-set-key (kbd "-") #'help/insert-hyphen)
+;; (global-set-key (kbd "-") #'help/insert-hyphen)
 (global-set-key (kbd "s-_") #'help/insert-em-dash)
 (global-set-key (kbd "s--") #'help/insert-en-dash)
