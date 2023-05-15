@@ -1,0 +1,37 @@
+#+title: Testfeed
+
+* Feeds :elfeed:
+** Twitter :twitter:
+*** [[https://nitter.net/hermitcraft_/rss][Hermitcraft]]
+*** [[https://nitter.net/kotatsugame_t/rss][Kotatsugame]]
+*** [[https://nitter.net/PresentInMyLife/rss][Yoshi]]
+*** [[https://nitter.net/headisaradio/rss][Saketh]]
+*** [[https://nitter.net/maspy_stars/rss][Maspy]]
+*** [[https://nitter.net/SSRS_cp/rss][SSRS]]
+** YouTube :youtube:
+#+begin_src js
+javascript:(function() {
+  var url = (document.querySelector('link[type="application/rss+xml"]') || '').href;
+  if (url !== undefined) {
+    return location.href = url;
+  }
+  try {
+    var channelId = ytplayer.config.args.ucid;
+    location.href = 'https://www.youtube.com/feeds/videos.xml?channel_id=' + channelId;
+  }
+  catch (TypeError) {
+    console.error('YouTube RSS feed bookmarklet: Could not find a channel RSS feed');
+  }
+})();
+#+end_src
+*** [[https://www.youtube.com/feeds/videos.xml?channel_id=UCpGJxlhKXfdOKkBhuDH6ujA][Etho]]
+*** [[https://www.youtube.com/feeds/videos.xml?channel_id=UCL8EOznhSyreT9O0-KFxgZQ][KotatsuYT]]
+*** [[https://www.youtube.com/feeds/videos.xml?channel_id=UC2_krAagEXVPftDXZCDiVZA][Kaname]]
+*** [[https://www.youtube.com/feeds/videos.xml?channel_id=UCSbH_BPR_AoARW6RDYLlLog][NatuJap]]
+*** [[https://www.youtube.com/feeds/videos.xml?channel_id=UCpGJxlhKXfdOKkBhuDH6ujA][ikechan]]
+*** [[https://www.youtube.com/feeds/videos.xml?channel_id=UCqnP1HkcAnueBjyKCdaoNHg][Joshua Chen]]
+** Download :ddl:
+*** [[https://psa.re/feed/][PSA]]
+** Proper :tech:
+*** [[
+][Lobsters]]

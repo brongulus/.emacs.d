@@ -28,7 +28,8 @@
         ([backtab] . corfu-previous)
         ("<escape>" . collection-corfu-quit-and-escape)
         ([escape] . evil-collection-corfu-quit-and-escape)
-        ("RET" . corfu-complete))
+        ("RET" . corfu-insert))
+        ;; ("RET" . corfu-complete))
         ;; ("SPC" . corfu-insert-separator))
 
   :hook (doom-first-input . global-corfu-mode)

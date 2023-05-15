@@ -54,7 +54,7 @@
  evil-vsplit-window-right t
  frame-resize-pixelwise nil
  treemacs-width 30
- doom-themes-treemacs-theme "doom-colors"
+ doom-themes-treemacs-theme "doom-atom" ; doom-colors
  +treemacs-git-mode 'deferred)
 
 ;; HACK Fixes font sizing issue
@@ -103,7 +103,7 @@
 (load! "openwith")
 ;; (require 'selectric-mode)
 ;; (selectric-mode 1)
-(require 'movie)
+;; (require 'movie)
 ;; (require 'openwith)
 ;; (add-hook 'dired-mode-hook 'openwith-mode 1)
 
@@ -238,9 +238,16 @@
         :ni "C-c C-<left>" 'org-insert-heading
         :ni "C-c C-<right>" 'org-insert-subheading))
 
-(add-hook! 'org-mode-hook #'org-appear-mode #'org-fragtog-mode)
+;; (add-hook! 'org-mode-hook #'org-appear-mode #'org-fragtog-mode)
+
+(set-file-template! :trigger "template" :mode 'org-mode)
+
+;; fcitx5
+(map! :map global
+      "C-SPC" nil)
 
 (setq org-appear-autoemphasis t
+      org-appear-autosubmarkers nil
       org-appear-autolinks t)
 
 (add-hook 'org-mode-hook
@@ -252,11 +259,45 @@
 
 (setq org-fontify-quote-and-verse-blocks t
       yas-triggers-in-field t
-      org-startup-with-inline-images t
+      org-startup-with-inline-images nil
       +latex-viewers nil
       flycheck-global-modes '(not LaTeX-mode latex-mode)
       org-latex-pdf-process '("tectonic -X compile %f --outdir=%o -Z shell-escape")
-      org-preview-latex-default-process 'dvisvgm)
+      org-preview-latex-default-process 'imagemagick)
+
+(setq!
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ org-preview-latex-process-alist
+   '((dvipng :programs
+      ("tectonic" "dvipng")
+      :description "dvi > png" :message "you need to install the programs: latex/tectonic and dvipng." :image-input-type "dvi" :image-output-type "png" :image-size-adjust
+      (1.0 . 1.0)
+      :latex-compiler
+      ("tectonic -X compile %f --outdir=%o -Z shell-escape")
+      :image-converter
+      ("dvipng -D %D -T tight -o %O %f")
+      :transparent-image-converter
+      ("dvipng -D %D -T tight -bg Transparent -o %O %f"))
+     (dvisvgm :programs
+      ("tectonic" "dvisvgm")
+      :description "dvi > svg" :message "you need to install the programs: latex/tectonic and dvisvgm." :image-input-type "dvi" :image-output-type "svg" :image-size-adjust
+      (1.7 . 1.5)
+      :latex-compiler
+      ("tectonic -X compile %f --outdir=%o -Z shell-escape")
+      :image-converter
+      ("dvisvgm %f -n -b min -c %S -o %O"))
+     (imagemagick :programs
+      ("tectonic" "convert")
+      :description "pdf > png" :message "you need to install the programs: latex/tectonic and imagemagick." :image-input-type "pdf" :image-output-type "png" :image-size-adjust
+      (1.0 . 1.0)
+      :latex-compiler
+      ("tectonic -X compile %f --outdir=%o -Z shell-escape")
+      :image-converter
+      ("convert -density %D -trim -antialias %f -quality 100 %O"))))
+
 
 ;; (after! org
 ;;   (plist-put org-format-latex-options :background "Transparent")
@@ -418,7 +459,8 @@ This function makes sure that dates are aligned for easy reading."
 
 ;;; Readers
 
-(setq rmh-elfeed-org-files '("~/.doom.d/elfeed.org"))
+;; (setq rmh-elfeed-org-files '("~/.doom.d/elfeed.org"))
+(setq rmh-elfeed-org-files '("~/.doom.d/testfeed.org"))
 (after! elfeed
   (setq elfeed-search-filter "@2-month-ago")
   (add-hook! elfeed-show-mode-hook #'mixed-pitch-mode)
@@ -433,6 +475,25 @@ This function makes sure that dates are aligned for easy reading."
 (map! :n "SPC o l" #'=elfeed)
 (map! :map elfeed-search-mode-map :localleader "u" #'elfeed-update)
 
+(use-package elfeed-tube
+  :after elfeed
+  :demand t
+  :config
+  ;; (setq elfeed-tube-auto-save-p nil) ; default value
+  ;; (setq elfeed-tube-auto-fetch-p t)  ; default value
+  (elfeed-tube-setup)
+  :bind (:map elfeed-show-mode-map
+         ("F" . elfeed-tube-fetch)
+         ([remap save-buffer] . elfeed-tube-save)
+         :map elfeed-search-mode-map
+         ("F" . elfeed-tube-fetch)
+         ([remap save-buffer] . elfeed-tube-save)))
+
+(use-package elfeed-tube-mpv
+  :bind (:map elfeed-show-mode-map
+              ("C-c C-f" . elfeed-tube-mpv-follow-mode)
+              ("C-c C-w" . elfeed-tube-mpv-where)))
+
 ;; FIXME
 (after! pocket-reader
   (set-evil-initial-state! 'pocket-reader-mode
@@ -443,6 +504,30 @@ This function makes sure that dates are aligned for easy reading."
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
 
 (map! :map pdf-view-mode-map :localleader "h" #'pdf-annot-add-highlight-markup-annotation)
+
+;; Dictionary lookup (Issue with multiple results)
+(use-package lexic
+    :commands lexic-search lexic-list-dictionary
+    :bind (:map lexic-mode-map
+                (("q" . lexic-return-from-lexic)
+                 ("RET" . lexic-search-word-at-point)
+                 ("a" . outline-show-all)
+                 ("h" . (lambda () (interactive) (outline-hide-sublevels 3)))
+                 ("o" . lexic-toggle-entry)
+                 ("n" . lexic-next-entry)
+                 ("N" . (lambda () (interactive) (lexic-next-entry t)))
+                 ("p" . lexic-previous-entry)
+                 ("P" . (lambda () (interactive) (lexic-previous-entry t)))
+                 ("E" . (lambda () (interactive) (lexic-return-from-lexic) ; expand
+                                            (switch-to-buffer (lexic-get-buffer))))
+                 ("M" . (lambda () (interactive) (lexic-return-from-lexic) ; minimise
+                                            (lexic-goto-lexic)))
+                 ("C-p" . lexic-search-history-backwards)
+                 ("C-n" . lexic-search-history-forwards)
+                 ("P" . (lambda () (interactive) (call-interactively #'lexic-search)))))
+    :config (setq lexic-dictionary-specs '(("牛津现代英汉双解词典" :priority 1)
+                                           ("Collins Cobuild 5" :priority 2))))
+(add-to-list 'evil-insert-state-modes 'lexic-mode)
 
 ;;; Dashboard
 
@@ -460,15 +545,15 @@ This function makes sure that dates are aligned for easy reading."
          :icon (all-the-icons-octicon "mention" :face 'doom-dashboard-menu-title)
          :face (:inherit (doom-dashboard-menu-title bold))
          :action notmuch)
-        ("Open browser"
+        ("Open elfeed"
          :icon (all-the-icons-octicon "book" :face 'doom-dashboard-menu-title)
          :face (:inherit (doom-dashboard-menu-title bold))
-         :action webkit)
+         :action =elfeed)
         ("Open Agenda"
          :icon (all-the-icons-octicon "check" :face 'doom-dashboard-menu-title)
          :face (:inherit (doom-dashboard-menu-title bold))
          :action org-agenda))
-      )
+     )
 (add-hook! '+doom-dashboard-mode-hook #'hide-mode-line-mode)
 
 (use-package! info-colors
@@ -531,6 +616,10 @@ This function makes sure that dates are aligned for easy reading."
       leetcode-prefer-sql "mssql"
       leetcode-save-solutions t
       leetcode-directory "/mnt/Data/Documents/problems/leetcode/")
+
+(add-hook 'leetcode-solution-mode-hook
+          (lambda() (flycheck-mode -1)
+               (lsp-mode -1)))
 
 (defun lsp-ui-popup-focus(&optional arg)
   (interactive)
@@ -595,7 +684,8 @@ This function makes sure that dates are aligned for easy reading."
 (setq dap-cpptools-extension-version "1.5.1")
 
 (after! lsp-mode
-  (require 'dap-cpptools))
+  (require 'dap-cpptools)
+  (add-to-list 'lsp-file-watch-ignored-directories "/mnt/Data/Documents/problems/leetcode/"))
 
 (with-eval-after-load 'lsp-rust
   (require 'dap-cpptools))
@@ -633,14 +723,16 @@ This function makes sure that dates are aligned for easy reading."
 (defun cpp-compile-command (f-name)
   (when f-name
     (setq compile-command
-          (concat "g++ -std=c++17 -O2 -DLOCAL -I/mnt/Data/Documents/problems/include "
+          (concat "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL -I/mnt/Data/Documents/problems/include "
                   ;; (shell-quote-argument (file-name-sans-extension f-name))
                   ;; " "
-                  (shell-quote-argument f-name)
-                  " -Wall;"))))
+                  (shell-quote-argument f-name)))))
 
 (add-hook! 'c++-mode-hook
   (setq-local compile-command (cpp-compile-command (buffer-file-name))))
+
+;; Run with input, copy from clipboard if DNE
+
 
 (add-hook! 'python-mode-hook
   (setq-local compile-command (concat "python "(shell-quote-argument buffer-file-name))))

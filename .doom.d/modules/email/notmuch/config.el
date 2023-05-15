@@ -6,7 +6,7 @@
 ;; TODO shift it to a case basis in config section
 (defvar +notmuch-sync-command nil)
 
-(defvar +notmuch-mail-folder "~/.mail/")
+(defvar +notmuch-mail-folder "~/.local/share/mail/")
 
 
 
@@ -33,19 +33,16 @@
 ;;  (set-evil-initial-state! '(notmuch-show-mode notmuch-tree-mode notmuch-search-mode) 'insert)
 
   (setq notmuch-fcc-dirs nil
-
         ;;  might change this
         notmuch-show-logo nil
         notmuch-message-headers-visible nil
         notmuch-search-oldest-first nil
         message-defNotmault-mail-headers "Cc: \nBcc: \n"
         message-kill-buffer-on-exit t
-
         ;;  smtp
         smtpmail-smtp-server "smtp.gmail.com"
         message-send-mail-function 'message-smtpmail-send-it
         smtpmail-debug-info t
-
         ;; html stuff TODO add different colour for links for improved visibility
         mm-text-html-renderer 'gnus-w3m
         notmuch-multipart/alternative-discouraged
@@ -53,13 +50,11 @@
         notmuch-show-text/html-blocked-images nil
         gnus-max-image-proportion 0.7
         ;;shr-use-colors nil
-
         ;; Image hacks
         pixel-resolution-fine-flag t
         mouse-wheel-progressive-speed nil
-;;        mouse-wheel-scroll-amount '(1 ((shift) . 1))
+        ;;mouse-wheel-scroll-amount '(1 ((shift) . 1))
         mouse-wheel-follow-mouse 't
-
         ;; search results TODO convert to tree format and fix the stuff with subject
         notmuch-search-result-format
         '(("date" . "%12s ")
@@ -91,8 +86,7 @@
         notmuch-tag-formats
         '(("unread" (propertize tag 'face 'notmuch-tag-unread)))
         notmuch-archive-tags '("-inbox" "-unread")
-        notmuch-tree-show-out t
-        )
+        notmuch-tree-show-out t)
 
   ;; hooks
 
@@ -122,7 +116,8 @@
       (setq right-margin-width 6)
       (set-window-buffer nil (current-buffer))))
 
-  (add-hook! 'notmuch-show-hook #'writeroom-mode #'mixed-pitch-mode #'left-padding #'iscroll-mode)
+  (add-hook! 'notmuch-show-hook
+             #'writeroom-mode #'mixed-pitch-mode #'left-padding)
   ;; TEST setup
 
 

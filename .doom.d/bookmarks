@@ -2,10 +2,10 @@
 ;;; This format is meant to be slightly human-readable;
 ;;; nevertheless, you probably don't want to edit it.
 ;;; -*- End Of Bookmark File Format Version Stamp -*-
-(("kinara"
- (filename . "/sshx:iprashant@vendor03.dc.kinara.ai:/auto/xwork/iprashant/")
- (front-context-string . "kinara/\n  drwxr-x-")
- (rear-context-string . "84k 07-20 12:01 ")
+(("Documents"
+ (filename . "/mnt/Data/Documents/")
+ (front-context-string . "4-2\n  drwxrwxrwx")
+ (rear-context-string . " 4k 02-17 15:00 ")
  (position . 82))
 ("2015 Fall: 15-213 Introduction to Computer Systems : Panopto"
  (filename . "https://scs.hosted.panopto.com/Panopto/Pages/Sessions/List.aspx#folderID=%22b96d90ae-9871-4fae-91e2-b1627b43e25e%22")
@@ -22,18 +22,13 @@
  (rear-context-string . "2021-03-22 Mon>\n")
  (position . 5021))
 ("org-capture-last-stored"
- (filename . "~/Dropbox/org/notes.org")
- (front-context-string . "** [2022-11-18 F")
- (rear-context-string)
- (position . 9))
+ (filename . "~/Dropbox/org/journal.org")
+ (front-context-string . "**** [2023-05-13")
+ (rear-context-string . "-05-13 Saturday\n")
+ (position . 12147))
 ("blog"
  (filename . "~/blog/org/")
  (front-context-string . "assets\n  -rwxr-x")
  (rear-context-string . " 4k 01-31 07:17 ")
  (position . 83))
-("Documents"
- (filename . "/mnt/Data/Documents/")
- (front-context-string . "4-2\n  drwxrwxrwx")
- (rear-context-string . " 4k 02-17 15:00 ")
- (position . 82))
 )

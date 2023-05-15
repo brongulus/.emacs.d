@@ -45,8 +45,14 @@
   :recipe (:host github :repo "dalanicolai/pdf-continuous-scroll-mode.el"))
 (package! org-ol-tree
   :recipe (:host github :repo "Townk/org-ol-tree"))
-(package! movie
-  :recipe (:host github :repo "larsmagne/movie.el"))
+(package! hlsl-mode
+  :recipe (:host github :repo "jcaw/hlsl-mode"))
+(package! elfeed-tube
+  :recipe (:host github :repo "karthink/elfeed-tube"))
+(package! elfeed-tube-mpv
+  :recipe (:host github :repo "karthink/elfeed-tube"))
+;; (package! movie
+;;   :recipe (:host github :repo "larsmagne/movie.el"))
 (package! pvr
   :recipe (:host github :repo "larsmagne/pvr.el"))
 (package! imdb
