@@ -57,6 +57,10 @@
  doom-themes-treemacs-theme "doom-atom" ; doom-colors
  +treemacs-git-mode 'deferred)
 
+(map! :map global
+      :n ";" nil
+      :n ";" #'evil-ex)
+
 ;; HACK Fixes font sizing issue
 ;; (add-to-list 'default-frame-alist '(font . "Hack-8"))
 
@@ -664,6 +668,52 @@ This function makes sure that dates are aligned for easy reading."
     (kill-current-buffer)
     (+workspace/close-window-or-workspace)))
 
+;; Vterm-function, courtesy : elken
+(after! vterm
+  (setf (alist-get "woman" vterm-eval-cmds nil nil #'equal)
+        '((lambda (topic)
+            (woman topic))))
+  (setf (alist-get "magit-status" vterm-eval-cmds nil nil #'equal)
+        '((lambda (path)
+            (magit-status path))))
+  (setf (alist-get "dired" vterm-eval-cmds nil nil #'equal)
+        '((lambda (dir)
+            (dired dir)))))
+
+;; Compile Command
+(after! racket-mode
+  (setq compile-command (concat "racket " (shell-quote-argument buffer-file-name))))
+
+(add-hook! 'python-mode-hook
+  (setq-local compile-command (concat
+                               "python " (shell-quote-argument buffer-file-name) " < ./in"
+                               (shell-quote-argument (file-name-sans-extension (file-name-nondirectory buffer-file-name))))))
+
+(add-hook! 'c++-mode-hook
+    (setq compile-command
+          (concat "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL -I/mnt/Data/Documents/problems/include "
+                  (shell-quote-argument buffer-file-name)
+                  " && ./a.out < ./in"
+                  (shell-quote-argument (file-name-sans-extension (file-name-nondirectory buffer-file-name))))))
+
+;; Run with input, copy from clipboard if DNE
+(defun paste-input (&optional arg)
+  (interactive)
+  (find-file (concat
+              "in"
+              (shell-quote-argument (file-name-sans-extension (file-name-nondirectory buffer-file-name)))))
+  (erase-buffer)
+  (clipboard-yank)
+  (basic-save-buffer)
+  (kill-current-buffer)
+  (message "Populated input file"))
+
+
+(map! "<f4>" nil
+      "<f4>" #'compile
+      "<f3>" nil
+      "<f3>" #'paste-input)
+
 (map! :map comint-mode-map
       :ni "q" #'end-process)
 (map! :map compilation-mode-map
@@ -718,24 +768,6 @@ This function makes sure that dates are aligned for easy reading."
 (after! dap-mode
   (setq dap-default-terminal-kind "integrated") ;; Make sure that terminal programs open a term for I/O in an Emacs buffer
   (dap-auto-configure-mode +1))
-
-;; Compile Command
-(defun cpp-compile-command (f-name)
-  (when f-name
-    (setq compile-command
-          (concat "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL -I/mnt/Data/Documents/problems/include "
-                  ;; (shell-quote-argument (file-name-sans-extension f-name))
-                  ;; " "
-                  (shell-quote-argument f-name)))))
-
-(add-hook! 'c++-mode-hook
-  (setq-local compile-command (cpp-compile-command (buffer-file-name))))
-
-;; Run with input, copy from clipboard if DNE
-
-
-(add-hook! 'python-mode-hook
-  (setq-local compile-command (concat "python "(shell-quote-argument buffer-file-name))))
 
 (after! projectile
   (projectile-register-project-type 'cpp '("*.cpp")

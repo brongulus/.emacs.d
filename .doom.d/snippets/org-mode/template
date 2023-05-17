@@ -10,6 +10,8 @@
 #+LATEX_HEADER: \setlength{\abovedisplayshortskip}{7pt}
 #+LATEX_HEADER: \setlength{\belowdisplayshortskip}{7pt}
 #+latex_header: \usepackage{xeCJK}
+#+latex_header: \usepackage{ruby}
 #+latex_header: \setCJKmainfont{Noto Serif CJK JP} % for \rmfamily
 #+latex_header: \setCJKsansfont{Noto Sans CJK JP} % for \sffamily
+#+latex_header: \renewcommand{\rubysep}{-0.2ex}
 $0

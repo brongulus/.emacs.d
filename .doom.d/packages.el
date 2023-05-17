@@ -11,7 +11,6 @@
 ;
 ;;##########PACKAGES###########
 (unpin! doom-themes)
-(unpin! doom-modeline)
 (unpin! tramp)
 ;; (package! solaire-mode :disable t)
 

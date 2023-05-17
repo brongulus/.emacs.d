@@ -33,5 +33,4 @@ javascript:(function() {
 ** Download :ddl:
 *** [[https://psa.re/feed/][PSA]]
 ** Proper :tech:
-*** [[
-][Lobsters]]
+*** [[https://lobste.rs/rss][Lobsters]]
