@@ -37,7 +37,7 @@
  forge-owned-accounts '(("brongulus"))
  auth-sources '("/home/prashant/.authinfo" "/home/prashant/.emacs.d/.local/etc/authinfo.gpg" "~/.authinfo.gpg")
  doom-font "Victor Mono:pixelsize=18"
- doom-theme 'doom-material
+ doom-theme 'doom-flatwhite
  org-directory "/home/prashant/Dropbox/org/"
  bookmark-default-file "~/.doom.d/bookmarks"
  evil-escape-mode 1
@@ -458,8 +458,7 @@ This function makes sure that dates are aligned for easy reading."
   '((font-lock-comment-face font-lock-doc-face) :slant italic)
   '(treemacs-git-unmodified-face :inherit treemacs-file-face)
   '(org-table :inherit 'fixed-pitch)
-  '(tooltip :font "VictorMono:pixelsize=18" ))
-
+  '(tooltip :font "VictorMono:pixelsize=18"))
 
 ;;; Readers
 
@@ -614,7 +613,12 @@ This function makes sure that dates are aligned for easy reading."
 ;;;; LSP Test
 (setq lsp-ui-doc-enable t
       lsp-ui-doc-use-childframe t
+      ;; lsp-ui-doc-enhanced-markdown nil
       lsp-ui-doc-use-webkit nil)
+
+(after! lsp-ui
+  (setq lsp-ui-doc-max-width 100
+        lsp-ui-doc-max-height 14))
 
 (setq leetcode-prefer-language "cpp"
       leetcode-prefer-sql "mssql"
@@ -668,21 +672,10 @@ This function makes sure that dates are aligned for easy reading."
     (kill-current-buffer)
     (+workspace/close-window-or-workspace)))
 
-;; Vterm-function, courtesy : elken
-(after! vterm
-  (setf (alist-get "woman" vterm-eval-cmds nil nil #'equal)
-        '((lambda (topic)
-            (woman topic))))
-  (setf (alist-get "magit-status" vterm-eval-cmds nil nil #'equal)
-        '((lambda (path)
-            (magit-status path))))
-  (setf (alist-get "dired" vterm-eval-cmds nil nil #'equal)
-        '((lambda (dir)
-            (dired dir)))))
-
-;; Compile Command
-(after! racket-mode
-  (setq compile-command (concat "racket " (shell-quote-argument buffer-file-name))))
+;; Compile commands
+(add-hook! 'racket-mode-hook
+  (setq-local compile-command (concat
+                               "racket " (shell-quote-argument buffer-file-name))))
 
 (add-hook! 'python-mode-hook
   (setq-local compile-command (concat
@@ -690,13 +683,13 @@ This function makes sure that dates are aligned for easy reading."
                                (shell-quote-argument (file-name-sans-extension (file-name-nondirectory buffer-file-name))))))
 
 (add-hook! 'c++-mode-hook
-    (setq compile-command
+    (setq-local compile-command
           (concat "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL -I/mnt/Data/Documents/problems/include "
                   (shell-quote-argument buffer-file-name)
                   " && ./a.out < ./in"
                   (shell-quote-argument (file-name-sans-extension (file-name-nondirectory buffer-file-name))))))
 
-;; Run with input, copy from clipboard if DNE
+;; Copy input from clipboard
 (defun paste-input (&optional arg)
   (interactive)
   (find-file (concat
@@ -708,14 +701,34 @@ This function makes sure that dates are aligned for easy reading."
   (kill-current-buffer)
   (message "Populated input file"))
 
+;; Test using the cf-tool CLI
+(defun cf-test (&optional arg)
+  (interactive)
+  (require 'vterm)
+  (eval-when-compile (require 'subr-x))
+  (let ((command (concat "cf test " (shell-quote-argument buffer-file-name))))
+    (let ((dir default-directory))
+      (vterm)
+      (switch-to-buffer vterm-buffer-name)
+      (vterm--goto-line -1)
+      (message command)
+      (vterm-send-string (concat "cd " dir))
+      (vterm-send-return)
+      (vterm-send-string command)
+      (vterm-send-return))))
 
-(map! "<f4>" nil
+(map! "<f3>" nil
+      "<f3>" #'paste-input
+      "<f4>" nil
       "<f4>" #'compile
-      "<f3>" nil
-      "<f3>" #'paste-input)
+      "<f5>" nil
+      "<f5>" #'cf-test
+      "<f9>" nil
+      "<f9>" #'mark-whole-buffer)
 
 (map! :map comint-mode-map
-      :ni "q" #'end-process)
+      :ni "q" #'end-process
+      :ni "<escape>" #'end-process)
 (map! :map compilation-mode-map
       :ni "q" #'+workspace/close-window-or-workspace
       :ni "<escape>" #'+workspace/close-window-or-workspace)
@@ -807,6 +820,9 @@ This function makes sure that dates are aligned for easy reading."
       tramp-verbose 3)
 
 (add-hook! 'dired-mode-hook #'dired-hide-details-mode)
+(map! :map dired-mode-map
+      :n "~" nil
+      :n "~" (cmd! (dired "/home/prashant/")))
 
 ;;; Insert Package Name here
 
