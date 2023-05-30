@@ -22,10 +22,10 @@
  (rear-context-string . "2021-03-22 Mon>\n")
  (position . 5021))
 ("org-capture-last-stored"
- (filename . "~/Dropbox/org/journal.org")
- (front-context-string . "**** [2023-05-13")
- (rear-context-string . "-05-13 Saturday\n")
- (position . 12147))
+ (filename . "~/Dropbox/org/inbox.org")
+ (front-context-string . "** TODO Look int")
+ (rear-context-string . "  :code:\n* todo\n")
+ (position . 1559))
 ("blog"
  (filename . "~/blog/org/")
  (front-context-string . "assets\n  -rwxr-x")

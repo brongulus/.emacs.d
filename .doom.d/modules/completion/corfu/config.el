@@ -7,15 +7,16 @@
   :custom
   (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
   (corfu-auto t)                 ;; Enable auto completion
+  (corfu-auto-prefix 2)
   (corfu-auto-delay 0)
   (tab-always-indent 'complete)
   (completion-styles '(orderless-fast basic))
-  (corfu-quit-at-boundary t)     ;; Automatically quit at word boundary
+  (corfu-quit-at-boundary 'separator)     ;; Automatically quit at word boundary
   (corfu-quit-no-match t)        ;; Automatically quit if there is no match
   (corfu-preview-current nil)    ;; Disable current candidate preview
   (corfu-preselect-first nil)    ;; Disable candidate preselection
   ;; (corfu-commit-predicate nil)   ;; Do not commit selected candidates on next input
-  ;; (corfu-echo-documentation nil) ;; Disable documentation in the echo area
+  (corfu-echo-documentation 0.2) ;; Disable documentation in the echo area
   ;; (corfu-scroll-margin 5)        ;; Use scroll margin
 
   :bind
@@ -25,6 +26,7 @@
         ("C-j" . corfu-next) ;; Org down element clashing
         ("S-TAB" . corfu-previous)
         ("C-k" . corfu-previous)
+        ("S-TAB" . corfu-previous)
         ([backtab] . corfu-previous)
         ("<escape>" . collection-corfu-quit-and-escape)
         ([escape] . evil-collection-corfu-quit-and-escape)
@@ -34,7 +36,7 @@
 
   :hook (doom-first-input . global-corfu-mode)
 
-  ;;:init
+  ;; :init
   ;; (when (featurep! +lsp)
   ;;   ())
 
@@ -42,8 +44,7 @@
     (after! evil
     (advice-add 'corfu--setup :after 'evil-normalize-keymaps)
     (advice-add 'corfu--teardown :after 'evil-normalize-keymaps)
-    (evil-make-overriding-map corfu-map))
-  )
+    (evil-make-overriding-map corfu-map)))
 
 
 ;; Optionally use the `orderless' completion style.
@@ -102,18 +103,6 @@
         ("M-p" . corfu-doc-scroll-down)
         ("M-n" . corfu-doc-scroll-up)
         ("M-d" . corfu-doc-toggle)))
-
-(use-package! kind-icon
-  :after corfu
-  :custom
-  (kind-icon-use-icons t)
-  (kind-icon-default-face 'corfu-default) ; to compute blended backgrounds correctly
-  (setq kind-icon-blend-background nil
-        kind-icon-blend-frac 0.0)
-  (setq svg-lib-icons-dir
-        (expand-file-name (concat user-emacs-directory ".local/cache/svg-lib/")))
-  :config
-  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
 
 (unless (display-graphic-p)
   (corfu-terminal-mode +1))

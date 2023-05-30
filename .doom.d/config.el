@@ -37,7 +37,7 @@
  forge-owned-accounts '(("brongulus"))
  auth-sources '("/home/prashant/.authinfo" "/home/prashant/.emacs.d/.local/etc/authinfo.gpg" "~/.authinfo.gpg")
  doom-font "Victor Mono:pixelsize=18"
- doom-theme 'doom-flatwhite
+ doom-theme 'doom-one-light
  org-directory "/home/prashant/Dropbox/org/"
  bookmark-default-file "~/.doom.d/bookmarks"
  evil-escape-mode 1
@@ -103,12 +103,7 @@
 
 
 (add-to-list 'load-path "~/.doom.d/selectric")
-(add-to-list 'load-path "~/.emacs.d/.local/straight/repos/movie.el")
 (load! "openwith")
-;; (require 'selectric-mode)
-;; (selectric-mode 1)
-;; (require 'movie)
-;; (require 'openwith)
 ;; (add-hook 'dired-mode-hook 'openwith-mode 1)
 
 (defun hugo-build ()
@@ -118,13 +113,19 @@
 (setq eshell-visual-commands
       '("spt" "ncmpcpp" "nvim" "vim" "vi" "screen" "tmux" "top" "htop" "less" "more" "lynx" "links" "ncftp" "mutt" "pine" "tin" "trn" "elm"))
 
-;;; TODO Better Keymaps - FAR, MC etc
+(defun timestamp ()
+   (interactive)
+   (insert (format-time-string "%Y-%m-%d %H:%M ")))
+
+(map! :map global
+      :n "SPC >" #'timestamp)
+
+;;; Better Keymaps - FAR, MC etc
 (map! :ni "<f2>" #'basic-save-buffer
       :ni "<f10>" #'kill-current-buffer
       :n "-" #'dired-jump)
 
-
-(map! :i "C-y" #'evil-paste-after)
+(map! :i "C-y" #'evil-paste-before)
 (map! :map image-mode-map
       :ni "r" #'image-rotate)
 
@@ -227,6 +228,9 @@
      (doom-modeline--buffer-name)))
   (setq-default doom-modeline-major-mode-icon t
                 doom-modeline-enable-word-count nil
+                doom-modeline-gnus t
+                doom-modeline-gnus-timer 1
+                ;; doom-modeline-gnus-excluded-groups '("")
                 doom-modeline-buffer-encoding nil
                 doom-modeline-buffer-file-name-style 'relative-to-project
                 line-number-mode t
@@ -242,7 +246,7 @@
         :ni "C-c C-<left>" 'org-insert-heading
         :ni "C-c C-<right>" 'org-insert-subheading))
 
-;; (add-hook! 'org-mode-hook #'org-appear-mode #'org-fragtog-mode)
+(add-hook! 'org-mode-hook #'org-appear-mode) ; #'org-fragtog-mode)
 
 (set-file-template! :trigger "template" :mode 'org-mode)
 
@@ -334,19 +338,21 @@
 
 (setq org-agenda-custom-commands
       '(("A" "My agenda"
-         ((todo "TODO" ((org-agenda-overriding-header
+         ((alltodo "" ((org-agenda-overriding-header
                          (insert(concat
                                 (insert (all-the-icons-faicon "star" :v-adjust 0.1 :face 'all-the-icons-yellow))
                                 (propertize "  Today" 'face '(:height 1.3 :inherit 'variable-pitch)))))
                         (org-agenda-remove-tags t)
                         (org-agenda-prefix-format " %-15b")
                         (org-agenda-todo-keyword-format "")))
-          (agenda "" ((org-agenda-overriding-header "")
-                               ;; (insert (all-the-icons-faicon "calendar" :v-adjust 0.1 :face 'all-the-icons-red)
-                               ;; (propertize "  Schedule" 'face '(:height 1.3 :inherit 'variable-pitch))))
-                      (org-agenda-skip-scheduled-if-done t)
-                      (org-agenda-skip-timestamp-if-done t)
+          (agenda "" ((org-agenda-overriding-header ;"")
+                             (concat (propertize "  Schedule" 'face '(:height 1.3 :inherit 'variable-pitch))))
+                       ;; (insert (concat ;; Buffer is read only
+                       ;;         (insert (all-the-icons-faicon "calendar" :v-adjust 0.1 :face 'all-the-icons-red))
+                       ;;         (propertize "  Schedule" 'face '(:height 1.3 :inherit 'variable-pitch)))))
                       (org-agenda-skip-deadline-if-done t)
+                      ;; (org-agenda-skip-scheduled-if-done t)
+                      ;; (org-agenda-skip-timestamp-if-done t)
                       (org-agenda-start-day "-1d")
                       (org-agenda-span 3)
                       (org-agenda-remove-tags t)
@@ -379,14 +385,15 @@
  org-ellipsis "…"
 
  ;; Agenda styling
- org-agenda-tags-column 0
- org-agenda-block-separator ?─
- org-agenda-time-grid
- '((daily today require-timed)
-   (800 1000 1200 1400 1600 1800 2000)
-   " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
- org-agenda-current-time-string
- "⭠ now ─────────────────────────────────────────────────")
+ ;; org-agenda-tags-column 0
+ ;; org-agenda-block-separator ?─
+ ;; org-agenda-time-grid
+ ;; '((daily today require-timed)
+ ;;   (800 1000 1200 1400 1600 1800 2000)
+ ;;   " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+ ;; org-agenda-current-time-string
+ ;; "⭠ now ────────────────────────────────────────────────"
+ )
 
 (if (display-graphic-p)
     (global-org-modern-mode))
@@ -463,9 +470,64 @@ This function makes sure that dates are aligned for easy reading."
 ;;; Readers
 
 ;; (setq rmh-elfeed-org-files '("~/.doom.d/elfeed.org"))
+(defadvice! your/elfeed-goodes-entry-line-draw (entry)
+  "Some doc"
+  :override #'elfeed-goodies/entry-line-draw
+  (let* ((title (or (elfeed-meta entry :title) (elfeed-entry-title entry) ""))
+         (title-faces (elfeed-search--faces (elfeed-entry-tags entry)))
+         (feed (elfeed-entry-feed entry))
+         (feed-title
+          (when feed
+            (or (elfeed-meta feed :title) (elfeed-feed-title feed))))
+         (tags (mapcar #'symbol-name (elfeed-entry-tags entry)))
+         (tags-str (concat "[" (mapconcat 'identity tags ",") "]"))
+         (title-width (- (window-width) elfeed-goodies/feed-source-column-width
+                         elfeed-goodies/tag-column-width 4))
+         ;; what actually gets displayed.
+         ;; Feed name
+         (feed-column (elfeed-format-column
+                       feed-title
+                       elfeed-goodies/feed-source-column-width
+                       :left))
+         ;; Subject
+         (title-column (elfeed-format-column
+                        title ;; str
+                        elfeed-search-title-max-width ;; width
+                        :left)) ;; alignment
+         ;; Tags
+         (tag-column (elfeed-format-column
+                      tags-str
+                      elfeed-goodies/tag-column-width
+                      :left)))
+
+    (if (>= (window-width) (* (frame-width) elfeed-goodies/wide-threshold))
+        (progn
+          (insert (propertize feed-column 'face 'elfeed-search-feed-face) " ")
+          (insert (propertize title-column 'face title-faces 'kbd-help title) " ")
+          (insert (propertize tag-column 'face 'elfeed-search-tag-face) " "))
+      (insert (propertize title 'face title-faces 'kbd-help title)))))
+
+(defadvice! your/search-header-draw-wide (separator-left separator-right search-filter stats db-time)
+  "some doc"
+  :override #'search-header/draw-wide
+  (let* ((update (format-time-string "%Y-%m-%d %H:%M:%S %z" db-time))
+         (lhs (list
+               (powerline-raw (-pad-string-to "Feed" (- elfeed-goodies/feed-source-column-width 4)) 'powerline-active1 'l)
+               (funcall separator-left 'powerline-active1 'powerline-active2)
+               ;; play with the number 7 to get the tags to align better
+               (powerline-raw (-pad-string-to  "Subject" (-  elfeed-search-title-max-width 7)) 'mode-line 'l)
+               (funcall separator-left 'powerline-active2 'mode-line)
+               (powerline-raw (-pad-string-to "Tags" (- elfeed-goodies/tag-column-width 6)) 'powerline-active2 'l)))
+         (rhs (search-header/rhs separator-left separator-right search-filter stats update)))
+
+    (concat (powerline-render lhs)
+            (powerline-fill 'mode-line (powerline-width rhs))
+            (powerline-render rhs))))
+
 (setq rmh-elfeed-org-files '("~/.doom.d/testfeed.org"))
 (after! elfeed
-  (setq elfeed-search-filter "@2-month-ago")
+  (setq elfeed-search-filter "@2-month-ago"
+        elfeed-goodies/tag-column-width 14)
   (add-hook! elfeed-show-mode-hook #'mixed-pitch-mode)
   (set-popup-rule! "^\\*elfeed-entry" :ignore t))
 (add-hook! 'elfeed-show-mode-hook
@@ -544,10 +606,10 @@ This function makes sure that dates are aligned for easy reading."
                       (file-exists-p (desktop-full-file-name))))
          :face (:inherit (doom-dashboard-menu-title bold))
          :action doom/quickload-session)
-        ("Open notmuch"
+        ("Open gnus"
          :icon (all-the-icons-octicon "mention" :face 'doom-dashboard-menu-title)
          :face (:inherit (doom-dashboard-menu-title bold))
-         :action notmuch)
+         :action gnus)
         ("Open elfeed"
          :icon (all-the-icons-octicon "book" :face 'doom-dashboard-menu-title)
          :face (:inherit (doom-dashboard-menu-title bold))
@@ -607,12 +669,13 @@ This function makes sure that dates are aligned for easy reading."
       ;; change the directory to store the sent mail
       message-directory "~/.mail/gmail/")
 
-(map! :n "SPC o n" 'notmuch)
+(map! :n "SPC o n" 'gnus)
 
 ;;; Code
 ;;;; LSP Test
 (setq lsp-ui-doc-enable t
       lsp-ui-doc-use-childframe t
+      lsp-headerline-breadcrumb-enable t
       ;; lsp-ui-doc-enhanced-markdown nil
       lsp-ui-doc-use-webkit nil)
 
@@ -726,9 +789,9 @@ This function makes sure that dates are aligned for easy reading."
       "<f9>" nil
       "<f9>" #'mark-whole-buffer)
 
-(map! :map comint-mode-map
-      :ni "q" #'end-process
-      :ni "<escape>" #'end-process)
+;; (map! :map comint-mode-map
+;;       :ni "q" #'end-process
+;;       :ni "<escape>" #'end-process)
 (map! :map compilation-mode-map
       :ni "q" #'+workspace/close-window-or-workspace
       :ni "<escape>" #'+workspace/close-window-or-workspace)
@@ -820,9 +883,14 @@ This function makes sure that dates are aligned for easy reading."
       tramp-verbose 3)
 
 (add-hook! 'dired-mode-hook #'dired-hide-details-mode)
-(map! :map dired-mode-map
-      :n "~" nil
-      :n "~" (cmd! (dired "/home/prashant/")))
+(setq ls-lisp-ignore-case t)
+(after! dired
+        (map! :map dired-mode-map
+        :n "~" nil
+        :n "~" (cmd! (dired "/home/prashant/"))))
+
+;;; Gnus
+(load! "gnus-conf")
 
 ;;; Insert Package Name here
 
