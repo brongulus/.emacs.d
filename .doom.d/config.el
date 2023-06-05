@@ -37,13 +37,13 @@
  forge-owned-accounts '(("brongulus"))
  auth-sources '("/home/prashant/.authinfo" "/home/prashant/.emacs.d/.local/etc/authinfo.gpg" "~/.authinfo.gpg")
  doom-font "Victor Mono:pixelsize=18"
- doom-theme 'doom-one-light
+ doom-theme 'doom-dracula
  org-directory "/home/prashant/Dropbox/org/"
  bookmark-default-file "~/.doom.d/bookmarks"
  evil-escape-mode 1
  display-line-numbers-type 'nil
  tab-width 2
- doom-fallback-buffer-name "*doom*"
+ doom-fallback-buffer-name "*dashboard*"
  left-margin-width 2
  which-key-idle-delay 0.5
  large-file-warning-threshold nil
@@ -56,6 +56,9 @@
  treemacs-width 30
  doom-themes-treemacs-theme "doom-atom" ; doom-colors
  +treemacs-git-mode 'deferred)
+
+(setq smtpmail-smtp-server "smtp.gmail.com"
+      smtpmail-smtp-service 587)
 
 (map! :map global
       :n ";" nil
@@ -104,7 +107,7 @@
 
 (add-to-list 'load-path "~/.doom.d/selectric")
 (load! "openwith")
-;; (add-hook 'dired-mode-hook 'openwith-mode 1)
+(add-hook 'dired-mode-hook 'openwith-mode 1)
 
 (defun hugo-build ()
   (interactive)
@@ -164,6 +167,9 @@
     (outline-hide-subtree)))
 
 (add-hook! 'emacs-lisp-mode-hook #'outline-minor-mode)
+(after! racket
+  (add-hook! 'racket-mode-hook #'outline-minor-mode))
+
 (map! :map outline-minor-mode-map
       :n [backtab] #'outline-hide-body
       :n [tab] #'toggle-outline-entry
@@ -177,7 +183,12 @@
 
 (add-hook! 'imenu-list-major-mode-hook #'hide-mode-line-mode)
 
-;;; Webkit
+;;; Webkit (Disabled now, will use with pgtk)
+
+(setq eww-search-prefix "https://lite.duckduckgo.com/lite/?q=")
+(map! :map eww-mode-map
+      :n "q" nil
+      :n "q" 'kill-current-buffer)
 
 (map! :n "SPC o w" 'webkit)
 
@@ -191,28 +202,28 @@
 
 (map! :map webkit-mode-map :n "q" #'webkit-close-tab)
 
-(use-package! webkit
-  :init
-  (when (eq window-system 'x)
-        (modify-frame-parameters nil '((inhibit-double-buffering . t))))
-  (require 'ol)
-  :config
-  (setq browse-url-browser-function 'webkit-browse-url
-        webkit-cookie-file "~/.doom.d/webkit/cookies"
-        webkit-history-file "~/.doom.d/webkit/history"
-        webkit-browse-url-force-new t)
-  (defun webkit--display-progress (progress)
-    (setq webkit--progress-formatted
-          (if (equal progress 100.0)
-              ""
-            (format "%s%.0f%%  " (all-the-icons-faicon "spinner") progress)))
-    (force-mode-line-update)))
+;; (use-package! webkit
+;;   :init
+;;   (when (eq window-system 'x)
+;;         (modify-frame-parameters nil '((inhibit-double-buffering . t))))
+;;   (require 'ol)
+;;   :config
+;;   (setq browse-url-browser-function 'webkit-browse-url
+;;         webkit-cookie-file "~/.doom.d/webkit/cookies"
+;;         webkit-history-file "~/.doom.d/webkit/history"
+;;         webkit-browse-url-force-new t)
+;;   (defun webkit--display-progress (progress)
+;;     (setq webkit--progress-formatted
+;;           (if (equal progress 100.0)
+;;               ""
+;;             (format "%s%.0f%%  " (all-the-icons-faicon "spinner") progress)))
+;;     (force-mode-line-update)))
 
-(use-package webkit-dark)
+;; (use-package webkit-dark)
 
-(use-package evil-collection-webkit
-  :config
-  (evil-collection-xwidget-setup))
+;; (use-package evil-collection-webkit
+;;   :config
+;;   (evil-collection-xwidget-setup))
 
 ;;; Modeline
 
@@ -229,8 +240,9 @@
   (setq-default doom-modeline-major-mode-icon t
                 doom-modeline-enable-word-count nil
                 doom-modeline-gnus t
-                doom-modeline-gnus-timer 1
-                ;; doom-modeline-gnus-excluded-groups '("")
+                doom-modeline-gnus-timer 5
+                doom-modeline-gnus-idle 1
+                doom-modeline-gnus-excluded-groups '("nnimap+personal:[Gmail/All Mail]" "nnimap+uni:[Gmail/All Mail]")
                 doom-modeline-buffer-encoding nil
                 doom-modeline-buffer-file-name-style 'relative-to-project
                 line-number-mode t
@@ -246,7 +258,7 @@
         :ni "C-c C-<left>" 'org-insert-heading
         :ni "C-c C-<right>" 'org-insert-subheading))
 
-(add-hook! 'org-mode-hook #'org-appear-mode) ; #'org-fragtog-mode)
+(add-hook! 'org-mode-hook #'org-appear-mode #'org-fragtog-mode)
 
 (set-file-template! :trigger "template" :mode 'org-mode)
 
@@ -323,10 +335,11 @@
 ;;       (org-clear-latex-preview (point-min) (point-max))
 ;;       (org--latex-preview-region (point-min) (point-max)))))
 
-(map! :after evil-org
-      :map evil-org-mode-map
-      :ni "C-RET"   #'+org/insert-item-below
-      :ni "C-S-RET" #'+org/insert-item-above)
+(after! org
+  (map! :after evil-org
+        :map evil-org-mode-map
+        :ni "C-RET"   #'+org/insert-item-below
+        :ni "C-S-RET" #'+org/insert-item-above))
 
 (setq org-agenda-start-with-log-mode t
       org-log-done t
@@ -341,12 +354,12 @@
          ((alltodo "" ((org-agenda-overriding-header
                          (insert(concat
                                 (insert (all-the-icons-faicon "star" :v-adjust 0.1 :face 'all-the-icons-yellow))
-                                (propertize "  Today" 'face '(:height 1.3 :inherit 'variable-pitch)))))
+                                (propertize "  Today" 'face '(:height 1.3 :inherit variable-pitch)))))
                         (org-agenda-remove-tags t)
                         (org-agenda-prefix-format " %-15b")
                         (org-agenda-todo-keyword-format "")))
           (agenda "" ((org-agenda-overriding-header ;"")
-                             (concat (propertize "  Schedule" 'face '(:height 1.3 :inherit 'variable-pitch))))
+                             (concat (propertize "  Schedule" 'face '(:height 1.3 :inherit variable-pitch))))
                        ;; (insert (concat ;; Buffer is read only
                        ;;         (insert (all-the-icons-faicon "calendar" :v-adjust 0.1 :face 'all-the-icons-red))
                        ;;         (propertize "  Schedule" 'face '(:height 1.3 :inherit 'variable-pitch)))))
@@ -369,6 +382,15 @@
           ;;              (org-agenda-prefix-format " %b")
           ;;              (org-agenda-todo-keyword-format "")))
           ))))
+
+(defun =agenda (&optional arg)
+  (interactive)
+  (org-agenda nil "A"))
+
+(map! :n "SPC o A" nil
+      :n "SPC o A" '=agenda)
+
+;; (add-hook 'after-init-hook (lambda () (org-agenda nil "A")))
 
 ;; Org-modern setup --------------
 (setq
@@ -528,7 +550,7 @@ This function makes sure that dates are aligned for easy reading."
 (after! elfeed
   (setq elfeed-search-filter "@2-month-ago"
         elfeed-goodies/tag-column-width 14)
-  (add-hook! elfeed-show-mode-hook #'mixed-pitch-mode)
+  ;; (add-hook! elfeed-show-mode-hook #'mixed-pitch-mode)
   (set-popup-rule! "^\\*elfeed-entry" :ignore t))
 (add-hook! 'elfeed-show-mode-hook
   (setq left-margin-width 2))
@@ -596,6 +618,9 @@ This function makes sure that dates are aligned for easy reading."
 
 ;;; Dashboard
 
+(setq-hook! 'doom-init-ui-hook doom-fallback-buffer-name "*dashboard*")
+(dashboard-setup-startup-hook)
+
 (setq fancy-splash-image "~/.doom.d/sink.png")
 (setq +doom-dashboard-menu-sections
       '(("Reload last session"
@@ -617,8 +642,8 @@ This function makes sure that dates are aligned for easy reading."
         ("Open Agenda"
          :icon (all-the-icons-octicon "check" :face 'doom-dashboard-menu-title)
          :face (:inherit (doom-dashboard-menu-title bold))
-         :action org-agenda))
-     )
+         :action =agenda)
+     ))
 (add-hook! '+doom-dashboard-mode-hook #'hide-mode-line-mode)
 
 (use-package! info-colors

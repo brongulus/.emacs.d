@@ -24,10 +24,12 @@
       gnus-use-cache t
       gnus-cache-remove-articles nil
       gnus-fetch-old-headers t
-      gnus-use-header-prefetch t
-      gnus-blocked-images t
-      gnus-inhibit-images nil
-      gnus-article-x-face-too-ugly ".*")
+      ;; gnus-blocked-images t
+      ;; gnus-inhibit-images nil
+      gnus-article-x-face-too-ugly ".*"
+      gnus-interactive-exit nil
+      gnus-novice-user nil
+      gnus-expert-user nil)
 
 ;; SOURCE: https://www.bounga.org/tips/2020/05/03/multiple-smtp-accounts-in-gnus-without-external-tools/
 (setq gnus-posting-styles
@@ -119,51 +121,37 @@
       (setq gnus-topic-topology '(("Gnus" visible)
                                   (("uni" visible nil nil))
                                   (("personal" visible nil nil))
-                                  (("RSS" visible nil nil))
-                                  (("misc" visible))
-                                 ))
+                                  (("news.gwene.org" visible nil nil))))
 
       ;; key of topic is specified in my sample ".gnus.el"
       (setq gnus-topic-alist '(("uni" ; the key of topic
                                 "nnimap+uni:INBOX"
                                 "nnimap+uni:[Gmail]/Sent Mail"
-                                "nnimap+uni:[Gmail]/Starred"
-                                "nnimap+uni:[Gmail]/Drafts")
+                                "nnimap+uni:[Gmail]/Starred")
                                ("personal" ; the key of topic
                                 "nnimap+personal:INBOX"
                                 "nnimap+personal:[Gmail]/Sent Mail"
-                                "nnimap+personal:[Gmail]/Starred"
-                                "nnimap+personal:[Gmail]/Drafts")
-                               ("misc" ; the key of topic
-                                "nnfolder+archive:sent.2015-12"
-                                "nnfolder+archive:sent.2016"
-                                "nndraft:drafts")
-                               ("RSS"
-                                "nntp+news.gwene.org:gwene.com.youtube.feeds.videos.xml.user.ethoslab"
-                                "nntp+news.gwene.org:gwene.rs.lobste"
-                                "nntp+news.gwene.org:gwene.net.lwn.headlines.comments")
+                                "nnimap+personal:[Gmail]/Starred")
+                               ("news.gwene.org")
                                ("Gnus")))))
 
-;; SOURCE: https://www.reddit.com/r/emacs/comments/lx04yu/comment/gpl92oa/
-(defvar my/gnus-rss-list
-  '("nntp+news.gwene.org:gwene.com.youtube.feeds.videos.xml.user.ethoslab"
-    "nntp+news.gwene.org:gwene.rs.lobste"
-    "nntp+news.gwene.org:gwene.net.lwn.headlines.comments"))
-;; (add-to-list 'gnus-topic-alist (add-to-list 'my/gnus-rss-list "RSS") t)
+(add-hook! 'gnus-group-mode-hook #'gnus-topic-mode) ; #'(lambda ()(gnus-group-list-all-groups))
 
-(add-hook! 'gnus-group-mode-hook #'(lambda ()(gnus-group-list-all-groups)) #'gnus-topic-mode)
-
-(defun gnus-get-news-async (&optional arg)
-        (interactive)
-        (make-thread (lambda()
-                        (gnus-group-get-new-news))
-                     "Get the new gnus news asynchronously"))
+(setq-hook! 'gnus-article-mode-hook hl-line-mode -1)
 
 (after! gnus
         (map! :map gnus-group-mode-map
                 :ni "t" nil
                 :ni "t" #'gnus-topic-mode
                 :ni "g" nil
-                :ni "g" #'gnus-get-news-async))
+                :ni "g" #'gnus-group-get-new-news)
+        (map! :map gnus-summary-mode-map
+              :ni "J" nil
+              :ni "J" 'evil-window-down)
+        (map! :map gnus-article-mode-map
+              :ni "K" nil
+              :ni "K" 'evil-window-up))
 
-(gnus-demon-add-handler 'gnus-demon-scan-news 1 t)
+;; Using in doom-modeline for now
+;; (after! gnus
+;;   (gnus-demon-add-handler 'gnus-demon-scan-news 1 1))
