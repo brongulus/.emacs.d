@@ -86,7 +86,8 @@
 					nnfolder-directory (concat gnus-directory "/mail/archive"))
 
 	(with-eval-after-load 'gnus-topic
-			'(progn
+				 (define-key gnus-topic-mode-map "j" 'next-line)
+				 (define-key gnus-topic-mode-map "k" 'previous-line)
 				 (setq gnus-message-archive-group '((format-time-string "sent.%Y")))
 				 (setq gnus-topic-topology '(("Gnus" visible)
 																		 (("uni" visible nil nil))
@@ -116,11 +117,9 @@
 																	 "gwene.net.lwn.headlines"
 																	 "gwene.org.quantamagazine"
 																	 "gwene.org.bitlbee.news.rss")
-																	("Gnus")))))
+																	("Gnus"))))
 
 		(add-hook 'gnus-group-mode-hook #'gnus-topic-mode)
-		(define-key gnus-topic-mode-map "j" 'next-line)
-		(define-key gnus-topic-mode-map "k" 'previous-line)
 )
 ;; (after! gnus
 ;;   (gnus-demon-add-handler 'gnus-demon-scan-news 1 1))

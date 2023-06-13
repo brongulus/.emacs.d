@@ -16,7 +16,7 @@
 ;;; Commentary:
 ;;  Ref: https://zenn.dev/takeokunn/articles/56010618502ccc
 ;;  Ref: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
-;;  TODO: Add fix capf, modeline, file and buffer shortcuts, tempel.
+;;  TODO: fix modeline, file and buffer shortcuts, tempel.
 ;;  TODO: Outline, TAB folding, eglot, viper visual mode?
 ;;  TODO: Create macro for j/k scroll (prog-mode text-mode)
 ;;  Description
@@ -275,14 +275,15 @@
 	      (corfu-mode))))
 
 (el-get-bundle! cape)
-(with-delayed-execution
-   ;; Not getting executed for some reason
-;; (with-eval-after-load 'minibuffer
-  (add-to-list 'completion-at-point-functions #'cape-file)
-  (add-to-list 'completion-at-point-functions #'cape-tex)
-  (add-to-list 'completion-at-point-functions #'cape-dabbrev)
-  (add-to-list 'completion-at-point-functions #'cape-keyword)
-	(add-to-list 'completion-at-point-functions #'cape-symbol))
+
+(with-delayed-execution-priority-high
+	(defun my/add-capfs ()
+		(add-to-list 'completion-at-point-functions #'cape-file)
+		(add-to-list 'completion-at-point-functions #'cape-dabbrev)
+		;; (add-to-list 'completion-at-point-functions #'cape-symbol)
+		(add-to-list 'completion-at-point-functions #'cape-keyword))
+	(add-hook 'prog-mode-hook #'my/add-capfs)
+	(add-hook 'text-mode-hook #'my/add-capfs))
 
 ;; Undo tree
 (el-get-bundle undo-fu)
@@ -372,6 +373,12 @@
 	(with-eval-after-load 'winner
 		(define-key winner-mode-map (kbd "C-c C-<left>") 'winner-undo)
 		(define-key winner-mode-map (kbd "C-c C-<right>") 'winner-redo))
+	(with-eval-after-load 'recentf
+    (setq recentf-max-menu-items 10000)
+    (setq recentf-max-saved-items 10000)
+    (setq recentf-auto-cleanup 'never)
+    (setq recentf-save-file  "~/.emacs.d/.recentf")
+    (setq recentf-exclude '(".recentf" "\\.gpg\\")))
   (show-paren-mode)
   (global-hl-line-mode)
   (fset 'yes-or-no-p 'y-or-n-p))
