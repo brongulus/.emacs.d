@@ -59,7 +59,7 @@
 					gnus-sum-thread-tree-single-indent ""
 					gnus-sum-thread-tree-vertical        "|"
 					gnus-sum-thread-tree-leaf-with-other "├─► %s"
-					gnus-sum-thread-tree-single-leaf     (concat "╰─► " "%S") ; FIXME:
+					gnus-sum-thread-tree-single-leaf     "╰─►"
 					gnus-user-date-format-alist '(((gnus-seconds-today) . " %H:%M")
 																				(t . "%b %d"))
 					gnus-topic-line-format (concat "%i "
@@ -86,8 +86,6 @@
 					nnfolder-directory (concat gnus-directory "/mail/archive"))
 
 	(with-eval-after-load 'gnus-topic
-				 (define-key gnus-topic-mode-map "j" 'next-line)
-				 (define-key gnus-topic-mode-map "k" 'previous-line)
 				 (setq gnus-message-archive-group '((format-time-string "sent.%Y")))
 				 (setq gnus-topic-topology '(("Gnus" visible)
 																		 (("uni" visible nil nil))

@@ -14,11 +14,11 @@
 ;; This file is not part of GNU Emacs.
 ;;
 ;;; Commentary:
-;;  Ref: https://zenn.dev/takeokunn/articles/56010618502ccc
-;;  Ref: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
-;;  TODO: fix modeline, file and buffer shortcuts, tempel.
+;;  Ref 1: https://zenn.dev/takeokunn/articles/56010618502ccc
+;;  Ref 2: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
+;;  Ref 3: https://robbmann.io/emacsd/
+;;  TODO: file and buffer shortcuts, tempel.
 ;;  TODO: Outline, TAB folding, eglot, viper visual mode?
-;;  TODO: Create macro for j/k scroll (prog-mode text-mode)
 ;;  Description
 ;;
 ;;; Code:
@@ -29,9 +29,6 @@
 ;;; Gccemacs stuff / Startup hacks
 (setq comp-deferred-compilation t
       comp-async-report-warnings-errors nil)
-
-(defconst my-saved-file-name-handler-alist file-name-handler-alist)
-(setq file-name-handler-alist nil)
 
 ;; ;; (el-get-bundle benchmark-init)
 ;; (load "/home/prashant/.emacs.d/el-get/benchmark-init/benchmark-init.el"
@@ -87,6 +84,10 @@
   warning-minimum-level :error
   tab-width 2
   mouse-yank-at-point t
+	;; nice scrolling
+	scroll-margin 0
+	scroll-conservatively 100000
+	scroll-preserve-screen-position 1
   recenter-positions '(5 top bottom)
   vc-follow-symlinks t)
 
@@ -102,7 +103,6 @@
 	shell-file-name "/bin/bash"
 	auth-sources '("~/.authinfo")
 	show-paren-delay 0
-	scroll-preserve-screen-position t
 	initial-buffer-choice 'remember-notes
 	remember-notes-buffer-name "*scratch*"))
 
@@ -120,25 +120,36 @@
   viper-inhibit-startup-message t
   viper-vi-style-in-minibuffer nil
   viper-ESC-moves-cursor-back nil
+	viper-shift-width 2
+	viper-fast-keyseq-timeout 300
   viper-electric-mode t
   viper-ex-style-motion nil)
 (require 'viper)
 
 (with-eval-after-load 'viper
-	;; Trying to get visual mode working
+	(push 'org-capture-mode viper-insert-state-mode-list) ;; FIXME:
+	;; Defines how many times the next command is run
+	(define-key viper-vi-global-user-map "\M-u" 'universal-argument)
+	;; macros
+	(define-key viper-vi-global-user-map "q" 'kmacro-start-macro-or-insert-counter)
+	(define-key viper-vi-global-user-map "Q" 'kmacro-end-or-call-macro)
+	(define-key viper-vi-global-user-map "@" 'consult-kmacro)
+	;; WIP: visual mode (commands not getting executed)
   (define-key viper-vi-global-user-map "v" 'set-mark-command)
 	(define-key viper-vi-global-user-map "\C-v" 'rectangle-mark-mode)
-  (define-key viper-vi-global-user-map "q" 'keyboard-quit)
-	;; FIXME:
+  (define-key viper-vi-global-user-map "ESC" 'keyboard-quit)
   ;; (define-key viper-vi-global-user-map "d" 'clipboard-kill-region)
-  ;; (define-key viper-vi-global-user-map "y" 'clipboard-kill-region)
 	;; ------------
+  (define-key viper-vi-global-user-map "(" 'backward-list)
+  (define-key viper-vi-global-user-map ")" 'forward-list)
   (define-key viper-vi-global-user-map ";" 'viper-ex)
   (define-key viper-vi-global-user-map "-" 'dired-jump)
   (define-key viper-vi-global-user-map (kbd "M-<down>") 'scroll-other-window)
   (define-key viper-vi-global-user-map (kbd "M-<up>") 'scroll-other-window-down)
   (define-key viper-vi-global-user-map (kbd "C-t") 'tab-new)
   (define-key viper-vi-global-user-map (kbd "C-w") 'tab-close)
+  (define-key viper-vi-global-user-map (kbd "SPC") 'consult-buffer)
+  (define-key viper-vi-global-user-map (kbd "?") 'consult-recent-file)
   (define-key viper-insert-global-user-map "\C-v" 'viper-Put-back)
   (define-key viper-insert-global-user-map "\C-y" 'viper-Put-back)
 
@@ -147,24 +158,24 @@
   (viper-record-kbd-macro "gt" 'vi-state [(ctrl x) t o] t)
   (viper-record-kbd-macro "gT" 'vi-state [(ctrl x) t O] t)
   (viper-record-kbd-macro "gg" 'vi-state [1 G] t)
-  (viper-record-kbd-macro "gcc" 'vi-state [(ctrl x) (ctrl \;)] t)
+  (viper-record-kbd-macro "gc" 'vi-state [(ctrl x) (ctrl \;)] t)
   (viper-record-kbd-macro "jk" 'insert-state [escape] t)
   (viper-record-kbd-macro ",w" 'vi-state [(ctrl x) o] t)
   (viper-record-kbd-macro ",v" 'vi-state [(ctrl x) 3] t)
   (viper-record-kbd-macro ",s" 'vi-state [(ctrl x) 2] t)
   (viper-record-kbd-macro ",d" 'vi-state [(ctrl x) 0] t))
-;; (viper-record-kbd-macro ",t" 'vi-state [(ctrl x) b] t) ;; FIXME:
-;; (viper-record-kbd-macro ",/" 'vi-state [(ctrl x) f] t) ;; FIXME:
+ ;; (viper-record-kbd-macro ",t" 'vi-state [(ctrl x) b] t) ;; FIXME:
+ ;; (viper-record-kbd-macro ",/" 'vi-state [(ctrl x) f] t) ;; FIXME:
 (eval-after-load 'viper
   '(progn
      (setq viper-vi-state-id
-	   (concat (propertize "●" 'face '(:foreground "#ccdfff")) " "))
+	   (concat (propertize "⬤" 'face '(:foreground "#ccdfff")) " "))
      (setq viper-emacs-state-id
-	   (concat (propertize "●" 'face '(:foreground "#b9f2c6")) " "))
+	   (concat (propertize "⬤" 'face '(:foreground "#b9f2c6")) " "))
      (setq viper-insert-state-id
-	   (concat (propertize "●" 'face '(:foreground "#fff576")) " "))
+	   (concat (propertize "⬤" 'face '(:foreground "#fff576")) " "))
      (setq viper-replace-state-id
-	   (concat (propertize "●" 'face 'ansi-color-green) " "))
+	   (concat (propertize "⬤" 'face 'ansi-color-green) " "))
      (put 'viper-mode-string 'risky-local-variable t)))
 
 (with-eval-after-load 'doc-view
@@ -172,12 +183,20 @@
   (define-key doc-view-mode-map "k" 'doc-view-previous-line-or-previous-page))
 
 ;;;; Visual
+;; Theming
 (add-to-list 'load-path "~/doom-configs/.emacs.d")
 (require 'ef-themes)
 (setq ef-themes-mixed-fonts t
-      ef-themes-variable-pitch-ui t)
+      ef-themes-variable-pitch-ui t
+			ef-themes-to-toggle '(ef-summer ef-cherie))
 (load-theme 'ef-summer :no-confirm)
 (set-face-attribute 'default nil :family "Victor Mono" :height 140)
+
+;; Modeline (Ref: https://github.com/motform/emacs.d/blob/master/init.el)
+(setq-default mode-line-format
+							'("%e" mode-line-front-space mode-line-modified
+								mode-line-remote "  " mode-line-misc-info "  ";; (vc-mode vc-mode)
+								mode-line-buffer-identification "%l %p "))
 
 ;;;; el-get (Packages)
 (add-to-list 'load-path (expand-file-name "el-get/el-get" user-emacs-directory))
@@ -196,12 +215,38 @@
 
 ;; (el-get 'sync)
 
+;; TESTING: eglot
+;; (el-get-bundle! external-completion)
+;; (el-get-bundle! eglot)
+;; (el-get-bundle! eglot-java)
+
+;; Vertico
+(el-get-bundle vertico)
+(with-delayed-execution-priority-high
+  (vertico-mode)
+  (savehist-mode)
+  (keymap-set vertico-map "<backspace>" #'vertico-directory-delete-char)
+  (keymap-set vertico-map "TAB" #'vertico-insert)
+  (keymap-set vertico-map "ESC" #'abort-minibuffers)
+  (keymap-set vertico-map "C-j" #'vertico-next)
+  (keymap-set vertico-map "C-k" #'vertico-previous)
+  ;; RET -> insert and select (FIXME: Selects even if no exact match)
+  (defun my/vertico-gg (&optional arg)
+    (interactive)
+    (vertico-insert)
+    (vertico-exit))
+  (keymap-set vertico-map "RET" #'my/vertico-gg)
+  (setq vertico-scroll-margin 0
+	vertico-resize nil
+	vertico-cycle t))
+
 ;; Consult/Orderless
 (el-get-bundle compat) ;; for minad's pkgs
 (el-get-bundle orderless)
 (with-delayed-execution-priority-high
 	(setq completion-category-defaults nil
-	completion-category-overrides '((file (styles partial-completion)))
+	completion-styles '(substring orderless basic)
+	completion-category-overrides '((file (styles basic partial-completion)))
 	completion-ignore-case t
 	read-buffer-completion-ignore-case t
 	read-file-name-completion-ignore-case t
@@ -214,11 +259,17 @@
   
 (el-get-bundle consult)
 (with-delayed-execution-priority-high
+	(when (executable-find "rg")
+		(setq grep-program "rg"))
+	(when (executable-find "fd")
+		(setq find-program "fd"))
   (setq register-preview-function #'consult-register-format)
   (recentf-mode)
   (global-set-key (kbd "C-x f") 'consult-recent-file)
   (global-set-key (kbd "C-<return>") 'consult-bookmark)
-  (global-set-key (kbd "C-x b") 'consult-buffer))
+  (global-set-key (kbd "C-x b") 'consult-buffer)
+	(global-set-key [remap list-buffers] 'consult-buffer)
+	(global-set-key [remap isearch-forward] 'consult-grep))
 
 ;; Helpful
 ;; Its requires aren't being pulled by el-get automatically
@@ -235,31 +286,13 @@
   (global-set-key (kbd "C-h '") #'describe-face)
   (global-set-key (kbd "C-h x") #'helpful-command))
 
-;; Vertico
-(el-get-bundle vertico)
-(with-delayed-execution-priority-high
-  (vertico-mode)
-  (savehist-mode)
-  (keymap-set vertico-map "<backspace>" #'vertico-directory-delete-char)
-  (keymap-set vertico-map "TAB" #'vertico-insert)
-  ;; RET -> insert and select (FIXME: Selects even if no exact match)
-  (defun my/vertico-gg (&optional arg)
-    (interactive)
-    (vertico-insert)
-    (vertico-exit))
-  (keymap-set vertico-map "RET" #'my/vertico-gg)
-  (keymap-set vertico-map "ESC" #'abort-minibuffers)
-  (setq vertico-scroll-margin 0
-	vertico-resize nil
-	vertico-cycle t))
-
 ;; Cape and Corfu
 (el-get-bundle corfu)
 (with-delayed-execution-priority-high
   (global-corfu-mode)
   (add-hook 'corfu-mode-hook 'corfu-popupinfo-mode)
-  (setq completion-styles '(substring orderless basic)
-  corfu-cycle t
+  (keymap-set corfu-map "ESC" #'abort-minibuffers)
+  (setq corfu-cycle t
 	corfu-auto t
 	corfu-auto-prefix 2
 	corfu-auto-delay 0
@@ -278,10 +311,9 @@
 
 (with-delayed-execution-priority-high
 	(defun my/add-capfs ()
-		(add-to-list 'completion-at-point-functions #'cape-file)
-		(add-to-list 'completion-at-point-functions #'cape-dabbrev)
-		;; (add-to-list 'completion-at-point-functions #'cape-symbol)
-		(add-to-list 'completion-at-point-functions #'cape-keyword))
+		(push 'cape-file completion-at-point-functions)
+		(push 'cape-dabbrev completion-at-point-functions)
+		(push 'cape-keyword completion-at-point-functions))
 	(add-hook 'prog-mode-hook #'my/add-capfs)
 	(add-hook 'text-mode-hook #'my/add-capfs))
 
@@ -300,8 +332,8 @@
 (el-get-bundle esxml)
 (el-get-bundle nov)
 (with-delayed-execution
-  (add-to-list 'load-path (locate-user-emacs-file "el-get/nov"))
-  (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode)))
+  (push (locate-user-emacs-file "el-get/nov") load-path)
+  (push '("\\.epub\\'" . nov-mode) auto-mode-alist))
 (with-eval-after-load 'nov
   (define-key nov-mode-map "j" 'next-line)
   (define-key nov-mode-map "k" 'previous-line))
@@ -322,13 +354,14 @@
 (el-get-bundle magit/forge)
 
 (with-delayed-execution-priority-high
-  (add-to-list 'load-path (locate-user-emacs-file "el-get/transient/lisp"))
-  (add-to-list 'load-path (locate-user-emacs-file "el-get/ghub/lisp"))
-  (add-to-list 'load-path (locate-user-emacs-file "el-get/magit-pop"))
-  (add-to-list 'load-path (locate-user-emacs-file "el-get/with-editor/lisp"))
-  (add-to-list 'load-path (locate-user-emacs-file "el-get/magit/lisp"))
-  (add-to-list 'load-path (locate-user-emacs-file "el-get/forge/lisp"))
+  (push (locate-user-emacs-file "el-get/transient/lisp") load-path)
+  (push (locate-user-emacs-file "el-get/ghub/lisp") load-path)
+  (push (locate-user-emacs-file "el-get/magit-pop") load-path)
+  (push (locate-user-emacs-file "el-get/with-editor/lisp") load-path)
+  (push (locate-user-emacs-file "el-get/magit/lisp") load-path)
+  (push (locate-user-emacs-file "el-get/forge/lisp") load-path)
   (autoload 'magit "magit" nil t)
+	(global-set-key (kbd "C-c g") 'magit)
   (setq forge-owned-accounts '(("brongulus")))
   (add-hook 'magit-mode-hook #'(lambda () (require 'forge))))
 
@@ -342,7 +375,10 @@
 (global-set-key [f2] 'save-buffer)
 (global-set-key [f10] 'kill-current-buffer)
 (global-set-key (kbd "C-x x") 'org-capture)
+(global-set-key (kbd "C-c a") 'org-agenda)
+(global-set-key (kbd "C-c C-t") 'ef-themes-toggle)
 
+;; dired
 (with-delayed-execution
   (define-key dired-mode-map "v" 'dired-x-find-file)
   (define-key dired-mode-map "V" 'dired-view-file)
@@ -353,10 +389,10 @@
   (define-key dired-mode-map "-" 'dired-up-directory)
   (define-key dired-mode-map "~"
     #'(lambda () (interactive) (dired "/home/prashant/")))
+	(setq dired-dwim-target t
+				dired-recursive-deletes 'always
+				dired-recursive-copies 'always)
   (add-hook 'dired-mode-hook 'dired-hide-details-mode))
-(with-eval-after-load 'magit
-  (define-key magit-mode-map "j" 'next-line)
-  (define-key magit-mode-map "k" 'previous-line))
 
 ;; tabs
 (with-eval-after-load 'tab-bar
@@ -381,6 +417,9 @@
     (setq recentf-exclude '(".recentf" "\\.gpg\\")))
   (show-paren-mode)
   (global-hl-line-mode)
+	;; auto pair completion
+	(add-hook 'prog-mode-hook (electric-pair-mode t))
+	(add-hook 'prog-mode-hook (show-paren-mode t))
   (fset 'yes-or-no-p 'y-or-n-p))
 
 ;;; Org-Capture
@@ -405,11 +444,19 @@
 	   (file+olp+datetree +org-capture-journal-file)
 	   "* %U %?\n** What happened \n** What is going through your mind? \n** What emotions are you feeling? \n** What thought pattern do you recognize? \n** How can you think about the situation differently? " :prepend t))))
 
-;; Start the server
-(with-delayed-execution
-		(server-start))
+;;; Org-agenda
+(with-eval-after-load 'org-agenda
+	(setq org-agenda-start-with-log-mode t
+	org-log-done t
+	org-log-into-drawer t
+	org-agenda-breadcrumbs-separator " ❱ "
+	org-agenda-files '("~/Dropbox/org/todo.org" "~/Dropbox/org/inbox.org")))
 
-;; Terminal session (taken from doom: enable mouse support, cursor change and clipboard)
+;; Start the server (FIXME: Slowing down the startup)
+; (with-delayed-execution
+; 		(server-start))
+
+;; Terminal session (taken from doom)
 (with-delayed-execution-priority-high
 	(unless (display-graphic-p)
 		(xterm-mouse-mode 1)
@@ -427,3 +474,10 @@
 
 (provide 'init)
 ;;; init.el ends here
+
+
+;; ------------------------- This contains code for the future.
+;; (if (version< emacs-version "29.0")
+    ;; (pixel-scroll-mode)
+  ;; (pixel-scroll-precision-mode 1)
+  ;; (setq pixel-scroll-precision-large-scroll-height 35.0))

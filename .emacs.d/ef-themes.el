@@ -1464,7 +1464,7 @@ Optional prefix argument MAPPINGS has the same meaning as for
     `(gnus-summary-normal-read ((,c :inherit shadow)))
     `(gnus-summary-normal-ticked ((,c :foreground ,err)))
     `(gnus-summary-normal-undownloaded ((,c :foreground ,warning)))
-    `(gnus-summary-normal-unread (( )))
+    `(gnus-summary-normal-unread ((,c :inherit italic :foreground "green")))
     `(gnus-summary-selected ((,c :inherit highlight)))
 ;;;; hi-lock (M-x highlight-regexp)
     ;; NOTE 2022-10-16 We hardcode color values.  We have to do this

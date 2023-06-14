@@ -1,9 +1,11 @@
 ;;; early-init.el -*- lexical-binding: t; -*-
 
+(defconst my-saved-file-name-handler-alist file-name-handler-alist)
+(setq file-name-handler-alist nil)
+
 (push '(menu-bar-lines . 0) default-frame-alist)
 (push '(tool-bar-lines . 0) default-frame-alist)
-(push '(scroll-bar-lines . 0) default-frame-alist)
-(scroll-bar-mode -1)
+(push '(vertical-scroll-bars) default-frame-alist)
 
 (setq gc-cons-threshold (* 128 1024 1024)
       garbage-collection-messages nil)
