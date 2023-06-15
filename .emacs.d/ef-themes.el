@@ -1555,9 +1555,9 @@ Optional prefix argument MAPPINGS has the same meaning as for
     ;; We need to fall back to `default' otherwise line numbers do not
     ;; scale when using `text-scale-adjust'.
     `(line-number ((,c :inherit (ef-themes-fixed-pitch shadow default))))
-    `(line-number-current-line ((,c :inherit (bold line-number) :foreground ,fg-intense)))
-    `(line-number-major-tick ((,c :inherit (bold line-number) :foreground ,rainbow-0)))
-    `(line-number-minor-tick ((,c :inherit (bold line-number))))
+    `(line-number-current-line ((,c :inherit line-number :foreground ,fg-intense)))
+    `(line-number-major-tick ((,c :inherit line-number :foreground ,rainbow-0)))
+    `(line-number-minor-tick ((,c :inherit line-number)))
 ;;;; magit
     `(magit-bisect-bad ((,c :inherit error)))
     `(magit-bisect-good ((,c :inherit success)))
@@ -1715,7 +1715,7 @@ Optional prefix argument MAPPINGS has the same meaning as for
     `(message-mml ((,c :foreground ,mail-part)))
     `(message-separator ((,c :background ,bg-active)))
 ;;;; mode-line
-    `(mode-line ((,c :inherit ef-themes-ui-variable-pitch :background ,bg-mode-line :foreground ,fg-mode-line)))
+    `(mode-line ((,c :inherit ef-themes-ui-variable-pitch :background ,bg-mode-line :foreground ,fg-mode-line :box (:line-width 1 :color ,fg-dim))))
     `(mode-line-active ((,c :inherit mode-line)))
     `(mode-line-buffer-id ((,c :inherit bold)))
     `(mode-line-emphasis ((,c :inherit bold :foreground ,modeline-info)))

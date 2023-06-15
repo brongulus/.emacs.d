@@ -6,6 +6,9 @@
 (push '(menu-bar-lines . 0) default-frame-alist)
 (push '(tool-bar-lines . 0) default-frame-alist)
 (push '(vertical-scroll-bars) default-frame-alist)
+(push '(internal-border-width . 8) default-frame-alist)
+
+(fringe-mode '(0 . 0))
 
 (setq gc-cons-threshold (* 128 1024 1024)
       garbage-collection-messages nil)
