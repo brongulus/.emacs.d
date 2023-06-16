@@ -1,14 +1,17 @@
 ;;; early-init.el -*- lexical-binding: t; -*-
 
 (defconst my-saved-file-name-handler-alist file-name-handler-alist)
-(setq file-name-handler-alist nil)
+(setq file-name-handler-alist nil
+			load-prefer-newer t
+			mode-line-format nil)
 
-(push '(menu-bar-lines . 0) default-frame-alist)
-(push '(tool-bar-lines . 0) default-frame-alist)
-(push '(vertical-scroll-bars) default-frame-alist)
-(push '(internal-border-width . 8) default-frame-alist)
-
-(fringe-mode '(0 . 0))
+(setq default-frame-alist
+			'((menu-bar-lines . 0)
+			 (tool-bar-lines . 0)
+			 (vertical-scroll-bars)
+			 (left-fringe . 0)
+			 (right-fringe . 0)
+			 (internal-border-width . 8)))
 
 (setq gc-cons-threshold (* 128 1024 1024)
       garbage-collection-messages nil)

@@ -17,7 +17,8 @@
 ;;  Ref 1: https://zenn.dev/takeokunn/articles/56010618502ccc
 ;;  Ref 2: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
 ;;  Ref 3: https://robbmann.io/emacsd/
-;;  TODO: file and buffer shortcuts, tempel, eglot
+;;  TODO: file and buffer shortcuts, comp setup
+;;  https://www.adventuresinwhy.com/post/eglot/
 ;;  The packaged used so far are
 ;;  1. Viper for vim emulations
 ;;  2. Ef-themes for visuals
@@ -25,6 +26,7 @@
 ;;  4. Helpful, which-key, undo-fu, undo-fu-session
 ;;  5. Magit (ghub, transient, popup, with-editor, forge)
 ;;  6. xclip, evil-terminal-cursor-changer
+;;  7. Tree-sitter, eglot
 ;;
 ;;; Code:
 
@@ -32,6 +34,7 @@
 ;; (profiler-start 'cpu)
 
 ;;; Startup hacks
+
 (setq comp-deferred-compilation t
       comp-async-report-warnings-errors nil)
 
@@ -78,11 +81,12 @@
   `(setq my/delayed-priority-low-confs
          (append my/delayed-priority-low-confs ',body)))
 
-;; --------------------------------------------------------------------------------
+;; -----------------------------------------------------------------------------
 
 ;;; Temporary fix (doom profiles)
+(with-delayed-execution-priority-high
 (setq ignored-local-variable-values
-			'((git-commit-major-mode . git-commit-elisp-text-mode)))
+			'((git-commit-major-mode . git-commit-elisp-text-mode))))
 
 ;;; Better Defaults
 (setq-default
@@ -98,12 +102,6 @@
 
 (with-delayed-execution-priority-high
 	(add-hook 'prog-mode-hook #'display-fill-column-indicator-mode))
-	;; (add-hook 'text-mode-hook
-	;; 					#'(lambda () (setq-local display-line-numbers 'relative)))
-	;; (add-hook 'prog-mode-hook
-	;; 					#'(lambda () (setq-local display-line-numbers 'relative)))
-	;; (add-hook 'org-mode-hook
-	;; 					#'(lambda () (setq-local display-line-numbers nil))))
 
 (with-delayed-execution
   (setq bookmark-default-file "~/doom-configs/.emacs.d/bookmarks"
@@ -118,84 +116,86 @@
 
 ;;; Package Management
 ;;;; Viper
-(setq-default
-  viper-mode t
-  viper-expert-level 5
-	viper-want-ctl-h-help t
-	viper-want-emacs-keys-in-insert t
-	viper-ex-style-editing nil
-	viper-ex-style-motion nil
-	viper-case-fold-search t
-  viper-inhibit-startup-message t
-  viper-vi-style-in-minibuffer nil
-  viper-ESC-moves-cursor-back nil
-	viper-shift-width 2
-	viper-fast-keyseq-timeout 300
-  viper-electric-mode t
-  viper-ex-style-motion nil)
+(with-delayed-execution-priority-high
+	(setq-default
+		viper-mode t
+		viper-expert-level 5
+		viper-want-ctl-h-help t
+		viper-want-emacs-keys-in-insert t
+		viper-ex-style-editing nil
+		viper-ex-style-motion nil
+		viper-case-fold-search t
+		viper-inhibit-startup-message t
+		viper-vi-style-in-minibuffer nil
+		viper-ESC-moves-cursor-back nil
+		viper-shift-width 2
+		viper-fast-keyseq-timeout 300
+		viper-electric-mode t
+		viper-ex-style-motion nil)
 
-(require 'viper)
+	(require 'viper)
 
-(with-eval-after-load 'viper
-	(push 'org-capture-mode viper-insert-state-mode-list) ;; FIXME:
-	;; #times next command is run
-	(define-key viper-vi-global-user-map "\M-u" 'universal-argument)
-	;; macros
-	;; (define-key viper-vi-global-user-map "q" 'kmacro-start-macro-or-insert-counter)
-	;; (define-key viper-vi-global-user-map "Q" 'kmacro-end-or-call-macro)
-	;; (define-key viper-vi-global-user-map "@" 'consult-kmacro)
-	;; WIP: visual mode
-  (define-key viper-vi-global-user-map "v" 'set-mark-command)
-	(define-key viper-vi-global-user-map "\C-v" 'rectangle-mark-mode)
-	(define-key viper-vi-global-user-map "q" 'keyboard-quit)
-	(define-key viper-vi-local-user-map "Y" 'copy-region-as-kill)
-	(define-key viper-vi-local-user-map "D" 'kill-region) ;; DEL works
-	(define-key viper-vi-local-user-map "X" 'clipboard-kill-region)
-	(define-key viper-vi-local-user-map "C" 'comment-or-uncomment-region)
-	;; ------------
-  (define-key viper-vi-global-user-map "(" 'backward-list)
-  (define-key viper-vi-global-user-map ")" 'forward-list)
-  (define-key viper-vi-global-user-map ";" 'viper-ex)
-  (define-key viper-vi-global-user-map "-" 'dired-jump)
-  (define-key viper-vi-global-user-map (kbd "M-<down>") 'scroll-other-window)
-  (define-key viper-vi-global-user-map (kbd "M-<up>") 'scroll-other-window-down)
-  (define-key viper-vi-global-user-map (kbd "C-t") 'tab-new)
-  (define-key viper-vi-global-user-map (kbd "C-w") 'tab-close)
-  (define-key viper-insert-global-user-map "\C-v" 'viper-Put-back)
-  (define-key viper-insert-global-user-map "\C-y" 'viper-Put-back)
-	;; Look into incorporating these via viper-vi-basic-map
-  (viper-record-kbd-macro "gf" 'vi-state [(meta x) f f a p return] t)
-  (viper-record-kbd-macro "gd" 'vi-state [(meta .)] t)
-  (viper-record-kbd-macro "gt" 'vi-state [(ctrl x) t o] t)
-  (viper-record-kbd-macro "gT" 'vi-state [(ctrl x) t O] t)
-  (viper-record-kbd-macro "gg" 'vi-state [1 G] t)
-  (viper-record-kbd-macro "gc" 'vi-state [(ctrl x) (ctrl \;)] t)
-  (viper-record-kbd-macro "jk" 'insert-state [escape] t)
-  (viper-record-kbd-macro ",w" 'vi-state [(ctrl x) o] t)
-  (viper-record-kbd-macro ",v" 'vi-state [(ctrl x) 3] t)
-  (viper-record-kbd-macro ",s" 'vi-state [(ctrl x) 2] t)
-  (viper-record-kbd-macro ",d" 'vi-state [(ctrl x) 0] t))
+	(with-eval-after-load 'viper
+		(push 'org-capture-mode viper-insert-state-mode-list) ;; FIXME:
+		;; #times next command is run
+		(define-key viper-vi-global-user-map "\M-u" 'universal-argument)
+		;; macros
+		;; (define-key viper-vi-global-user-map "q" 'kmacro-start-macro-or-insert-counter)
+		;; (define-key viper-vi-global-user-map "Q" 'kmacro-end-or-call-macro)
+		;; (define-key viper-vi-global-user-map "@" 'consult-kmacro)
+		;; WIP: visual mode
+		(define-key viper-vi-global-user-map "v" 'set-mark-command)
+		(define-key viper-vi-global-user-map "\C-v" 'rectangle-mark-mode)
+		(define-key viper-vi-global-user-map "q" 'keyboard-quit)
+		(define-key viper-vi-local-user-map "Y" 'copy-region-as-kill)
+		(define-key viper-vi-local-user-map "D" 'kill-region) ;; DEL works
+		(define-key viper-vi-local-user-map "X" 'clipboard-kill-region)
+		(define-key viper-vi-local-user-map "C" 'comment-or-uncomment-region)
+		;; ------------
+		(define-key viper-vi-global-user-map "(" 'backward-list)
+		(define-key viper-vi-global-user-map ")" 'forward-list)
+		(define-key viper-vi-global-user-map ";" 'viper-ex)
+		(define-key viper-vi-global-user-map "-" 'dired-jump)
+		(define-key viper-vi-global-user-map (kbd "M-<down>") 'scroll-other-window)
+		(define-key viper-vi-global-user-map (kbd "M-<up>") 'scroll-other-window-down)
+		(define-key viper-vi-global-user-map (kbd "C-t") 'tab-new)
+		(define-key viper-vi-global-user-map (kbd "C-w") 'tab-close)
+		(define-key viper-insert-global-user-map "\C-v" 'viper-Put-back)
+		(define-key viper-insert-global-user-map "\C-y" 'viper-Put-back)
+		;; Look into incorporating these via viper-vi-basic-map
+		(viper-record-kbd-macro "gf" 'vi-state [(meta x) f f a p return] t)
+		(viper-record-kbd-macro "gd" 'vi-state [(meta .)] t)
+		(viper-record-kbd-macro "gt" 'vi-state [(ctrl x) t o] t)
+		(viper-record-kbd-macro "gT" 'vi-state [(ctrl x) t O] t)
+		(viper-record-kbd-macro "gg" 'vi-state [1 G] t)
+		(viper-record-kbd-macro "gc" 'vi-state [(ctrl x) (ctrl \;)] t)
+		(viper-record-kbd-macro "jk" 'insert-state [escape] t)
+		(viper-record-kbd-macro ",w" 'vi-state [(ctrl x) o] t)
+		(viper-record-kbd-macro ",v" 'vi-state [(ctrl x) 3] t)
+		(viper-record-kbd-macro ",s" 'vi-state [(ctrl x) 2] t)
+		(viper-record-kbd-macro ",d" 'vi-state [(ctrl x) 0] t))
 
-(eval-after-load 'viper
-  '(progn
-     (setq viper-vi-state-id
-	   (concat (propertize "⬤" 'face '(:foreground "#ccdfff")) " "))
-     (setq viper-emacs-state-id
-	   (concat (propertize "⬤" 'face '(:foreground "#b9f2c6")) " "))
-     (setq viper-insert-state-id
-	   (concat (propertize "⬤" 'face '(:foreground "#fff576")) " "))
-     (setq viper-replace-state-id
-	   (concat (propertize "⬤" 'face 'ansi-color-green) " "))
-     (put 'viper-mode-string 'risky-local-variable t)))
+	(eval-after-load 'viper
+		'(progn
+			 (setq viper-vi-state-id
+				 (concat (propertize "⬤" 'face '(:foreground "#ccdfff")) " "))
+			 (setq viper-emacs-state-id
+				 (concat (propertize "⬤" 'face '(:foreground "#b9f2c6")) " "))
+			 (setq viper-insert-state-id
+				 (concat (propertize "⬤" 'face '(:foreground "#fff576")) " "))
+			 (setq viper-replace-state-id
+				 (concat (propertize "⬤" 'face 'ansi-color-green) " "))
+			 (put 'viper-mode-string 'risky-local-variable t))))
 
 ;;;; Visual
 ;;;;; Theming
-(add-to-list 'load-path "~/doom-configs/.emacs.d")
-(require 'ef-themes)
-(setq ef-themes-mixed-fonts t
-			ef-themes-variable-pitch-ui t
-			ef-themes-to-toggle '(ef-summer ef-cherie))
-(load-theme 'ef-cherie :no-confirm)
+(with-delayed-execution-priority-high
+	(add-to-list 'load-path "~/doom-configs/.emacs.d")
+	(require 'ef-themes)
+	(setq ef-themes-mixed-fonts t
+				ef-themes-variable-pitch-ui t
+				ef-themes-to-toggle '(ef-summer ef-cherie))
+	(load-theme 'ef-cherie :no-confirm))
 
 (with-delayed-execution-priority-high
 	(set-face-attribute 'default nil :family "Victor Mono" :weight 'semi-bold :height 140)
@@ -205,11 +205,13 @@
 
 ;;;;; Modeline (Ref: https://github.com/motform/emacs.d/blob/master/init.el)
 (with-delayed-execution-priority-high
+	(setq-default global-mode-string nil) ;; avoid duping of vi-indicator
 	(setq-default mode-line-format
 								'(" %e" mode-line-front-space mode-line-modified
-									mode-line-remote " " mode-line-misc-info "  ";; (vc-mode vc-mode)
+									mode-line-remote " " viper-mode-string "  ";; (vc-mode vc-mode)
 									mode-line-buffer-identification "  %l %p "
-									"   " flymake-mode-line-exception flymake-mode-line-counters)))
+									"   " flymake-mode-line-exception flymake-mode-line-counters
+									mode-line-misc-info)))
 ;; (setq-default header-line-format mode-line-format
 							;; mode-line-format nil)
 
@@ -217,11 +219,13 @@
 (add-to-list 'load-path (expand-file-name "el-get/el-get" user-emacs-directory))
 
 (unless (require 'el-get nil 'noerror)
-  (with-current-buffer
-      (url-retrieve-synchronously
-       "https://raw.githubusercontent.com/dimitri/el-get/master/el-get-install.el")
-    (goto-char (point-max))
-    (eval-print-last-sexp)))
+ (with-current-buffer
+		 (url-retrieve-synchronously
+			"https://raw.githubusercontent.com/dimitri/el-get/master/el-get-install.el")
+	 (goto-char (point-max))
+	 (eval-print-last-sexp)))
+(with-eval-after-load 'el-get-git
+ (setq el-get-git-shallow-clone t))
 
 (add-to-list 'el-get-recipe-path "~/.emacs.d/el-get-user/recipes")
 (setq el-get-is-lazy t)
@@ -229,9 +233,9 @@
 ;;;;; Vertico/Marginalia
 (el-get-bundle compat) ;; for minad's pkgs
 (el-get-bundle vertico)
+(vertico-mode)
+(savehist-mode)
 (with-delayed-execution-priority-high
-  (vertico-mode)
-  (savehist-mode)
   (keymap-set vertico-map "<backspace>" #'vertico-directory-delete-char)
   (keymap-set vertico-map "TAB" #'vertico-insert)
   (keymap-set vertico-map "ESC" #'abort-minibuffers)
@@ -295,7 +299,10 @@
 
 (el-get-bundle helpful)
 (with-delayed-execution
-  (define-key viper-vi-global-user-map "K" #'helpful-at-point)
+	(define-key viper-vi-global-user-map "K" 'eldoc-box-help-at-point)
+	;; (add-hook 'emacs-lisp-mode-hook #'(lambda ()
+		;; ;; FIXME: Buffer local vi keymaps?
+	  ;; (define-key viper-vi-local-user-map "K" #'helpful-at-point)))
   (global-set-key (kbd "C-h f") #'helpful-callable)
   (global-set-key (kbd "C-h v") #'helpful-variable)
   (global-set-key (kbd "C-h k") #'helpful-key)
@@ -348,7 +355,7 @@
 	(setq which-key-idle-delay 0.5)
 	(which-key-mode))
 
-;;;;; magit
+;;;;; magit/tempel
 (el-get-bundle magit/transient)
 (el-get-bundle magit/ghub)
 (el-get-bundle magit/magit-popup)
@@ -371,6 +378,54 @@
 ;; terminal stuff, taken from doom (cursor, cliboard)
 (el-get-bundle xclip)
 (el-get-bundle evil-terminal-cursor-changer)
+
+;; tempel (FIXME: tab-completion, dabbrev too OP)
+(el-get-bundle tempel)
+(with-delayed-execution
+	(defun tempel-setup-capf ()
+		(setq-local completion-at-point-functions
+								(cons #'tempel-expand
+											completion-at-point-functions)))
+	(add-hook 'conf-mode-hook 'tempel-setup-capf)
+	(add-hook 'prog-mode-hook 'tempel-setup-capf)
+	(add-hook 'text-mode-hook 'tempel-setup-capf)
+	(with-eval-after-load 'tempel
+		(define-key tempel-map (kbd "<tab>") 'tempel-next)
+		(define-key tempel-map (kbd "<backtab>") 'tempel-previous))
+	(setq tempel-path "~/doom-configs/.emacs.d/templates.el"))
+
+;;;;; eglot
+(el-get-bundle! project
+	:url "https://raw.githubusercontent.com/emacs-mirror/emacs/master/lisp/progmodes/project.el")
+(el-get-bundle rustic)
+(el-get-bundle external-completion)
+(el-get-bundle eldoc-box)
+(with-delayed-execution
+	(with-eval-after-load 'eldoc-box
+		(setq eldoc-box-max-pixel-width 600
+					eldoc-box-max-pixel-height 700
+					eldoc-box-only-multi-line t)))
+(el-get-bundle! eglot)
+(require 'eglot)
+(with-delayed-execution
+	(with-eval-after-load 'eglot
+		(if (display-graphic-p)
+				(global-eldoc-mode -1))
+		(define-key eglot-mode-map "K" 'eldoc-box-help-at-point)
+		;; pacman -S clang python-lsp-server rust-analyzer
+		;; yay -S jdtls jdk-openjdk jre-openjdk
+		;; rustup component add rust-analyzer
+		(push '((c++-mode c-mode) "clangd") eglot-server-programs)
+		(push '(python-mode "pylsp") eglot-server-programs)
+		(push '(java-mode "jdtls") eglot-server-programs)
+		(push '(python-mode "pylsp") eglot-server-programs)
+		(push '(rust-mode "rust-analyzer") eglot-server-programs))
+	(setq eglot-autoshutdown t
+				rustic-lsp-client 'eglot)
+	(add-hook 'c++-mode-hook 'eglot-ensure)
+	(add-hook 'java-mode-hook 'eglot-ensure)
+	(add-hook 'python-mode-hook 'eglot-ensure)
+	(add-hook 'c-mode-hook 'eglot-ensure))
 
 (el-get 'sync)
 
@@ -399,9 +454,13 @@
 
 ;; tabs
 (with-eval-after-load 'tab-bar
+	(defun +my/tab (tab i)
+		(propertize (concat "  " (alist-get 'name tab) "      ")
+								'face (funcall tab-bar-tab-face-function tab)))
   (setq tab-bar-close-button-show nil
 				tab-bar-new-button-show nil
-				tab-bar-separator "" 
+				tab-bar-separator ""
+				tab-bar-tab-name-format-function #'+my/tab
 				tab-bar-new-tab-choice "*scratch*"
 				tab-bar-tab-name-truncated-max 12))
 
@@ -429,26 +488,6 @@
 	(add-hook 'prog-mode-hook (show-paren-mode t))
   (fset 'yes-or-no-p 'y-or-n-p))
 
-;;; Outline
-(with-delayed-execution
-	(outline-minor-mode 1)
-
-	(defvar-local outline-folded nil)
-	;; FIXME:
-	(defun toggle-outline-entry (&optional arg)
-		(interactive)
-		(if (setq outline-folded (not outline-folded))
-				(outline-show-subtree)
-			(outline-hide-subtree)))
-
-	(add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
-	(eval-after-load 'racket
-		(add-hook 'racket-mode-hook #'outline-minor-mode))
-  (add-hook 'outline-minor-mode-hook #'(lambda ()
-	  (define-key viper-vi-local-user-map (kbd "<tab>") #'toggle-outline-entry)))
-  (add-hook 'outline-minor-mode-hook #'(lambda ()
-	  (define-key viper-vi-local-user-map (kbd "<backtab>") #'outline-hide-sublevels))))
-
 ;;; Org
 ;;;; Org-Capture
 (with-eval-after-load 'org-capture
@@ -465,9 +504,9 @@
 	  ("r" "Readings" entry
 	   (file+headline +org-capture-readings-file "Readings")
 	   "* " :prepend t)
-	  ("l" "Personal Log" item
+	  ("l" "Personal Log" entry
 	   (file +org-capture-log-file)
-	   "+ %T %?" :prepend t)
+	   "* %T %?" :prepend t)
 	  ("j" "Journal" entry
 	   (file+olp+datetree +org-capture-journal-file)
 	   "* %U %?\n** What happened \n** What is going through your mind? \n** What emotions are you feeling? \n** What thought pattern do you recognize? \n** How can you think about the situation differently? " :prepend t))))
@@ -488,6 +527,7 @@
 (with-delayed-execution-priority-high
 	(unless (display-graphic-p)
 		(xterm-mouse-mode 1)
+		(eldoc-mode 1)
 		(turn-on-xclip)
 		(etcc-on)))
 
@@ -511,11 +551,6 @@
   ;; (pixel-scroll-precision-mode 1)
   ;; (setq pixel-scroll-precision-large-scroll-height 35.0))
 
-;; TESTING: eglot
-;; (el-get-bundle! external-completion)
-;; (el-get-bundle! eglot)
-;; (el-get-bundle! eglot-java)
-
 ;; Nov
 ;; (el-get-bundle esxml)
 ;; (el-get-bundle nov)
@@ -538,3 +573,23 @@
     ;; (progn
       ;; (save-some-buffers 1)
       ;; (compile cmd))))
+
+;;; Outline
+;; (with-delayed-execution
+;; 	(outline-minor-mode 1)
+
+;; 	(defvar-local outline-folded nil)
+;; 	;; FIXME:
+;; 	(defun toggle-outline-entry (&optional arg)
+;; 		(interactive)
+;; 		(if (setq outline-folded (not outline-folded))
+;; 				(outline-show-subtree)
+;; 			(outline-hide-subtree)))
+
+;; 	(add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
+;; 	(eval-after-load 'racket
+;; 		(add-hook 'racket-mode-hook #'outline-minor-mode))
+;;   (add-hook 'outline-minor-mode-hook #'(lambda ()
+;; 	  (define-key viper-vi-local-user-map (kbd "<tab>") #'toggle-outline-entry)))
+;;   (add-hook 'outline-minor-mode-hook #'(lambda ()
+;; 	  (define-key viper-vi-local-user-map (kbd "<backtab>") #'outline-hide-sublevels))))

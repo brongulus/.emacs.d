@@ -112,6 +112,7 @@
 																	 "gmane.comp.web.elinks.user"
 																	 "gwene.app.rsshub.leetcode.articles"
 																	 "gwene.com.arcan-fe"
+																	 "gwene.io.github.matklad"
 																	 "gwene.net.lwn.headlines"
 																	 "gwene.org.quantamagazine"
 																	 "gwene.org.bitlbee.news.rss")
