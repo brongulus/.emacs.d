@@ -1,6 +1,6 @@
 /**
  *   author: brongulus
- *   created: `(format-time-string "%Y-%m-%d %H:%M:%S")`
+ *   created: `(format-time-string "%Y-%m-%d %H:%M:%S")
 **/
 #include <bits/stdc++.h>
 using namespace std;
@@ -12,8 +12,8 @@ using namespace std;
 #endif
 
 int main(){
-    ios::sync_with_stdio(false);
-    cin.tie(0);
+  ios::sync_with_stdio(false);
+  cin.tie(0);
     
-    return 0;
+  return 0;
 }

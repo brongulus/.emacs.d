@@ -4,6 +4,12 @@ fundamental-mode ;; Available everywhere
 
 (today (format-time-string "%Y-%m-%d"))
 
+c++-mode
+
+(ttt "int tt = 0; cin >> tt; \n" > "while(tt--) {" r "}")
+(forl
+ "for (int " (p "i" iter) " = 0; " iter " < " (p "n") "; " iter "++) {" r "}")
+
 prog-mode
 
 (fixme (if (derived-mode-p 'emacs-lisp-mode) ";; " comment-start) "FIXME: ")

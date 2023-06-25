@@ -293,9 +293,12 @@
 
 (el-get-bundle helpful)
 (with-delayed-execution
-	(add-hook 'emacs-lisp-mode-hook #'(lambda ()
-		;; FIXME: Buffer local vi keymaps?
-	  (define-key viper-vi-local-user-map "K" #'helpful-at-point)))
+	(defun my/doc-at-point (&rest args)
+			(interactive)
+			(if (derived-mode-p 'emacs-lisp-mode)
+					(helpful-at-point)
+				(eldoc-box-help-at-point)))
+	(define-key viper-vi-local-user-map "K" #'my/doc-at-point)
   (global-set-key (kbd "C-h f") #'helpful-callable)
   (global-set-key (kbd "C-h v") #'helpful-variable)
   (global-set-key (kbd "C-h k") #'helpful-key)
@@ -313,7 +316,7 @@
 	corfu-auto-prefix 2
 	corfu-auto-delay 0
 	corfu-separator ?_
-	corfu-quit-no-match 'separator
+	corfu-quit-no-match t
 	corfu-preview-current nil
 	corfu-popupinfo-delay '(0.2 . 0.1)
 	corfu-preselect-first nil
@@ -324,14 +327,12 @@
 	      (corfu-mode))))
 
 (el-get-bundle cape)
+
 (with-delayed-execution-priority-high
 	(defun my/add-capfs ()
-		(add-to-list 'completion-at-point-functions #'cape-keyword)
-		(add-to-list 'completion-at-point-functions #'cape-dabbrev)
-		(add-to-list 'completion-at-point-functions #'cape-file))
-		;; (push 'cape-file completion-at-point-functions)
-		;; (push 'cape-dabbrev completion-at-point-functions)
-		;; (push 'cape-keyword completion-at-point-functions))
+		(push 'cape-file completion-at-point-functions)
+		(push 'cape-dabbrev completion-at-point-functions)
+		(push 'cape-keyword completion-at-point-functions))
 	(add-hook 'prog-mode-hook #'my/add-capfs)
 	(add-hook 'text-mode-hook #'my/add-capfs))
 
@@ -378,14 +379,16 @@
 ;; tempel (FIXME: tab-completion, dabbrev too OP)
 (el-get-bundle tempel)
 (with-delayed-execution
+	(setq fill-indent-according-to-mode t)
 	(defun tempel-setup-capf ()
 		(setq-local completion-at-point-functions
-								(cons #'tempel-expand
+								(cons #'tempel-complete
 											completion-at-point-functions)))
 	(add-hook 'conf-mode-hook 'tempel-setup-capf)
 	(add-hook 'prog-mode-hook 'tempel-setup-capf)
 	(add-hook 'text-mode-hook 'tempel-setup-capf)
 	(with-eval-after-load 'tempel
+		;; FIXME: terminal tab
 		(define-key tempel-map (kbd "<tab>") 'tempel-next)
 		(define-key tempel-map (kbd "<backtab>") 'tempel-previous))
 	(setq tempel-path "~/.emacs.d/templates.el"))
@@ -408,6 +411,7 @@
 	(with-eval-after-load 'eglot
 		(if (display-graphic-p)
 				(global-eldoc-mode -1))
+		(add-hook 'eglot-managed-mode-hook 'tempel-setup-capf)
 		(define-key eglot-mode-map "K" 'eldoc-box-help-at-point)
 		;; pacman -S clang python-lsp-server rust-analyzer
 		;; yay -S jdtls jdk-openjdk jre-openjdk
@@ -475,33 +479,24 @@
 		(kill-current-buffer)
 		(message "Populated input file")))
 
-;; (with-delayed-execution
-;; 	(add-hook 'c++-mode-hook 'auto-insert-mode)
-;; 	(eval-after-load 'autoinsert
-;; 		'(define-auto-insert '("\\.cpp\\'" . "C++ skeleton")
-;; 			 '(
-;; 				 "Short description: "
-;; 				 "/**" \n
-;; 				 " *   author: brongulus" \n
-;; 				 " *   created: " (format-time-string "%Y-%m-%d %H:%M:%S") \n
-;; 				 "**/" > \n
-;; 				 "#include <bits/stdc++.h>" \n \n
-;; 				 "using namespace std;" \n \n
-;; 				 "#ifdef LOCAL\n#include \"algo/debug.h\"\n#else\n#define debug(...) 42\n#endif"
-;; 				 \n \n
-;; 				 "int main()" \n
-;; 				 "{" > \n
-;; 				 > "ios::sync_with_stdio(false);" \n > "cin.tie(0);" \n
-;; 				 > _ \n
-;; 				 > "return 0;" \n
-;; 				 "}" > \n))))
 (with-delayed-execution
+	;; https://emacs.stackexchange.com/questions/55754/how-to-run-functions-inside-auto-insert-template
+	(defun my/eval-auto-insert-init-form ()
+		(goto-char (point-min))
+		(cl-letf (((symbol-function '\`) #'progn))
+			(while (re-search-forward "`" nil t)
+      (let* ((beg (goto-char (match-beginning 0)))
+					 (end (with-syntax-table emacs-lisp-mode-syntax-table
+							(forward-sexp)
+							(point)))
+					 (str (eval (read (buffer-substring beg end)))))
+			(delete-region beg end)
+			(insert str)))))
 	(auto-insert-mode)
 	(setq auto-insert-directory "~/doom-configs/.emacs.d/templates/"
 				auto-insert-query nil)
-	(define-auto-insert "\.cpp" "comp.cpp"))
-
-
+	(define-auto-insert "\.cpp" ["comp.cpp"
+															 my/eval-auto-insert-init-form]))
 
 ;;; Keymaps
 (global-set-key [f2] 'save-buffer)
