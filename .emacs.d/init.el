@@ -9,7 +9,6 @@
 ;; Version: 0.0.1
 ;; Keywords: abbrev bib c calendar comm convenience data docs emulations extensions faces files frames games hardware help hypermedia i18n internal languages lisp local maint mail matching mouse multimedia news outlines processes terminals tex tools unix vc wp
 ;; Homepage: https://github.com/brongulus/init
-;; Package-Requires: ((emacs "24.3"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -17,7 +16,7 @@
 ;;  Ref 1: https://zenn.dev/takeokunn/articles/56010618502ccc
 ;;  Ref 2: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
 ;;  Ref 3: https://robbmann.io/emacsd/
-;;  TODO: file and buffer shortcuts, comp setup
+;;  TODO: file and buffer shortcuts, fix capfs man
 ;;  https://www.adventuresinwhy.com/post/eglot/
 ;;  The packaged used so far are
 ;;  1. Viper for vim emulations
@@ -35,7 +34,8 @@
 
 ;;; Startup hacks
 
-(setq comp-deferred-compilation t
+(setq gc-cons-threshold (* 16 1024 1024)
+			comp-deferred-compilation t
       comp-async-report-warnings-errors nil)
 
 ;; ;; (el-get-bundle benchmark-init)
@@ -83,11 +83,6 @@
 
 ;; -----------------------------------------------------------------------------
 
-;;; Temporary fix (doom profiles)
-(with-delayed-execution-priority-high
-(setq ignored-local-variable-values
-			'((git-commit-major-mode . git-commit-elisp-text-mode))))
-
 ;;; Better Defaults
 (setq-default
   warning-minimum-level :error
@@ -104,7 +99,7 @@
 	(add-hook 'prog-mode-hook #'display-fill-column-indicator-mode))
 
 (with-delayed-execution
-  (setq bookmark-default-file "~/doom-configs/.emacs.d/bookmarks"
+  (setq bookmark-default-file "~/.emacs.d/bookmarks"
 	cursor-in-non-selected-windows nil
 	help-window-select t
 	large-file-warning-threshold nil
@@ -117,103 +112,102 @@
 ;;; Package Management
 ;;;; Viper
 (with-delayed-execution-priority-high
-	(setq-default
-		viper-mode t
-		viper-expert-level 5
-		viper-want-ctl-h-help t
-		viper-want-emacs-keys-in-insert t
-		viper-ex-style-editing nil
-		viper-ex-style-motion nil
-		viper-case-fold-search t
-		viper-inhibit-startup-message t
-		viper-vi-style-in-minibuffer nil
-		viper-ESC-moves-cursor-back nil
-		viper-shift-width 2
-		viper-fast-keyseq-timeout 300
-		viper-electric-mode t
-		viper-ex-style-motion nil)
+(setq-default
+	viper-mode t
+	viper-expert-level 5
+	viper-want-ctl-h-help t
+	viper-want-emacs-keys-in-insert t
+	viper-ex-style-editing nil
+	viper-ex-style-motion nil
+	viper-case-fold-search t
+	viper-inhibit-startup-message t
+	viper-vi-style-in-minibuffer nil
+	viper-ESC-moves-cursor-back nil
+	viper-shift-width 2
+	viper-fast-keyseq-timeout 300
+	viper-electric-mode t
+	viper-ex-style-motion nil)
 
-	(require 'viper)
+(require 'viper)
 
-	(with-eval-after-load 'viper
-		(push 'org-capture-mode viper-insert-state-mode-list) ;; FIXME:
-		;; #times next command is run
-		(define-key viper-vi-global-user-map "\M-u" 'universal-argument)
-		;; macros
-		;; (define-key viper-vi-global-user-map "q" 'kmacro-start-macro-or-insert-counter)
-		;; (define-key viper-vi-global-user-map "Q" 'kmacro-end-or-call-macro)
-		;; (define-key viper-vi-global-user-map "@" 'consult-kmacro)
-		;; WIP: visual mode
-		(define-key viper-vi-global-user-map "v" 'set-mark-command)
-		(define-key viper-vi-global-user-map "\C-v" 'rectangle-mark-mode)
-		(define-key viper-vi-global-user-map "q" 'keyboard-quit)
-		(define-key viper-vi-local-user-map "Y" 'copy-region-as-kill)
-		(define-key viper-vi-local-user-map "D" 'kill-region) ;; DEL works
-		(define-key viper-vi-local-user-map "X" 'clipboard-kill-region)
-		(define-key viper-vi-local-user-map "C" 'comment-or-uncomment-region)
-		;; ------------
-		(define-key viper-vi-global-user-map "(" 'backward-list)
-		(define-key viper-vi-global-user-map ")" 'forward-list)
-		(define-key viper-vi-global-user-map ";" 'viper-ex)
-		(define-key viper-vi-global-user-map "-" 'dired-jump)
-		(define-key viper-vi-global-user-map (kbd "M-<down>") 'scroll-other-window)
-		(define-key viper-vi-global-user-map (kbd "M-<up>") 'scroll-other-window-down)
-		(define-key viper-vi-global-user-map (kbd "C-t") 'tab-new)
-		(define-key viper-vi-global-user-map (kbd "C-w") 'tab-close)
-		(define-key viper-insert-global-user-map "\C-v" 'viper-Put-back)
-		(define-key viper-insert-global-user-map "\C-y" 'viper-Put-back)
-		;; Look into incorporating these via viper-vi-basic-map
-		(viper-record-kbd-macro "gf" 'vi-state [(meta x) f f a p return] t)
-		(viper-record-kbd-macro "gd" 'vi-state [(meta .)] t)
-		(viper-record-kbd-macro "gt" 'vi-state [(ctrl x) t o] t)
-		(viper-record-kbd-macro "gT" 'vi-state [(ctrl x) t O] t)
-		(viper-record-kbd-macro "gg" 'vi-state [1 G] t)
-		(viper-record-kbd-macro "gc" 'vi-state [(ctrl x) (ctrl \;)] t)
-		(viper-record-kbd-macro "jk" 'insert-state [escape] t)
-		(viper-record-kbd-macro ",w" 'vi-state [(ctrl x) o] t)
-		(viper-record-kbd-macro ",v" 'vi-state [(ctrl x) 3] t)
-		(viper-record-kbd-macro ",s" 'vi-state [(ctrl x) 2] t)
-		(viper-record-kbd-macro ",d" 'vi-state [(ctrl x) 0] t))
+(with-eval-after-load 'viper
+	(push 'org-capture-mode viper-insert-state-mode-list) ;; FIXME:
+	;; #times next command is run
+	(define-key viper-vi-global-user-map "\M-u" 'universal-argument)
+	;; macros
+	;; (define-key viper-vi-global-user-map "q" 'kmacro-start-macro-or-insert-counter)
+	;; (define-key viper-vi-global-user-map "Q" 'kmacro-end-or-call-macro)
+	;; (define-key viper-vi-global-user-map "@" 'consult-kmacro)
+	;; WIP: visual mode
+	(define-key viper-vi-global-user-map "v" 'set-mark-command)
+	(define-key viper-vi-global-user-map "\C-v" 'rectangle-mark-mode)
+	(define-key viper-vi-global-user-map "q" 'keyboard-quit)
+	(define-key viper-vi-local-user-map "Y" 'copy-region-as-kill)
+	(define-key viper-vi-local-user-map "D" 'kill-region) ;; DEL works
+	(define-key viper-vi-local-user-map "X" 'clipboard-kill-region)
+	(define-key viper-vi-local-user-map "C" 'comment-or-uncomment-region)
+	;; ------------
+	(define-key viper-vi-global-user-map "(" 'backward-list)
+	(define-key viper-vi-global-user-map ")" 'forward-list)
+	(define-key viper-vi-global-user-map ";" 'viper-ex)
+	(define-key viper-vi-global-user-map "-" 'dired-jump)
+	(define-key viper-vi-global-user-map (kbd "M-<down>") 'scroll-other-window)
+	(define-key viper-vi-global-user-map (kbd "M-<up>") 'scroll-other-window-down)
+	(define-key viper-vi-global-user-map (kbd "C-t") 'tab-new)
+	(define-key viper-vi-global-user-map (kbd "C-w") 'tab-close)
+	(define-key viper-insert-global-user-map "\C-v" 'viper-Put-back)
+	(define-key viper-insert-global-user-map "\C-y" 'viper-Put-back)
+	;; Look into incorporating these via viper-vi-basic-map
+	(viper-record-kbd-macro "gf" 'vi-state [(meta x) f f a p return] t)
+	(viper-record-kbd-macro "gd" 'vi-state [(meta .)] t)
+	(viper-record-kbd-macro "gt" 'vi-state [(ctrl x) t o] t)
+	(viper-record-kbd-macro "gT" 'vi-state [(ctrl x) t O] t)
+	(viper-record-kbd-macro "gg" 'vi-state [1 G] t)
+	(viper-record-kbd-macro "gcc" 'vi-state [(ctrl x) (ctrl \;)] t)
+	(viper-record-kbd-macro "jk" 'insert-state [escape] t))
 
-	(eval-after-load 'viper
-		'(progn
-			 (setq viper-vi-state-id
-				 (concat (propertize "⬤" 'face '(:foreground "#ccdfff")) " "))
-			 (setq viper-emacs-state-id
-				 (concat (propertize "⬤" 'face '(:foreground "#b9f2c6")) " "))
-			 (setq viper-insert-state-id
-				 (concat (propertize "⬤" 'face '(:foreground "#fff576")) " "))
-			 (setq viper-replace-state-id
-				 (concat (propertize "⬤" 'face 'ansi-color-green) " "))
+(eval-after-load 'viper
+	'(progn
+		 (setq viper-vi-state-id
+			 (concat (propertize "⬤" 'face '(:foreground "#ccdfff")) " "))
+		 (setq viper-emacs-state-id
+			 (concat (propertize "⬤" 'face '(:foreground "#b9f2c6")) " "))
+		 (setq viper-insert-state-id
+			 (concat (propertize "⬤" 'face '(:foreground "#fff576")) " "))
+		 (setq viper-replace-state-id
+			 (concat (propertize "⬤" 'face 'ansi-color-green) " "))
 			 (put 'viper-mode-string 'risky-local-variable t))))
 
 ;;;; Visual
 ;;;;; Theming
 (with-delayed-execution-priority-high
-	(add-to-list 'load-path "~/doom-configs/.emacs.d")
+	(add-to-list 'load-path "~/.emacs.d")
 	(require 'ef-themes)
 	(setq ef-themes-mixed-fonts t
 				ef-themes-variable-pitch-ui t
 				ef-themes-to-toggle '(ef-summer ef-cherie))
-	(load-theme 'ef-cherie :no-confirm))
+	(if (display-graphic-p)
+			(load-theme 'ef-summer :no-confirm)
+		(load-theme 'modus-vivendi :no-confirm)))
 
 (with-delayed-execution-priority-high
 	(set-face-attribute 'default nil :family "Victor Mono" :weight 'semi-bold :height 140)
 	(set-face-attribute 'fixed-pitch nil :family "Victor Mono" :weight 'semi-bold :height 140)
 	(set-face-attribute 'variable-pitch nil :family "Noto Sans" :weight 'regular :height 140))
-;; (set-face-attribute 'variable-pitch nil :family "EB Garamond" :height 140) ;; FIXME: Serifs?
 
 ;;;;; Modeline (Ref: https://github.com/motform/emacs.d/blob/master/init.el)
+;; (el-get-bundle mini-modeline)
 (with-delayed-execution-priority-high
-	(setq-default global-mode-string nil) ;; avoid duping of vi-indicator
+	(setq-default flymake-mode-line-format
+								'(" " flymake-mode-line-exception flymake-mode-line-counters)
+								global-mode-string nil) ;; avoid duping of vi-indicator
 	(setq-default mode-line-format
 								'(" %e" mode-line-front-space mode-line-modified
-									mode-line-remote " " viper-mode-string "  ";; (vc-mode vc-mode)
+									mode-line-remote " " viper-mode-string " ";; (vc-mode vc-mode)
 									mode-line-buffer-identification "  %l %p "
-									"   " flymake-mode-line-exception flymake-mode-line-counters
+									"  " (:eval (when (bound-and-true-p flymake-mode)
+																	flymake-mode-line-format))
 									mode-line-misc-info)))
-;; (setq-default header-line-format mode-line-format
-							;; mode-line-format nil)
 
 ;;;; el-get (Packages)
 (add-to-list 'load-path (expand-file-name "el-get/el-get" user-emacs-directory))
@@ -299,10 +293,9 @@
 
 (el-get-bundle helpful)
 (with-delayed-execution
-	(define-key viper-vi-global-user-map "K" 'eldoc-box-help-at-point)
-	;; (add-hook 'emacs-lisp-mode-hook #'(lambda ()
-		;; ;; FIXME: Buffer local vi keymaps?
-	  ;; (define-key viper-vi-local-user-map "K" #'helpful-at-point)))
+	(add-hook 'emacs-lisp-mode-hook #'(lambda ()
+		;; FIXME: Buffer local vi keymaps?
+	  (define-key viper-vi-local-user-map "K" #'helpful-at-point)))
   (global-set-key (kbd "C-h f") #'helpful-callable)
   (global-set-key (kbd "C-h v") #'helpful-variable)
   (global-set-key (kbd "C-h k") #'helpful-key)
@@ -333,9 +326,12 @@
 (el-get-bundle cape)
 (with-delayed-execution-priority-high
 	(defun my/add-capfs ()
-		(push 'cape-file completion-at-point-functions)
-		(push 'cape-dabbrev completion-at-point-functions)
-		(push 'cape-keyword completion-at-point-functions))
+		(add-to-list 'completion-at-point-functions #'cape-keyword)
+		(add-to-list 'completion-at-point-functions #'cape-dabbrev)
+		(add-to-list 'completion-at-point-functions #'cape-file))
+		;; (push 'cape-file completion-at-point-functions)
+		;; (push 'cape-dabbrev completion-at-point-functions)
+		;; (push 'cape-keyword completion-at-point-functions))
 	(add-hook 'prog-mode-hook #'my/add-capfs)
 	(add-hook 'text-mode-hook #'my/add-capfs))
 
@@ -392,12 +388,14 @@
 	(with-eval-after-load 'tempel
 		(define-key tempel-map (kbd "<tab>") 'tempel-next)
 		(define-key tempel-map (kbd "<backtab>") 'tempel-previous))
-	(setq tempel-path "~/doom-configs/.emacs.d/templates.el"))
+	(setq tempel-path "~/.emacs.d/templates.el"))
 
 ;;;;; eglot
 (el-get-bundle! project
 	:url "https://raw.githubusercontent.com/emacs-mirror/emacs/master/lisp/progmodes/project.el")
 (el-get-bundle rustic)
+(el-get-bundle reformatter)
+(el-get-bundle zig-mode)
 (el-get-bundle external-completion)
 (el-get-bundle eldoc-box)
 (with-delayed-execution
@@ -406,7 +404,6 @@
 					eldoc-box-max-pixel-height 700
 					eldoc-box-only-multi-line t)))
 (el-get-bundle! eglot)
-(require 'eglot)
 (with-delayed-execution
 	(with-eval-after-load 'eglot
 		(if (display-graphic-p)
@@ -429,8 +426,87 @@
 
 (el-get 'sync)
 
+;;; Compilation
+(with-delayed-execution
+	(setq compilation-scroll-output 'first-error
+				compilation-always-kill t)
+	(add-hook 'racket-mode-hook #'(lambda ()
+						 (setq-local compile-command (concat
+												"racket " (shell-quote-argument buffer-file-name)))))
+	(add-hook 'rust-mode-hook #'(lambda ()
+																;; (setq-local compile-command "cargo build && cargo run")
+																(setq-local compile-command
+																						(concat "rustc "
+																										(shell-quote-argument buffer-file-name)
+																										" && ./"
+																										(shell-quote-argument
+                                   (file-name-sans-extension (file-name-nondirectory buffer-file-name)))))))
+	(add-hook 'java-mode-hook #'(lambda ()
+						 (setq-local
+							compile-command
+							(concat "javac " (shell-quote-argument buffer-file-name)
+                      " && java " (shell-quote-argument
+                                   (file-name-sans-extension (file-name-nondirectory buffer-file-name)))))))
+	(add-hook 'python-mode-hook #'(lambda ()
+						 (setq-local
+							compile-command
+							(concat "python " (shell-quote-argument buffer-file-name) " < ./in"
+                       (shell-quote-argument(file-name-sans-extension
+																						 (file-name-nondirectory buffer-file-name)))))))
+	(add-hook 'c++-mode-hook #'(lambda ()
+						(setq-local
+						 compile-command
+							(concat "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion "
+											"-O2 -DLOCAL -I/mnt/Data/Documents/problems/include "
+											(shell-quote-argument buffer-file-name)
+											" && ./a.out < ./in"
+											(shell-quote-argument (file-name-sans-extension
+																				 (file-name-nondirectory buffer-file-name)))))))
+	;; Copy input from clipboard
+	(defun paste-input (&optional arg)
+		(interactive)
+		(find-file (concat
+              "in"
+              (shell-quote-argument (file-name-sans-extension
+																		 (file-name-nondirectory buffer-file-name)))))
+		(erase-buffer)
+		(clipboard-yank)
+		(basic-save-buffer)
+		(kill-current-buffer)
+		(message "Populated input file")))
+
+;; (with-delayed-execution
+;; 	(add-hook 'c++-mode-hook 'auto-insert-mode)
+;; 	(eval-after-load 'autoinsert
+;; 		'(define-auto-insert '("\\.cpp\\'" . "C++ skeleton")
+;; 			 '(
+;; 				 "Short description: "
+;; 				 "/**" \n
+;; 				 " *   author: brongulus" \n
+;; 				 " *   created: " (format-time-string "%Y-%m-%d %H:%M:%S") \n
+;; 				 "**/" > \n
+;; 				 "#include <bits/stdc++.h>" \n \n
+;; 				 "using namespace std;" \n \n
+;; 				 "#ifdef LOCAL\n#include \"algo/debug.h\"\n#else\n#define debug(...) 42\n#endif"
+;; 				 \n \n
+;; 				 "int main()" \n
+;; 				 "{" > \n
+;; 				 > "ios::sync_with_stdio(false);" \n > "cin.tie(0);" \n
+;; 				 > _ \n
+;; 				 > "return 0;" \n
+;; 				 "}" > \n))))
+(with-delayed-execution
+	(auto-insert-mode)
+	(setq auto-insert-directory "~/doom-configs/.emacs.d/templates/"
+				auto-insert-query nil)
+	(define-auto-insert "\.cpp" "comp.cpp"))
+
+
+
 ;;; Keymaps
 (global-set-key [f2] 'save-buffer)
+(global-set-key [f3] 'paste-input)
+(global-set-key [f4] 'compile)
 (global-set-key [f10] 'kill-current-buffer)
 (global-set-key (kbd "C-x x") 'org-capture)
 (global-set-key (kbd "C-c a") 'org-agenda)
@@ -438,6 +514,7 @@
 
 ;; dired
 (with-delayed-execution
+  (setq dired-listing-switches "-ahl -v --group-directories-first")
   (define-key dired-mode-map "v" 'dired-x-find-file)
   (define-key dired-mode-map "V" 'dired-view-file)
   (define-key dired-mode-map "j" 'dired-next-line)
@@ -458,27 +535,28 @@
 		(propertize (concat "  " (alist-get 'name tab) "      ")
 								'face (funcall tab-bar-tab-face-function tab)))
   (setq tab-bar-close-button-show nil
-				tab-bar-new-button-show nil
-				tab-bar-separator ""
-				tab-bar-tab-name-format-function #'+my/tab
-				tab-bar-new-tab-choice "*scratch*"
-				tab-bar-tab-name-truncated-max 12))
+        tab-bar-new-button-show nil
+        tab-bar-separator ""
+        tab-bar-tab-name-format-function #'+my/tab
+        tab-bar-new-tab-choice "*scratch*"
+        tab-bar-tab-name-function 'tab-bar-tab-name-truncated
+        tab-bar-tab-name-truncated-max 12))
 
 ;;; Random
 (with-delayed-execution
   (save-place-mode 1)
-	(winner-mode 1)
-	(with-eval-after-load 'winner
-		(define-key winner-mode-map (kbd "C-c C-<left>") 'winner-undo)
-		(define-key winner-mode-map (kbd "C-c C-<right>") 'winner-redo))
+  (winner-mode 1)
+  (with-eval-after-load 'winner
+    (define-key winner-mode-map (kbd "C-c C-<left>") 'winner-undo)
+    (define-key winner-mode-map (kbd "C-c C-<right>") 'winner-redo))
   (with-eval-after-load 'doc-view
     (define-key doc-view-mode-map "j" 'doc-view-next-line-or-next-page)
     (define-key doc-view-mode-map "k" 'doc-view-previous-line-or-previous-page))
-	(with-eval-after-load 'eww
-		(define-key eww-mode-map "j" 'next-line)
-		(define-key eww-mode-map "k" 'previous-line)
-		(define-key eww-mode-map "h" 'eww-back-url)
-		(define-key eww-mode-map "l" 'eww-forward-url))
+  (with-eval-after-load 'eww
+    (define-key eww-mode-map "j" 'next-line)
+    (define-key eww-mode-map "k" 'previous-line)
+    (define-key eww-mode-map "h" 'eww-back-url)
+    (define-key eww-mode-map "l" 'eww-forward-url))
   (show-paren-mode)
   (global-hl-line-mode)
 	(add-hook 'after-save-hook
@@ -489,11 +567,28 @@
   (fset 'yes-or-no-p 'y-or-n-p))
 
 ;;; Org
+;; (el-get-bundle engrave-faces)
+(with-delayed-execution
+	(setq org-latex-toc-command "\\tableofcontents \\clearpage"
+				org-src-preserve-indentation t
+				;; \usepackage{listings}
+				;; org-latex-listings 'engraved
+				org-latex-pdf-process '("tectonic -X compile %f --outdir=%o -Z shell-escape"))
+	(defun my/org-inkscape-watcher (fname)
+		"Open inkscape and add tex code for importing the figure"
+		(interactive "sName: ")
+		(insert (shell-command-to-string (concat "inkscape-figures create '" fname
+																						 "' ./figures/"))))
+	(with-eval-after-load 'org
+		(add-hook 'org-mode-hook 'tempel-setup-capf)
+		(define-key org-mode-map [f4] #'org-latex-export-to-pdf)
+		(define-key org-mode-map [f5] #'my/org-inkscape-watcher)))
 ;;;; Org-Capture
 (with-eval-after-load 'org-capture
-  (setq +org-capture-readings-file "~/Dropbox/org/links.org"
-	+org-capture-log-file "~/Dropbox/org/log.org"
-	+org-capture-todo-file "~/Dropbox/org/inbox.org"
+  (setq
+    +org-capture-readings-file "~/Dropbox/org/links.org"
+	  +org-capture-log-file "~/Dropbox/org/log.org"
+	  +org-capture-todo-file "~/Dropbox/org/inbox.org"
 	org-capture-templates
 	'(("t" "Personal todo" entry
 	   (file+headline +org-capture-todo-file "todo")
@@ -509,9 +604,9 @@
 	   "* %T %?" :prepend t)
 	  ("j" "Journal" entry
 	   (file+olp+datetree +org-capture-journal-file)
-	   "* %U %?\n** What happened \n** What is going through your mind? \n** What emotions are you feeling? \n** What thought pattern do you recognize? \n** How can you think about the situation differently? " :prepend t))))
+   "* %U %?\n** What happened \n** What is going through your mind? \n** What emotions are you feeling? \n** What thought pattern do you recognize? \n** How can you think about the situation differently? " :prepend t))))
 
-;;;; Org-agenda
+; ;;;; Org-agenda
 (with-eval-after-load 'org-agenda
 	(setq org-agenda-start-with-log-mode t
 	org-log-done t
@@ -533,7 +628,7 @@
 
 ;; Gnus
 (with-delayed-execution
-	(load "~/doom-configs/.emacs.d/+gnus"))
+	(load "~/.emacs.d/+gnus"))
 
 ;; Startup hacks
 (setq file-name-handler-alist my-saved-file-name-handler-alist)
@@ -567,6 +662,8 @@
   ;; (let* ((cmd
           ;; (cond ((bound-and-true-p smart-compile-command) smart-compile-command)
                 ;; ((eq major-mode 'js-mode) "npm test")
+;; ((eq major-mode 'c++-mode) (concat "zig c++ " (buffer-file-name) "-DLOCAL "
+;; "-I/mnt/Data/Documents/problems/include/ -o ")
                 ;; ((eq major-mode 'rust-mode) "cargo build")
                 ;; ((eq major-mode 'haskell-mode) "cabal run")))
          ;; (default-directory (projectile-project-root)))
@@ -593,3 +690,16 @@
 ;; 	  (define-key viper-vi-local-user-map (kbd "<tab>") #'toggle-outline-entry)))
 ;;   (add-hook 'outline-minor-mode-hook #'(lambda ()
 ;; 	  (define-key viper-vi-local-user-map (kbd "<backtab>") #'outline-hide-sublevels))))
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages
+	 '(engrave-faces vertico undo-fu-session undo-fu tempel orderless marginalia helpful external-completion evil-terminal-cursor-changer eldoc-box corfu consult cape)))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )

@@ -145,6 +145,7 @@ org-mode
 (comment "#+begin_comment" n> r> n "#+end_comment")
 (verse "#+begin_verse" n> r> n "#+end_verse")
 (src "#+begin_src " q n> r> n "#+end_src")
+(forest "\\begin{forest}\n" r> n> "\\end{forest}")
 (gnuplot "#+begin_src gnuplot :var data=" (p "table") " :file " (p "plot.png") n> r> n "#+end_src" :post (org-edit-src-code))
 (elisp "#+begin_src emacs-lisp" n> r> n "#+end_src" :post (org-edit-src-code))
 (inlsrc "src_" p "{" q "}")

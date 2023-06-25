@@ -1,0 +1,10 @@
+ln -sf ~/doom-configs/.emacs.d/early-init.el ~/.emacs.d/
+ln -sf ~/doom-configs/.emacs.d/init.el ~/.emacs.d/
+ln -sf ~/doom-configs/.emacs.d/templates.el ~/.emacs.d/
+ln -sf ~/doom-configs/.emacs.d/ef-themes.el ~/.emacs.d/
+ln -sf ~/doom-configs/.emacs.d/ef-cherie-theme.el ~/.emacs.d/
+ln -sf ~/doom-configs/.emacs.d/ef-summer-theme.el ~/.emacs.d/
+ln -sf ~/doom-configs/.emacs.d/+gnus.el ~/.emacs.d/
+ln -sf ~/doom-configs/.emacs.d/bookmarks ~/.emacs.d/
+
+ln -sf ~/doom-configs/.emacs.d/.newsrc ~/.emacs.d/.local/gnus/

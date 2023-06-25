@@ -1,4 +1,6 @@
 ;;; early-init.el -*- lexical-binding: t; -*-
+(setq gc-cons-threshold most-positive-fixnum
+      garbage-collection-messages nil)
 
 (defconst my-saved-file-name-handler-alist file-name-handler-alist)
 (setq file-name-handler-alist nil
@@ -13,11 +15,7 @@
 			 (right-fringe . 0)
 			 (internal-border-width . 8)))
 
-(setq gc-cons-threshold (* 128 1024 1024)
-      garbage-collection-messages nil)
-
 (setq package-enable-at-startup nil
-      load-prefer-newer t
       auto-save-default nil
       auto-save-list-file-prefix nil
       make-backup-files nil
