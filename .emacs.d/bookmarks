@@ -8,8 +8,8 @@
  (rear-context-string . "96 Jan 16 10:51 ")
  (position . 235))
 ("org-capture-last-stored"
- (filename . "~/Dropbox/org/log.org")
- (front-context-string . "* <2023-06-21 We")
+ (filename . "~/Dropbox/org/links.org")
+ (front-context-string . "** https://ag91.")
  (rear-context-string)
- (position . 1))
+ (position . 12))
 )

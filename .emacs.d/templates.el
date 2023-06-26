@@ -69,7 +69,7 @@ emacs-lisp-mode
 (var "(defvar " p "\n  \"" p "\")")
 (local "(defvar-local " p "\n  \"" p "\")")
 (const "(defconst " p "\n  \"" p "\")")
-(custom "(defcustom " p "\n  \"" p "\"" n> ":type '" p ")")
+(defcustom "(defcustom " p "\n  \"" p "\"" n> ":type '" p ")")
 (face "(defface " p " '((t :inherit " p "))\n  \"" p "\")")
 (group "(defgroup " p " nil\n  \"" p "\"" n> ":group '" p n> ":prefix \"" p "-\")")
 (macro "(defmacro " p " (" p ")\n  \"" p "\"" n> r> ")")

@@ -1,41 +1,21 @@
 ;;; init.el --- Description -*- lexical-binding: t; -*-
-;;
-;; Copyright (C) 2023 Prashant Tak
-;;
 ;; Author: Prashant Tak <prashantrameshtak@gmail.com>
-;; Maintainer: Prashant Tak <prashantrameshtak@gmail.com>
 ;; Created: June 11, 2023
 ;; Modified: June 11, 2023
 ;; Version: 0.0.1
-;; Keywords: abbrev bib c calendar comm convenience data docs emulations extensions faces files frames games hardware help hypermedia i18n internal languages lisp local maint mail matching mouse multimedia news outlines processes terminals tex tools unix vc wp
-;; Homepage: https://github.com/brongulus/init
-;;
 ;; This file is not part of GNU Emacs.
-;;
 ;;; Commentary:
 ;;  Ref 1: https://zenn.dev/takeokunn/articles/56010618502ccc
 ;;  Ref 2: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
 ;;  Ref 3: https://robbmann.io/emacsd/
-;;  TODO: file and buffer shortcuts, fix capfs man
-;;  https://www.adventuresinwhy.com/post/eglot/
-;;  The packaged used so far are
-;;  1. Viper for vim emulations
-;;  2. Ef-themes for visuals
-;;  3. Compat, vertico, consult, orderless, corfu, cape, marginalia
-;;  4. Helpful, which-key, undo-fu, undo-fu-session
-;;  5. Magit (ghub, transient, popup, with-editor, forge)
-;;  6. xclip, evil-terminal-cursor-changer
-;;  7. Tree-sitter, eglot
-;;
+;;  TODO: file and buffer shortcuts, fix eldoc in terminal, bottom popup in gui
 ;;; Code:
 
 ;; (require 'profiler)
 ;; (profiler-start 'cpu)
 
-;;; Startup hacks
-
-(setq gc-cons-threshold (* 16 1024 1024)
-			comp-deferred-compilation t
+;;; Startup hacks 
+(setq comp-deferred-compilation t
       comp-async-report-warnings-errors nil)
 
 ;; ;; (el-get-bundle benchmark-init)
@@ -87,7 +67,9 @@
 (setq-default
   warning-minimum-level :error
   tab-width 2
+	indent-tabs-mode nil
 	fill-column 80
+  delete-selection-mode t
   mouse-yank-at-point t
 	scroll-margin 0
 	scroll-conservatively 100000
@@ -111,7 +93,6 @@
 
 ;;; Package Management
 ;;;; Viper
-(with-delayed-execution-priority-high
 (setq-default
 	viper-mode t
 	viper-expert-level 5
@@ -176,38 +157,42 @@
 			 (concat (propertize "⬤" 'face '(:foreground "#fff576")) " "))
 		 (setq viper-replace-state-id
 			 (concat (propertize "⬤" 'face 'ansi-color-green) " "))
-			 (put 'viper-mode-string 'risky-local-variable t))))
+			 (put 'viper-mode-string 'risky-local-variable t)))
 
-;;;; Visual
-;;;;; Theming
+;;;;; Visual
 (with-delayed-execution-priority-high
-	(add-to-list 'load-path "~/.emacs.d")
-	(require 'ef-themes)
-	(setq ef-themes-mixed-fonts t
-				ef-themes-variable-pitch-ui t
-				ef-themes-to-toggle '(ef-summer ef-cherie))
-	(if (display-graphic-p)
-			(load-theme 'ef-summer :no-confirm)
-		(load-theme 'modus-vivendi :no-confirm)))
+  (set-cursor-color "white")
+	(setq dracula-enlarge-headings nil
+        dracula-height-title-1 1.0
+        dracula-height-title-2 1.0
+        drcaula-height-doc-title 1.0)
+  (load-theme 'dracula :no-confirm))
 
 (with-delayed-execution-priority-high
-	(set-face-attribute 'default nil :family "Victor Mono" :weight 'semi-bold :height 140)
-	(set-face-attribute 'fixed-pitch nil :family "Victor Mono" :weight 'semi-bold :height 140)
-	(set-face-attribute 'variable-pitch nil :family "Noto Sans" :weight 'regular :height 140))
+	(set-face-attribute 'default nil :family "Victor Mono" :weight 'semi-bold :height 130)
+	(set-face-attribute 'fixed-pitch nil :family "Victor Mono" :weight 'semi-bold :height 130)
+	(set-face-attribute 'variable-pitch nil :family "Noto Sans" :weight 'regular :height 130))
 
-;;;;; Modeline (Ref: https://github.com/motform/emacs.d/blob/master/init.el)
-;; (el-get-bundle mini-modeline)
+;; Modeline (Ref: https://github.com/motform/emacs.d/blob/master/init.el)
 (with-delayed-execution-priority-high
-	(setq-default flymake-mode-line-format
+	(setq-default flymake-mode-line-counter-format
+                '("" flymake-mode-line-error-counter
+                  flymake-mode-line-warning-counter
+                  flymake-mode-line-note-counter "")
+                flymake-mode-line-format
 								'(" " flymake-mode-line-exception flymake-mode-line-counters)
 								global-mode-string nil) ;; avoid duping of vi-indicator
 	(setq-default mode-line-format
-								'(" %e" mode-line-front-space mode-line-modified
-									mode-line-remote " " viper-mode-string " ";; (vc-mode vc-mode)
-									mode-line-buffer-identification "  %l %p "
-									"  " (:eval (when (bound-and-true-p flymake-mode)
+								'(" %e " viper-mode-string " "
+                  (:eval (if (buffer-modified-p)
+                             (propertize " %b "
+                                         'face '((:inverse-video t))
+                                         'help-echo (buffer-file-name))
+                           (propertize " %b " 'help-echo (buffer-file-name))))
+									" " (:eval (when (bound-and-true-p flymake-mode)
 																	flymake-mode-line-format))
-									mode-line-misc-info)))
+									mode-line-misc-info "  %l %p "))) 
+
 
 ;;;; el-get (Packages)
 (add-to-list 'load-path (expand-file-name "el-get/el-get" user-emacs-directory))
@@ -217,9 +202,9 @@
 		 (url-retrieve-synchronously
 			"https://raw.githubusercontent.com/dimitri/el-get/master/el-get-install.el")
 	 (goto-char (point-max))
-	 (eval-print-last-sexp)))
+ (eval-print-last-sexp)))
 (with-eval-after-load 'el-get-git
- (setq el-get-git-shallow-clone t))
+	(setq el-get-git-shallow-clone t))
 
 (add-to-list 'el-get-recipe-path "~/.emacs.d/el-get-user/recipes")
 (setq el-get-is-lazy t)
@@ -327,7 +312,6 @@
 	      (corfu-mode))))
 
 (el-get-bundle cape)
-
 (with-delayed-execution-priority-high
 	(defun my/add-capfs ()
 		(push 'cape-file completion-at-point-functions)
@@ -352,7 +336,19 @@
 	(setq which-key-idle-delay 0.5)
 	(which-key-mode))
 
-;;;;; magit/tempel
+;;;;; git/tempel
+(el-get-bundle git-gutter)
+(with-delayed-execution
+	(add-hook 'text-mode-hook #'git-gutter-mode)
+	(add-hook 'prog-mode-hook #'git-gutter-mode)
+  (with-eval-after-load 'git-gutter
+    (set-face-foreground 'git-gutter:modified "yellow"))
+	(setq git-gutter:update-interval 0.02
+				fringes-outside-margins t
+				git-gutter:added-sign "│"
+				git-gutter:modified-sign "│"
+				git-gutter:deleted-sign "│"))
+
 (el-get-bundle magit/transient)
 (el-get-bundle magit/ghub)
 (el-get-bundle magit/magit-popup)
@@ -376,7 +372,7 @@
 (el-get-bundle xclip)
 (el-get-bundle evil-terminal-cursor-changer)
 
-;; tempel (FIXME: tab-completion, dabbrev too OP)
+;; tempel
 (el-get-bundle tempel)
 (with-delayed-execution
 	(setq fill-indent-according-to-mode t)
@@ -390,6 +386,7 @@
 	(with-eval-after-load 'tempel
 		;; FIXME: terminal tab
 		(define-key tempel-map (kbd "<tab>") 'tempel-next)
+		(define-key tempel-map (kbd "TAB") 'tempel-next)
 		(define-key tempel-map (kbd "<backtab>") 'tempel-previous))
 	(setq tempel-path "~/.emacs.d/templates.el"))
 
@@ -437,48 +434,49 @@
 	(add-hook 'racket-mode-hook #'(lambda ()
 						 (setq-local compile-command (concat
 												"racket " (shell-quote-argument buffer-file-name)))))
-	(add-hook 'rust-mode-hook #'(lambda ()
-																;; (setq-local compile-command "cargo build && cargo run")
-																(setq-local compile-command
-																						(concat "rustc "
-																										(shell-quote-argument buffer-file-name)
-																										" && ./"
-																										(shell-quote-argument
-                                   (file-name-sans-extension (file-name-nondirectory buffer-file-name)))))))
+	(add-hook 'rust-mode-hook
+						#'(lambda ()
+								(setq-local compile-command
+								;; (setq-local compile-command "cargo build && cargo run")
+														(concat "rustc " buffer-file-name
+																		" && ./"
+																		(file-name-sans-extension
+																		 (file-name-nondirectory buffer-file-name))))))
 	(add-hook 'java-mode-hook #'(lambda ()
 						 (setq-local
 							compile-command
 							(concat "javac " (shell-quote-argument buffer-file-name)
-                      " && java " (shell-quote-argument
-                                   (file-name-sans-extension (file-name-nondirectory buffer-file-name)))))))
+                      " && java " (file-name-sans-extension
+																	 (file-name-nondirectory buffer-file-name))))))
 	(add-hook 'python-mode-hook #'(lambda ()
 						 (setq-local
 							compile-command
 							(concat "python " (shell-quote-argument buffer-file-name) " < ./in"
-                       (shell-quote-argument(file-name-sans-extension
-																						 (file-name-nondirectory buffer-file-name)))))))
+                      (file-name-sans-extension
+											 (file-name-nondirectory buffer-file-name))))))
 	(add-hook 'c++-mode-hook #'(lambda ()
 						(setq-local
 						 compile-command
 							(concat "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion "
 											"-O2 -DLOCAL -I/mnt/Data/Documents/problems/include "
-											(shell-quote-argument buffer-file-name)
+											buffer-file-name
 											" && ./a.out < ./in"
-											(shell-quote-argument (file-name-sans-extension
-																				 (file-name-nondirectory buffer-file-name)))))))
+											(file-name-sans-extension
+											 (file-name-nondirectory buffer-file-name))))))
 	;; Copy input from clipboard
 	(defun paste-input (&optional arg)
 		(interactive)
 		(find-file (concat
               "in"
-              (shell-quote-argument (file-name-sans-extension
-																		 (file-name-nondirectory buffer-file-name)))))
+              (file-name-sans-extension
+							 (file-name-nondirectory buffer-file-name))))
 		(erase-buffer)
 		(clipboard-yank)
 		(basic-save-buffer)
 		(kill-current-buffer)
 		(message "Populated input file")))
 
+;; File-templates
 (with-delayed-execution
 	;; https://emacs.stackexchange.com/questions/55754/how-to-run-functions-inside-auto-insert-template
 	(defun my/eval-auto-insert-init-form ()
@@ -601,7 +599,7 @@
 	   (file+olp+datetree +org-capture-journal-file)
    "* %U %?\n** What happened \n** What is going through your mind? \n** What emotions are you feeling? \n** What thought pattern do you recognize? \n** How can you think about the situation differently? " :prepend t))))
 
-; ;;;; Org-agenda
+;;;; Org-agenda
 (with-eval-after-load 'org-agenda
 	(setq org-agenda-start-with-log-mode t
 	org-log-done t
@@ -624,9 +622,6 @@
 ;; Gnus
 (with-delayed-execution
 	(load "~/.emacs.d/+gnus"))
-
-;; Startup hacks
-(setq file-name-handler-alist my-saved-file-name-handler-alist)
 
 ;; (profiler-report)
 ;; (profiler-stop)
@@ -686,15 +681,5 @@
 ;;   (add-hook 'outline-minor-mode-hook #'(lambda ()
 ;; 	  (define-key viper-vi-local-user-map (kbd "<backtab>") #'outline-hide-sublevels))))
 (custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
  '(package-selected-packages
-	 '(engrave-faces vertico undo-fu-session undo-fu tempel orderless marginalia helpful external-completion evil-terminal-cursor-changer eldoc-box corfu consult cape)))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
+   '(org-modern vertico undo-fu-session undo-fu tempel orderless marginalia helpful external-completion evil-terminal-cursor-changer engrave-faces eldoc-box dracula-theme corfu consult cape)))
