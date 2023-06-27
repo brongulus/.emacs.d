@@ -18,7 +18,8 @@
                                     (garbage-collect)
                                     (setq gc-cons-threshold (* 60 1024 1024))))
 
-(setq default-frame-alist
+(setq mode-line-format nil
+      default-frame-alist
 			'((menu-bar-lines . 0)
 			 (tool-bar-lines . 0)
 			 (vertical-scroll-bars)
@@ -26,8 +27,15 @@
 			 (right-fringe . 0)
 			 (internal-border-width . 8)))
 
+;; Set theme and font beforehand to prevent flickering
+(load-theme 'dracula :no-confirm)
+(set-face-attribute 'default nil :family "Victor Mono" :weight 'semi-bold :height 130)
+(set-face-attribute 'fixed-pitch nil :family "Victor Mono" :weight 'semi-bold :height 130)
+(set-face-attribute 'variable-pitch nil :family "Noto Sans" :weight 'semi-bold :height 130)
+
+(fset 'display-startup-echo-area-message 'ignore)
+
 (setq load-prefer-newer t
-			mode-line-format nil
       package-enable-at-startup nil
       auto-save-default nil
       auto-save-list-file-prefix nil

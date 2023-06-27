@@ -8,11 +8,9 @@
 ;;  Ref 1: https://zenn.dev/takeokunn/articles/56010618502ccc
 ;;  Ref 2: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
 ;;  Ref 3: https://robbmann.io/emacsd/
-;;  TODO: file and buffer shortcuts, fix eldoc in terminal, bottom popup in gui
+;;  TODO: file and buffer shortcuts, fix eldoc in terminal, bottom popup in gui,
+;;        terminal vertico arrow keys
 ;;; Code:
-
-;; (require 'profiler)
-;; (profiler-start 'cpu)
 
 ;;; Startup hacks 
 (setq comp-deferred-compilation t
@@ -65,12 +63,17 @@
 
 ;;; Better Defaults
 (setq-default
+  user-full-name "Prashant Tak"
+  user-mail-address "prashantrameshtak@gmail.com"
+  smtpmail-smtp-server "smtp.gmail.com"
+  smtpmail-smtp-service 587
   warning-minimum-level :error
   tab-width 2
 	indent-tabs-mode nil
 	fill-column 80
   delete-selection-mode t
   mouse-yank-at-point t
+  custom-file (concat user-emacs-directory "custom.el")
 	scroll-margin 0
 	scroll-conservatively 100000
 	scroll-preserve-screen-position 1
@@ -90,6 +93,40 @@
 	show-paren-delay 0
 	initial-buffer-choice 'remember-notes
 	remember-notes-buffer-name "*scratch*"))
+
+;;;;; Visual
+(with-delayed-execution-priority-high
+  (set-cursor-color "white")
+	(setq dracula-enlarge-headings nil
+        dracula-height-title-1 1.0
+        dracula-height-title-2 1.0
+        drcaula-height-doc-title 1.0))
+
+;; Modeline (Ref: https://github.com/motform/emacs.d/blob/master/init.el)
+(with-delayed-execution-priority-high
+	(setq-default flymake-mode-line-counter-format
+                '("" flymake-mode-line-error-counter
+                  flymake-mode-line-warning-counter
+                  flymake-mode-line-note-counter "")
+                flymake-mode-line-format
+								'(" " flymake-mode-line-exception flymake-mode-line-counters)
+								global-mode-string nil) ;; avoid duping of vi-indicator
+  (setq-default mode-line-end-spaces '("" mode-line-misc-info " %l %p ")))
+  (defun my/ml-padding ()
+    (let ((r-length (length (format-mode-line mode-line-end-spaces))))
+        (propertize " "
+          'display `(space :align-to (- right ,r-length)))))
+	(setq-default mode-line-format
+								'(" %e " viper-mode-string " "
+                  (:eval (if (buffer-modified-p)
+                             (propertize " %b "
+                                         'face '((:inverse-video t))
+                                         'help-echo (buffer-file-name))
+                           (propertize " %b " 'help-echo (buffer-file-name))))
+                  (:eval (when (bound-and-true-p flymake-mode)
+													 flymake-mode-line-format))
+                  (:eval (my/ml-padding))
+                  mode-line-end-spaces))
 
 ;;; Package Management
 ;;;; Viper
@@ -124,8 +161,7 @@
 	(define-key viper-vi-global-user-map "\C-v" 'rectangle-mark-mode)
 	(define-key viper-vi-global-user-map "q" 'keyboard-quit)
 	(define-key viper-vi-local-user-map "Y" 'copy-region-as-kill)
-	(define-key viper-vi-local-user-map "D" 'kill-region) ;; DEL works
-	(define-key viper-vi-local-user-map "X" 'clipboard-kill-region)
+	(define-key viper-vi-local-user-map "D" 'clipboard-kill-region) ;; DEL works
 	(define-key viper-vi-local-user-map "C" 'comment-or-uncomment-region)
 	;; ------------
 	(define-key viper-vi-global-user-map "(" 'backward-list)
@@ -159,41 +195,6 @@
 			 (concat (propertize "⬤" 'face 'ansi-color-green) " "))
 			 (put 'viper-mode-string 'risky-local-variable t)))
 
-;;;;; Visual
-(with-delayed-execution-priority-high
-  (set-cursor-color "white")
-	(setq dracula-enlarge-headings nil
-        dracula-height-title-1 1.0
-        dracula-height-title-2 1.0
-        drcaula-height-doc-title 1.0)
-  (load-theme 'dracula :no-confirm))
-
-(with-delayed-execution-priority-high
-	(set-face-attribute 'default nil :family "Victor Mono" :weight 'semi-bold :height 130)
-	(set-face-attribute 'fixed-pitch nil :family "Victor Mono" :weight 'semi-bold :height 130)
-	(set-face-attribute 'variable-pitch nil :family "Noto Sans" :weight 'regular :height 130))
-
-;; Modeline (Ref: https://github.com/motform/emacs.d/blob/master/init.el)
-(with-delayed-execution-priority-high
-	(setq-default flymake-mode-line-counter-format
-                '("" flymake-mode-line-error-counter
-                  flymake-mode-line-warning-counter
-                  flymake-mode-line-note-counter "")
-                flymake-mode-line-format
-								'(" " flymake-mode-line-exception flymake-mode-line-counters)
-								global-mode-string nil) ;; avoid duping of vi-indicator
-	(setq-default mode-line-format
-								'(" %e " viper-mode-string " "
-                  (:eval (if (buffer-modified-p)
-                             (propertize " %b "
-                                         'face '((:inverse-video t))
-                                         'help-echo (buffer-file-name))
-                           (propertize " %b " 'help-echo (buffer-file-name))))
-									" " (:eval (when (bound-and-true-p flymake-mode)
-																	flymake-mode-line-format))
-									mode-line-misc-info "  %l %p "))) 
-
-
 ;;;; el-get (Packages)
 (add-to-list 'load-path (expand-file-name "el-get/el-get" user-emacs-directory))
 
@@ -220,6 +221,7 @@
   (keymap-set vertico-map "ESC" #'abort-minibuffers)
   (keymap-set vertico-map "C-j" #'vertico-next)
   (keymap-set vertico-map "C-k" #'vertico-previous)
+  (keymap-set vertico-map "<up>" #'vertico-previous)
   ;; RET -> insert and select (FIXME: Selects even if no exact match)
   (defun my/vertico-gg (&optional arg)
     (interactive)
@@ -271,6 +273,8 @@
 	(global-set-key [remap isearch-forward] 'consult-line))
 
 ;;;;; Helpful
+(el-get-bundle darkroom
+  :url "https://raw.githubusercontent.com/joaotavora/darkroom/master/darkroom.el")
 ;; Its requires aren't being pulled by el-get automatically
 (el-get-bundle f)
 (el-get-bundle s)
@@ -297,15 +301,15 @@
   (add-hook 'corfu-mode-hook 'corfu-popupinfo-mode)
   (keymap-set corfu-map "ESC" #'abort-minibuffers)
   (setq corfu-cycle t
-	corfu-auto t
-	corfu-auto-prefix 2
-	corfu-auto-delay 0
-	corfu-separator ?_
-	corfu-quit-no-match t
-	corfu-preview-current nil
-	corfu-popupinfo-delay '(0.2 . 0.1)
-	corfu-preselect-first nil
-	tab-always-indent 'complete)
+	      corfu-auto t
+	      corfu-auto-prefix 2
+	      corfu-auto-delay 0
+	      corfu-separator ?_
+	      corfu-quit-no-match t
+	      corfu-preview-current nil
+	      corfu-popupinfo-delay '(0.2 . 0.1)
+	      corfu-preselect-first nil
+	      tab-always-indent 'complete)
   (add-hook 'eshell-mode-hook
 	    (lambda ()
 	      (setq-local corfu-auto nil)
@@ -325,8 +329,8 @@
 (el-get-bundle undo-fu-session)
 (with-delayed-execution-priority-high
   (setq undo-limit 67108864
-	undo-strong-limit 100663296
-	undo-outer-limit 1006632960)
+	      undo-strong-limit 100663296
+	      undo-outer-limit 1006632960)
   (define-key viper-vi-global-user-map "u" #'undo-fu-only-undo)
   (define-key viper-vi-global-user-map "\C-r" #'undo-fu-only-redo)
   (undo-fu-session-global-mode))
@@ -410,13 +414,12 @@
 				(global-eldoc-mode -1))
 		(add-hook 'eglot-managed-mode-hook 'tempel-setup-capf)
 		(define-key eglot-mode-map "K" 'eldoc-box-help-at-point)
-		;; pacman -S clang python-lsp-server rust-analyzer
+    (define-key viper-vi-local-user-map "X" 'flymake-show-buffer-diagnostics)
+		;; pacman -S clang pyright rust-analyzer
 		;; yay -S jdtls jdk-openjdk jre-openjdk
 		;; rustup component add rust-analyzer
 		(push '((c++-mode c-mode) "clangd") eglot-server-programs)
-		(push '(python-mode "pylsp") eglot-server-programs)
 		(push '(java-mode "jdtls") eglot-server-programs)
-		(push '(python-mode "pylsp") eglot-server-programs)
 		(push '(rust-mode "rust-analyzer") eglot-server-programs))
 	(setq eglot-autoshutdown t
 				rustic-lsp-client 'eglot)
@@ -515,6 +518,8 @@
   (define-key dired-mode-map "k" 'dired-previous-line)
   (define-key dired-mode-map "K" 'dired-do-kill-lines)
   (define-key dired-mode-map "-" 'dired-up-directory)
+  (define-key dired-mode-map (kbd "<space>") 'consult-buffer)
+  (define-key dired-mode-map (kbd "SPC") 'consult-buffer)
   (define-key dired-mode-map "~"
     #'(lambda () (interactive) (dired "/home/prashant/")))
 	(setq dired-dwim-target t
@@ -538,6 +543,7 @@
 ;;; Random
 (with-delayed-execution
   (save-place-mode 1)
+  (global-auto-revert-mode t)
   (winner-mode 1)
   (with-eval-after-load 'winner
     (define-key winner-mode-map (kbd "C-c C-<left>") 'winner-undo)
@@ -563,6 +569,8 @@
 ;; (el-get-bundle engrave-faces)
 (with-delayed-execution
 	(setq org-latex-toc-command "\\tableofcontents \\clearpage"
+        org-startup-indented t
+        org-startup-folded t
 				org-src-preserve-indentation t
 				;; \usepackage{listings}
 				;; org-latex-listings 'engraved
@@ -582,34 +590,30 @@
     +org-capture-readings-file "~/Dropbox/org/links.org"
 	  +org-capture-log-file "~/Dropbox/org/log.org"
 	  +org-capture-todo-file "~/Dropbox/org/inbox.org"
-	org-capture-templates
-	'(("t" "Personal todo" entry
-	   (file+headline +org-capture-todo-file "todo")
-	   "* TODO %?\n%i\n%a%f" :prepend t)
-	  ("n" "Personal notes" entry
-	   (file+headline +org-capture-notes-file "Notes")
-	   "* %u %?\n%i\n%a" :prepend t)
-	  ("r" "Readings" entry
-	   (file+headline +org-capture-readings-file "Readings")
-	   "* " :prepend t)
-	  ("l" "Personal Log" entry
-	   (file +org-capture-log-file)
-	   "* %T %?" :prepend t)
-	  ("j" "Journal" entry
-	   (file+olp+datetree +org-capture-journal-file)
-   "* %U %?\n** What happened \n** What is going through your mind? \n** What emotions are you feeling? \n** What thought pattern do you recognize? \n** How can you think about the situation differently? " :prepend t))))
+	  org-capture-templates
+	  '(("t" "Personal todo" entry
+	     (file+headline +org-capture-todo-file "todo")
+	     "* TODO %?\n%i\n%a%f" :prepend t)
+	    ("n" "Personal notes" entry
+	     (file+headline +org-capture-notes-file "Notes")
+	     "* %u %?\n%i\n%a" :prepend t)
+	    ("r" "Readings" entry
+	     (file+headline +org-capture-readings-file "Readings")
+	     "* " :prepend t)
+	    ("l" "Personal Log" entry
+	     (file +org-capture-log-file)
+	     "* %T %?" :prepend t)
+	    ("j" "Journal" entry
+	     (file+olp+datetree +org-capture-journal-file)
+       "* %U %?\n** What happened \n** What is going through your mind? \n** What emotions are you feeling? \n** What thought pattern do you recognize? \n** How can you think about the situation differently? " :prepend t))))
 
 ;;;; Org-agenda
 (with-eval-after-load 'org-agenda
 	(setq org-agenda-start-with-log-mode t
-	org-log-done t
-	org-log-into-drawer t
-	org-agenda-breadcrumbs-separator " ❱ "
-	org-agenda-files '("~/Dropbox/org/todo.org" "~/Dropbox/org/inbox.org")))
-
-;; Start the server (FIXME: Slowing down the startup)
-; (with-delayed-execution
-; 		(server-start))
+	      org-log-done t
+	      org-log-into-drawer t
+	      org-agenda-breadcrumbs-separator " ❱ "
+	      org-agenda-files '("~/Dropbox/org/todo.org" "~/Dropbox/org/inbox.org")))
 
 ;; Terminal session (taken from doom)
 (with-delayed-execution-priority-high
@@ -623,9 +627,6 @@
 (with-delayed-execution
 	(load "~/.emacs.d/+gnus"))
 
-;; (profiler-report)
-;; (profiler-stop)
-
 (provide 'init)
 ;;; init.el ends here
 
@@ -635,16 +636,6 @@
     ;; (pixel-scroll-mode)
   ;; (pixel-scroll-precision-mode 1)
   ;; (setq pixel-scroll-precision-large-scroll-height 35.0))
-
-;; Nov
-;; (el-get-bundle esxml)
-;; (el-get-bundle nov)
-;; (with-delayed-execution
-  ;; (push (locate-user-emacs-file "el-get/nov") load-path)
-  ;; (push '("\\.epub\\'" . nov-mode) auto-mode-alist))
-;; (with-eval-after-load 'nov
-  ;; (define-key nov-mode-map "j" 'next-line)
-  ;; (define-key nov-mode-map "k" 'previous-line))
 
 ;; (defun smart-compile ()
   ;; "runs compile command based on current major mode."
@@ -660,26 +651,3 @@
     ;; (progn
       ;; (save-some-buffers 1)
       ;; (compile cmd))))
-
-;;; Outline
-;; (with-delayed-execution
-;; 	(outline-minor-mode 1)
-
-;; 	(defvar-local outline-folded nil)
-;; 	;; FIXME:
-;; 	(defun toggle-outline-entry (&optional arg)
-;; 		(interactive)
-;; 		(if (setq outline-folded (not outline-folded))
-;; 				(outline-show-subtree)
-;; 			(outline-hide-subtree)))
-
-;; 	(add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
-;; 	(eval-after-load 'racket
-;; 		(add-hook 'racket-mode-hook #'outline-minor-mode))
-;;   (add-hook 'outline-minor-mode-hook #'(lambda ()
-;; 	  (define-key viper-vi-local-user-map (kbd "<tab>") #'toggle-outline-entry)))
-;;   (add-hook 'outline-minor-mode-hook #'(lambda ()
-;; 	  (define-key viper-vi-local-user-map (kbd "<backtab>") #'outline-hide-sublevels))))
-(custom-set-variables
- '(package-selected-packages
-   '(org-modern vertico undo-fu-session undo-fu tempel orderless marginalia helpful external-completion evil-terminal-cursor-changer engrave-faces eldoc-box dracula-theme corfu consult cape)))

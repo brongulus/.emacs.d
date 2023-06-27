@@ -134,7 +134,7 @@ read it before opening a new issue about your will.")
                (warning :foreground ,dracula-orange)
                ;; syntax / font-lock
                (font-lock-builtin-face :foreground ,dracula-cyan :slant italic)
-               (font-lock-comment-face :inherit shadow)
+               (font-lock-comment-face :inherit shadow :slant italic)
                (font-lock-comment-delimiter-face :inherit shadow)
                (font-lock-constant-face :foreground ,dracula-purple)
                (font-lock-doc-face :foreground ,dracula-comment)
