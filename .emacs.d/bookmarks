@@ -2,14 +2,19 @@
 ;;; This format is meant to be slightly human-readable;
 ;;; nevertheless, you probably don't want to edit it.
 ;;; -*- End Of Bookmark File Format Version Stamp -*-
-(("Documents"
+(("Dotfiles"
+ (filename . "~/Dotfiles/")
+ (front-context-string . ".config\n  drwxr-")
+ (rear-context-string . "0K Jun 25 09:56 ")
+ (position . 239))
+("Documents"
  (filename . "~/Documents/Documents/")
  (front-context-string . "4-2\n  drwxrwxrwx")
  (rear-context-string . "96 Jan 16 10:51 ")
  (position . 235))
 ("org-capture-last-stored"
- (filename . "~/Dropbox/org/links.org")
- (front-context-string . "** https://ag91.")
+ (filename . "~/Dropbox/org/log.org")
+ (front-context-string . "* <2023-06-28 We")
  (rear-context-string)
- (position . 12))
+ (position . 1))
 )

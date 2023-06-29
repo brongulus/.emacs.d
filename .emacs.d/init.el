@@ -1,7 +1,7 @@
 ;;; init.el --- Description -*- lexical-binding: t; -*-
 ;; Author: Prashant Tak <prashantrameshtak@gmail.com>
 ;; Created: June 11, 2023
-;; Modified: June 11, 2023
+;; Modified: June 27, 2023
 ;; Version: 0.0.1
 ;; This file is not part of GNU Emacs.
 ;;; Commentary:
@@ -13,8 +13,8 @@
 ;;; Code:
 
 ;;; Startup hacks 
-(setq comp-deferred-compilation t
-      comp-async-report-warnings-errors nil)
+;; (setq comp-deferred-compilation t
+      ;; comp-async-report-warnings-errors nil)
 
 ;; ;; (el-get-bundle benchmark-init)
 ;; (load "/home/prashant/.emacs.d/el-get/benchmark-init/benchmark-init.el"
@@ -62,40 +62,41 @@
 ;; -----------------------------------------------------------------------------
 
 ;;; Better Defaults
-(setq-default
-  user-full-name "Prashant Tak"
-  user-mail-address "prashantrameshtak@gmail.com"
-  smtpmail-smtp-server "smtp.gmail.com"
-  smtpmail-smtp-service 587
-  warning-minimum-level :error
-  tab-width 2
-	indent-tabs-mode nil
-	fill-column 80
-  delete-selection-mode t
-  mouse-yank-at-point t
-  custom-file (concat user-emacs-directory "custom.el")
-	scroll-margin 0
-	scroll-conservatively 100000
-	scroll-preserve-screen-position 1
-  recenter-positions '(5 top bottom)
-  vc-follow-symlinks t)
+(setq-default user-full-name "Prashant Tak"
+              user-mail-address "prashantrameshtak@gmail.com"
+              smtpmail-smtp-server "smtp.gmail.com"
+              smtpmail-smtp-service 587
+              warning-minimum-level :error
+              tab-width 2
+	            indent-tabs-mode nil
+	            fill-column 80
+              delete-selection-mode t
+              mouse-yank-at-point t
+              custom-file (concat user-emacs-directory "custom.el")
+	            scroll-margin 0
+	            scroll-conservatively 100000
+	            scroll-preserve-screen-position 1
+              recenter-positions '(5 top bottom)
+              vc-follow-symlinks t)
 
 (with-delayed-execution-priority-high
-	(add-hook 'prog-mode-hook #'display-fill-column-indicator-mode))
+	(add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
+  (add-hook 'prog-mode-hook #'(lambda ()
+                                (setq-local display-line-numbers 'relative))))
 
 (with-delayed-execution
   (setq bookmark-default-file "~/.emacs.d/bookmarks"
-	cursor-in-non-selected-windows nil
-	help-window-select t
-	large-file-warning-threshold nil
-	shell-file-name "/bin/bash"
-	auth-sources '("~/.authinfo")
-	show-paren-delay 0
-	initial-buffer-choice 'remember-notes
-	remember-notes-buffer-name "*scratch*"))
+	      cursor-in-non-selected-windows nil
+	      help-window-select t
+	      large-file-warning-threshold nil
+	      shell-file-name "/bin/bash"
+	      auth-sources '("~/.authinfo")
+	      show-paren-delay 0
+	      initial-buffer-choice 'remember-notes
+	      remember-notes-buffer-name "*scratch*"))
 
 ;;;;; Visual
-(with-delayed-execution-priority-high
+(with-delayed-execution
   (set-cursor-color "white")
 	(setq dracula-enlarge-headings nil
         dracula-height-title-1 1.0
@@ -111,22 +112,23 @@
                 flymake-mode-line-format
 								'(" " flymake-mode-line-exception flymake-mode-line-counters)
 								global-mode-string nil) ;; avoid duping of vi-indicator
-  (setq-default mode-line-end-spaces '("" mode-line-misc-info " %l %p ")))
+  (setq-default mode-line-end-spaces '("" (vc-mode vc-mode) " "
+                                       mode-line-misc-info " %l %p "))
   (defun my/ml-padding ()
     (let ((r-length (length (format-mode-line mode-line-end-spaces))))
         (propertize " "
           'display `(space :align-to (- right ,r-length)))))
 	(setq-default mode-line-format
-								'(" %e " viper-mode-string " "
+								'(" %e " viper-mode-string "  "
                   (:eval (if (buffer-modified-p)
-                             (propertize " %b "
-                                         'face '((:inverse-video t))
+                             (propertize "%b"
+                                         'face '((:slant italic :underline t))
                                          'help-echo (buffer-file-name))
-                           (propertize " %b " 'help-echo (buffer-file-name))))
+                           (propertize "%b" 'help-echo (buffer-file-name))))
                   (:eval (when (bound-and-true-p flymake-mode)
 													 flymake-mode-line-format))
                   (:eval (my/ml-padding))
-                  mode-line-end-spaces))
+                  mode-line-end-spaces)))
 
 ;;; Package Management
 ;;;; Viper
@@ -137,6 +139,7 @@
 	viper-want-emacs-keys-in-insert t
 	viper-ex-style-editing nil
 	viper-ex-style-motion nil
+  viper-auto-indent t
 	viper-case-fold-search t
 	viper-inhibit-startup-message t
 	viper-vi-style-in-minibuffer nil
@@ -164,6 +167,7 @@
 	(define-key viper-vi-local-user-map "D" 'clipboard-kill-region) ;; DEL works
 	(define-key viper-vi-local-user-map "C" 'comment-or-uncomment-region)
 	;; ------------
+	(define-key viper-vi-global-user-map "F" 'find-file)
 	(define-key viper-vi-global-user-map "(" 'backward-list)
 	(define-key viper-vi-global-user-map ")" 'forward-list)
 	(define-key viper-vi-global-user-map ";" 'viper-ex)
@@ -220,8 +224,9 @@
   (keymap-set vertico-map "TAB" #'vertico-insert)
   (keymap-set vertico-map "ESC" #'abort-minibuffers)
   (keymap-set vertico-map "C-j" #'vertico-next)
+  ;; (keymap-set vertico-map "\e[OB" #'vertico-next) ;; FIXME
   (keymap-set vertico-map "C-k" #'vertico-previous)
-  (keymap-set vertico-map "<up>" #'vertico-previous)
+  ;; (keymap-set vertico-map "\e[OA" #'vertico-previous)
   ;; RET -> insert and select (FIXME: Selects even if no exact match)
   (defun my/vertico-gg (&optional arg)
     (interactive)
@@ -288,6 +293,8 @@
 					(helpful-at-point)
 				(eldoc-box-help-at-point)))
 	(define-key viper-vi-local-user-map "K" #'my/doc-at-point)
+  (with-eval-after-load 'helpful
+    (keymap-set helpful-mode-map "K" #'helpful-at-point))
   (global-set-key (kbd "C-h f") #'helpful-callable)
   (global-set-key (kbd "C-h v") #'helpful-variable)
   (global-set-key (kbd "C-h k") #'helpful-key)
@@ -346,7 +353,8 @@
 	(add-hook 'text-mode-hook #'git-gutter-mode)
 	(add-hook 'prog-mode-hook #'git-gutter-mode)
   (with-eval-after-load 'git-gutter
-    (set-face-foreground 'git-gutter:modified "yellow"))
+    (set-face-foreground 'git-gutter:modified "deep sky blue")
+    (set-face-foreground 'git-gutter:deleted "dark orange"))
 	(setq git-gutter:update-interval 0.02
 				fringes-outside-margins t
 				git-gutter:added-sign "│"
@@ -428,15 +436,64 @@
 	(add-hook 'python-mode-hook 'eglot-ensure)
 	(add-hook 'c-mode-hook 'eglot-ensure))
 
+;;;;; Markdown
+(el-get-bundle jrbelvin/markdown-mode)
+(with-delayed-execution
+  (setq markdown-command "multimarkdown")
+  (add-to-list 'auto-mode-alist '("README\\.md\\'" . gfm-mode))
+  (with-eval-after-load 'markdown-mode
+    (define-key markdown-mode-map (kbd "C-c C-e") #'markdown-do)))
+
+
+;;;;; Leetcode
+(el-get-bundle log4e)
+(el-get-bundle aio)
+(el-get-bundle graphql)
+(el-get-bundle leetcode)
+(with-delayed-execution
+  (defun set-exec-path-from-shell-PATH ()
+    "Set up Emacs' `exec-path' and PATH environment variable to match
+  that used by the user's shell."
+    (interactive)
+    (let ((path-from-shell (replace-regexp-in-string
+          "[ \t\n]*$" "" (shell-command-to-string
+              "$SHELL --login -c 'echo $PATH'"
+                  ))))
+      ;; (setenv "PATH" path-from-shell)
+      (setq exec-path (split-string path-from-shell path-separator))))
+
+  (set-exec-path-from-shell-PATH)
+
+  (with-eval-after-load 'leetcode
+    (setq leetcode-prefer-language "python3"
+          leetcode-save-solutions t
+          leetcode-directory "/mnt/Data/Documents/problems/leetcode")
+    (keymap-set leetcode--problems-mode-map "j" #'next-line)
+    (define-key leetcode-solution-mode-map (kbd "\C-q") #'leetcode-quit)
+    (keymap-set leetcode--problems-mode-map "k" #'previous-line)
+    (keymap-set leetcode--problems-mode-map "q" #'leetcode-quit))
+
+  (defun my/leetcode-problem-at-point ()
+    "Open leetcode problem by name using string at point. Run after M-x leetcode"
+    (interactive)
+    (let ((prob (replace-regexp-in-string "\\\"" "" (thing-at-point 'string))))
+      (tab-new)
+      (leetcode-show-problem-by-slug 
+       (leetcode--slugify-title prob))))
+  (with-eval-after-load 'org
+    (define-key org-mode-map (kbd "C-l") #'my/leetcode-problem-at-point)))
+
 (el-get 'sync)
 
 ;;; Compilation
 (with-delayed-execution
 	(setq compilation-scroll-output 'first-error
 				compilation-always-kill t)
-	(add-hook 'racket-mode-hook #'(lambda ()
-						 (setq-local compile-command (concat
-												"racket " (shell-quote-argument buffer-file-name)))))
+	(add-hook 'racket-mode-hook 
+            #'(lambda ()
+						    (setq-local compile-command 
+                            (concat
+												     "racket " (shell-quote-argument buffer-file-name)))))
 	(add-hook 'rust-mode-hook
 						#'(lambda ()
 								(setq-local compile-command
@@ -445,34 +502,32 @@
 																		" && ./"
 																		(file-name-sans-extension
 																		 (file-name-nondirectory buffer-file-name))))))
-	(add-hook 'java-mode-hook #'(lambda ()
-						 (setq-local
-							compile-command
-							(concat "javac " (shell-quote-argument buffer-file-name)
-                      " && java " (file-name-sans-extension
-																	 (file-name-nondirectory buffer-file-name))))))
-	(add-hook 'python-mode-hook #'(lambda ()
-						 (setq-local
-							compile-command
-							(concat "python " (shell-quote-argument buffer-file-name) " < ./in"
-                      (file-name-sans-extension
-											 (file-name-nondirectory buffer-file-name))))))
-	(add-hook 'c++-mode-hook #'(lambda ()
-						(setq-local
-						 compile-command
-							(concat "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion "
-											"-O2 -DLOCAL -I/mnt/Data/Documents/problems/include "
-											buffer-file-name
-											" && ./a.out < ./in"
-											(file-name-sans-extension
-											 (file-name-nondirectory buffer-file-name))))))
+	(add-hook 'java-mode-hook 
+            #'(lambda ()
+						    (setq-local compile-command
+							              (concat "javac " (shell-quote-argument buffer-file-name)
+                                    " && java " (file-name-sans-extension
+																	               (file-name-nondirectory buffer-file-name))))))
+	(add-hook 'python-mode-hook 
+            #'(lambda ()
+						    (setq-local compile-command
+							              (concat "python " (shell-quote-argument buffer-file-name) " < ./in"
+                                    (file-name-sans-extension
+											               (file-name-nondirectory buffer-file-name))))))
+	(add-hook 'c++-mode-hook 
+            #'(lambda ()
+						    (setq-local compile-command
+							              (concat "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion "
+											              "-O2 -DLOCAL -I/mnt/Data/Documents/problems/include "
+											              buffer-file-name
+											              " && ./a.out < ./in"
+											              (file-name-sans-extension
+											               (file-name-nondirectory buffer-file-name))))))
 	;; Copy input from clipboard
 	(defun paste-input (&optional arg)
 		(interactive)
-		(find-file (concat
-              "in"
-              (file-name-sans-extension
-							 (file-name-nondirectory buffer-file-name))))
+		(find-file (concat "in" (file-name-sans-extension
+							               (file-name-nondirectory buffer-file-name))))
 		(erase-buffer)
 		(clipboard-yank)
 		(basic-save-buffer)
@@ -506,7 +561,13 @@
 (global-set-key [f10] 'kill-current-buffer)
 (global-set-key (kbd "C-x x") 'org-capture)
 (global-set-key (kbd "C-c a") 'org-agenda)
-(global-set-key (kbd "C-c C-t") 'ef-themes-toggle)
+(global-set-key (kbd "M-k") 'windmove-up)
+(global-set-key (kbd "M-j") 'windmove-down)
+(global-set-key (kbd "M-h") 'windmove-left)
+(global-set-key (kbd "M-l") 'windmove-right)
+(global-set-key (kbd "M-d") 'delete-window)
+(global-set-key (kbd "M-s") 'split-window-below)
+(global-set-key (kbd "M-v") 'split-window-right)
 
 ;; dired
 (with-delayed-execution
@@ -515,6 +576,7 @@
   (define-key dired-mode-map "V" 'dired-view-file)
   (define-key dired-mode-map "j" 'dired-next-line)
   (define-key dired-mode-map "J" 'dired-goto-file)
+  (define-key dired-mode-map "F" 'find-file)
   (define-key dired-mode-map "k" 'dired-previous-line)
   (define-key dired-mode-map "K" 'dired-do-kill-lines)
   (define-key dired-mode-map "-" 'dired-up-directory)
@@ -523,6 +585,8 @@
   (define-key dired-mode-map "~"
     #'(lambda () (interactive) (dired "/home/prashant/")))
 	(setq dired-dwim-target t
+        dired-auto-revert-buffer t
+        dired-kill-when-opening-new-dired-buffer t
 				dired-recursive-deletes 'always
 				dired-recursive-copies 'always)
   (add-hook 'dired-mode-hook 'dired-hide-details-mode))
@@ -530,7 +594,7 @@
 ;; tabs
 (with-eval-after-load 'tab-bar
 	(defun +my/tab (tab i)
-		(propertize (concat "  " (alist-get 'name tab) "      ")
+		(propertize (concat "  " (alist-get 'name tab) "  ")
 								'face (funcall tab-bar-tab-face-function tab)))
   (setq tab-bar-close-button-show nil
         tab-bar-new-button-show nil
@@ -542,6 +606,8 @@
 
 ;;; Random
 (with-delayed-execution
+  (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
+  (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
   (save-place-mode 1)
   (global-auto-revert-mode t)
   (winner-mode 1)
@@ -581,6 +647,9 @@
 		(insert (shell-command-to-string (concat "inkscape-figures create '" fname
 																						 "' ./figures/"))))
 	(with-eval-after-load 'org
+    (set-face-attribute 'org-level-1 nil :height 1.0)
+    (set-face-attribute 'org-level-2 nil :height 1.0)
+    (set-face-attribute 'org-document-title nil :height 1.0)
 		(add-hook 'org-mode-hook 'tempel-setup-capf)
 		(define-key org-mode-map [f4] #'org-latex-export-to-pdf)
 		(define-key org-mode-map [f5] #'my/org-inkscape-watcher)))
@@ -590,6 +659,7 @@
     +org-capture-readings-file "~/Dropbox/org/links.org"
 	  +org-capture-log-file "~/Dropbox/org/log.org"
 	  +org-capture-todo-file "~/Dropbox/org/inbox.org"
+    +org-capture-journal-file "~/Dropbox/org/journal.org"
 	  org-capture-templates
 	  '(("t" "Personal todo" entry
 	     (file+headline +org-capture-todo-file "todo")
@@ -605,7 +675,11 @@
 	     "* %T %?" :prepend t)
 	    ("j" "Journal" entry
 	     (file+olp+datetree +org-capture-journal-file)
-       "* %U %?\n** What happened \n** What is going through your mind? \n** What emotions are you feeling? \n** What thought pattern do you recognize? \n** How can you think about the situation differently? " :prepend t))))
+       "* %U %?\n** What happened \n
+** What is going through your mind? \n
+** What emotions are you feeling? \n
+** What thought pattern do you recognize? \n
+** How can you think about the situation differently? " :prepend t))))
 
 ;;;; Org-agenda
 (with-eval-after-load 'org-agenda
@@ -625,7 +699,7 @@
 
 ;; Gnus
 (with-delayed-execution
-	(load "~/.emacs.d/+gnus"))
+	(load "~/.emacs.d/+gnus" nil t))
 
 (provide 'init)
 ;;; init.el ends here

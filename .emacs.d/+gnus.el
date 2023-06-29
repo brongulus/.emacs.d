@@ -1,11 +1,45 @@
 ;;; ../doom-configs/.emacs.d/gnus.el -*- lexical-binding: t; -*-
-
-;; SOURCE:
+;; TODO: nnrss backend
+;; REFS:
 ;; https://gluer.org/blog/2023/trying-gnus-as-an-email-client/
 ;; https://github.com/redguardtoo/mastering-emacs-in-one-year-guide/blob/master/gnus-guide-en.org
-;; SOURCE: https://www.bounga.org/tips/2020/05/03/multiple-smtp-accounts-in-gnus-without-external-tools/
+;; https://www.bounga.org/tips/2020/05/03/multiple-smtp-accounts-in-gnus-without-external-tools/
 
 (with-delayed-execution
+    (with-eval-after-load 'gnus
+      ;; mode-line unread indicator
+      (defun my/gnus-unread-count ()
+        (interactive)
+        (let ((uc (+ (cdr (nth 1 gnus-topic-unreads))    ;; uni uc
+                     (cdr (nth 2 gnus-topic-unreads))))) ;; personal uc
+          (if (eq uc 0)
+              ""
+            (format " 📥 %s " uc))))
+      (setq global-mode-string 
+            (append global-mode-string 
+                    (list '(:eval (propertize 
+                                   (my/gnus-unread-count)
+                                   'help-echo "Gnus : Unread"
+                                   'face '((:inverse-video t)))))))
+      ;; Better UI
+      (gnus-add-configuration
+       '(article
+         (horizontal 1.0
+                     (vertical 30
+                               (group 1.0))
+                     (vertical 1.0
+                               (summary 0.30 point)
+                               (article 1.0)))))
+      (gnus-add-configuration
+       '(summary
+         (horizontal 1.0
+                     (vertical 30
+                               (group 1.0))
+                     (vertical 1.0
+                               (summary 1.0 point)))))
+      (keymap-set gnus-article-mode-map "q" #'kill-buffer-and-window))
+      ;; (add-hook 'gnus-article-mode-hook #'visual-line-mode)
+    
 		(setq gnus-select-method '(nntp "news.gwene.org"))
 		(setq gnus-secondary-select-methods
 					'((nnimap "personal"
@@ -25,11 +59,14 @@
 		(setq gnus-asynchronous t
 					gnus-use-cache t
 					gnus-cache-remove-articles nil
-					gnus-fetch-old-headers t
+					;; gnus-fetch-old-headers t
+          mm-text-html-renderer 'shr
 					gnus-article-x-face-too-ugly ".*"
-					gnus-interactive-exit nil
+					gnus-interactive-exit 'quiet
 					gnus-novice-user nil
 					gnus-expert-user nil
+          gnus-auto-select-first nil
+          gnus-summary-display-arrow nil
 					gnus-thread-sort-functions
 					'(gnus-thread-sort-by-most-recent-date
 						(not gnus-thread-sort-by-number)))
@@ -52,26 +89,23 @@
 						 (gcc-self . "nnimap+uni:Sent")
 						 (display . all))))
 		;; summary
-		(setq gnus-sum-thread-tree-false-root " "
-					gnus-sum-thread-tree-indent "  "
-					gnus-sum-thread-tree-root "r "
-					;; gnus-sum-thread-tree-single-indent "◎ "
+		(setq gnus-sum-thread-tree-false-root ""
+					gnus-sum-thread-tree-indent " "
+					gnus-sum-thread-tree-root ""
 					gnus-sum-thread-tree-single-indent ""
 					gnus-sum-thread-tree-vertical        "|"
-					gnus-sum-thread-tree-leaf-with-other "├─► %s"
+					gnus-sum-thread-tree-leaf-with-other "├─►"
 					gnus-sum-thread-tree-single-leaf     "╰─►"
 					gnus-user-date-format-alist '(((gnus-seconds-today) . " %H:%M")
 																				(t . "%b %d"))
-					gnus-topic-line-format (concat "%i "
-																				 " %(%{%n - %A%}%) %v\n")
-					gnus-group-line-format (concat "%1M%1S%5y "
-																				 " : %(%-50,50G%)\n")
-					;; │06-Jan│  Sender Name  │ Email Subject
+					gnus-topic-line-format (concat "%i%(%{%n - %A%}%) %v\n")
+					gnus-group-line-format (concat "%S%3y : %(%-50,50G%)\n") ;; %E (gnus-group-icon-list)
+					;;  06-Jan   Sender Name    Email Subject
 					gnus-summary-line-format (concat "%0{%U%R%z%}"
-																					 "%3{│%}" "%1{%&user-date;%}" "%3{│%}" " "
+																					 "%3{ %}" "%1{%&user-date;%}" "%3{ %}" " "
 																					 "%4{%-16,16f%}" " "
-																					 "%3{│%}" " "
-																					 "%1{%B%}" "%s\n"))
+																					 "%3{ %}" " "
+																					 "%1{%B%}" "%S\n"))
 
 		(setq user-emacs-config-directory (concat (getenv "HOME") "/doom-configs/.emacs.d")
 					user-emacs-data-directory (concat (getenv "HOME") "/.emacs.d/.local")
@@ -87,11 +121,11 @@
 
 	(with-eval-after-load 'gnus-topic
 				 (setq gnus-message-archive-group '((format-time-string "sent.%Y")))
-				 (setq gnus-topic-topology '(("Gnus" visible)
-																		 (("uni" visible nil nil))
-																		 (("personal" visible nil nil))
-																		 (("news.gwene.org" visible nil nil))))
-				 (setq gnus-topic-alist '(("uni" ; the key of topic
+				 (setq gnus-topic-topology '(("Unread" visible)
+																		 (("📩 Uni" visible nil nil))
+																		 (("📥 Personal" visible nil nil))
+																		 (("📰 News" visible nil nil))))
+				 (setq gnus-topic-alist '(("📩 Uni" ; the key of topic
 																	 "nnimap+uni:INBOX"
 																	 "nnimap+uni:[Gmail]/Sent Mail"
 																	 "nnimap+uni:Sent"
@@ -100,13 +134,14 @@
 																	 "nnimap+uni:SOP"
 																	 "nnimap+uni:Thesis"
 																	 "nnimap+uni:[Gmail]/Starred")
-																	("personal" ; the key of topic
+																	("📥 Personal" ; the key of topic
 																	 "nnimap+personal:INBOX"
 																	 "nnimap+personal:[Gmail]/Sent Mail"
 																	 "nnimap+personal:Sent"
 																	 "nnimap+personal:sent.2023"
 																	 "nnimap+personal:[Gmail]/Starred")
-																	("news.gwene.org"
+																	("📰 News"
+                                   "gmane.emacs.devel"
 																	 "gwene.com.youtube.feeds.videos.xml.user.ethoslab"
 																	 "gmane.comp.web.qutebrowser"
 																	 "gmane.comp.web.elinks.user"
@@ -116,9 +151,8 @@
 																	 "gwene.net.lwn.headlines"
 																	 "gwene.org.quantamagazine"
 																	 "gwene.org.bitlbee.news.rss")
-																	("Gnus"))))
+																	("Unread"))))
 
-		(add-hook 'gnus-group-mode-hook #'gnus-topic-mode)
-)
+		(add-hook 'gnus-group-mode-hook #'gnus-topic-mode))
 ;; (after! gnus
 ;;   (gnus-demon-add-handler 'gnus-demon-scan-news 1 1))

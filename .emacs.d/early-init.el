@@ -21,17 +21,18 @@
 (setq mode-line-format nil
       default-frame-alist
 			'((menu-bar-lines . 0)
-			 (tool-bar-lines . 0)
-			 (vertical-scroll-bars)
-			 (left-fringe . 0)
-			 (right-fringe . 0)
-			 (internal-border-width . 8)))
+        (alpha 95 95)
+			  (tool-bar-lines . 0)
+			  (vertical-scroll-bars)
+			  (left-fringe . 0)
+			  (right-fringe . 0)
+			  (internal-border-width . 8)
+        (font . "Victor Mono-13:weight=semi-bold")))
 
 ;; Set theme and font beforehand to prevent flickering
 (load-theme 'dracula :no-confirm)
-(set-face-attribute 'default nil :family "Victor Mono" :weight 'semi-bold :height 130)
-(set-face-attribute 'fixed-pitch nil :family "Victor Mono" :weight 'semi-bold :height 130)
-(set-face-attribute 'variable-pitch nil :family "Noto Sans" :weight 'semi-bold :height 130)
+(set-face-attribute 
+ 'variable-pitch nil :family "Noto Sans" :weight 'regular :height 130)
 
 (fset 'display-startup-echo-area-message 'ignore)
 
