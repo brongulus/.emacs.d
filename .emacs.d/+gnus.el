@@ -1,4 +1,4 @@
-;;; ../doom-configs/.emacs.d/gnus.el -*- lexical-binding: t; -*-
+;;; +gnus.el -*- lexical-binding: t; -*-
 ;; TODO: nnrss backend
 ;; REFS:
 ;; https://gluer.org/blog/2023/trying-gnus-as-an-email-client/
@@ -24,12 +24,13 @@
             ""
           (format " 📥 %s " uc))))
     ;; FIXME: box not rendering completely
-    (setq global-mode-string
-      (append global-mode-string 
-              (list '(:eval (propertize 
-                             (my/gnus-unread-count)
-                             'help-echo "Gnus : Unread"
-                             'face '(:box '(:line-width -1 :color "blue")))))))
+    ;; (unless (server-running-p)
+      (setq global-mode-string
+            (append global-mode-string 
+                    (list '(:eval (propertize 
+                                   (my/gnus-unread-count)
+                                   'help-echo "Gnus : Unread"
+                                   'face '(:box '(:line-width -1 :color "blue")))))));)
     ;; Better UI
     (gnus-add-configuration
     '(article

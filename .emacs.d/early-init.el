@@ -19,6 +19,7 @@
                                     (setq gc-cons-threshold (* 60 1024 1024))))
 
 (setq-default mode-line-format nil
+              frame-inhibit-implied-resize t
               default-frame-alist
 			        '((menu-bar-lines . 0)
                 (alpha 95 95)
@@ -40,12 +41,12 @@
 (setq load-prefer-newer t
       frame-resize-pixelwise t
       package-enable-at-startup nil
+      package--init-file-ensured t ;; doom
       auto-save-default nil
       auto-save-list-file-prefix nil
       make-backup-files nil
       create-lockfiles nil
-      inhibit-startup-screen t
-      frame-inhibit-implied-resize t)
+      inhibit-startup-screen t)
 
 (provide 'early-init)
 ;;; early-init.el ends here
