@@ -6,7 +6,7 @@
       file-name-handler-alist nil
       garbage-collection-messages nil)
 
-(add-hook 'emacs-startup-hook ; hook run after loading init files
+(add-hook 'after-init-hook ; hook run after loading init files
           #'(lambda ()
               (setq gc-cons-threshold (* 60 1024 1024)
                     gc-cons-percentage 0.1

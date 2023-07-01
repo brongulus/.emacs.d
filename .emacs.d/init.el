@@ -85,8 +85,10 @@
                                 (setq-local display-line-numbers 'relative))))
 
 (with-delayed-execution
+  (advice-add 'bookmark-set-internal :after '(funcall 'bookmark=save)) ;; prot
   (setq bookmark-default-file "~/.emacs.d/bookmarks"
 	      cursor-in-non-selected-windows nil
+        savehist-additional-variables '(register-alist kill-ring) ;; prot
 	      help-window-select t
 	      large-file-warning-threshold nil
 	      shell-file-name "/bin/bash"
@@ -119,12 +121,12 @@
         (propertize " "
           'display `(space :align-to (- right ,r-length)))))
 	(setq-default mode-line-format
-								'(" %e " viper-mode-string "  "
+								'(" %e " viper-mode-string " "
                   (:eval (if (buffer-modified-p)
-                             (propertize "%b"
-                                         'face '((:slant italic :underline t))
+                             (propertize " %b "
+                                         'face '(:slant italic :inverse-video t)
                                          'help-echo (buffer-file-name))
-                           (propertize "%b" 'help-echo (buffer-file-name))))
+                           (propertize " %b " 'help-echo (buffer-file-name))))
                   (:eval (when (bound-and-true-p flymake-mode)
 													 flymake-mode-line-format))
                   (:eval (my/ml-padding))
@@ -152,7 +154,6 @@
 (require 'viper)
 
 (with-eval-after-load 'viper
-	(push 'org-capture-mode viper-insert-state-mode-list) ;; FIXME:
 	;; #times next command is run
 	(define-key viper-vi-global-user-map "\M-u" 'universal-argument)
 	;; macros
@@ -174,8 +175,6 @@
 	(define-key viper-vi-global-user-map "-" 'dired-jump)
 	(define-key viper-vi-global-user-map (kbd "M-<down>") 'scroll-other-window)
 	(define-key viper-vi-global-user-map (kbd "M-<up>") 'scroll-other-window-down)
-	(define-key viper-vi-global-user-map (kbd "C-t") 'tab-new)
-	(define-key viper-vi-global-user-map (kbd "C-w") 'tab-close)
 	(define-key viper-insert-global-user-map "\C-v" 'viper-Put-back)
 	(define-key viper-insert-global-user-map "\C-y" 'viper-Put-back)
 	;; Look into incorporating these via viper-vi-basic-map
@@ -232,7 +231,7 @@
     (interactive)
     (vertico-insert)
     (vertico-exit))
-  (keymap-set vertico-map "RET" #'my/vertico-gg)
+  ;; (keymap-set vertico-map "RET" #'my/vertico-gg)
   (setq vertico-scroll-margin 0
 	vertico-resize nil
 	vertico-cycle t))
@@ -294,7 +293,9 @@
 				(eldoc-box-help-at-point)))
 	(define-key viper-vi-local-user-map "K" #'my/doc-at-point)
   (with-eval-after-load 'helpful
-    (keymap-set helpful-mode-map "K" #'helpful-at-point))
+    (keymap-set helpful-mode-map "K" #'helpful-at-point)
+    (keymap-set helpful-mode-map "j" #'next-line)
+    (keymap-set helpful-mode-map "k" #'previous-line))
   (global-set-key (kbd "C-h f") #'helpful-callable)
   (global-set-key (kbd "C-h v") #'helpful-variable)
   (global-set-key (kbd "C-h k") #'helpful-key)
@@ -306,6 +307,7 @@
 (with-delayed-execution-priority-high
   (global-corfu-mode)
   (add-hook 'corfu-mode-hook 'corfu-popupinfo-mode)
+  (add-hook 'viper-vi-state-hook 'corfu-quit) ;; Godsend
   (keymap-set corfu-map "ESC" #'abort-minibuffers)
   (setq corfu-cycle t
 	      corfu-auto t
@@ -396,7 +398,6 @@
 	(add-hook 'prog-mode-hook 'tempel-setup-capf)
 	(add-hook 'text-mode-hook 'tempel-setup-capf)
 	(with-eval-after-load 'tempel
-		;; FIXME: terminal tab
 		(define-key tempel-map (kbd "<tab>") 'tempel-next)
 		(define-key tempel-map (kbd "TAB") 'tempel-next)
 		(define-key tempel-map (kbd "<backtab>") 'tempel-previous))
@@ -436,7 +437,7 @@
 	(add-hook 'python-mode-hook 'eglot-ensure)
 	(add-hook 'c-mode-hook 'eglot-ensure))
 
-;;;;; Markdown
+;;;;; Markdown / Nice-citation (gnus)
 (el-get-bundle jrbelvin/markdown-mode)
 (with-delayed-execution
   (setq markdown-command "multimarkdown")
@@ -444,6 +445,7 @@
   (with-eval-after-load 'markdown-mode
     (define-key markdown-mode-map (kbd "C-c C-e") #'markdown-do)))
 
+(el-get-bundle! damiencollard/nice-citation)
 
 ;;;;; Leetcode
 (el-get-bundle log4e)
@@ -561,19 +563,23 @@
 (global-set-key [f10] 'kill-current-buffer)
 (global-set-key (kbd "C-x x") 'org-capture)
 (global-set-key (kbd "C-c a") 'org-agenda)
-(global-set-key (kbd "M-k") 'windmove-up)
-(global-set-key (kbd "M-j") 'windmove-down)
-(global-set-key (kbd "M-h") 'windmove-left)
-(global-set-key (kbd "M-l") 'windmove-right)
-(global-set-key (kbd "M-d") 'delete-window)
-(global-set-key (kbd "M-s") 'split-window-below)
-(global-set-key (kbd "M-v") 'split-window-right)
+(global-set-key (kbd "C-c m") 'gnus)
+(global-set-key (kbd "C-t") 'tab-new)
+(global-set-key (kbd "C-w") 'tab-close)
+;; (global-set-key (kbd "M-k") 'windmove-up)
+;; (global-set-key (kbd "M-j") 'windmove-down)
+;; (global-set-key (kbd "M-h") 'windmove-left)
+;; (global-set-key (kbd "M-l") 'windmove-right)
+;; (global-set-key (kbd "M-d") 'delete-window)
+;; (global-set-key (kbd "M-s") 'split-window-below)
+;; (global-set-key (kbd "M-v") 'split-window-right)
 
 ;; dired
 (with-delayed-execution
   (setq dired-listing-switches "-ahl -v --group-directories-first")
   (define-key dired-mode-map "v" 'dired-x-find-file)
   (define-key dired-mode-map "V" 'dired-view-file)
+  (define-key dired-mode-map "l" 'browse-url-of-dired-file)
   (define-key dired-mode-map "j" 'dired-next-line)
   (define-key dired-mode-map "J" 'dired-goto-file)
   (define-key dired-mode-map "F" 'find-file)
@@ -606,6 +612,27 @@
 
 ;;; Random
 (with-delayed-execution
+  ;; FIXME:
+  (defun my/reload-config ()
+    (interactive)
+    (startup--load-user-init-file nil)
+    (load-file "~/.emacs.d/init.el")))
+
+(with-delayed-execution
+  (defun +setup-text-mode-left-margin () ;; teco
+    (interactive)
+    (when (and (derived-mode-p 'text-mode)
+               (eq (current-buffer)
+                   (window-buffer (frame-selected-window))))
+      (setq left-margin-width (if display-line-numbers
+                                  0 2))
+      (set-window-buffer (get-buffer-window (current-buffer))
+                         (current-buffer))))
+
+  (add-hook 'window-configuration-change-hook #'+setup-text-mode-left-margin)
+  (add-hook 'display-line-numbers-mode-hook #'+setup-text-mode-left-margin)
+  (add-hook 'text-mode-hook #'+setup-text-mode-left-margin)
+  
   (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
   (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
   (save-place-mode 1)
@@ -618,6 +645,7 @@
     (define-key doc-view-mode-map "j" 'doc-view-next-line-or-next-page)
     (define-key doc-view-mode-map "k" 'doc-view-previous-line-or-previous-page))
   (with-eval-after-load 'eww
+    (add-hook 'eww-mode-hook #'+setup-text-mode-left-margin)
     (define-key eww-mode-map "j" 'next-line)
     (define-key eww-mode-map "k" 'previous-line)
     (define-key eww-mode-map "h" 'eww-back-url)
@@ -655,6 +683,9 @@
 		(define-key org-mode-map [f5] #'my/org-inkscape-watcher)))
 ;;;; Org-Capture
 (with-eval-after-load 'org-capture
+  ;; FIXME:
+  (delete 'org-capture-mode viper-vi-state-mode-list)
+  (add-to-list 'viper-insert-state-mode-list "org-capture-mode")
   (setq
     +org-capture-readings-file "~/Dropbox/org/links.org"
 	  +org-capture-log-file "~/Dropbox/org/log.org"
@@ -669,7 +700,7 @@
 	     "* %u %?\n%i\n%a" :prepend t)
 	    ("r" "Readings" entry
 	     (file+headline +org-capture-readings-file "Readings")
-	     "* " :prepend t)
+	     "* %?" :prepend t)
 	    ("l" "Personal Log" entry
 	     (file +org-capture-log-file)
 	     "* %T %?" :prepend t)

@@ -5,8 +5,16 @@
 ;; https://github.com/redguardtoo/mastering-emacs-in-one-year-guide/blob/master/gnus-guide-en.org
 ;; https://www.bounga.org/tips/2020/05/03/multiple-smtp-accounts-in-gnus-without-external-tools/
 
-(with-delayed-execution
+;; (with-delayed-execution
     (with-eval-after-load 'gnus
+      ;; See: #52735
+      (defun srb-gnus-group-get-new-news (&optional arg one-level)
+        (interactive "P")
+        (with-timeout (1 (kill-buffer (nntp-find-connection-buffer nntp-server-buffer))
+		                     (gnus-group-get-new-news))
+          (gnus-group-get-new-news arg one-level)))
+      (define-key gnus-group-mode-map "g" 'srb-gnus-group-get-new-news)
+      
       ;; mode-line unread indicator
       (defun my/gnus-unread-count ()
         (interactive)
@@ -15,41 +23,50 @@
           (if (eq uc 0)
               ""
             (format " 📥 %s " uc))))
+      ;; FIXME: box not rendering completely
       (setq global-mode-string 
             (append global-mode-string 
                     (list '(:eval (propertize 
                                    (my/gnus-unread-count)
                                    'help-echo "Gnus : Unread"
-                                   'face '((:inverse-video t)))))))
+                                   'face '(:box '(:line-width -1 :color "blue")))))))
       ;; Better UI
       (gnus-add-configuration
        '(article
          (horizontal 1.0
-                     (vertical 30
+                     (vertical 25
                                (group 1.0))
                      (vertical 1.0
-                               (summary 0.30 point)
+                               (summary 0.25 point)
                                (article 1.0)))))
       (gnus-add-configuration
        '(summary
          (horizontal 1.0
-                     (vertical 30
+                     (vertical 25
                                (group 1.0))
                      (vertical 1.0
                                (summary 1.0 point)))))
+      (delete 'gnus-article-mode viper-vi-state-mode-list)
+      (with-eval-after-load 'gnus-summary
+        (keymap-set gnus-summary-mode-map "u" #'gnus-summary-put-mark-as-unread)
+        (keymap-set gnus-summary-mode-map "j" #'next-line)
+        (keymap-set gnus-summary-mode-map "k" #'previous-line))
+      (keymap-set gnus-article-mode-map "j" #'next-line)
+      (keymap-set gnus-article-mode-map "k" #'previous-line)
       (keymap-set gnus-article-mode-map "q" #'kill-buffer-and-window))
+      ;; (gnus-demon-add-handler 'gnus-demon-scan-news 5 1))
       ;; (add-hook 'gnus-article-mode-hook #'visual-line-mode)
     
-		(setq gnus-select-method '(nntp "news.gwene.org"))
+	  (setq gnus-select-method '(nntp "news.gwene.org"))
 		(setq gnus-secondary-select-methods
 					'((nnimap "personal"
-										(nnimap-address "imap.gmail.com")
+					    			(nnimap-address "imap.gmail.com")
 										(nnimap-server-port "993")
 										(nnimap-stream ssl)
 										(nnir-search-engine imap)
 										(nnmail-expiry-target "nnimap+personal:[Imap]/Trash")
 										(nnmail-expiry-wait 'immediate))
-						(nnimap "uni"
+         		(nnimap "uni"
 										(nnimap-address "imap.gmail.com")
 										(nnimap-server-port "993")
 										(nnimap-stream ssl)
@@ -57,7 +74,7 @@
 										(nnmail-expiry-target "nnimap+uni:[Imap]/Trash")
 										(nnmail-expiry-wait 'immediate))))
 		(setq gnus-asynchronous t
-					gnus-use-cache t
+		      gnus-use-cache t
 					gnus-cache-remove-articles nil
 					;; gnus-fetch-old-headers t
           mm-text-html-renderer 'shr
@@ -93,7 +110,7 @@
 					gnus-sum-thread-tree-indent " "
 					gnus-sum-thread-tree-root ""
 					gnus-sum-thread-tree-single-indent ""
-					gnus-sum-thread-tree-vertical        "|"
+					gnus-sum-thread-tree-vertical        "│"
 					gnus-sum-thread-tree-leaf-with-other "├─►"
 					gnus-sum-thread-tree-single-leaf     "╰─►"
 					gnus-user-date-format-alist '(((gnus-seconds-today) . " %H:%M")
@@ -153,6 +170,5 @@
 																	 "gwene.org.bitlbee.news.rss")
 																	("Unread"))))
 
-		(add-hook 'gnus-group-mode-hook #'gnus-topic-mode))
-;; (after! gnus
-;;   (gnus-demon-add-handler 'gnus-demon-scan-news 1 1))
+		(add-hook 'gnus-group-mode-hook #'gnus-topic-mode)
+;; )
