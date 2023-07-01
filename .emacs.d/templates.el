@@ -60,21 +60,7 @@ texinfo-mode
 
 lisp-mode emacs-lisp-mode ;; Specify multiple modes
 
-(lambda "(lambda (" p ")" n> r> ")")
-
 emacs-lisp-mode
-
-(autoload ";;;###autoload")
-(loop "(cl-loop for " p " in " p " do" n> r> ")")
-(command "(defun " p " (" p ")\n  \"" p "\"" n> "(interactive" p ")" n> r> ")")
-(advice "(defun " (p "adv" name) " (&rest app)" n> p n> "(apply app))" n>
-        "(advice-add #'" (p "fun") " " (p ":around") " #'" (s name) ")")
-(header ";;; " (file-name-nondirectory (or (buffer-file-name) (buffer-name)))
-        " -- " p " -*- lexical-binding: t -*-" n
-        ";;; Commentary:" n ";;; Code:" n n)
-(provide "(provide '" (file-name-base (or (buffer-file-name) (buffer-name))) ")" n
-         ";;; " (file-name-nondirectory (or (buffer-file-name) (buffer-name)))
-         " ends here" n)
 
 eshell-mode
 

@@ -8,19 +8,20 @@
 ;;  Ref 1: https://zenn.dev/takeokunn/articles/56010618502ccc
 ;;  Ref 2: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
 ;;  Ref 3: https://robbmann.io/emacsd/
-;;  TODO: file and buffer shortcuts, fix eldoc in terminal, bottom popup in gui,
-;;        terminal vertico arrow keys
+;;  TODO: fix eldoc in terminal, bottom popup in gui,
 ;;; Code:
 
 ;;; Startup hacks 
 ;; (setq comp-deferred-compilation t
-      ;; comp-async-report-warnings-errors nil)
+;;       comp-async-report-warnings-errors nil)
 
 ;; ;; (el-get-bundle benchmark-init)
 ;; (load "/home/prashant/.emacs.d/el-get/benchmark-init/benchmark-init.el"
-      ;; 'no-error nil 'no-suffix)
+;;       'no-error nil 'no-suffix)
 ;; (require 'benchmark-init)
 ;; (add-hook 'after-init-hook 'benchmark-init/deactivate)
+
+(setq t0 (current-time))
 
 (defvar my/delayed-priority-high-confs '())
 (defvar my/delayed-priority-high-conf-timer nil)
@@ -60,146 +61,41 @@
          (append my/delayed-priority-low-confs ',body)))
 
 ;; -----------------------------------------------------------------------------
-
 ;;; Better Defaults
-(setq-default user-full-name "Prashant Tak"
-              user-mail-address "prashantrameshtak@gmail.com"
-              smtpmail-smtp-server "smtp.gmail.com"
-              smtpmail-smtp-service 587
-              warning-minimum-level :error
-              tab-width 2
-	            indent-tabs-mode nil
-	            fill-column 80
-              delete-selection-mode t
-              mouse-yank-at-point t
-              custom-file (concat user-emacs-directory "custom.el")
-	            scroll-margin 0
-	            scroll-conservatively 100000
-	            scroll-preserve-screen-position 1
-              recenter-positions '(5 top bottom)
-              vc-follow-symlinks t)
+(with-delayed-execution
+  (setq-default user-full-name "Prashant Tak"
+                user-mail-address "prashantrameshtak@gmail.com"
+                smtpmail-smtp-server "smtp.gmail.com"
+                smtpmail-smtp-service 587
+                warning-minimum-level :error
+                tab-width 2
+	              indent-tabs-mode nil
+	              fill-column 80
+                delete-selection-mode t
+                mouse-yank-at-point t
+                custom-file (concat user-emacs-directory "custom.el")
+	              scroll-margin 10
+                scroll-step 1
+                next-screen-context-lines 5
+	              scroll-conservatively 100000
+	              scroll-preserve-screen-position 1
+                recenter-positions '(5 top bottom)
+                vc-follow-symlinks t
+                bookmark-default-file "~/doom-configs/.emacs.d/bookmarks"
+	              cursor-in-non-selected-windows nil
+	              help-window-select t
+	              large-file-warning-threshold nil
+	              show-paren-delay 0
+	              initial-buffer-choice t)
+    (advice-add 'bookmark-set-internal :after '(funcall 'bookmark=save))) ;; prot
 
-(with-delayed-execution-priority-high
+(with-delayed-execution
 	(add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
   (add-hook 'prog-mode-hook #'(lambda ()
                                 (setq-local display-line-numbers 'relative))))
 
-(with-delayed-execution
-  (advice-add 'bookmark-set-internal :after '(funcall 'bookmark=save)) ;; prot
-  (setq bookmark-default-file "~/.emacs.d/bookmarks"
-	      cursor-in-non-selected-windows nil
-        savehist-additional-variables '(register-alist kill-ring) ;; prot
-	      help-window-select t
-	      large-file-warning-threshold nil
-	      shell-file-name "/bin/bash"
-	      auth-sources '("~/.authinfo")
-	      show-paren-delay 0
-	      initial-buffer-choice 'remember-notes
-	      remember-notes-buffer-name "*scratch*"))
-
-;;;;; Visual
-(with-delayed-execution
-  (set-cursor-color "white")
-	(setq dracula-enlarge-headings nil
-        dracula-height-title-1 1.0
-        dracula-height-title-2 1.0
-        drcaula-height-doc-title 1.0))
-
-;; Modeline (Ref: https://github.com/motform/emacs.d/blob/master/init.el)
-(with-delayed-execution-priority-high
-	(setq-default flymake-mode-line-counter-format
-                '("" flymake-mode-line-error-counter
-                  flymake-mode-line-warning-counter
-                  flymake-mode-line-note-counter "")
-                flymake-mode-line-format
-								'(" " flymake-mode-line-exception flymake-mode-line-counters)
-								global-mode-string nil) ;; avoid duping of vi-indicator
-  (setq-default mode-line-end-spaces '("" (vc-mode vc-mode) " "
-                                       mode-line-misc-info " %l %p "))
-  (defun my/ml-padding ()
-    (let ((r-length (length (format-mode-line mode-line-end-spaces))))
-        (propertize " "
-          'display `(space :align-to (- right ,r-length)))))
-	(setq-default mode-line-format
-								'(" %e " viper-mode-string " "
-                  (:eval (if (buffer-modified-p)
-                             (propertize " %b "
-                                         'face '(:slant italic :inverse-video t)
-                                         'help-echo (buffer-file-name))
-                           (propertize " %b " 'help-echo (buffer-file-name))))
-                  (:eval (when (bound-and-true-p flymake-mode)
-													 flymake-mode-line-format))
-                  (:eval (my/ml-padding))
-                  mode-line-end-spaces)))
-
 ;;; Package Management
-;;;; Viper
-(setq-default
-	viper-mode t
-	viper-expert-level 5
-	viper-want-ctl-h-help t
-	viper-want-emacs-keys-in-insert t
-	viper-ex-style-editing nil
-	viper-ex-style-motion nil
-  viper-auto-indent t
-	viper-case-fold-search t
-	viper-inhibit-startup-message t
-	viper-vi-style-in-minibuffer nil
-	viper-ESC-moves-cursor-back nil
-	viper-shift-width 2
-	viper-fast-keyseq-timeout 300
-	viper-electric-mode t
-	viper-ex-style-motion nil)
-
-(require 'viper)
-
-(with-eval-after-load 'viper
-	;; #times next command is run
-	(define-key viper-vi-global-user-map "\M-u" 'universal-argument)
-	;; macros
-	;; (define-key viper-vi-global-user-map "q" 'kmacro-start-macro-or-insert-counter)
-	;; (define-key viper-vi-global-user-map "Q" 'kmacro-end-or-call-macro)
-	;; (define-key viper-vi-global-user-map "@" 'consult-kmacro)
-	;; WIP: visual mode
-	(define-key viper-vi-global-user-map "v" 'set-mark-command)
-	(define-key viper-vi-global-user-map "\C-v" 'rectangle-mark-mode)
-	(define-key viper-vi-global-user-map "q" 'keyboard-quit)
-	(define-key viper-vi-local-user-map "Y" 'copy-region-as-kill)
-	(define-key viper-vi-local-user-map "D" 'clipboard-kill-region) ;; DEL works
-	(define-key viper-vi-local-user-map "C" 'comment-or-uncomment-region)
-	;; ------------
-	(define-key viper-vi-global-user-map "F" 'find-file)
-	(define-key viper-vi-global-user-map "(" 'backward-list)
-	(define-key viper-vi-global-user-map ")" 'forward-list)
-	(define-key viper-vi-global-user-map ";" 'viper-ex)
-	(define-key viper-vi-global-user-map "-" 'dired-jump)
-	(define-key viper-vi-global-user-map (kbd "M-<down>") 'scroll-other-window)
-	(define-key viper-vi-global-user-map (kbd "M-<up>") 'scroll-other-window-down)
-	(define-key viper-insert-global-user-map "\C-v" 'viper-Put-back)
-	(define-key viper-insert-global-user-map "\C-y" 'viper-Put-back)
-	;; Look into incorporating these via viper-vi-basic-map
-	(viper-record-kbd-macro "gf" 'vi-state [(meta x) f f a p return] t)
-	(viper-record-kbd-macro "gd" 'vi-state [(meta .)] t)
-	(viper-record-kbd-macro "gt" 'vi-state [(ctrl x) t o] t)
-	(viper-record-kbd-macro "gT" 'vi-state [(ctrl x) t O] t)
-	(viper-record-kbd-macro "gg" 'vi-state [1 G] t)
-	(viper-record-kbd-macro "gcc" 'vi-state [(ctrl x) (ctrl \;)] t)
-	(viper-record-kbd-macro "jk" 'insert-state [escape] t))
-
-(eval-after-load 'viper
-	'(progn
-		 (setq viper-vi-state-id
-			 (concat (propertize "⬤" 'face '(:foreground "#ccdfff")) " "))
-		 (setq viper-emacs-state-id
-			 (concat (propertize "⬤" 'face '(:foreground "#b9f2c6")) " "))
-		 (setq viper-insert-state-id
-			 (concat (propertize "⬤" 'face '(:foreground "#fff576")) " "))
-		 (setq viper-replace-state-id
-			 (concat (propertize "⬤" 'face 'ansi-color-green) " "))
-			 (put 'viper-mode-string 'risky-local-variable t)))
-
-;;;; el-get (Packages)
-(add-to-list 'load-path (expand-file-name "el-get/el-get" user-emacs-directory))
+(push (expand-file-name "el-get/el-get" user-emacs-directory) load-path)
 
 (unless (require 'el-get nil 'noerror)
  (with-current-buffer
@@ -210,51 +106,102 @@
 (with-eval-after-load 'el-get-git
 	(setq el-get-git-shallow-clone t))
 
-(add-to-list 'el-get-recipe-path "~/.emacs.d/el-get-user/recipes")
+(push "~/.emacs.d/el-get-user/recipes" el-get-recipe-path)
 (setq el-get-is-lazy t)
+
+;;;;; Evil?
+(el-get-bundle undo-fu)
+(el-get-bundle undo-fu-session)
+(with-delayed-execution
+  (setq undo-limit 67108864
+	      undo-strong-limit 100663296
+	      undo-outer-limit 1006632960)
+  (undo-fu-session-global-mode))
+
+(el-get-bundle elpa:evil)
+(with-delayed-execution-priority-high
+  (define-key global-map (kbd "<escape>") #'keyboard-escape-quit)
+  (setq evil-want-keybinding t ;; nil
+        evil-split-window-below t
+        evil-vsplit-window-right t
+        evil-want-C-i-jump nil
+        evil-move-cursor-back nil
+        evil-auto-indent t
+        evil-move-beyond-eol t
+        evil-show-paren-range 0
+        evil-shift-width 2
+        evil-disable-insert-state-bindings t
+        evil-undo-system 'undo-fu
+        evil-normal-state-tag  (propertize "⬤" 'face '(:foreground "LightSteelBlue1"))
+        evil-emacs-state-tag   (propertize "⬤" 'face '(:foreground "dim gray"))
+        evil-insert-state-tag  (propertize "⬤" 'face '(:foreground "khaki1"))
+        evil-visual-state-tag  (propertize "⬤" 'face '(:foreground "medium spring green")))
+
+  (evil-mode 1)
+  (with-eval-after-load 'evil-maps (define-key evil-motion-state-map (kbd "TAB") nil)))
+
+;;;;; Modeline (Ref: https://github.com/motform/emacs.d/blob/master/init.el)
+(with-delayed-execution-priority-high
+  (setq-default flymake-mode-line-counter-format
+                '("" flymake-mode-line-error-counter
+                  flymake-mode-line-warning-counter
+                  flymake-mode-line-note-counter "")
+                global-mode-string nil
+                flymake-mode-line-format
+							  '(" " flymake-mode-line-exception flymake-mode-line-counters))
+  (setq-default mode-line-end-spaces '("" (vc-mode vc-mode) " "
+                                       mode-line-misc-info " %l %p "))
+  (defun my/ml-padding ()
+    (let ((r-length (length (format-mode-line mode-line-end-spaces))))
+      (propertize " "
+                  'display `(space :align-to (- right ,r-length)))))
+  (setq-default mode-line-format
+							  '(" %e "
+                  (:eval evil-mode-line-tag) " "
+                  (:eval (if (buffer-modified-p)
+                             (propertize " %b "
+                                         'face '(:slant italic :inverse-video t)
+                                         'help-echo (buffer-file-name))
+                           (propertize " %b " 'help-echo (buffer-file-name))))
+                  (:eval (when (bound-and-true-p flymake-mode)
+												   flymake-mode-line-format))
+                  (:eval (my/ml-padding))
+                  mode-line-end-spaces)))
 
 ;;;;; Vertico/Marginalia
 (el-get-bundle compat) ;; for minad's pkgs
 (el-get-bundle vertico)
-(vertico-mode)
-(savehist-mode)
 (with-delayed-execution-priority-high
+  (vertico-mode)
+  (savehist-mode)
   (keymap-set vertico-map "<backspace>" #'vertico-directory-delete-char)
   (keymap-set vertico-map "TAB" #'vertico-insert)
   (keymap-set vertico-map "ESC" #'abort-minibuffers)
   (keymap-set vertico-map "C-j" #'vertico-next)
-  ;; (keymap-set vertico-map "\e[OB" #'vertico-next) ;; FIXME
   (keymap-set vertico-map "C-k" #'vertico-previous)
-  ;; (keymap-set vertico-map "\e[OA" #'vertico-previous)
-  ;; RET -> insert and select (FIXME: Selects even if no exact match)
-  (defun my/vertico-gg (&optional arg)
-    (interactive)
-    (vertico-insert)
-    (vertico-exit))
-  ;; (keymap-set vertico-map "RET" #'my/vertico-gg)
   (setq vertico-scroll-margin 0
-	vertico-resize nil
-	vertico-cycle t))
+	      vertico-resize nil
+	      vertico-cycle t))
 
 (el-get-bundle marginalia)
-(with-delayed-execution-priority-high
+(with-delayed-execution
 	(marginalia-mode))
 
 ;;;;; Consult/Orderless
 (el-get-bundle orderless)
 (with-delayed-execution-priority-high
 	(setq completion-category-defaults nil
-	completion-styles '(substring orderless basic)
-	completion-category-overrides '((file (styles basic partial-completion)))
-	completion-ignore-case t
-	read-buffer-completion-ignore-case t
-	read-file-name-completion-ignore-case t
-	completion-in-region-function
-	(lambda (&rest args)
-	  (apply (if vertico-mode
-		     #'consult-completion-in-region
-		   #'completion--in-region)
-		 args))))
+	      completion-styles '(substring orderless basic)
+	      completion-category-overrides '((file (styles basic partial-completion)))
+	      completion-ignore-case t
+	      read-buffer-completion-ignore-case t
+	      read-file-name-completion-ignore-case t
+	      completion-in-region-function
+	      (lambda (&rest args)
+	        (apply (if vertico-mode
+		                 #'consult-completion-in-region
+		               #'completion--in-region)
+		             args))))
   
 (el-get-bundle consult)
 (with-delayed-execution-priority-high
@@ -268,8 +215,9 @@
 				recentf-save-file  "~/.emacs.d/.recentf"
 				recentf-exclude '(".recentf" "\\.gpg\\"))
   (recentf-mode)
-  (define-key viper-vi-global-user-map (kbd "SPC") 'consult-buffer)
-  (define-key viper-vi-global-user-map (kbd "?") 'consult-recent-file)
+  (evil-define-key 'normal 'global
+    (kbd "SPC") 'consult-buffer
+    "?" 'consult-recent-file)
   (global-set-key (kbd "C-x f") 'consult-recent-file)
   (global-set-key (kbd "C-<return>") 'consult-bookmark)
   (global-set-key (kbd "C-x b") 'consult-buffer)
@@ -286,16 +234,11 @@
 
 (el-get-bundle helpful)
 (with-delayed-execution
-	(defun my/doc-at-point (&rest args)
-			(interactive)
-			(if (derived-mode-p 'emacs-lisp-mode)
-					(helpful-at-point)
-				(eldoc-box-help-at-point)))
-	(define-key viper-vi-local-user-map "K" #'my/doc-at-point)
+  (evil-define-key 'normal emacs-lisp-mode-map "K" #'helpful-at-point)
   (with-eval-after-load 'helpful
-    (keymap-set helpful-mode-map "K" #'helpful-at-point)
-    (keymap-set helpful-mode-map "j" #'next-line)
-    (keymap-set helpful-mode-map "k" #'previous-line))
+    (evil-define-key 'normal helpful-mode-map
+      "K" #'helpful-at-point
+      "q" #'(lambda () (interactive) (quit-window t)))) ;; hate unused buffers
   (global-set-key (kbd "C-h f") #'helpful-callable)
   (global-set-key (kbd "C-h v") #'helpful-variable)
   (global-set-key (kbd "C-h k") #'helpful-key)
@@ -304,45 +247,35 @@
 
 ;;;;; Cape and Corfu
 (el-get-bundle corfu)
-(with-delayed-execution-priority-high
+(with-delayed-execution
   (global-corfu-mode)
   (add-hook 'corfu-mode-hook 'corfu-popupinfo-mode)
-  (add-hook 'viper-vi-state-hook 'corfu-quit) ;; Godsend
-  (keymap-set corfu-map "ESC" #'abort-minibuffers)
-  (setq corfu-cycle t
-	      corfu-auto t
-	      corfu-auto-prefix 2
-	      corfu-auto-delay 0
-	      corfu-separator ?_
-	      corfu-quit-no-match t
-	      corfu-preview-current nil
-	      corfu-popupinfo-delay '(0.2 . 0.1)
-	      corfu-preselect-first nil
-	      tab-always-indent 'complete)
-  (add-hook 'eshell-mode-hook
-	    (lambda ()
-	      (setq-local corfu-auto nil)
-	      (corfu-mode))))
+  (add-hook 'evil-insert-state-exit-hook 'corfu-quit)
+  (with-eval-after-load 'corfu
+    (keymap-set corfu-map "ESC" #'abort-minibuffers)
+    (setq corfu-cycle t
+	        corfu-auto t
+	        corfu-auto-prefix 2
+	        corfu-auto-delay 0
+	        corfu-separator ?_
+	        corfu-quit-no-match t
+	        corfu-preview-current nil
+	        corfu-popupinfo-delay '(0.2 . 0.1)
+	        corfu-preselect-first nil
+	        tab-always-indent 'complete)
+    (add-hook 'eshell-mode-hook
+	            (lambda ()
+	              (setq-local corfu-auto nil)
+	              (corfu-mode)))))
 
 (el-get-bundle cape)
-(with-delayed-execution-priority-high
+(with-delayed-execution
 	(defun my/add-capfs ()
 		(push 'cape-file completion-at-point-functions)
 		(push 'cape-dabbrev completion-at-point-functions)
 		(push 'cape-keyword completion-at-point-functions))
 	(add-hook 'prog-mode-hook #'my/add-capfs)
 	(add-hook 'text-mode-hook #'my/add-capfs))
-
-;;;;; Undo tree/ which-key
-(el-get-bundle undo-fu)
-(el-get-bundle undo-fu-session)
-(with-delayed-execution-priority-high
-  (setq undo-limit 67108864
-	      undo-strong-limit 100663296
-	      undo-outer-limit 1006632960)
-  (define-key viper-vi-global-user-map "u" #'undo-fu-only-undo)
-  (define-key viper-vi-global-user-map "\C-r" #'undo-fu-only-redo)
-  (undo-fu-session-global-mode))
 
 (el-get-bundle which-key)
 (with-delayed-execution
@@ -404,6 +337,7 @@
 	(setq tempel-path "~/.emacs.d/templates.el"))
 
 ;;;;; eglot
+(el-get-bundle expand-region)
 (el-get-bundle! project
 	:url "https://raw.githubusercontent.com/emacs-mirror/emacs/master/lisp/progmodes/project.el")
 (el-get-bundle rustic)
@@ -422,8 +356,8 @@
 		(if (display-graphic-p)
 				(global-eldoc-mode -1))
 		(add-hook 'eglot-managed-mode-hook 'tempel-setup-capf)
-		(define-key eglot-mode-map "K" 'eldoc-box-help-at-point)
-    (define-key viper-vi-local-user-map "X" 'flymake-show-buffer-diagnostics)
+		(evil-define-key 'normal eglot-mode-map "K" 'eldoc-box-help-at-point)
+		(evil-define-key 'normal eglot-mode-map "X" 'flymake-show-buffer-diagnostics)
 		;; pacman -S clang pyright rust-analyzer
 		;; yay -S jdtls jdk-openjdk jre-openjdk
 		;; rustup component add rust-analyzer
@@ -437,14 +371,7 @@
 	(add-hook 'python-mode-hook 'eglot-ensure)
 	(add-hook 'c-mode-hook 'eglot-ensure))
 
-;;;;; Markdown / Nice-citation (gnus)
-(el-get-bundle jrbelvin/markdown-mode)
-(with-delayed-execution
-  (setq markdown-command "multimarkdown")
-  (add-to-list 'auto-mode-alist '("README\\.md\\'" . gfm-mode))
-  (with-eval-after-load 'markdown-mode
-    (define-key markdown-mode-map (kbd "C-c C-e") #'markdown-do)))
-
+;;;;; Nice-citation (gnus)
 (el-get-bundle! damiencollard/nice-citation)
 
 ;;;;; Leetcode
@@ -455,13 +382,12 @@
 (with-delayed-execution
   (defun set-exec-path-from-shell-PATH ()
     "Set up Emacs' `exec-path' and PATH environment variable to match
-  that used by the user's shell."
+     that used by the user's shell."
     (interactive)
     (let ((path-from-shell (replace-regexp-in-string
           "[ \t\n]*$" "" (shell-command-to-string
               "$SHELL --login -c 'echo $PATH'"
                   ))))
-      ;; (setenv "PATH" path-from-shell)
       (setq exec-path (split-string path-from-shell path-separator))))
 
   (set-exec-path-from-shell-PATH)
@@ -489,8 +415,10 @@
 
 ;;; Compilation
 (with-delayed-execution
-	(setq compilation-scroll-output 'first-error
-				compilation-always-kill t)
+  (with-eval-after-load 'compile
+	  (setq compilation-scroll-output 'first-error
+				  compilation-always-kill t
+          compilation-environment '("TERM=xterm-256color"))) ;; flat
 	(add-hook 'racket-mode-hook 
             #'(lambda ()
 						    (setq-local compile-command 
@@ -556,38 +484,47 @@
 	(define-auto-insert "\.cpp" ["comp.cpp"
 															 my/eval-auto-insert-init-form]))
 
-;;; Keymaps
-(global-set-key [f2] 'save-buffer)
-(global-set-key [f3] 'paste-input)
-(global-set-key [f4] 'compile)
-(global-set-key [f10] 'kill-current-buffer)
-(global-set-key (kbd "C-x x") 'org-capture)
-(global-set-key (kbd "C-c a") 'org-agenda)
-(global-set-key (kbd "C-c m") 'gnus)
-(global-set-key (kbd "C-t") 'tab-new)
-(global-set-key (kbd "C-w") 'tab-close)
-;; (global-set-key (kbd "M-k") 'windmove-up)
-;; (global-set-key (kbd "M-j") 'windmove-down)
-;; (global-set-key (kbd "M-h") 'windmove-left)
-;; (global-set-key (kbd "M-l") 'windmove-right)
-;; (global-set-key (kbd "M-d") 'delete-window)
-;; (global-set-key (kbd "M-s") 'split-window-below)
-;; (global-set-key (kbd "M-v") 'split-window-right)
+;;; Key binds
+(with-delayed-execution-priority-high
+  (evil-set-leader 'normal "'") ;; ' is leader
+  (evil-define-key 'normal 'global
+    (kbd "<leader>fs") 'save-buffer
+    (kbd "<leader>qq") 'save-buffers-kill-emacs
+    )
+  (evil-define-key 'normal 'global
+    "-" 'dired-jump
+    (kbd "C-'") 'er/expand-region
+    (kbd "C-f") 'find-file
+    ";" 'evil-ex
+    ":" 'evil-repeat-find-char
+    (kbd "A-f") 'fill-paragraph
+    (kbd "gcc") 'comment-line 
+    (kbd "C-t") 'tab-new)
+  (global-set-key [f2] 'save-buffer)
+  (global-set-key [f3] 'paste-input)
+  (global-set-key [f4] 'compile)
+  (global-set-key [f10] 'kill-current-buffer)
+  (global-set-key (kbd "C-x x") 'org-capture)
+  (global-set-key (kbd "C-c a") 'org-agenda)
+  (global-set-key (kbd "C-c m") 'gnus)
+  (global-set-key (kbd "C-'") 'er/expand-region)
+  (global-set-key (kbd "C-t") 'tab-new)
+  (global-set-key (kbd "C-w") 'tab-close)
+  (global-set-key (kbd "M-k") 'windmove-up)
+  (global-set-key (kbd "M-j") 'windmove-down)
+  (global-set-key (kbd "M-h") 'windmove-left)
+  (global-set-key (kbd "M-l") 'windmove-right)
+  (global-set-key (kbd "M-d") 'delete-window)
+  (global-set-key (kbd "M-s") 'split-window-below)
+  (global-set-key (kbd "M-v") 'split-window-right))
 
 ;; dired
 (with-delayed-execution
   (setq dired-listing-switches "-ahl -v --group-directories-first")
-  (define-key dired-mode-map "v" 'dired-x-find-file)
-  (define-key dired-mode-map "V" 'dired-view-file)
-  (define-key dired-mode-map "l" 'browse-url-of-dired-file)
-  (define-key dired-mode-map "j" 'dired-next-line)
-  (define-key dired-mode-map "J" 'dired-goto-file)
-  (define-key dired-mode-map "F" 'find-file)
-  (define-key dired-mode-map "k" 'dired-previous-line)
-  (define-key dired-mode-map "K" 'dired-do-kill-lines)
+  (evil-define-key 'normal dired-mode-map
+    "O" 'browse-url-of-dired-file
+    "q" #'(lambda () (interactive) (quit-window t))) ;; hate unused buffers
   (define-key dired-mode-map "-" 'dired-up-directory)
-  (define-key dired-mode-map (kbd "<space>") 'consult-buffer)
-  (define-key dired-mode-map (kbd "SPC") 'consult-buffer)
   (define-key dired-mode-map "~"
     #'(lambda () (interactive) (dired "/home/prashant/")))
 	(setq dired-dwim-target t
@@ -612,13 +549,6 @@
 
 ;;; Random
 (with-delayed-execution
-  ;; FIXME:
-  (defun my/reload-config ()
-    (interactive)
-    (startup--load-user-init-file nil)
-    (load-file "~/.emacs.d/init.el")))
-
-(with-delayed-execution
   (defun +setup-text-mode-left-margin () ;; teco
     (interactive)
     (when (and (derived-mode-p 'text-mode)
@@ -638,18 +568,21 @@
   (save-place-mode 1)
   (global-auto-revert-mode t)
   (winner-mode 1)
+  (push '("README\\.md\\'" . gfm-mode) auto-mode-alist)
   (with-eval-after-load 'winner
     (define-key winner-mode-map (kbd "C-c C-<left>") 'winner-undo)
     (define-key winner-mode-map (kbd "C-c C-<right>") 'winner-redo))
-  (with-eval-after-load 'doc-view
-    (define-key doc-view-mode-map "j" 'doc-view-next-line-or-next-page)
-    (define-key doc-view-mode-map "k" 'doc-view-previous-line-or-previous-page))
   (with-eval-after-load 'eww
     (add-hook 'eww-mode-hook #'+setup-text-mode-left-margin)
-    (define-key eww-mode-map "j" 'next-line)
-    (define-key eww-mode-map "k" 'previous-line)
-    (define-key eww-mode-map "h" 'eww-back-url)
-    (define-key eww-mode-map "l" 'eww-forward-url))
+    (evil-define-key 'normal 'eww-mode-map
+      "q" #'quit-window
+      "H" #'eww-back-url))
+  (with-delayed-execution
+  (set-cursor-color "white")
+	(setq dracula-enlarge-headings nil
+        dracula-height-title-1 1.0
+        dracula-height-title-2 1.0
+        drcaula-height-doc-title 1.0))
   (show-paren-mode)
   (global-hl-line-mode)
 	(add-hook 'after-save-hook
@@ -663,6 +596,7 @@
 ;; (el-get-bundle engrave-faces)
 (with-delayed-execution
 	(setq org-latex-toc-command "\\tableofcontents \\clearpage"
+        org-directory "~/Dropbox/org/"
         org-startup-indented t
         org-startup-folded t
 				org-src-preserve-indentation t
@@ -683,30 +617,27 @@
 		(define-key org-mode-map [f5] #'my/org-inkscape-watcher)))
 ;;;; Org-Capture
 (with-eval-after-load 'org-capture
-  ;; FIXME:
-  (delete 'org-capture-mode viper-vi-state-mode-list)
-  (add-to-list 'viper-insert-state-mode-list "org-capture-mode")
-  (setq
-    +org-capture-readings-file "~/Dropbox/org/links.org"
-	  +org-capture-log-file "~/Dropbox/org/log.org"
-	  +org-capture-todo-file "~/Dropbox/org/inbox.org"
-    +org-capture-journal-file "~/Dropbox/org/journal.org"
-	  org-capture-templates
-	  '(("t" "Personal todo" entry
-	     (file+headline +org-capture-todo-file "todo")
-	     "* TODO %?\n%i\n%a%f" :prepend t)
-	    ("n" "Personal notes" entry
-	     (file+headline +org-capture-notes-file "Notes")
-	     "* %u %?\n%i\n%a" :prepend t)
-	    ("r" "Readings" entry
-	     (file+headline +org-capture-readings-file "Readings")
-	     "* %?" :prepend t)
-	    ("l" "Personal Log" entry
-	     (file +org-capture-log-file)
-	     "* %T %?" :prepend t)
-	    ("j" "Journal" entry
-	     (file+olp+datetree +org-capture-journal-file)
-       "* %U %?\n** What happened \n
+  (push "org-capture-mode" evil-insert-state-modes)
+  (setq +org-capture-readings-file "~/Dropbox/org/links.org"
+	      +org-capture-log-file "~/Dropbox/org/log.org"
+	      +org-capture-todo-file "~/Dropbox/org/inbox.org"
+        +org-capture-journal-file "~/Dropbox/org/journal.org"
+	      org-capture-templates
+	      '(("t" "Personal todo" entry
+	         (file+headline +org-capture-todo-file "todo")
+	         "* TODO %?\n%i\n%a%f" :prepend t)
+	        ("n" "Personal notes" entry
+	         (file+headline +org-capture-notes-file "Notes")
+	         "* %u %?\n%i\n%a" :prepend t)
+	        ("r" "Readings" entry
+	         (file+headline +org-capture-readings-file "Readings")
+	         "* %?" :prepend t)
+	        ("l" "Personal Log" entry
+	         (file +org-capture-log-file)
+	         "* %T %?" :prepend t)
+	        ("j" "Journal" entry
+	         (file+olp+datetree +org-capture-journal-file)
+           "* %U %?\n** What happened \n
 ** What is going through your mind? \n
 ** What emotions are you feeling? \n
 ** What thought pattern do you recognize? \n
@@ -730,7 +661,13 @@
 
 ;; Gnus
 (with-delayed-execution
+  (autoload 'gnus "nice-citation" nil t)
 	(load "~/.emacs.d/+gnus" nil t))
+
+;;; Config performance measure
+(let ((elapsed (float-time (time-subtract (current-time) t0))))
+  (makunbound 't0)
+  (message "Spent %.3fs in init.el" elapsed))
 
 (provide 'init)
 ;;; init.el ends here
