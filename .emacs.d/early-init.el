@@ -46,7 +46,11 @@
       auto-save-list-file-prefix nil
       make-backup-files nil
       create-lockfiles nil
-      inhibit-startup-screen t)
+      inhibit-startup-screen t
+      bidi-inhibit-bpa t)
+
+(setq-default bidi-display-reordering 'left-to-right
+              bidi-paragraph-direction 'left-to-right)
 
 (provide 'early-init)
 ;;; early-init.el ends here

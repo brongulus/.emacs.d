@@ -8,8 +8,8 @@
 ;;  Ref 1: https://zenn.dev/takeokunn/articles/56010618502ccc
 ;;  Ref 2: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
 ;;  Ref 3: https://robbmann.io/emacsd/
-;;  TODO: fix eldoc in terminal, bottom popup in gui,
-;;  TODO: lazy load tempel, corfu, eglot
+;;  TODO: fix eldoc in terminal, bottom popup in gui, clean compile command
+;;  TODO: lazy load tempel, corfu, eglot, autoload stuff by keybind?
 ;;  ref: https://github.com/doomemacs/doomemacs/blob/develop/docs/faq.org#how-does-doom-start-up-so-quickly
 ;;; Code:
 
@@ -72,6 +72,7 @@
                 warning-minimum-level :error
                 tab-width 2
                 indent-tabs-mode nil
+                enable-recursive-minibuffers t
                 fill-column 80
                 delete-selection-mode t
                 mouse-yank-at-point t
@@ -89,7 +90,7 @@
                 large-file-warning-threshold nil
                 show-paren-delay 0
                 initial-buffer-choice t)
-    (advice-add 'bookmark-set-internal :after '(funcall 'bookmark=save))) ;; prot
+  (advice-add 'bookmark-set-internal :after '(funcall 'bookmark=save))) ;; prot
 
 (with-delayed-execution
   (add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
@@ -100,11 +101,11 @@
 (push (expand-file-name "el-get/el-get" user-emacs-directory) load-path)
 
 (unless (require 'el-get nil 'noerror)
- (with-current-buffer
-     (url-retrieve-synchronously
-      "https://raw.githubusercontent.com/dimitri/el-get/master/el-get-install.el")
-   (goto-char (point-max))
- (eval-print-last-sexp)))
+  (with-current-buffer
+      (url-retrieve-synchronously
+       "https://raw.githubusercontent.com/dimitri/el-get/master/el-get-install.el")
+    (goto-char (point-max))
+    (eval-print-last-sexp)))
 (with-eval-after-load 'el-get-git
   (setq el-get-git-shallow-clone t))
 
@@ -121,6 +122,7 @@
   (undo-fu-session-global-mode))
 
 (el-get-bundle elpa:evil)
+(el-get-bundle evil-escape)
 (with-delayed-execution-priority-high
   (define-key global-map (kbd "<escape>") #'keyboard-escape-quit)
   (setq evil-want-keybinding t ;; nil
@@ -129,18 +131,24 @@
         evil-want-C-i-jump nil
         evil-cross-lines t
         evil-move-cursor-back nil
+        evil-want-Y-yank-to-eol t
         evil-auto-indent t
         evil-move-beyond-eol t
         evil-shift-width 2
         evil-disable-insert-state-bindings t
         evil-undo-system 'undo-fu
         evil-normal-state-tag  (propertize "⬤" 'face '(:foreground "LightSteelBlue1"))
+        evil-motion-state-tag  (propertize "⬤" 'face '(:foreground "LightSteelBlue1"))
         evil-emacs-state-tag   (propertize "⬤" 'face '(:foreground "dim gray"))
         evil-insert-state-tag  (propertize "⬤" 'face '(:foreground "khaki1"))
         evil-visual-state-tag  (propertize "⬤" 'face '(:foreground "medium spring green")))
 
   (evil-mode 1)
+  (evil-escape-mode)
+  (setq-default evil-escape-key-sequence "jk")
   (add-to-list 'evil-highlight-closing-paren-at-point-states 'normal t)
+  ;; (evil-define-key '(normal motion) 'messages-buffer-mode-map "q" #'quit-window) ;; FIXME: QoL
+  (evil-define-key '(normal motion) 'Info-mode-map "RET" #'Info-follow-nearest-node)
   (with-eval-after-load 'evil-maps (define-key evil-motion-state-map (kbd "TAB") nil)))
 
 ;;;;; Modeline (Ref: https://github.com/motform/emacs.d/blob/master/init.el)
@@ -171,14 +179,17 @@
                   (:eval (my/ml-padding))
                   mode-line-end-spaces)))
 
-;;;;; Vertico/Marginalia
+;;;;; Vertico/Marginalia (TnG completion)
 (el-get-bundle compat) ;; for minad's pkgs
 (el-get-bundle vertico)
 (with-delayed-execution-priority-high
   (vertico-mode)
   (savehist-mode)
   (keymap-set vertico-map "<backspace>" #'vertico-directory-delete-char)
-  (keymap-set vertico-map "TAB" #'vertico-insert)
+  (keymap-set vertico-map "RET" #'vertico-directory-enter)
+  (keymap-set vertico-map "TAB" #'vertico-next)
+  (keymap-set vertico-map "<backtab>" #'vertico-previous)
+  (keymap-set vertico-map "S-TAB" #'vertico-previous)
   (keymap-set vertico-map "C-j" #'vertico-next)
   (keymap-set vertico-map "C-k" #'vertico-previous)
   (setq vertico-scroll-margin 0
@@ -189,7 +200,7 @@
 (with-delayed-execution
   (marginalia-mode))
 
-;;;;; Consult/Orderless
+;;;;; Consult/Orderless (Recentf)
 (el-get-bundle orderless)
 (with-delayed-execution
   (setq completion-category-defaults nil
@@ -204,7 +215,7 @@
                      #'consult-completion-in-region
                    #'completion--in-region)
                  args))))
-  
+
 (el-get-bundle consult)
 (with-delayed-execution
   (when (executable-find "rg")
@@ -215,11 +226,11 @@
   (setq recentf-max-menu-items 10000
         recentf-max-saved-items 10000
         recentf-save-file  "~/.emacs.d/.recentf"
-        recentf-exclude '(".recentf" "\\.gpg\\"))
+        recentf-exclude '(".recentf" "\\.gpg\\")
+        recentf-filename-handlers '(substring-no-properties
+                                    abbreviate-file-name))
   (recentf-mode)
-  (evil-define-key 'normal 'global
-    (kbd "SPC") 'consult-buffer
-    "?" 'consult-recent-file)
+  (add-hook 'kill-emacs-hook #'recentf-cleanup)
   (global-set-key (kbd "C-x f") 'consult-recent-file)
   (global-set-key (kbd "C-<return>") 'consult-bookmark)
   (global-set-key (kbd "C-x b") 'consult-buffer)
@@ -237,10 +248,9 @@
 (el-get-bundle helpful)
 (with-delayed-execution
   (evil-define-key 'normal emacs-lisp-mode-map "K" #'helpful-at-point)
-  (with-eval-after-load 'helpful
-    (evil-define-key 'normal helpful-mode-map
-      "K" #'helpful-at-point
-      "q" #'(lambda () (interactive) (quit-window t)))) ;; hate unused buffers
+  (evil-define-key '(normal motion) helpful-mode-map
+    "K" #'helpful-at-point
+    "q" #'(lambda () (interactive) (quit-window t))) ;; fixme: hate unused buffers
   (global-set-key (kbd "C-h f") #'helpful-callable)
   (global-set-key (kbd "C-h v") #'helpful-variable)
   (global-set-key (kbd "C-h k") #'helpful-key)
@@ -254,17 +264,37 @@
   (add-hook 'corfu-mode-hook 'corfu-popupinfo-mode)
   (add-hook 'evil-insert-state-exit-hook 'corfu-quit)
   (with-eval-after-load 'corfu
-    (keymap-set corfu-map "ESC" #'abort-minibuffers)
+    ;; TnG completion
+    (keymap-set corfu-map "TAB" #'corfu-next)
+    (define-key corfu-map [tab] #'corfu-next)
+    (keymap-set corfu-map "S-TAB" #'corfu-previous)
+    (define-key corfu-map [backtab] #'corfu-previous)
     (setq corfu-cycle t
           corfu-auto t
           corfu-auto-prefix 2
           corfu-auto-delay 0
-          corfu-separator ?_
+          corfu-separator 32
           corfu-quit-no-match t
           corfu-preview-current nil
           corfu-popupinfo-delay '(0.2 . 0.1)
           corfu-preselect-first nil
           tab-always-indent 'complete)
+    (define-key corfu-map (kbd "SPC") ;; FIXME: corfu wiki 
+      (lambda ()
+        (interactive)
+        (if current-prefix-arg
+            (progn
+              (corfu-quit)
+              (insert " "))
+          (if (and (= (char-before) corfu-separator)
+                   (or
+                    (not (char-after))
+                    (= (char-after) ?\s)
+                    (= (char-after) ?\n)))
+              (progn
+                (corfu-insert)
+                (insert " "))
+            (corfu-insert-separator)))))
     (add-hook 'eshell-mode-hook
               (lambda ()
                 (setq-local corfu-auto nil)
@@ -356,8 +386,8 @@
 (el-get-bundle! eglot)
 (with-delayed-execution
   ;; FIXME:
-  (evil-define-key 'normal eglot-mode-map "K" 'eldoc-box-help-at-point)
-  (evil-define-key 'normal eglot-mode-map "X" 'flymake-show-buffer-diagnostics)
+  (evil-define-key 'normal eglot-mode-map "K" #'eldoc-box-help-at-point)
+  (evil-define-key 'normal eglot-mode-map "X" #'flymake-show-buffer-diagnostics)
   (with-eval-after-load 'eglot
     (if (display-graphic-p)
         (global-eldoc-mode -1))
@@ -377,6 +407,19 @@
 
 ;;;;; Nice-citation (gnus)
 (el-get-bundle! damiencollard/nice-citation)
+;;;;; Dirvish
+(el-get-bundle dirvish)
+(with-delayed-execution
+  (dirvish-override-dired-mode)
+  ;; (add-hook 'dirvish-override-dired-mode-hook 'dirvish-emerge-mode)
+  ;; (evil-define-key 'normal 'dirvish-mode-map "q" #'dirvish-quit)
+  (setq-default dirvish-emerge-groups
+                '(("Recent files" (predicate . recent-files-2h))
+                  ("Documents" (extensions "pdf" "tex" "bib" "epub"))
+                  ("Video" (extensions "mp4" "mkv" "webm"))
+                  ("Pictures" (extensions "jpg" "png" "svg" "gif"))
+                  ("Audio" (extensions "mp3" "flac" "wav" "ape" "aac"))
+                  ("Archives" (extensions "gz" "rar" "zip")))))
 
 ;;;;; Leetcode
 (el-get-bundle log4e)
@@ -389,9 +432,9 @@
      that used by the user's shell."
     (interactive)
     (let ((path-from-shell (replace-regexp-in-string
-          "[ \t\n]*$" "" (shell-command-to-string
-              "$SHELL --login -c 'echo $PATH'"
-                  ))))
+                            "[ \t\n]*$" "" (shell-command-to-string
+                                            "$SHELL --login -c 'echo $PATH'"
+                                            ))))
       (setq exec-path (split-string path-from-shell path-separator))))
 
   (set-exec-path-from-shell-PATH)
@@ -431,7 +474,7 @@
   (add-hook 'rust-mode-hook
             #'(lambda ()
                 (setq-local compile-command
-                ;; (setq-local compile-command "cargo build && cargo run")
+                            ;; (setq-local compile-command "cargo build && cargo run")
                             (concat "rustc " buffer-file-name
                                     " && ./"
                                     (file-name-sans-extension
@@ -475,13 +518,13 @@
     (goto-char (point-min))
     (cl-letf (((symbol-function '\`) #'progn))
       (while (re-search-forward "`" nil t)
-      (let* ((beg (goto-char (match-beginning 0)))
-           (end (with-syntax-table emacs-lisp-mode-syntax-table
-              (forward-sexp)
-              (point)))
-           (str (eval (read (buffer-substring beg end)))))
-      (delete-region beg end)
-      (insert str)))))
+        (let* ((beg (goto-char (match-beginning 0)))
+               (end (with-syntax-table emacs-lisp-mode-syntax-table
+                      (forward-sexp)
+                      (point)))
+               (str (eval (read (buffer-substring beg end)))))
+          (delete-region beg end)
+          (insert str)))))
   (auto-insert-mode)
   (setq auto-insert-directory "~/doom-configs/.emacs.d/templates/"
         auto-insert-query nil)
@@ -490,51 +533,61 @@
 
 ;;; Key binds / Key maps
 (with-delayed-execution-priority-high
-  (evil-set-leader 'normal "'") ;; ' is leader
-  (evil-set-leader 'normal "," t) ;; , is localleader
+  (evil-set-leader 'normal (kbd "SPC")) ;; SPC is leader
+  (evil-set-leader 'normal "'" t) ;; ' is localleader
   (evil-define-key 'normal 'global
-    (kbd "<leader>fs") 'save-buffer
-    (kbd "<leader>qq") 'save-buffers-kill-emacs
-    (kbd "<leader>fp") '(lambda () (interactive) (find-file "~/.emacs.d/init.el"))
-    (kbd "<leader>gg") 'magit
-    (kbd "<leader>om") 'gnus
-    (kbd "<leader>ot") 'term)
+    (kbd "<leader>SPC") #'consult-buffer
+    (kbd "<leader>fr") #'consult-recent-file
+    (kbd "<leader>fs") #'save-buffer
+    (kbd "<leader>qq") #'save-buffers-kill-emacs
+    (kbd "<leader>fp") #'(lambda () (interactive) (find-file "~/.emacs.d/init.el"))
+    (kbd "<leader>gg") #'magit
+    (kbd "<leader>om") #'gnus
+    (kbd "<leader>ot") #'eshell)
+  (evil-define-key 'visual 'global (kbd ", TAB") #'untabify)
   (evil-define-key 'normal 'global
-    ")" 'evil-next-close-paren
-    "(" 'evil-previous-open-paren
-    "-" 'dired-jump
-    "+" 'er/expand-region
-    (kbd "C-f") 'find-file
-    ";" 'evil-ex
-    ":" 'evil-repeat-find-char
-    (kbd "A-f") 'fill-paragraph
-    (kbd "gcc") 'comment-line 
-    (kbd "C-t") 'tab-new)
-  (global-set-key [f2] 'save-buffer)
-  (global-set-key [f3] 'paste-input)
-  (global-set-key [f4] 'compile)
-  (global-set-key [f10] 'kill-current-buffer)
-  (global-set-key (kbd "C-x x") 'org-capture)
-  (global-set-key (kbd "C-c a") 'org-agenda)
-  (global-set-key (kbd "C-c m") 'gnus)
-  (global-set-key (kbd "C-'") 'er/expand-region)
-  (global-set-key (kbd "C-t") 'tab-new)
-  (global-set-key (kbd "C-w") 'tab-close)
-  (global-set-key (kbd "M-k") 'windmove-up)
-  (global-set-key (kbd "M-j") 'windmove-down)
-  (global-set-key (kbd "M-h") 'windmove-left)
-  (global-set-key (kbd "M-l") 'windmove-right)
-  (global-set-key (kbd "M-d") 'delete-window)
-  (global-set-key (kbd "M-m") 'delete-other-windows)
-  (global-set-key (kbd "M-s") 'split-window-below)
-  (global-set-key (kbd "M-v") 'split-window-right))
+    ")" #'evil-next-close-paren
+    "(" #'evil-previous-open-paren
+    "-" #'dired-jump
+    "+" #'er/expand-region
+    (kbd "C-f") #'find-file
+    ";" #'evil-ex
+    ":" #'evil-repeat-find-char
+    (kbd "A-f") #'fill-paragraph
+    (kbd "gcc") #'comment-line 
+    (kbd "C-t") #'tab-new)
+  (global-set-key [f2] #'save-buffer)
+  (global-set-key [f3] #'paste-input)
+  (global-set-key [f4] #'compile)
+  (global-set-key [f8] #'window-toggle-side-windows)
+  (global-set-key [f9] #'mark-whole-buffer)
+  (global-set-key [f10] #'kill-current-buffer)
+  (global-set-key (kbd "C-x x") #'org-capture)
+  (global-set-key (kbd "C-c a") #'org-agenda)
+  (global-set-key (kbd "C-c m") #'gnus)
+  (global-set-key (kbd "C-'") #'er/expand-region)
+  (global-set-key (kbd "C-;") #'eval-expression)
+  (global-set-key (kbd "C-t") #'tab-new)
+  (global-set-key (kbd "C-w") #'tab-close)
+  ;; window management under alt
+  (global-set-key (kbd "M-k") #'windmove-up)
+  (global-set-key (kbd "M-j") #'windmove-down)
+  (global-set-key (kbd "M-h") #'windmove-left)
+  (global-set-key (kbd "M-l") #'windmove-right)
+  (global-set-key (kbd "M-r") #'winner-redo)
+  (global-set-key (kbd "M-u") #'winner-undo)
+  (global-set-key (kbd "M-d") #'delete-window)
+  (global-set-key (kbd "M-c") #'delete-other-windows)
+  (global-set-key (kbd "M-s") #'split-window-below)
+  (global-set-key (kbd "M-v") #'split-window-right))
 
 ;; dired
 (with-delayed-execution
-  (setq dired-listing-switches "-ahl -v --group-directories-first")
+  (setq dired-listing-switches
+        "-ahl -v --group-directories-first --ignore=\. --ignore=\.\.")
   (evil-define-key 'normal dired-mode-map
     "O" 'browse-url-of-dired-file
-    "q" #'(lambda () (interactive) (quit-window t))) ;; hate unused buffers
+    "q" #'(lambda () (interactive) (quit-window t))) ;; fixme: hate unused buffers
   (define-key dired-mode-map "-" 'dired-up-directory)
   (define-key dired-mode-map "~"
     #'(lambda () (interactive) (dired "/home/prashant/")))
@@ -558,8 +611,62 @@
         tab-bar-tab-name-function 'tab-bar-tab-name-truncated
         tab-bar-tab-name-truncated-max 12))
 
+;; Window configuration (prot)
+(with-delayed-execution
+  (defun prot/dired-vc-left()
+    (interactive)
+    (let ((dir (if (eq (vc-root-dir) nil)
+                   (dired-noselect default-directory)
+                 (dired-noselect (vc-root-dir)))))
+      (display-buffer-in-side-window
+       dir `((side . left)
+             (slot . 0)
+             (window-width . 0.2)
+             (window-parameters . ((no-delete-other-windows . t)
+                                   (mode-line-format . (" %b"))))))))
+  (evil-define-key 'normal 'global (kbd "<leader>op") #'prot/dired-vc-left)
+  (setq display-buffer-alist
+        '(("\\*e?shell\\*"
+           (display-buffer-in-side-window)
+           (window-height . 0.25)
+           (side . bottom)
+           (slot . -1))
+          ("\\*Faces\\*"
+           (display-buffer-in-side-window)
+           (window-height . 0.25)
+           (side . bottom)
+           (slot . 1)))))
+
 ;;; Random
 (with-delayed-execution
+  ;; ref: noctuid
+  (defun noct-maybe-sudo-edit ()
+    "If the current file is exists and is unwritable, edit it as root with sudo."
+    (interactive)
+    (let* ((file (or buffer-file-name
+                     (when (derived-mode-p 'dired-mode 'wdired-mode)
+                       default-directory)))
+           (parent (file-name-directory file))
+           ;; don't try to lookup password with auth-source
+           auth-sources)
+      (when (and file
+                 (not (file-writable-p file))
+                 (or (file-exists-p file)
+                     ;; might want to create a file
+                     (and (file-exists-p parent)
+                          (not (file-writable-p parent))))
+                 ;; don't want to edit Emacs source files as root
+                 (not (string-match "/usr/share/emacs/.*" file)))
+        (let ((method (file-remote-p default-directory 'method))
+              (user (file-remote-p default-directory 'user))
+              (host (file-remote-p default-directory 'host))
+              (localname (file-remote-p file 'localname)))
+          (find-file (if method
+                         (concat "/" method ":" user "@" host
+                                 "|sudo:" host ":" localname)
+                       (concat "/sudo:root@localhost:" file)))))))
+  (evil-define-key 'normal 'global (kbd "<leader>fu") #'noct-maybe-sudo-edit)
+  
   (defun +setup-text-mode-left-margin () ;; teco
     (interactive)
     (when (and (derived-mode-p 'text-mode)
@@ -591,19 +698,33 @@
       "q" #'quit-window
       "H" #'eww-back-url))
   (with-delayed-execution
-  (set-cursor-color "white")
-  (setq dracula-enlarge-headings nil
-        dracula-height-title-1 1.0
-        dracula-height-title-2 1.0
-        drcaula-height-doc-title 1.0))
+    (set-cursor-color "white")
+    (setq suggest-key-bindings nil
+          dracula-enlarge-headings nil
+          dracula-height-title-1 1.0
+          dracula-height-title-2 1.0
+          drcaula-height-doc-title 1.0))
   (show-paren-mode)
   (global-hl-line-mode)
   (add-hook 'after-save-hook
-          'executable-make-buffer-file-executable-if-script-p)
+            'executable-make-buffer-file-executable-if-script-p)
   ;; auto pair completion
   (add-hook 'prog-mode-hook (electric-pair-mode t))
   (add-hook 'prog-mode-hook (show-paren-mode t))
   (fset 'yes-or-no-p 'y-or-n-p))
+
+;;; Newsticker (fixme: keybinds, layout)
+(with-delayed-execution
+  (setq newsticker-groups '("PSA" "Gluer" "Matklad" "Lobsters" "DDW" "Arch" "HLTV"))
+  (setq newsticker-automatically-mark-visited-items-as-old t)
+  (setq newsticker-url-list
+        '(("HLTV" "https://www.hltv.org/rss/news")
+          ("Arch" "https://archlinux.org/feeds/news/")
+          ("DDW" "https://drewdevault.com/blog/index.xml")
+          ("Lobsters" "https://lobste.rs/rss")
+          ("Matklad" "https://matklad.github.io/feed.xml")
+          ("Gluer" "https://gluer.org/blog/atom.xml")
+          ("PSA" "https://psa.wf/feed/"))))
 
 ;;; Org
 ;; (el-get-bundle engrave-faces)
@@ -626,6 +747,7 @@
     (set-face-attribute 'org-level-2 nil :height 1.0)
     (set-face-attribute 'org-document-title nil :height 1.0)
     (add-hook 'org-mode-hook 'tempel-setup-capf)
+    (add-hook 'org-mode-hook 'visual-line-mode)
     (define-key org-mode-map [f4] #'org-latex-export-to-pdf)
     (define-key org-mode-map [f5] #'my/org-inkscape-watcher)))
 ;;;; Org-Capture
@@ -690,21 +812,21 @@
 
 ;; ------------------------- This contains code for the future.
 ;; (if (version< emacs-version "29.0")
-    ;; (pixel-scroll-mode)
-  ;; (pixel-scroll-precision-mode 1)
-  ;; (setq pixel-scroll-precision-large-scroll-height 35.0))
+;;     (pixel-scroll-mode)
+;;   (pixel-scroll-precision-mode 1)
+;;   (setq pixel-scroll-precision-large-scroll-height 35.0))
 
 ;; (defun smart-compile ()
-  ;; "runs compile command based on current major mode."
-  ;; (interactive)
-  ;; (let* ((cmd
-          ;; (cond ((bound-and-true-p smart-compile-command) smart-compile-command)
-                ;; ((eq major-mode 'js-mode) "npm test")
-;; ((eq major-mode 'c++-mode) (concat "zig c++ " (buffer-file-name) "-DLOCAL "
-;; "-I/mnt/Data/Documents/problems/include/ -o ")
-                ;; ((eq major-mode 'rust-mode) "cargo build")
-                ;; ((eq major-mode 'haskell-mode) "cabal run")))
-         ;; (default-directory (projectile-project-root)))
-    ;; (progn
-      ;; (save-some-buffers 1)
-      ;; (compile cmd))))
+;;   "runs compile command based on current major mode."
+;;   (interactive)
+;;   (let* ((cmd
+;;           (cond ((bound-and-true-p smart-compile-command) smart-compile-command)
+;;                 ((eq major-mode 'js-mode) "npm test")
+;;                 ((eq major-mode 'c++-mode) (concat "zig c++ " (buffer-file-name) "-DLOCAL "
+;;                                                    "-I/mnt/Data/Documents/problems/include/ -o ")
+;;                  ((eq major-mode 'rust-mode) "cargo build")
+;;                  ((eq major-mode 'haskell-mode) "cabal run")))
+;;           (default-directory (projectile-project-root)))
+;;          (progn
+;;            (save-some-buffers 1)
+;;            (compile cmd))))
