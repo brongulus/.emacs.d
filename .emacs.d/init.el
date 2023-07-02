@@ -1,16 +1,14 @@
 ;;; init.el --- Description -*- lexical-binding: t; -*-
 ;; Author: Prashant Tak <prashantrameshtak@gmail.com>
 ;; Created: June 11, 2023
-;; Modified: June 27, 2023
-;; Version: 0.0.1
+;; Modified: July 3, 2023
+;; Version: 0.0.2
 ;; This file is not part of GNU Emacs.
 ;;; Commentary:
 ;;  Ref 1: https://zenn.dev/takeokunn/articles/56010618502ccc
 ;;  Ref 2: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
-;;  Ref 3: https://robbmann.io/emacsd/
+;;  Ref 3: https://github.com/doomemacs/doomemacs/blob/develop/docs/faq.org#how-does-doom-start-up-so-quickly
 ;;  TODO: fix eldoc in terminal, bottom popup in gui, clean compile command
-;;  TODO: lazy load tempel, corfu, eglot, autoload stuff by keybind?
-;;  ref: https://github.com/doomemacs/doomemacs/blob/develop/docs/faq.org#how-does-doom-start-up-so-quickly
 ;;; Code:
 
 ;;; Startup hacks 
@@ -137,8 +135,7 @@
   (evil-escape-mode)
   (setq-default evil-escape-key-sequence "jk")
   (add-to-list 'evil-highlight-closing-paren-at-point-states 'normal t)
-  ;; (evil-define-key '(normal motion) messages-buffer-mode-map "q" #'quit-window) ;; FIXME: QoL
-  (evil-define-key '(normal motion) special-mode-map "q" #'quit-window) ;; FIXME: QoL
+  (evil-define-key '(normal motion) special-mode-map "q" #'quit-window) ;; QoL
   (with-eval-after-load 'evil-maps (define-key evil-motion-state-map (kbd "TAB") nil)))
 
 ;;;;; Modeline (Ref: https://github.com/motform/emacs.d/blob/master/init.el)
@@ -568,7 +565,7 @@
         dired-recursive-copies 'always)
   (add-hook 'dired-initial-position-hook 'dired-hide-details-mode))
 
-;; tabs
+;; tabs (FIXME: new tab not cleanly init)
 (with-eval-after-load 'tab-bar
   (defun +my/tab (tab i)
     (propertize (concat "  " (alist-get 'name tab) "  ")
@@ -601,6 +598,9 @@
            (window-height . 0.25)
            (side . bottom)
            (slot . -1))
+          ("\\*Group\\*"
+           (display-buffer-in-tab
+            (tab-name . "Gnus")))
           ("\\*\\(Faces\\|git-gutter\\:diff\\)\\*"
            (display-buffer-in-side-window)
            (window-height . 0.25)

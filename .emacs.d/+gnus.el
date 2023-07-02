@@ -1,5 +1,5 @@
 ;;; +gnus.el -*- lexical-binding: t; -*-
-;; TODO: nnrss backend
+;; TODO: nnrss backend, advice based fetching and demon fns?
 ;; REFS:
 ;; https://gluer.org/blog/2023/trying-gnus-as-an-email-client/
 ;; https://github.com/redguardtoo/mastering-emacs-in-one-year-guide/blob/master/gnus-guide-en.org
@@ -14,8 +14,16 @@
       (with-timeout (1 (kill-buffer (nntp-find-connection-buffer nntp-server-buffer))
                        (gnus-group-get-new-news))
         (gnus-group-get-new-news arg one-level)))
-    (define-key gnus-group-mode-map "g" 'srb-gnus-group-get-new-news)
-
+    (defun my/gnus-demon-scan ()
+      (interactive)
+      (let ((win (current-window-configuration)))
+        (unwind-protect
+            (save-window-excursion
+              (when (gnus-alive-p)
+                (with-current-buffer gnus-group-buffer
+                  (srb-gnus-group-get-new-news))))
+          (set-window-configuration win))))
+    
     ;; mode-line unread indicator
     (defun my/gnus-unread-count ()
       (interactive)
@@ -24,14 +32,13 @@
         (if (eq uc 0)
             ""
           (format " 📥 %s " uc))))
-    ;; FIXME: box not rendering completely
-    ;; (unless (server-running-p)
+    ;; FIXME:
     (setq global-mode-string
           (append global-mode-string 
                   (list '(:eval (propertize 
                                  (my/gnus-unread-count)
                                  'help-echo "Gnus : Unread"
-                                 'face '(:inverse-video t))))));)
+                                 'face '(:inverse-video t))))))
     ;; Better UI
     (gnus-add-configuration
      '(article
@@ -54,7 +61,6 @@
     (keymap-set gnus-article-mode-map "j" #'next-line)
     (keymap-set gnus-article-mode-map "k" #'previous-line)
     (keymap-set gnus-article-mode-map "q" #'kill-buffer-and-window))
-  ;; (gnus-demon-add-handler 'gnus-demon-scan-news 5 1))
   ;; (add-hook 'gnus-article-mode-hook #'visual-line-mode)
 
   ;; input
@@ -95,11 +101,13 @@
         '((".*"
            (address "prashantrameshtak@gmail.com")
            (signature "Prashant Tak")
-           ("X-Message-SMTP-Method" "smtp smtp.gmail.com 587 prashantrameshtak@gmail.com"))
+           ("X-Message-SMTP-Method"
+            "smtp smtp.gmail.com 587 prashantrameshtak@gmail.com"))
           ("uni"
            (address "f20181050@pilani.bits-pilani.ac.in")
            (signature "Prashant Tak\n(2018B4A81050P)")
-           ("X-Message-SMTP-Method" "smtp smtp.gmail.com 587 f20181050@pilani.bits-pilani.ac.in")))
+           ("X-Message-SMTP-Method"
+            "smtp smtp.gmail.com 587 f20181050@pilani.bits-pilani.ac.in")))
         message-send-mail-function 'message-use-send-mail-function
         send-mail-function 'smtpmail-send-it
         gnus-parameters
@@ -151,6 +159,12 @@
 
   ;; topics
   (with-eval-after-load 'gnus-topic
+    ;; fetch news every 10 minutes if emacs has been idle for 1 min
+    (gnus-demon-add-handler #'my/gnus-demon-scan 10 1)
+
+    (define-key gnus-group-mode-map "g" 'srb-gnus-group-get-new-news)
+    (define-key gnus-topic-mode-map "g" 'srb-gnus-group-get-new-news)
+
     (setq gnus-message-archive-group '((format-time-string "sent.%Y")))
     (setq gnus-topic-topology '(("Unread" visible)
                                 (("🎓 Uni" visible nil nil))
