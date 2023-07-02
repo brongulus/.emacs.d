@@ -22,7 +22,7 @@
               frame-inhibit-implied-resize t
               default-frame-alist
 			        '((menu-bar-lines . 0)
-                (alpha 95 95)
+                ;; (alpha 95 95)
 			          (tool-bar-lines . 0)
 			          (vertical-scroll-bars)
 			          (left-fringe . 0)

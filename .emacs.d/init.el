@@ -17,12 +17,16 @@
 ;; (setq comp-deferred-compilation t
 ;;       comp-async-report-warnings-errors nil)
 
+;; -----------------------------------------------------------------------------
 ;; ;; (el-get-bundle benchmark-init)
 ;; (load "/home/prashant/.emacs.d/el-get/benchmark-init/benchmark-init.el"
 ;;       'no-error nil 'no-suffix)
 ;; (require 'benchmark-init)
 ;; (add-hook 'after-init-hook 'benchmark-init/deactivate)
 
+;; -----------------------------------------------------------------------------
+;; ;; (el-get-bundle esup)
+;; -----------------------------------------------------------------------------
 (setq t0 (current-time)) ;; ymarco
 
 (defvar my/delayed-priority-high-confs '())
@@ -99,30 +103,16 @@
 
 ;;; Package Management
 (push (expand-file-name "el-get/el-get" user-emacs-directory) load-path)
-
-(unless (require 'el-get nil 'noerror)
-  (with-current-buffer
-      (url-retrieve-synchronously
-       "https://raw.githubusercontent.com/dimitri/el-get/master/el-get-install.el")
-    (goto-char (point-max))
-    (eval-print-last-sexp)))
-(with-eval-after-load 'el-get-git
-  (setq el-get-git-shallow-clone t))
-
-(push "~/.emacs.d/el-get-user/recipes" el-get-recipe-path)
-(setq el-get-is-lazy t)
+(with-delayed-execution-priority-high
+  (load "~/.emacs.d/packages.el" nil t))
 
 ;;;;; Yay Evil!
-(el-get-bundle undo-fu)
-(el-get-bundle undo-fu-session)
 (with-delayed-execution
   (setq undo-limit 67108864
         undo-strong-limit 100663296
         undo-outer-limit 1006632960)
   (undo-fu-session-global-mode))
 
-(el-get-bundle elpa:evil)
-(el-get-bundle evil-escape)
 (with-delayed-execution-priority-high
   (define-key global-map (kbd "<escape>") #'keyboard-escape-quit)
   (setq evil-want-keybinding t ;; nil
@@ -147,8 +137,8 @@
   (evil-escape-mode)
   (setq-default evil-escape-key-sequence "jk")
   (add-to-list 'evil-highlight-closing-paren-at-point-states 'normal t)
-  ;; (evil-define-key '(normal motion) 'messages-buffer-mode-map "q" #'quit-window) ;; FIXME: QoL
-  (evil-define-key '(normal motion) 'Info-mode-map "RET" #'Info-follow-nearest-node)
+  ;; (evil-define-key '(normal motion) messages-buffer-mode-map "q" #'quit-window) ;; FIXME: QoL
+  (evil-define-key '(normal motion) special-mode-map "q" #'quit-window) ;; FIXME: QoL
   (with-eval-after-load 'evil-maps (define-key evil-motion-state-map (kbd "TAB") nil)))
 
 ;;;;; Modeline (Ref: https://github.com/motform/emacs.d/blob/master/init.el)
@@ -180,8 +170,6 @@
                   mode-line-end-spaces)))
 
 ;;;;; Vertico/Marginalia (TnG completion)
-(el-get-bundle compat) ;; for minad's pkgs
-(el-get-bundle vertico)
 (with-delayed-execution-priority-high
   (vertico-mode)
   (savehist-mode)
@@ -196,12 +184,10 @@
         vertico-resize nil
         vertico-cycle t))
 
-(el-get-bundle marginalia)
 (with-delayed-execution
   (marginalia-mode))
 
 ;;;;; Consult/Orderless (Recentf)
-(el-get-bundle orderless)
 (with-delayed-execution
   (setq completion-category-defaults nil
         completion-styles '(substring orderless basic)
@@ -216,7 +202,6 @@
                    #'completion--in-region)
                  args))))
 
-(el-get-bundle consult)
 (with-delayed-execution
   (when (executable-find "rg")
     (setq grep-program "rg"))
@@ -238,14 +223,6 @@
   (global-set-key [remap isearch-forward] 'consult-line))
 
 ;;;;; Helpful
-(el-get-bundle darkroom
-  :url "https://raw.githubusercontent.com/joaotavora/darkroom/master/darkroom.el")
-;; Its requires aren't being pulled by el-get automatically
-(el-get-bundle f)
-(el-get-bundle s)
-(el-get-bundle elisp-refs)
-
-(el-get-bundle helpful)
 (with-delayed-execution
   (evil-define-key 'normal emacs-lisp-mode-map "K" #'helpful-at-point)
   (evil-define-key '(normal motion) helpful-mode-map
@@ -258,7 +235,6 @@
   (global-set-key (kbd "C-h x") #'helpful-command))
 
 ;;;;; Cape and Corfu
-(el-get-bundle corfu)
 (with-delayed-execution
   (global-corfu-mode)
   (add-hook 'corfu-mode-hook 'corfu-popupinfo-mode)
@@ -300,7 +276,6 @@
                 (setq-local corfu-auto nil)
                 (corfu-mode)))))
 
-(el-get-bundle cape)
 (with-delayed-execution
   (defun my/add-capfs ()
     (push 'cape-file completion-at-point-functions)
@@ -309,31 +284,28 @@
   (add-hook 'prog-mode-hook #'my/add-capfs)
   (add-hook 'text-mode-hook #'my/add-capfs))
 
-(el-get-bundle which-key)
 (with-delayed-execution
   (setq which-key-idle-delay 0.5)
   (which-key-mode))
 
-;;;;; git/tempel
-(el-get-bundle git-gutter)
+;;;;; git
 (with-delayed-execution
   (add-hook 'text-mode-hook #'git-gutter-mode)
   (add-hook 'prog-mode-hook #'git-gutter-mode)
   (with-eval-after-load 'git-gutter
+    (evil-define-key 'normal 'git-gutter-mode
+      (kbd "<localleader>gs") #'git-gutter:stage-hunk
+      (kbd "<localleader>gp") #'git-gutter:popup-hunk
+      (kbd "<localleader>gj") #'git-gutter:next-hunk
+      (kbd "<localleader>gk") #'git-gutter:previous-hunk
+      (kbd "<localleader>gr") #'git-gutter:revert-hunk)
     (set-face-foreground 'git-gutter:modified "deep sky blue")
     (set-face-foreground 'git-gutter:deleted "dark orange"))
-  (setq git-gutter:update-interval 0.02
+  (setq git-gutter:update-interval 0.2
         fringes-outside-margins t
         git-gutter:added-sign "│"
         git-gutter:modified-sign "│"
         git-gutter:deleted-sign "│"))
-
-(el-get-bundle magit/transient)
-(el-get-bundle magit/ghub)
-(el-get-bundle magit/magit-popup)
-(el-get-bundle magit/with-editor)
-(el-get-bundle magit/magit)
-(el-get-bundle magit/forge)
 
 (with-delayed-execution
   (push (locate-user-emacs-file "el-get/transient/lisp") load-path)
@@ -348,12 +320,8 @@
         warning-suppress-types '((emacsql)))
   (add-hook 'magit-mode-hook #'(lambda () (require 'forge))))
 
-;; terminal stuff, taken from doom (cursor, cliboard)
-(el-get-bundle xclip)
-(el-get-bundle evil-terminal-cursor-changer)
 
-;; tempel
-(el-get-bundle tempel)
+;; tempel (TODO: incorporate aas with tempel?)
 (with-delayed-execution
   (setq fill-indent-according-to-mode t)
   (defun tempel-setup-capf ()
@@ -370,20 +338,11 @@
   (setq tempel-path "~/.emacs.d/templates.el"))
 
 ;;;;; eglot
-(el-get-bundle expand-region)
-(el-get-bundle! project
-  :url "https://raw.githubusercontent.com/emacs-mirror/emacs/master/lisp/progmodes/project.el")
-(el-get-bundle rustic)
-(el-get-bundle reformatter)
-(el-get-bundle zig-mode)
-(el-get-bundle external-completion)
-(el-get-bundle eldoc-box)
 (with-delayed-execution
   (with-eval-after-load 'eldoc-box
     (setq eldoc-box-max-pixel-width 600
           eldoc-box-max-pixel-height 700
           eldoc-box-only-multi-line t)))
-(el-get-bundle! eglot)
 (with-delayed-execution
   ;; FIXME:
   (evil-define-key 'normal eglot-mode-map "K" #'eldoc-box-help-at-point)
@@ -405,27 +364,27 @@
   (add-hook 'python-mode-hook 'eglot-ensure)
   (add-hook 'c-mode-hook 'eglot-ensure))
 
-;;;;; Nice-citation (gnus)
-(el-get-bundle! damiencollard/nice-citation)
 ;;;;; Dirvish
-(el-get-bundle dirvish)
 (with-delayed-execution
   (dirvish-override-dired-mode)
   ;; (add-hook 'dirvish-override-dired-mode-hook 'dirvish-emerge-mode)
-  ;; (evil-define-key 'normal 'dirvish-mode-map "q" #'dirvish-quit)
-  (setq-default dirvish-emerge-groups
-                '(("Recent files" (predicate . recent-files-2h))
-                  ("Documents" (extensions "pdf" "tex" "bib" "epub"))
-                  ("Video" (extensions "mp4" "mkv" "webm"))
-                  ("Pictures" (extensions "jpg" "png" "svg" "gif"))
-                  ("Audio" (extensions "mp3" "flac" "wav" "ape" "aac"))
-                  ("Archives" (extensions "gz" "rar" "zip")))))
+  (evil-define-key 'normal dirvish-mode-map "q" #'dirvish-quit)
+  ;; FIXME: dirvish dir preview
+  (dirvish-define-preview ls (file)
+    (when (file-directory-p file)
+      `(shell . ("ls" "-ahl" "--almost-all" "--group-directories-first" ,file))))
+  (push 'ls dirvish-preview-dispatchers)
+  (setq dirvish-attributes '(vc-state git-msg))
+  (setq dirvish-default-layout '(0 0.11 0.55)
+        dirvish-emerge-groups
+        '(("Recent files" (predicate . recent-files-2h))
+          ("Documents" (extensions "pdf" "tex" "bib" "epub"))
+          ("Video" (extensions "mp4" "mkv" "webm"))
+          ("Pictures" (extensions "jpg" "png" "svg" "gif"))
+          ("Audio" (extensions "mp3" "flac" "wav" "ape" "aac"))
+          ("Archives" (extensions "gz" "rar" "zip")))))
 
 ;;;;; Leetcode
-(el-get-bundle log4e)
-(el-get-bundle aio)
-(el-get-bundle graphql)
-(el-get-bundle leetcode)
 (with-delayed-execution
   (defun set-exec-path-from-shell-PATH ()
     "Set up Emacs' `exec-path' and PATH environment variable to match
@@ -457,8 +416,6 @@
        (leetcode--slugify-title prob))))
   (with-eval-after-load 'org
     (define-key org-mode-map (kbd "C-l") #'my/leetcode-problem-at-point)))
-
-(el-get 'sync)
 
 ;;; Compilation
 (with-delayed-execution
@@ -529,7 +486,9 @@
   (setq auto-insert-directory "~/doom-configs/.emacs.d/templates/"
         auto-insert-query nil)
   (define-auto-insert "\.cpp" ["comp.cpp"
-                               my/eval-auto-insert-init-form]))
+                               my/eval-auto-insert-init-form])
+  (define-auto-insert "\.py" ["comp.py"
+                              my/eval-auto-insert-init-form]))
 
 ;;; Key binds / Key maps
 (with-delayed-execution-priority-high
@@ -542,6 +501,8 @@
     (kbd "<leader>qq") #'save-buffers-kill-emacs
     (kbd "<leader>fp") #'(lambda () (interactive) (find-file "~/.emacs.d/init.el"))
     (kbd "<leader>gg") #'magit
+    (kbd "<leader>x") #'org-capture
+    (kbd "<leader>oa") #'org-agenda
     (kbd "<leader>om") #'gnus
     (kbd "<leader>ot") #'eshell)
   (evil-define-key 'visual 'global (kbd ", TAB") #'untabify)
@@ -556,6 +517,16 @@
     (kbd "A-f") #'fill-paragraph
     (kbd "gcc") #'comment-line 
     (kbd "C-t") #'tab-new)
+  (evil-define-key '(normal motion) Info-mode-map
+    "RET" #'Info-follow-nearest-node
+    (kbd "<ret>") #'Info-follow-nearest-node
+    "h" #'Info-backward-node
+    "l" #'Info-follow-nearest-node
+    "u" #'Info-up
+    "U" #'Info-top-node
+    "gt" 'Info-toc
+    "g?" #'Info-summary
+    "q" #'quit-window)
   (global-set-key [f2] #'save-buffer)
   (global-set-key [f3] #'paste-input)
   (global-set-key [f4] #'compile)
@@ -583,8 +554,7 @@
 
 ;; dired
 (with-delayed-execution
-  (setq dired-listing-switches
-        "-ahl -v --group-directories-first --ignore=\. --ignore=\.\.")
+  (setq dired-listing-switches "-ahl --sort=version --group-directories-first --almost-all")
   (evil-define-key 'normal dired-mode-map
     "O" 'browse-url-of-dired-file
     "q" #'(lambda () (interactive) (quit-window t))) ;; fixme: hate unused buffers
@@ -596,7 +566,7 @@
         dired-kill-when-opening-new-dired-buffer t
         dired-recursive-deletes 'always
         dired-recursive-copies 'always)
-  (add-hook 'dired-mode-hook 'dired-hide-details-mode))
+  (add-hook 'dired-initial-position-hook 'dired-hide-details-mode))
 
 ;; tabs
 (with-eval-after-load 'tab-bar
@@ -631,7 +601,7 @@
            (window-height . 0.25)
            (side . bottom)
            (slot . -1))
-          ("\\*Faces\\*"
+          ("\\*\\(Faces\\|git-gutter\\:diff\\)\\*"
            (display-buffer-in-side-window)
            (window-height . 0.25)
            (side . bottom)
@@ -689,6 +659,7 @@
         auto-revert-verbose nil)
   (winner-mode 1)
   (push '("README\\.md\\'" . gfm-mode) auto-mode-alist)
+  (push '("rc\\'" . conf-unix-mode) auto-mode-alist)
   (with-eval-after-load 'winner
     (define-key winner-mode-map (kbd "C-c C-<left>") 'winner-undo)
     (define-key winner-mode-map (kbd "C-c C-<right>") 'winner-redo))
@@ -727,10 +698,11 @@
           ("PSA" "https://psa.wf/feed/"))))
 
 ;;; Org
-;; (el-get-bundle engrave-faces)
 (with-delayed-execution
   (setq org-latex-toc-command "\\tableofcontents \\clearpage"
         org-directory "~/Dropbox/org/"
+        org-ellipsis "▼"
+        org-pretty-entities t
         org-startup-indented t
         org-startup-folded t
         org-src-preserve-indentation t
@@ -753,7 +725,7 @@
 ;;;; Org-Capture
 (with-delayed-execution
   (with-eval-after-load 'org-capture
-    ;; (evil-set-initial-state 'org-capture-mode 'insert)
+    (add-hook 'org-capture-mode-hook 'evil-insert-state)
     (setq +org-capture-readings-file "~/Dropbox/org/links.org"
           +org-capture-log-file "~/Dropbox/org/log.org"
           +org-capture-todo-file "~/Dropbox/org/inbox.org"
@@ -770,7 +742,7 @@
              "* %?" :prepend t)
             ("l" "Personal Log" entry
              (file +org-capture-log-file)
-             "* %T %?" :prepend t)
+             "* %T %?")
             ("j" "Journal" entry
              (file+olp+datetree +org-capture-journal-file)
              "* %U %?\n** What happened \n
@@ -791,10 +763,10 @@
 ;; Terminal session (taken from doom)
 (with-delayed-execution
   (unless (display-graphic-p)
-    (xterm-mouse-mode 1)
-    (eldoc-mode 1)
-    (turn-on-xclip)
-    (etcc-on)))
+    (eldoc-mode 1))
+  (xterm-mouse-mode 1)
+  (turn-on-xclip)
+  (etcc-on))
 
 ;; Gnus
 (with-delayed-execution
@@ -814,6 +786,8 @@
 ;; (if (version< emacs-version "29.0")
 ;;     (pixel-scroll-mode)
 ;;   (pixel-scroll-precision-mode 1)
+   ;; (setq dired-mouse-drag-files t)                   
+   ;; (setq mouse-drag-and-drop-region-cross-program t) 
 ;;   (setq pixel-scroll-precision-large-scroll-height 35.0))
 
 ;; (defun smart-compile ()
