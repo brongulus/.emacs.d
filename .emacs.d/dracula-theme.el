@@ -92,6 +92,7 @@ read it before opening a new issue about your will.")
                 (dracula-red     "#ff5555" "#ff8787" "red")         ; official red
                 (dracula-yellow  "#f1fa8c" "#ffff87" "yellow")      ; official yellow
                 ;; Other colors
+                (bg-alt          "#23242f" "#1e1e1e" "brightblack")
                 (bg2             "#373844" "#121212" "brightblack")
                 (bg3             "#464752" "#262626" "brightblack")
                 (bg4             "#565761" "#444444" "brightblack")
@@ -175,6 +176,9 @@ read it before opening a new issue about your will.")
                (completions-annotations :inherit font-lock-comment-face)
                (completions-common-part :foreground ,dracula-green)
                (completions-first-difference :foreground ,dracula-pink :weight bold)
+               ;; corfu
+               (corfu-default :inherit tooltip :background ,bg-alt)
+               (corfu-current :background ,dracula-bg :foreground ,dracula-fg)
                ;; diff-hl
                (diff-hl-change :foreground ,dracula-orange :background ,dracula-orange)
                (diff-hl-delete :foreground ,dracula-red :background ,dracula-red)
@@ -604,7 +608,9 @@ read it before opening a new issue about your will.")
                (org-agenda-dimmed-todo-face :foreground ,dracula-comment)
                (org-agenda-done :foreground ,dracula-green)
                (org-agenda-structure :foreground ,dracula-purple)
-               (org-block :foreground ,dracula-orange)
+               (org-block :foreground ,dracula-purple :background ,bg2 :extend t)
+               (org-block-begin-line :foreground ,dracula-comment :background ,bg2 :extend t)
+               (org-block-end-line :foreground ,dracula-comment :background ,bg2 :extend t)
                (org-code :foreground ,dracula-green)
                (org-column :background ,bg4)
                (org-column-title :inherit org-column :weight bold :underline t)

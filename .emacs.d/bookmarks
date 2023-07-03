@@ -15,6 +15,6 @@
 ("org-capture-last-stored"
  (filename . "~/Dropbox/org/log.org")
  (front-context-string . "* <2023-07-03 Mo")
- (rear-context-string . " 231 is insane.\n")
- (position . 13571))
+ (rear-context-string . "left (for now).\n")
+ (position . 13662))
 )

@@ -34,8 +34,8 @@
 (el-get-bundle corfu-terminal)
 (el-get-bundle cape)
 (el-get-bundle which-key)
-(el-get-bundle git-gutter)
 
+(el-get-bundle git-gutter)
 (el-get-bundle magit/transient)
 (el-get-bundle magit/ghub)
 (el-get-bundle magit/magit-popup)

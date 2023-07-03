@@ -21,14 +21,14 @@
 (setq-default mode-line-format nil
               frame-inhibit-implied-resize t
               default-frame-alist
-			        '((menu-bar-lines . 0)
+              '((menu-bar-lines . 0)
                 ;; (alpha 95 95)
-			          (tool-bar-lines . 0)
-			          (vertical-scroll-bars)
-			          (left-fringe . 0)
-			          (right-fringe . 0)
-			          (internal-border-width . 8)
-                (font . "Victor Mono-13:weight=semi-bold")))
+                (tool-bar-lines . 0)
+                (vertical-scroll-bars)
+                (left-fringe . 0)
+                (right-fringe . 0)
+                (internal-border-width . 8)
+                (font . "Victor Mono-13.5:weight=semi-bold")))
 
 ;; Set theme and font beforehand to prevent flickering
 (load-theme 'dracula :no-confirm)
@@ -45,7 +45,9 @@
       package-enable-at-startup nil
       package--init-file-ensured t ;; doom
       auto-save-default nil
+      server-client-instructions nil
       auto-save-list-file-prefix nil
+      vc-follow-symlinks t
       make-backup-files nil
       create-lockfiles nil
       inhibit-startup-screen t

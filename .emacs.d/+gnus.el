@@ -193,6 +193,7 @@
                              ("📰 News"
                               "gmane.emacs.devel"
                               "gmane.emacs.gnus.user"
+                              "gmane.emacs.tramp"
                               "gwene.com.youtube.feeds.videos.xml.user.ethoslab"
                               "gmane.comp.web.qutebrowser"
                               "gmane.comp.web.elinks.user"

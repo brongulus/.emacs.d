@@ -11,7 +11,7 @@
 ;;  Ref 3: https://github.com/doomemacs/doomemacs/blob/develop/docs/faq.org#how-does-doom-start-up-so-quickly
 ;;; Code:
 
-;;; Startup hacks 
+;;; Startup hacks
 ;; (setq comp-deferred-compilation t
 ;;       comp-async-report-warnings-errors nil)
 
@@ -73,6 +73,7 @@
                 smtpmail-smtp-server "smtp.gmail.com"
                 smtpmail-smtp-service 587
                 warning-minimum-level :error
+                line-spacing 3
                 tab-width 2
                 indent-tabs-mode nil
                 enable-recursive-minibuffers t
@@ -86,7 +87,6 @@
                 scroll-conservatively 100000
                 scroll-preserve-screen-position 1
                 recenter-positions '(5 top bottom)
-                vc-follow-symlinks t
                 bookmark-default-file "~/doom-configs/.emacs.d/bookmarks"
                 cursor-in-non-selected-windows nil
                 help-window-select t
@@ -128,6 +128,7 @@
         evil-auto-indent t
         evil-move-beyond-eol t
         evil-shift-width 2
+        evil-motion-state-modes nil
         evil-disable-insert-state-bindings t
         evil-undo-system 'undo-fu
         evil-normal-state-tag  (propertize "⬤" 'face '(:foreground "LightSteelBlue1"))
@@ -162,7 +163,8 @@
   (setq-default mode-line-format
                 '(" %e "
                   (:eval evil-mode-line-tag) " "
-                  (:eval (if (and (buffer-modified-p) (bound-and-true-p gnus-mode))
+                  ;; Fixme: gnus
+                  (:eval (if (and (buffer-modified-p) (not (bound-and-true-p gnus-mode)))
                              (propertize " %b "
                                          'face '(:slant italic :inverse-video t)
                                          'help-echo (buffer-file-name))
@@ -306,8 +308,7 @@
   (push (locate-user-emacs-file "el-get/forge/lisp") load-path)
   (autoload 'magit "magit" nil t)
   (global-set-key (kbd "C-c g") 'magit)
-  (setq forge-owned-accounts '(("brongulus"))
-        warning-suppress-types '((emacsql)))
+  (setq forge-owned-accounts '(("brongulus")))
   (add-hook 'magit-mode-hook #'(lambda () (require 'forge))))
 
 ;; tempel (TODO: incorporate aas with tempel?)
@@ -404,7 +405,7 @@
     (interactive)
     (let ((prob (replace-regexp-in-string "\\\"" "" (thing-at-point 'string))))
       (tab-new)
-      (leetcode-show-problem-by-slug 
+      (leetcode-show-problem-by-slug
        (leetcode--slugify-title prob))))
   (with-eval-after-load 'org
     (define-key org-mode-map (kbd "C-l") #'my/leetcode-problem-at-point)))
@@ -462,6 +463,7 @@
   (evil-set-leader 'normal (kbd "SPC")) ;; SPC is leader
   (evil-set-leader 'normal "'" t) ;; ' is localleader
   (evil-define-key 'normal 'global
+    (kbd "<leader>r") #'query-replace-regexp
     (kbd "<leader>SPC") #'consult-buffer
     (kbd "<leader>fr") #'consult-recent-file
     (kbd "<leader>fs") #'save-buffer
@@ -482,7 +484,7 @@
     ";" #'evil-ex
     ":" #'evil-repeat-find-char
     (kbd "A-f") #'fill-paragraph
-    (kbd "gcc") #'comment-line 
+    (kbd "gcc") #'comment-line
     (kbd "C-t") #'tab-new)
   (evil-define-key '(normal motion) Info-mode-map
     "RET" #'Info-follow-nearest-node
@@ -507,6 +509,8 @@
   (global-set-key (kbd "C-;") #'eval-expression)
   (global-set-key (kbd "C-t") #'tab-new)
   (global-set-key (kbd "C-w") #'tab-close)
+  (global-set-key (kbd "M-<down>") #'scroll-other-window)
+  (global-set-key (kbd "M-<up>") #'scroll-other-window-down)
   ;; window management under alt
   (global-set-key (kbd "M-k") #'windmove-up)
   (global-set-key (kbd "M-j") #'windmove-down)
@@ -522,9 +526,8 @@
 ;;; dired/tabs/windows
 ;; dired
 (with-delayed-execution
-  ;; FIXME:
-  ;; (setq dired-listing-switches
-  ;;       "--almost-all --human-readable --sort=version --group-directories-first")
+  (setq dired-listing-switches
+        "-l --almost-all --human-readable --sort=version --group-directories-first")
   (evil-define-key 'normal dired-mode-map
     "O" 'browse-url-of-dired-file
     "q" #'(lambda () (interactive) (quit-window t))) ;; fixme: hate unused buffers
@@ -572,7 +575,7 @@
            (window-height . 0.25)
            (side . bottom)
            (slot . -1))
-          ("\\*\\(Faces\\|git-gutter\\:diff\\)\\*"
+          ("\\*\\(Faces\\|compilation\\|git-gutter\\:diff\\)\\*"
            (display-buffer-in-side-window)
            (window-height . 0.25)
            (side . bottom)
@@ -603,6 +606,7 @@
         org-src-preserve-indentation t
         ;; \usepackage{listings}
         ;; org-latex-listings 'engraved
+        ;; ;; org-latex-src-block-backend 'engraved
         org-latex-pdf-process '("tectonic -X compile %f --outdir=%o -Z shell-escape"))
   (defun my/org-inkscape-watcher (fname)
     "Open inkscape and add tex code for importing the figure"
@@ -765,6 +769,6 @@
 ;; (if (version< emacs-version "29.0")
 ;;     (pixel-scroll-mode)
 ;;   (pixel-scroll-precision-mode 1)
-;;   (setq dired-mouse-drag-files t)                   
-;;   (setq mouse-drag-and-drop-region-cross-program t) 
+;;   (setq dired-mouse-drag-files t)
+;;   (setq mouse-drag-and-drop-region-cross-program t)
 ;;   (setq pixel-scroll-precision-large-scroll-height 35.0))
