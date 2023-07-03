@@ -5,10 +5,10 @@
 ;; Version: 0.0.2
 ;; This file is not part of GNU Emacs.
 ;;; Commentary:
+;;  Most completion systems follow TnG, tab to choose next and RET to select
 ;;  Ref 1: https://zenn.dev/takeokunn/articles/56010618502ccc
 ;;  Ref 2: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
 ;;  Ref 3: https://github.com/doomemacs/doomemacs/blob/develop/docs/faq.org#how-does-doom-start-up-so-quickly
-;;  TODO: fix eldoc in terminal, bottom popup in gui
 ;;; Code:
 
 ;;; Startup hacks 
@@ -65,6 +65,7 @@
          (append my/delayed-priority-low-confs ',body)))
 
 ;; -----------------------------------------------------------------------------
+
 ;;; Better Defaults
 (with-delayed-execution
   (setq-default user-full-name "Prashant Tak"
@@ -94,16 +95,20 @@
                 initial-buffer-choice t)
   (advice-add 'bookmark-set-internal :after '(funcall 'bookmark=save))) ;; prot
 
-(with-delayed-execution
-  (add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
-  (add-hook 'prog-mode-hook #'(lambda ()
-                                (setq-local display-line-numbers 'relative))))
-
 ;;; Package Management
 (with-delayed-execution-priority-high
   (load "~/.emacs.d/packages.el" nil t))
 
-;;;;; Yay Evil!
+(with-delayed-execution
+  (add-hook 'text-mode-hook #'outli-mode)
+  (add-hook 'prog-mode-hook #'outli-mode)
+  (setq outli-default-nobar t)
+  (add-hook 'prog-mode-hook #'display-fill-column-indicator-mode))
+  ;; (add-hook 'prog-mode-hook #'(lambda ()
+  ;;                               (setq-local display-line-numbers 'relative))))
+
+
+;;;; Yay Evil!
 (with-delayed-execution
   (setq undo-limit 67108864
         undo-strong-limit 100663296
@@ -138,7 +143,8 @@
   (evil-define-key '(normal motion) special-mode-map "q" #'quit-window) ;; QoL
   (with-eval-after-load 'evil-maps (define-key evil-motion-state-map (kbd "TAB") nil)))
 
-;;;;; Modeline (Ref: https://github.com/motform/emacs.d/blob/master/init.el)
+;;;; Modeline
+;; (Ref: lambda-line)
 (with-delayed-execution
   (setq-default flymake-mode-line-counter-format
                 '("" flymake-mode-line-error-counter
@@ -156,7 +162,7 @@
   (setq-default mode-line-format
                 '(" %e "
                   (:eval evil-mode-line-tag) " "
-                  (:eval (if (buffer-modified-p)
+                  (:eval (if (and (buffer-modified-p) (bound-and-true-p gnus-mode))
                              (propertize " %b "
                                          'face '(:slant italic :inverse-video t)
                                          'help-echo (buffer-file-name))
@@ -166,7 +172,7 @@
                   (:eval (my/ml-padding))
                   mode-line-end-spaces)))
 
-;;;;; Vertico/Marginalia (TnG completion)
+;;;; Vertico/Marginalia
 (with-delayed-execution-priority-high
   (vertico-mode)
   (savehist-mode)
@@ -184,7 +190,7 @@
 (with-delayed-execution
   (marginalia-mode))
 
-;;;;; Consult/Orderless (Recentf)
+;;;; Consult/Orderless
 (with-delayed-execution
   (setq completion-category-defaults nil
         completion-styles '(substring orderless basic)
@@ -219,7 +225,7 @@
   (global-set-key [remap list-buffers] 'consult-buffer)
   (global-set-key [remap isearch-forward] 'consult-line))
 
-;;;;; Helpful
+;;;; Helpful
 (with-delayed-execution
   (evil-define-key 'normal emacs-lisp-mode-map "K" #'helpful-at-point)
   (evil-define-key '(normal motion) helpful-mode-map
@@ -231,7 +237,7 @@
   (global-set-key (kbd "C-h '") #'describe-face)
   (global-set-key (kbd "C-h x") #'helpful-command))
 
-;;;;; Cape and Corfu
+;;;; Cape/Corfu
 (with-delayed-execution
   (global-corfu-mode)
   (add-hook 'corfu-mode-hook 'corfu-popupinfo-mode)
@@ -242,42 +248,29 @@
     (define-key corfu-map [tab] #'corfu-next)
     (keymap-set corfu-map "S-TAB" #'corfu-previous)
     (define-key corfu-map [backtab] #'corfu-previous)
+
     (setq corfu-cycle t
           corfu-auto t
           corfu-auto-prefix 2
           corfu-auto-delay 0
           corfu-separator 32
           corfu-quit-no-match t
+          corfu-quit-at-boundary 'separator
           corfu-preview-current nil
           corfu-popupinfo-delay '(0.2 . 0.1)
           corfu-preselect-first nil
           tab-always-indent 'complete)
-    (define-key corfu-map (kbd "SPC") ;; FIXME: corfu wiki 
-      (lambda ()
-        (interactive)
-        (if current-prefix-arg
-            (progn
-              (corfu-quit)
-              (insert " "))
-          (if (and (= (char-before) corfu-separator)
-                   (or
-                    (not (char-after))
-                    (= (char-after) ?\s)
-                    (= (char-after) ?\n)))
-              (progn
-                (corfu-insert)
-                (insert " "))
-            (corfu-insert-separator)))))
-    (add-hook 'eshell-mode-hook
-              (lambda ()
-                (setq-local corfu-auto nil)
-                (corfu-mode)))))
+
+      (add-hook 'eshell-mode-hook (lambda ()
+                                  (setq-local corfu-auto nil)
+                                  (corfu-mode)))))
 
 (with-delayed-execution
   (defun my/add-capfs ()
-    (push 'cape-file completion-at-point-functions)
     (push 'cape-dabbrev completion-at-point-functions)
-    (push 'cape-keyword completion-at-point-functions))
+    (push 'cape-symbol completion-at-point-functions)
+    (push 'cape-keyword completion-at-point-functions)
+    (push 'cape-file completion-at-point-functions))
   (add-hook 'prog-mode-hook #'my/add-capfs)
   (add-hook 'text-mode-hook #'my/add-capfs))
 
@@ -285,7 +278,7 @@
   (setq which-key-idle-delay 0.5)
   (which-key-mode))
 
-;;;;; git
+;;;; git/tempel
 (with-delayed-execution
   (add-hook 'text-mode-hook #'git-gutter-mode)
   (add-hook 'prog-mode-hook #'git-gutter-mode)
@@ -317,7 +310,6 @@
         warning-suppress-types '((emacsql)))
   (add-hook 'magit-mode-hook #'(lambda () (require 'forge))))
 
-
 ;; tempel (TODO: incorporate aas with tempel?)
 (with-delayed-execution
   (setq fill-indent-according-to-mode t)
@@ -334,19 +326,22 @@
     (define-key tempel-map (kbd "<backtab>") 'tempel-previous))
   (setq tempel-path "~/.emacs.d/templates.el"))
 
-;;;;; eglot
+;;;; eglot
 (with-delayed-execution
   (with-eval-after-load 'eldoc-box
     (setq eldoc-box-max-pixel-width 600
           eldoc-box-max-pixel-height 700
           eldoc-box-only-multi-line t)))
 (with-delayed-execution
-  ;; FIXME:
-  (evil-define-key 'normal eglot-mode-map "K" #'eldoc-box-help-at-point)
-  (evil-define-key 'normal eglot-mode-map "X" #'flymake-show-buffer-diagnostics)
+  (evil-define-key '(normal motion) prog-mode-map "X" #'flymake-show-buffer-diagnostics)
+  (if (display-graphic-p)
+      (evil-define-key '(normal motion) prog-mode-map "K" #'eldoc-box-help-at-point)
+    (evil-define-key '(normal motion) prog-mode-map "K" #'eldoc-doc-buffer))
+
   (with-eval-after-load 'eglot
     (if (display-graphic-p)
-        (global-eldoc-mode -1))
+        (setq eldoc-echo-area-prefer-doc-buffer t
+              eldoc-echo-area-use-multiline-p nil))
     (add-hook 'eglot-managed-mode-hook 'tempel-setup-capf)
     ;; pacman -S clang pyright rust-analyzer
     ;; yay -S jdtls jdk-openjdk jre-openjdk
@@ -361,7 +356,7 @@
   (add-hook 'python-mode-hook 'eglot-ensure)
   (add-hook 'c-mode-hook 'eglot-ensure))
 
-;;;;; Dirvish
+;;;; Dirvish
 (with-delayed-execution
   (dirvish-override-dired-mode)
   ;; (add-hook 'dirvish-override-dired-mode-hook 'dirvish-emerge-mode)
@@ -381,7 +376,7 @@
           ("Audio" (extensions "mp3" "flac" "wav" "ape" "aac"))
           ("Archives" (extensions "gz" "rar" "zip")))))
 
-;;;;; Leetcode
+;;;; Leetcode
 (with-delayed-execution
   (defun set-exec-path-from-shell-PATH ()
     "Set up Emacs' `exec-path' and PATH environment variable to match
@@ -524,21 +519,25 @@
   (global-set-key (kbd "M-s") #'split-window-below)
   (global-set-key (kbd "M-v") #'split-window-right))
 
+;;; dired/tabs/windows
 ;; dired
 (with-delayed-execution
-  (setq dired-listing-switches "-ahl --sort=version --group-directories-first --almost-all")
+  ;; FIXME:
+  ;; (setq dired-listing-switches
+  ;;       "--almost-all --human-readable --sort=version --group-directories-first")
   (evil-define-key 'normal dired-mode-map
     "O" 'browse-url-of-dired-file
     "q" #'(lambda () (interactive) (quit-window t))) ;; fixme: hate unused buffers
   (define-key dired-mode-map "-" 'dired-up-directory)
   (define-key dired-mode-map "~"
     #'(lambda () (interactive) (dired "/home/prashant/")))
+  (define-key dired-mode-map "."
+    #'(lambda () (interactive) (dired "/home/prashant/Dotfiles/")))
   (setq dired-dwim-target t
         dired-auto-revert-buffer t
         dired-kill-when-opening-new-dired-buffer t
         dired-recursive-deletes 'always
-        dired-recursive-copies 'always)
-  (add-hook 'dired-initial-position-hook 'dired-hide-details-mode))
+        dired-recursive-copies 'always))
 
 ;; tabs (FIXME: new tab not cleanly init)
 (with-eval-after-load 'tab-bar
@@ -579,84 +578,8 @@
            (side . bottom)
            (slot . 1)))))
 
-;;; Random
-(with-delayed-execution
-  ;; ref: noctuid
-  (defun noct-maybe-sudo-edit ()
-    "If the current file is exists and is unwritable, edit it as root with sudo."
-    (interactive)
-    (let* ((file (or buffer-file-name
-                     (when (derived-mode-p 'dired-mode 'wdired-mode)
-                       default-directory)))
-           (parent (file-name-directory file))
-           ;; don't try to lookup password with auth-source
-           auth-sources)
-      (when (and file
-                 (not (file-writable-p file))
-                 (or (file-exists-p file)
-                     ;; might want to create a file
-                     (and (file-exists-p parent)
-                          (not (file-writable-p parent))))
-                 ;; don't want to edit Emacs source files as root
-                 (not (string-match "/usr/share/emacs/.*" file)))
-        (let ((method (file-remote-p default-directory 'method))
-              (user (file-remote-p default-directory 'user))
-              (host (file-remote-p default-directory 'host))
-              (localname (file-remote-p file 'localname)))
-          (find-file (if method
-                         (concat "/" method ":" user "@" host
-                                 "|sudo:" host ":" localname)
-                       (concat "/sudo:root@localhost:" file)))))))
-  (evil-define-key 'normal 'global (kbd "<leader>fu") #'noct-maybe-sudo-edit)
-  
-  (defun +setup-text-mode-left-margin () ;; teco
-    (interactive)
-    (when (and (derived-mode-p 'text-mode)
-               (eq (current-buffer)
-                   (window-buffer (frame-selected-window))))
-      (setq left-margin-width (if display-line-numbers
-                                  0 2))
-      (set-window-buffer (get-buffer-window (current-buffer))
-                         (current-buffer))))
-
-  (add-hook 'window-configuration-change-hook #'+setup-text-mode-left-margin)
-  (add-hook 'display-line-numbers-mode-hook #'+setup-text-mode-left-margin)
-  (add-hook 'text-mode-hook #'+setup-text-mode-left-margin)
-  
-  (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
-  (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
-  (save-place-mode 1)
-  (global-auto-revert-mode t)
-  (setq global-auto-revert-non-file-buffers t
-        auto-revert-verbose nil)
-  (winner-mode 1)
-  (push '("README\\.md\\'" . gfm-mode) auto-mode-alist)
-  (push '("rc\\'" . conf-unix-mode) auto-mode-alist)
-  (with-eval-after-load 'winner
-    (define-key winner-mode-map (kbd "C-c C-<left>") 'winner-undo)
-    (define-key winner-mode-map (kbd "C-c C-<right>") 'winner-redo))
-  (with-eval-after-load 'eww
-    (add-hook 'eww-mode-hook #'+setup-text-mode-left-margin)
-    (evil-define-key 'normal 'eww-mode-map
-      "q" #'quit-window
-      "H" #'eww-back-url))
-  (with-delayed-execution
-    (set-cursor-color "white")
-    (setq suggest-key-bindings nil
-          dracula-enlarge-headings nil
-          dracula-height-title-1 1.0
-          dracula-height-title-2 1.0
-          drcaula-height-doc-title 1.0))
-  (show-paren-mode)
-  (global-hl-line-mode)
-  (add-hook 'after-save-hook
-            'executable-make-buffer-file-executable-if-script-p)
-  ;; auto pair completion
-  (add-hook 'prog-mode-hook (electric-pair-mode t))
-  (add-hook 'prog-mode-hook (show-paren-mode t))
-  (fset 'yes-or-no-p 'y-or-n-p))
-
-;;; Newsticker (fixme: keybinds, layout)
+;;; Newsticker
+;; (fixme: keybinds, layout)
 (with-delayed-execution
   (setq newsticker-groups '("PSA" "Gluer" "Matklad" "Lobsters" "DDW" "Arch" "HLTV"))
   (setq newsticker-automatically-mark-visited-items-as-old t)
@@ -686,6 +609,12 @@
     (interactive "sName: ")
     (insert (shell-command-to-string (concat "inkscape-figures create '" fname
                                              "' ./figures/"))))
+
+  (with-eval-after-load 'outli
+    (set-face-attribute 'org-level-1 nil :height 1.0)
+    (set-face-attribute 'org-level-2 nil :height 1.0)
+    (set-face-attribute 'org-document-title nil :height 1.0))
+
   (with-eval-after-load 'org
     (set-face-attribute 'org-level-1 nil :height 1.0)
     (set-face-attribute 'org-level-2 nil :height 1.0)
@@ -732,10 +661,89 @@
           org-agenda-breadcrumbs-separator " ❱ "
           org-agenda-files '("~/Dropbox/org/todo.org" "~/Dropbox/org/inbox.org"))))
 
+;;; Random
+(with-delayed-execution
+  ;; ref: noctuid
+  (defun noct-maybe-sudo-edit ()
+    "If the current file is exists and is unwritable, edit it as root with sudo."
+    (interactive)
+    (let* ((file (or buffer-file-name
+                     (when (derived-mode-p 'dired-mode 'wdired-mode)
+                       default-directory)))
+           (parent (file-name-directory file))
+           ;; don't try to lookup password with auth-source
+           auth-sources)
+      (when (and file
+                 (not (file-writable-p file))
+                 (or (file-exists-p file)
+                     ;; might want to create a file
+                     (and (file-exists-p parent)
+                          (not (file-writable-p parent))))
+                 ;; don't want to edit Emacs source files as root
+                 (not (string-match "/usr/share/emacs/.*" file)))
+        (let ((method (file-remote-p default-directory 'method))
+              (user (file-remote-p default-directory 'user))
+              (host (file-remote-p default-directory 'host))
+              (localname (file-remote-p file 'localname)))
+          (find-file (if method
+                         (concat "/" method ":" user "@" host
+                                 "|sudo:" host ":" localname)
+                       (concat "/sudo:root@localhost:" file)))))))
+  (evil-define-key 'normal 'global (kbd "<leader>fu") #'noct-maybe-sudo-edit)
+  
+  (defun +setup-text-mode-left-margin () ;; teco
+    (interactive)
+    (when (and (derived-mode-p 'text-mode)
+               (eq (current-buffer)
+                   (window-buffer (frame-selected-window))))
+      (setq left-margin-width (if display-line-numbers
+                                  0 2))
+      (set-window-buffer (get-buffer-window (current-buffer))
+                         (current-buffer))))
+  (add-hook 'window-configuration-change-hook #'+setup-text-mode-left-margin)
+  (add-hook 'display-line-numbers-mode-hook #'+setup-text-mode-left-margin)
+  (add-hook 'text-mode-hook #'+setup-text-mode-left-margin)
+
+  (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
+  (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
+  (save-place-mode 1)
+  (global-auto-revert-mode t)
+  (setq global-auto-revert-non-file-buffers t
+        auto-revert-verbose nil)
+  (winner-mode 1)
+  (push '("README\\.md\\'" . gfm-mode) auto-mode-alist)
+  (push '("rc\\'" . conf-unix-mode) auto-mode-alist)
+  (with-eval-after-load 'winner
+    (define-key winner-mode-map (kbd "C-c C-<left>") 'winner-undo)
+    (define-key winner-mode-map (kbd "C-c C-<right>") 'winner-redo))
+  (with-eval-after-load 'eww
+    (add-hook 'eww-mode-hook #'+setup-text-mode-left-margin)
+    (evil-define-key 'normal 'eww-mode-map
+      "q" #'quit-window
+      "H" #'eww-back-url))
+  (with-delayed-execution
+    (set-cursor-color "white")
+    (blink-cursor-mode -1)
+    (setq suggest-key-bindings nil
+          dracula-enlarge-headings nil
+          dracula-height-title-1 1.0
+          dracula-height-title-2 1.0
+          drcaula-height-doc-title 1.0))
+  (show-paren-mode)
+  (global-hl-line-mode)
+  (add-hook 'after-save-hook
+            'executable-make-buffer-file-executable-if-script-p)
+
+  ;; auto pair completion
+  (add-hook 'prog-mode-hook (electric-pair-mode t))
+  (add-hook 'prog-mode-hook (show-paren-mode t))
+  (fset 'yes-or-no-p 'y-or-n-p))
+
 ;; Terminal session (taken from doom)
 (with-delayed-execution
   (unless (display-graphic-p)
-    (eldoc-mode 1))
+    (eldoc-mode +1)
+    (corfu-terminal-mode +1))
   (xterm-mouse-mode 1)
   (turn-on-xclip)
   (etcc-on))
@@ -753,11 +761,10 @@
 (provide 'init)
 ;;; init.el ends here
 
-
 ;; ------------------------- This contains code for the future.
 ;; (if (version< emacs-version "29.0")
 ;;     (pixel-scroll-mode)
 ;;   (pixel-scroll-precision-mode 1)
-;; (setq dired-mouse-drag-files t)                   
-;; (setq mouse-drag-and-drop-region-cross-program t) 
+;;   (setq dired-mouse-drag-files t)                   
+;;   (setq mouse-drag-and-drop-region-cross-program t) 
 ;;   (setq pixel-scroll-precision-large-scroll-height 35.0))

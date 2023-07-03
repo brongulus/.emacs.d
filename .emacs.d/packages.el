@@ -30,6 +30,8 @@
 (el-get-bundle helpful)
 
 (el-get-bundle corfu)
+(el-get-bundle popon)
+(el-get-bundle corfu-terminal)
 (el-get-bundle cape)
 (el-get-bundle which-key)
 (el-get-bundle git-gutter)
@@ -57,6 +59,7 @@
 
 (el-get-bundle! damiencollard/nice-citation) ;; gnus
 (el-get-bundle dirvish)
+(el-get-bundle jdtsmith/outli)
 
 (el-get-bundle log4e)
 (el-get-bundle aio)

@@ -32,13 +32,7 @@
         (if (eq uc 0)
             ""
           (format " 📥 %s " uc))))
-    ;; FIXME:
-    (setq global-mode-string
-          (append global-mode-string 
-                  (list '(:eval (propertize 
-                                 (my/gnus-unread-count)
-                                 'help-echo "Gnus : Unread"
-                                 'face '(:inverse-video t))))))
+
     ;; Better UI
     (gnus-add-configuration
      '(article
@@ -86,7 +80,11 @@
         gnus-use-cache t
         gnus-cache-remove-articles nil
         ;; gnus-fetch-old-headers t
+        ;; gnus-blocked-images nil
         mm-text-html-renderer 'shr
+        shr-use-colors nil
+        shr-max-width fill-column
+        shr-indentation 2
         gnus-article-x-face-too-ugly ".*"
         gnus-interactive-exit 'quiet
         gnus-novice-user nil
@@ -161,6 +159,13 @@
   (with-eval-after-load 'gnus-topic
     ;; fetch news every 10 minutes if emacs has been idle for 1 min
     (gnus-demon-add-handler #'my/gnus-demon-scan 10 1)
+
+    (setq global-mode-string
+          (append global-mode-string 
+                  (list '(:eval (propertize 
+                                 (my/gnus-unread-count)
+                                 'help-echo "Gnus : Unread"
+                                 'face '(:inverse-video t))))))
 
     (define-key gnus-group-mode-map "g" 'srb-gnus-group-get-new-news)
     (define-key gnus-topic-mode-map "g" 'srb-gnus-group-get-new-news)
