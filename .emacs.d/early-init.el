@@ -35,6 +35,8 @@
 
 (set-face-attribute 
  'variable-pitch nil :family "Noto Sans" :weight 'regular :height 130)
+(set-face-attribute
+ 'fixed-pitch-serif nil :family "Victor Mono" :inherit 'default)
 
 (fset 'display-startup-echo-area-message 'ignore)
 

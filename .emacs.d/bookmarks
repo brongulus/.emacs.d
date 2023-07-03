@@ -14,7 +14,7 @@
  (position . 235))
 ("org-capture-last-stored"
  (filename . "~/Dropbox/org/log.org")
- (front-context-string . "* <2023-07-02 Su")
- (rear-context-string)
- (position . 1))
+ (front-context-string . "* <2023-07-03 Mo")
+ (rear-context-string . "ing log capture\n")
+ (position . 13523))
 )

@@ -8,7 +8,7 @@
 ;;  Ref 1: https://zenn.dev/takeokunn/articles/56010618502ccc
 ;;  Ref 2: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
 ;;  Ref 3: https://github.com/doomemacs/doomemacs/blob/develop/docs/faq.org#how-does-doom-start-up-so-quickly
-;;  TODO: fix eldoc in terminal, bottom popup in gui, clean compile command
+;;  TODO: fix eldoc in terminal, bottom popup in gui
 ;;; Code:
 
 ;;; Startup hacks 
@@ -78,7 +78,7 @@
                 fill-column 80
                 delete-selection-mode t
                 mouse-yank-at-point t
-                custom-file (concat user-emacs-directory "custom.el")
+                custom-file (make-temp-file "emacs-custom-")
                 scroll-margin 10
                 scroll-step 1
                 next-screen-context-lines 5
@@ -100,7 +100,6 @@
                                 (setq-local display-line-numbers 'relative))))
 
 ;;; Package Management
-(push (expand-file-name "el-get/el-get" user-emacs-directory) load-path)
 (with-delayed-execution-priority-high
   (load "~/.emacs.d/packages.el" nil t))
 
@@ -117,6 +116,7 @@
         evil-split-window-below t
         evil-vsplit-window-right t
         evil-want-C-i-jump nil
+        evil-want-C-u-scroll t
         evil-cross-lines t
         evil-move-cursor-back nil
         evil-want-Y-yank-to-eol t
@@ -420,40 +420,15 @@
     (setq compilation-scroll-output 'first-error
           compilation-always-kill t
           compilation-environment '("TERM=xterm-256color"))) ;; flat
-  (add-hook 'racket-mode-hook 
-            #'(lambda ()
-                (setq-local compile-command 
-                            (concat
-                             "racket " (shell-quote-argument buffer-file-name)))))
-  (add-hook 'rust-mode-hook
-            #'(lambda ()
-                (setq-local compile-command
-                            ;; (setq-local compile-command "cargo build && cargo run")
-                            (concat "rustc " buffer-file-name
-                                    " && ./"
-                                    (file-name-sans-extension
-                                     (file-name-nondirectory buffer-file-name))))))
-  (add-hook 'java-mode-hook 
-            #'(lambda ()
-                (setq-local compile-command
-                            (concat "javac " (shell-quote-argument buffer-file-name)
-                                    " && java " (file-name-sans-extension
-                                                 (file-name-nondirectory buffer-file-name))))))
-  (add-hook 'python-mode-hook 
-            #'(lambda ()
-                (setq-local compile-command
-                            (concat "python " (shell-quote-argument buffer-file-name) " < ./in"
-                                    (file-name-sans-extension
-                                     (file-name-nondirectory buffer-file-name))))))
-  (add-hook 'c++-mode-hook 
-            #'(lambda ()
-                (setq-local compile-command
-                            (concat "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion "
-                                    "-O2 -DLOCAL -I/mnt/Data/Documents/problems/include "
-                                    buffer-file-name
-                                    " && ./a.out < ./in"
-                                    (file-name-sans-extension
-                                     (file-name-nondirectory buffer-file-name))))))
+  (with-eval-after-load 'smart-compile
+    (push '("\\.rkt\\'" . "racket %F") smart-compile-alist)
+    (push '("\\.rs\\'" . "rustc %F && ./%n") smart-compile-alist)
+    ;; (push '("\\.rs\\'" . "cargo build && cargo run") smart-compile-alist)
+    (push '("\\.java\\'" . "javac %F && java ./%n") smart-compile-alist)
+    (push '("\\.py\\'" . "python %F < in%n") smart-compile-alist)
+    (push '("\\.cpp\\'" .
+            "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL -I/mnt/Data/Documents/problems/include %F && ./a.out < in%n")
+          smart-compile-alist))
   ;; Copy input from clipboard
   (defun paste-input (&optional arg)
     (interactive)
@@ -526,7 +501,7 @@
     "q" #'quit-window)
   (global-set-key [f2] #'save-buffer)
   (global-set-key [f3] #'paste-input)
-  (global-set-key [f4] #'compile)
+  (global-set-key [f4] #'smart-compile)
   (global-set-key [f8] #'window-toggle-side-windows)
   (global-set-key [f9] #'mark-whole-buffer)
   (global-set-key [f10] #'kill-current-buffer)
@@ -598,9 +573,6 @@
            (window-height . 0.25)
            (side . bottom)
            (slot . -1))
-          ("\\*Group\\*"
-           (display-buffer-in-tab
-            (tab-name . "Gnus")))
           ("\\*\\(Faces\\|git-gutter\\:diff\\)\\*"
            (display-buffer-in-side-window)
            (window-height . 0.25)
@@ -786,21 +758,6 @@
 ;; (if (version< emacs-version "29.0")
 ;;     (pixel-scroll-mode)
 ;;   (pixel-scroll-precision-mode 1)
-   ;; (setq dired-mouse-drag-files t)                   
-   ;; (setq mouse-drag-and-drop-region-cross-program t) 
+;; (setq dired-mouse-drag-files t)                   
+;; (setq mouse-drag-and-drop-region-cross-program t) 
 ;;   (setq pixel-scroll-precision-large-scroll-height 35.0))
-
-;; (defun smart-compile ()
-;;   "runs compile command based on current major mode."
-;;   (interactive)
-;;   (let* ((cmd
-;;           (cond ((bound-and-true-p smart-compile-command) smart-compile-command)
-;;                 ((eq major-mode 'js-mode) "npm test")
-;;                 ((eq major-mode 'c++-mode) (concat "zig c++ " (buffer-file-name) "-DLOCAL "
-;;                                                    "-I/mnt/Data/Documents/problems/include/ -o ")
-;;                  ((eq major-mode 'rust-mode) "cargo build")
-;;                  ((eq major-mode 'haskell-mode) "cabal run")))
-;;           (default-directory (projectile-project-root)))
-;;          (progn
-;;            (save-some-buffers 1)
-;;            (compile cmd))))
