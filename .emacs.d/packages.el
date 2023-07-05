@@ -18,16 +18,24 @@
 (el-get-bundle elpa:evil)
 (el-get-bundle evil-escape)
 
+(el-get-bundle olivetti)
+(el-get-bundle shr-tag-pre-highlight)
+(el-get-bundle vedang/pdf-tools)
+(el-get-bundle sicp)
+
 (el-get-bundle compat) ;; for minad's pkgs
 (el-get-bundle vertico)
 (el-get-bundle marginalia)
 (el-get-bundle orderless)
 (el-get-bundle consult)
+(el-get-bundle! armindarvish/consult-gh)
+
 ;; Helpfuls's requires aren't being pulled by el-get
 (el-get-bundle f)
 (el-get-bundle s)
 (el-get-bundle elisp-refs)
 (el-get-bundle helpful)
+(el-get-bundle elisp-demos)
 
 (el-get-bundle corfu)
 (el-get-bundle popon)
@@ -57,7 +65,7 @@
 (el-get-bundle eldoc-box)
 (el-get-bundle! eglot)
 
-(el-get-bundle! damiencollard/nice-citation) ;; gnus
+(el-get-bundle damiencollard/nice-citation) ;; gnus
 (el-get-bundle dirvish)
 (el-get-bundle jdtsmith/outli)
 
@@ -67,5 +75,6 @@
 (el-get-bundle leetcode)
 (el-get-bundle! smart-compile
   :url "https://raw.githubusercontent.com/zenitani/elisp/master/smart-compile.el")
+(el-get-bundle fancy-compilation)
 ;; (el-get-bundle engrave-faces)
 (el-get 'sync)
