@@ -12,6 +12,8 @@
 
 ;;; Commentary:
 
+;; This is a personal touch on the theme with bits from palenight.
+
 ;; A dark color theme available for a number of editors.
 ;; This theme tries as much as possible to follow the consensual
 ;; specification (see URL `https://spec.draculatheme.com/').
@@ -33,12 +35,12 @@ The theme has to be reloaded after changing anything in this group."
   :type 'boolean
   :group 'dracula)
 
-(defcustom dracula-height-title-1 1.3
+(defcustom dracula-height-title-1 1.0
   "Font size 100%."
   :type 'number
   :group 'dracula)
 
-(defcustom dracula-height-title-2 1.1
+(defcustom dracula-height-title-2 1.0
   "Font size 110%."
   :type 'number
   :group 'dracula)
@@ -48,7 +50,7 @@ The theme has to be reloaded after changing anything in this group."
   :type 'number
   :group 'dracula)
 
-(defcustom dracula-height-doc-title 1.44
+(defcustom dracula-height-doc-title 1.0
   "Font size 144%."
   :type 'number
   :group 'dracula)
@@ -80,40 +82,41 @@ read it before opening a new issue about your will.")
 
 ;; Assigment form: VARIABLE COLOR [256-COLOR [TTY-COLOR]]
 (let ((colors '(;; Upstream theme color
-                (dracula-bg      "#282a36" "unspecified-bg" "unspecified-bg") ; official background
+                (dracula-bg      "#292D3E" "unspecified-bg" "unspecified-bg") ; official background
                 (dracula-fg      "#f8f8f2" "#ffffff" "brightwhite") ; official foreground
-                (dracula-current "#44475a" "#303030" "brightblack") ; official current-line/selection
+                (dracula-current "#282a36" "#303030" "brightblack") ; official current-line/selection
                 (dracula-comment "#6272a4" "#5f5faf" "blue")        ; official comment
-                (dracula-cyan    "#8be9fd" "#87d7ff" "brightcyan")  ; official cyan
+                (dracula-cyan    "#82aaff" "#87d7ff" "brightcyan")  ; official cyan
                 (dracula-green   "#50fa7b" "#5fff87" "green")       ; official green
                 (dracula-orange  "#ffb86c" "#ffaf5f" "brightred")   ; official orange
                 (dracula-pink    "#ff79c6" "#ff87d7" "magenta")     ; official pink
                 (dracula-purple  "#bd93f9" "#af87ff" "brightmagenta") ; official purple
                 (dracula-red     "#ff5555" "#ff8787" "red")         ; official red
-                (dracula-yellow  "#f1fa8c" "#ffff87" "yellow")      ; official yellow
+                (dracula-yellow  "#FFCB6B" "#ffd700" "brightyellow"); official yellow
                 ;; Other colors
+                (links           "#80cbc4" "#87d7ff" "brightblue")
                 (bg-alt          "#23242f" "#1e1e1e" "brightblack")
-                (bg2             "#373844" "#121212" "brightblack")
-                (bg3             "#464752" "#262626" "brightblack")
-                (bg4             "#565761" "#444444" "brightblack")
+                (bg2             "#2b2a3e" "#121212" "brightblack")
+                (bg3             "#444267" "#262626" "brightblack")
+                (bg4             "#4E5579" "#444444" "brightblack")
                 (fg2             "#e2e2dc" "#e4e4e4" "brightwhite")
                 (fg3             "#ccccc7" "#c6c6c6" "white")
                 (fg4             "#b6b6b2" "#b2b2b2" "white")
                 (other-blue      "#0189cc" "#0087ff" "brightblue")))
       (faces '(;; default / basic faces
-               (cursor :background ,fg3)
+               (cursor :background ,fg2)
                (default :background ,dracula-bg :foreground ,dracula-fg)
                (default-italic :slant italic)
                (error :foreground ,dracula-red)
                (ffap :foreground ,fg4)
                (fringe :background ,dracula-bg :foreground ,fg4)
                (header-line :background ,dracula-bg)
-               (highlight :foreground ,fg3 :background ,bg3)
+               (highlight :foreground ,fg2 :background ,bg3)
                (hl-line :background ,dracula-current :extend t)
                (info-quoted-name :foreground ,dracula-orange)
                (info-string :foreground ,dracula-yellow)
                (lazy-highlight :foreground ,fg2 :background ,bg2)
-               (link :foreground ,dracula-cyan :underline t)
+               (link :foreground ,links :underline t)
                (linum :slant italic :foreground ,bg4 :background ,dracula-bg)
                (line-number :slant italic :foreground ,bg4 :background ,dracula-bg)
                (match :background ,dracula-yellow :foreground ,dracula-bg)
@@ -178,7 +181,7 @@ read it before opening a new issue about your will.")
                (completions-first-difference :foreground ,dracula-pink :weight bold)
                ;; corfu
                (corfu-default :inherit tooltip :background ,bg-alt)
-               (corfu-current :background ,dracula-bg :foreground ,dracula-fg)
+               (corfu-current :background ,bg4 :foreground ,dracula-fg)
                ;; diff-hl
                (diff-hl-change :foreground ,dracula-orange :background ,dracula-orange)
                (diff-hl-delete :foreground ,dracula-red :background ,dracula-red)
@@ -251,6 +254,8 @@ read it before opening a new issue about your will.")
                (enh-ruby-op-face :foreground ,dracula-pink)
                (enh-ruby-regexp-delimiter-face :foreground ,dracula-yellow)
                (enh-ruby-string-delimiter-face :foreground ,dracula-yellow)
+               ;; eww
+               (eww-valid-certificate :foreground ,dracula-green)
                ;; flyspell
                (flyspell-duplicate :underline (:style wave :color ,dracula-orange))
                (flyspell-incorrect :underline (:style wave :color ,dracula-red))
@@ -551,16 +556,16 @@ read it before opening a new issue about your will.")
                (message-cited-text-4 :foreground ,fg2)
                (message-mml :foreground ,dracula-green :weight normal)
                ;; mode-line
-               (mode-line :background ,dracula-current
-                          :box ,dracula-current :inverse-video nil
+               (mode-line :background ,dracula-bg
+                          :overline ,dracula-comment :inverse-video nil
                           ,@(if dracula-alternate-mode-line-and-minibuffer
                                 (list :foreground fg3)
-                              (list :foreground dracula-fg)))
+                              (list :foreground dracula-comment)))
                (mode-line-inactive
                 :background ,dracula-bg :inverse-video nil
                 ,@(if dracula-alternate-mode-line-and-minibuffer
                       (list :foreground dracula-comment :box dracula-bg)
-                    (list :foreground fg4 :box bg2)))
+                    (list :foreground bg4 :overline bg4)))
                (mini-modeline-mode-line :inherit mode-line :height 0.1 :box nil)
                ;; mu4e
                (mu4e-unread-face :foreground ,dracula-pink :weight normal)
@@ -737,10 +742,8 @@ read it before opening a new issue about your will.")
                ;; tab-bar & tab-line (since Emacs 27.1)
                (tab-bar :foreground ,dracula-purple :background ,dracula-current
                         :inherit variable-pitch)
-               (tab-bar-tab :foreground ,dracula-pink :background ,dracula-bg
-                            :box (:line-width 2 :color ,dracula-bg :style nil))
-               (tab-bar-tab-inactive :foreground ,dracula-purple :background ,bg2
-                                     :box (:line-width 2 :color ,bg2 :style nil))
+               (tab-bar-tab :foreground ,dracula-purple :background ,dracula-bg)
+               (tab-bar-tab-inactive :foreground ,dracula-comment :background ,dracula-current)
                (tab-line :foreground ,dracula-purple :background ,dracula-current
                          :height 0.9 :inherit variable-pitch)
                (tab-line-tab :foreground ,dracula-pink :background ,dracula-bg
