@@ -130,6 +130,24 @@
 	(evil-define-key '(normal motion) special-mode-map "q" #'quit-window) ;; QoL
 	(with-eval-after-load 'evil-maps (define-key evil-motion-state-map (kbd "TAB") nil)))
 
+;;;; Vertico/Marginalia
+(with-delayed-execution-priority-high
+	(vertico-mode)
+	(savehist-mode)
+	(keymap-set vertico-map "<backspace>" #'vertico-directory-delete-char)
+	(keymap-set vertico-map "RET" #'vertico-directory-enter)
+	(keymap-set vertico-map "TAB" #'vertico-next)
+	(keymap-set vertico-map "<backtab>" #'vertico-previous)
+	(keymap-set vertico-map "S-TAB" #'vertico-previous)
+	(keymap-set vertico-map "C-j" #'vertico-next)
+	(keymap-set vertico-map "C-k" #'vertico-previous)
+	(setq vertico-scroll-margin 0
+				vertico-resize nil
+				vertico-cycle t))
+
+(with-delayed-execution
+	(marginalia-mode))
+
 ;;;; Visuals
 (with-delayed-execution
   ;; outli
@@ -186,24 +204,6 @@
 													 flymake-mode-line-format))
 									(:eval (my/ml-padding))
 									mode-line-end-spaces)))
-
-;;;; Vertico/Marginalia
-(with-delayed-execution-priority-high
-	(vertico-mode)
-	(savehist-mode)
-	(keymap-set vertico-map "<backspace>" #'vertico-directory-delete-char)
-	(keymap-set vertico-map "RET" #'vertico-directory-enter)
-	(keymap-set vertico-map "TAB" #'vertico-next)
-	(keymap-set vertico-map "<backtab>" #'vertico-previous)
-	(keymap-set vertico-map "S-TAB" #'vertico-previous)
-	(keymap-set vertico-map "C-j" #'vertico-next)
-	(keymap-set vertico-map "C-k" #'vertico-previous)
-	(setq vertico-scroll-margin 0
-				vertico-resize nil
-				vertico-cycle t))
-
-(with-delayed-execution
-	(marginalia-mode))
 
 ;;;; Consult/Orderless
 ;; orderleass
@@ -807,7 +807,7 @@
 	(etcc-on))
 
 ;; Gnus
-(with-delayed-execution
+(with-delayed-execution-priority-high
 	(require 'nice-citation)
 	(load "~/.emacs.d/+gnus" nil t))
 

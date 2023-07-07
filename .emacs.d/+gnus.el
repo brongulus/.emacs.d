@@ -81,6 +81,7 @@
         gnus-cache-remove-articles nil
         ;; gnus-fetch-old-headers t
         ;; gnus-blocked-images nil
+        gnus-always-read-dribble-file t
         mm-text-html-renderer 'shr
         shr-use-colors nil
         shr-max-width fill-column

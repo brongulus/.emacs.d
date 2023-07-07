@@ -495,7 +495,7 @@ read it before opening a new issue about your will.")
                (magit-branch-local :foreground ,dracula-cyan)
                (magit-branch-remote :foreground ,dracula-green)
                (magit-tag :foreground ,dracula-orange)
-               (magit-section-heading :foreground ,dracula-pink :weight bold)
+               (magit-section-heading :foreground ,dracula-yellow :weight bold)
                (magit-section-highlight :background ,bg3 :extend t)
                (magit-diff-context-highlight :background ,bg3
                                              :foreground ,fg3
