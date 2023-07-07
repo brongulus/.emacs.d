@@ -70,7 +70,16 @@
 (el-get-bundle info+)
 (el-get-bundle jdtsmith/outli)
 (el-get-bundle rainbow-mode)
+
+;; random
 (el-get-bundle dirvish)
+;; mastodon
+(el-get-bundle ts)
+(el-get-bundle persist)
+(el-get-bundle request)
+(el-get-bundle! mastodon
+  :type git :url "https://codeberg.org/martianh/mastodon.el.git")
+(el-get-bundle rougier/mastodon-alt)
 
 (el-get-bundle sicp)
 (el-get-bundle log4e)

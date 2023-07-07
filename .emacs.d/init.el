@@ -515,7 +515,8 @@
     (kbd "<leader>gg") #'magit
     (kbd "<leader>x") #'org-capture
     (kbd "<leader>oa") #'org-agenda
-    (kbd "<leader>om") #'gnus
+    (kbd "<leader>om") #'mastodon
+    (kbd "<leader>on") #'gnus
     (kbd "<leader>ot") #'eshell)
   (evil-define-key 'visual 'global (kbd ", TAB") #'untabify)
   (evil-define-key 'normal 'global
@@ -772,6 +773,25 @@
   (push '("\\.md\\'" . gfm-view-mode) auto-mode-alist)
   (push '("rc\\'" . conf-unix-mode) auto-mode-alist)
 
+  ;; mastodon
+  (push (locate-user-emacs-file "el-get/mastodon/lisp") load-path)
+  (setq mastodon-instance-url "https://emacs.ch"
+        mastodon-auth-source-file "~/.authinfo"
+        mastodon-alt-tl-box-boosted nil
+        mastodon-active-user "brongulus")
+  (push '(reply "" . "R") mastodon-tl--symbols)
+  (push '(boost "" . "B") mastodon-tl--symbols)
+  (push '(favourite "" . "F") mastodon-tl--symbols)
+  (push '(bookmark "" . "K") mastodon-tl--symbols)
+  (if (display-graphic-p)
+      (add-hook 'mastodon-mode-hook #'olivetti-mode))
+  (add-hook 'mastodon-mode-hook #'mastodon-alt-tl-activate)
+  (autoload 'mastodon "mastodon-alt" nil t)
+  (with-eval-after-load 'mastodon
+    (evil-make-overriding-map mastodon-mode-map 'normal))
+  (evil-define-key 'normal mastodon-mode-map
+    "q" #'kill-current-buffer)
+  
   ;; eww
   (with-eval-after-load 'shr
     (require 'shr-tag-pre-highlight)
@@ -780,7 +800,7 @@
 
   (setq eww-header-line-format "%t")
   (eval-after-load 'eww
-    (evil-define-key 'normal 'eww-mode-map
+    (evil-define-key 'normal eww-mode-map
       "q" #'kill-buffer-and-window
       "H" #'eww-back-url))
 
