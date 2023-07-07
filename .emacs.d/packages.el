@@ -1,3 +1,4 @@
+;;; packages.el -*- lexical-binding: t; -*-
 (push (expand-file-name "el-get/el-get" user-emacs-directory) load-path)
 
 (unless (require 'el-get nil 'noerror)
@@ -17,11 +18,6 @@
 (el-get-bundle undo-fu-session)
 (el-get-bundle elpa:evil)
 (el-get-bundle evil-escape)
-
-(el-get-bundle olivetti)
-(el-get-bundle shr-tag-pre-highlight)
-(el-get-bundle vedang/pdf-tools)
-(el-get-bundle sicp)
 
 (el-get-bundle compat) ;; for minad's pkgs
 (el-get-bundle vertico)
@@ -64,11 +60,19 @@
 (el-get-bundle external-completion)
 (el-get-bundle eldoc-box)
 (el-get-bundle! eglot)
+(el-get-bundle apheleia)
 
+;; eye candy
+(el-get-bundle olivetti)
 (el-get-bundle damiencollard/nice-citation) ;; gnus
-(el-get-bundle dirvish)
+(el-get-bundle shr-tag-pre-highlight)
+(el-get-bundle vedang/pdf-tools)
+(el-get-bundle info+)
 (el-get-bundle jdtsmith/outli)
+(el-get-bundle rainbow-mode)
+(el-get-bundle dirvish)
 
+(el-get-bundle sicp)
 (el-get-bundle log4e)
 (el-get-bundle aio)
 (el-get-bundle graphql)

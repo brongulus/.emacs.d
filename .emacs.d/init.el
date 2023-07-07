@@ -12,9 +12,6 @@
 ;;; Code:
 
 ;;; Startup hacks
-;; (setq comp-deferred-compilation t
-;;			 comp-async-report-warnings-errors nil)
-
 ;; -----------------------------------------------------------------------------
 ;; ;; (el-get-bundle benchmark-init)
 ;; (load "/home/prashant/.emacs.d/el-get/benchmark-init/benchmark-init.el"
@@ -25,8 +22,6 @@
 ;; -----------------------------------------------------------------------------
 ;; ;; (el-get-bundle esup)
 ;; -----------------------------------------------------------------------------
-(setq t0 (current-time)) ;; ymarco
-
 (defvar my/delayed-priority-high-confs '())
 (defvar my/delayed-priority-high-conf-timer nil)
 
@@ -73,7 +68,6 @@
 								smtpmail-smtp-server "smtp.gmail.com"
 								smtpmail-smtp-service 587
 								warning-minimum-level :error
-								line-spacing 3
 								tab-width 2
 								indent-tabs-mode nil
 								enable-recursive-minibuffers t
@@ -81,7 +75,7 @@
 								delete-selection-mode t
 								mouse-yank-at-point t
 								custom-file (make-temp-file "emacs-custom-")
-								scroll-margin 14
+								scroll-margin 5
                 maximum-scroll-margin 0.5
 								scroll-step 1
 								next-screen-context-lines 5
@@ -94,8 +88,7 @@
 								large-file-warning-threshold nil
 								show-paren-delay 0
 								initial-major-mode 'lisp-interaction-mode
-								initial-buffer-choice t)
-	(advice-add 'bookmark-set-internal :after '(funcall 'bookmark=save))) ;; prot
+								initial-buffer-choice t))
 
 ;;; Package Management
 (with-delayed-execution-priority-high
@@ -124,11 +117,11 @@
 				evil-motion-state-modes nil
 				evil-disable-insert-state-bindings t
 				evil-undo-system 'undo-fu
-				evil-normal-state-tag	 (propertize "▊" 'face '(:foreground "#6272a4"))
-				evil-motion-state-tag	 (propertize "▊" 'face '(:foreground "LightSteelBlue1"))
-				evil-emacs-state-tag	 (propertize "▊" 'face '(:foreground "dim gray"))
-				evil-insert-state-tag	 (propertize "▊" 'face '(:foreground "khaki1"))
-				evil-visual-state-tag	 (propertize "▊" 'face '(:foreground "medium spring green")))
+				evil-normal-state-tag	 (propertize "▊" 'face '(:inherit mode-line))
+				evil-motion-state-tag	 (propertize "▊" 'face '(:inherit mode-line))
+				evil-emacs-state-tag	 (propertize "▊" 'face '(:inherit mode-line-inactive))
+				evil-insert-state-tag	 (propertize "▊" 'face '(:inherit minibuffer-prompt))
+				evil-visual-state-tag	 (propertize "▊" 'face '(:inherit success)))
 
 	(evil-mode 1)
 	(evil-escape-mode)
@@ -139,10 +132,20 @@
 
 ;;;; Visuals
 (with-delayed-execution
+  ;; outli
 	(add-hook 'text-mode-hook #'outli-mode)
 	(add-hook 'prog-mode-hook #'outli-mode)
 	(setq outli-default-nobar t)
 
+  ;; info-fontification
+  (autoload 'info "info+" nil t)
+  (setq Info-use-header-line nil
+        Info-breadcrumbs-in-header-flag nil
+        Info-breadcrumbs-in-mode-line-mode t)
+  (add-hook 'Info-mode-hook #'(lambda () (setq-local global-hl-line-mode nil
+                                                     cursor-type 'hbar)))
+
+  ;; olivetti
 	(if (display-graphic-p)
 			(progn
 				(add-hook 'text-mode-hook #'olivetti-mode)
@@ -221,7 +224,8 @@
 ;; consult
 (with-delayed-execution
 	(with-eval-after-load 'consult
-		(push ".newsrc-dribble" consult-preview-excluded-files)
+		(push "\\.newsrc-dribble" consult-preview-excluded-files)
+		(push "\\.pdf" consult-preview-excluded-files)
 		(require 'consult-gh)
 		(setq consult-gh-show-preview t
 					consult-gh-preview-key "M-o"
@@ -253,7 +257,7 @@
 	(evil-define-key 'normal emacs-lisp-mode-map "K" #'helpful-at-point)
 	(evil-define-key '(normal motion) helpful-mode-map
 		"K" #'helpful-at-point
-		"q" #'(lambda () (interactive) (quit-window t)))
+		"q" #'kill-buffer-and-window)
 	(global-set-key (kbd "C-h f") #'helpful-callable)
 	(global-set-key (kbd "C-h v") #'helpful-variable)
 	(global-set-key (kbd "C-h k") #'helpful-key)
@@ -355,9 +359,26 @@
 					eldoc-box-max-pixel-height 700
 					eldoc-box-only-multi-line t)))
 (with-delayed-execution
+  (apheleia-global-mode +1)
 	(evil-define-key '(normal motion) prog-mode-map "X" #'consult-flymake)
 	(if (display-graphic-p)
-			(evil-define-key '(normal motion) prog-mode-map "K" #'eldoc-box-help-at-point)
+      (progn
+        (defun eldoc-box-scroll-up ()
+          "Scroll up in `eldoc-box--frame'"
+          (interactive)
+          (with-current-buffer eldoc-box--buffer
+            (with-selected-frame eldoc-box--frame
+              (scroll-down 3))))
+        (defun eldoc-box-scroll-down ()
+          "Scroll down in `eldoc-box--frame'"
+          (interactive)
+          (with-current-buffer eldoc-box--buffer
+            (with-selected-frame eldoc-box--frame
+              (scroll-up 3))))
+			  (evil-define-key '(normal motion) eglot-mode-map
+          "K" #'eldoc-box-help-at-point
+          (kbd "C-j") 'eldoc-box-scroll-down
+          (kbd "C-k") 'eldoc-box-scroll-up))
 		(evil-define-key '(normal motion) prog-mode-map "K" #'eldoc-doc-buffer))
 
 	(with-eval-after-load 'eglot
@@ -381,17 +402,15 @@
 ;;;; Dirvish
 (with-delayed-execution
 	(dirvish-override-dired-mode)
-	;; (add-hook 'dirvish-override-dired-mode-hook 'dirvish-emerge-mode)
+  (add-hook 'dirvish-directory-view-mode-hook
+            #'(lambda () (setq-local truncate-lines t)))
 	(evil-define-key 'normal dirvish-mode-map "q" #'dirvish-quit)
-	;; FIXME: dirvish dir preview
-	(dirvish-define-preview ls (file)
-		(when (file-directory-p file)
-			`(shell . ("ls" "-ahl" "--almost-all" "--group-directories-first" ,file))))
-	(push 'ls dirvish-preview-dispatchers)
 	(setq dirvish-attributes '(vc-state git-msg))
 	(setq dirvish-default-layout '(0 0.11 0.55)
+        dirvish-mode-line-format '(:left (path) :right (free-space omit index))
+        dirvish-use-header-line nil
 				dirvish-reuse-session nil
-				dirvish-emerge-groups
+				dirvish-emerge-groups ;; todo hook
 				'(("Recent files" (predicate . recent-files-2h))
 					("Documents" (extensions "pdf" "tex" "bib" "epub"))
 					("Video" (extensions "mp4" "mkv" "webm"))
@@ -507,19 +526,18 @@
 		(kbd "C-f") #'find-file
 		";" #'evil-ex
 		":" #'evil-repeat-find-char
+    (kbd "M-.") #'xref-find-definitions
 		(kbd "C-t") #'tab-new
 		(kbd "C-w") #'tab-close
 		(kbd "A-f") #'fill-paragraph
 		(kbd "gcc") #'comment-line)
 	(evil-define-key '(normal motion) Info-mode-map
-		"RET" #'Info-follow-nearest-node
-		(kbd "<ret>") #'Info-follow-nearest-node
-		"h" #'Info-backward-node
-		"l" #'Info-follow-nearest-node
+		(kbd "RET") #'Info-follow-nearest-node
     "n" #'Info-forward-node
     "p" #'Info-backward-node
-    "J" #'Info-next
-    "K" #'Info-prev
+    "K" #'helpful-at-point
+    "N" #'Info-next
+    "P" #'Info-prev
 		"u" #'Info-up
 		"U" #'Info-top-node
 		"gt" 'Info-toc
@@ -555,12 +573,15 @@
 ;;; dired/tabs/windows
 ;; dired
 (with-delayed-execution
+  (add-hook 'dired-mode-hook #'(lambda () (setq-local truncate-lines t)))
 	(setq dired-listing-switches
 				"-l --almost-all --human-readable --sort=version --group-directories-first")
 	(evil-define-key 'normal dired-mode-map
+    (kbd "C-t") 'tab-new
 		"O" 'browse-url-of-dired-file
 		"h" 'dired-up-directory
 		"l" 'dired-find-file
+    "E" 'wdired-change-to-wdired-mode
 		"q" #'dirvish-quit)
 	(define-key dired-mode-map "-" 'dired-up-directory)
 	(define-key dired-mode-map "~"
@@ -602,12 +623,12 @@
 			(windmove-left)))
 	(evil-define-key 'normal 'global (kbd "<leader>op") #'prot/dired-vc-left)
 	(setq display-buffer-alist
-				'(("\\*e?shell\\*"
+				'(("\\*\\(e?shell\\|terminal\\)\\*"
 					 (display-buffer-in-side-window)
 					 (window-height . 0.25)
 					 (side . bottom)
 					 (slot . -1))
-					("\\*\\(Faces\\|compilation\\|git-gutter\\:diff\\)\\*"
+					("\\*\\(Compile-log\\|compilation\\|git-gutter\\:diff\\)\\*"
 					 (display-buffer-in-side-window)
 					 (window-height . 0.25)
 					 (side . bottom)
@@ -634,8 +655,10 @@
 				org-ellipsis "▼"
 				org-pretty-entities t
 				org-startup-indented t
+        org-adapt-indentation t
 				org-startup-folded t
 				org-src-preserve-indentation t
+        org-src-fontify-natively t
 				;; \usepackage{listings}
 				;; org-latex-listings 'engraved
 				;; ;; org-latex-src-block-backend 'engraved
@@ -736,19 +759,6 @@
 											 (concat "/sudo:root@localhost:" file)))))))
 	(evil-define-key 'normal 'global (kbd "<leader>fu") #'noct-maybe-sudo-edit)
  
-	(defun +setup-text-mode-left-margin () ;; teco
-		(interactive)
-		(when (and (derived-mode-p 'text-mode)
-							 (eq (current-buffer)
-									 (window-buffer (frame-selected-window))))
-			(setq left-margin-width (if display-line-numbers
-																	0 2))
-			(set-window-buffer (get-buffer-window (current-buffer))
-												 (current-buffer))))
-	(add-hook 'window-configuration-change-hook #'+setup-text-mode-left-margin)
-	(add-hook 'display-line-numbers-mode-hook #'+setup-text-mode-left-margin)
-	(add-hook 'text-mode-hook #'+setup-text-mode-left-margin)
-
 	(set-display-table-slot standard-display-table 'truncation 32) ;; hides $
 	(set-display-table-slot standard-display-table 'wrap 32) ;; hides \
 	(save-place-mode 1)
@@ -756,7 +766,10 @@
 	(setq global-auto-revert-non-file-buffers t
 				auto-revert-verbose nil)
 	(winner-mode 1)
-	(push '("README\\.md\\'" . gfm-mode) auto-mode-alist)
+  (setq markdown-command "multimarkdown"
+        markdown-fontify-code-blocks-natively t
+        markdown-display-remote-images t)
+	(push '("\\.md\\'" . gfm-view-mode) auto-mode-alist)
 	(push '("rc\\'" . conf-unix-mode) auto-mode-alist)
 
 	;; eww
@@ -765,9 +778,10 @@
 		(add-to-list 'shr-external-rendering-functions
 								 '(pre . shr-tag-pre-highlight)))
 
+  (setq eww-header-line-format "%t")
 	(eval-after-load 'eww
 		(evil-define-key 'normal 'eww-mode-map
-			"q" #'quit-window
+			"q" #'kill-buffer-and-window
 			"H" #'eww-back-url))
 
 	(with-delayed-execution
@@ -796,11 +810,6 @@
 (with-delayed-execution
 	(require 'nice-citation)
 	(load "~/.emacs.d/+gnus" nil t))
-
-;;; Config performance measure
-(let ((elapsed (float-time (time-subtract (current-time) t0))))
-	(makunbound 't0)
-	(message "Spent %.3fs in init.el" elapsed))
 
 (provide 'init)
 ;;; init.el ends here
