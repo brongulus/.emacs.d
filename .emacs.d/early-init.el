@@ -54,7 +54,7 @@
       bidi-inhibit-bpa t)
 
 (setq-default bidi-display-reordering 'left-to-right
-			        line-spacing 3
+              line-spacing 3
               bidi-paragraph-direction 'left-to-right)
 
 (provide 'early-init)
