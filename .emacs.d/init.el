@@ -20,7 +20,7 @@
 ;; (add-hook 'after-init-hook 'benchmark-init/deactivate)
 
 ;; -----------------------------------------------------------------------------
-;; ;; (el-get-bundle esup)
+;; ;; (el-get-bundle elpa:esup)
 ;; -----------------------------------------------------------------------------
 (defvar my/delayed-priority-high-confs '())
 (defvar my/delayed-priority-high-conf-timer nil)
@@ -92,10 +92,30 @@
 
 ;;; Package Management
 (with-delayed-execution-priority-high
-  (load "~/.emacs.d/packages.el" nil t))
+  ;(load "~/.emacs.d/packages.el" nil t)
+  (push (expand-file-name "el-get/el-get" user-emacs-directory) load-path)
+
+  (unless (require 'el-get nil 'noerror)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/dimitri/el-get/master/el-get-install.el")
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+
+  (with-eval-after-load 'el-get-git
+    (setq el-get-git-shallow-clone t))
+  
+  (push "~/.emacs.d/el-get-user/recipes" el-get-recipe-path)
+  (setq el-get-is-lazy t)
+
+  (el-get-bundle elpa:evil)
+  (el-get-bundle compat) ;; for minad's pkgs
+  (el-get-bundle evil-escape))
 
 ;;;; Yay Evil!
 (with-delayed-execution
+  (el-get-bundle undo-fu)
+  (el-get-bundle undo-fu-session)
   (setq undo-limit 67108864
         undo-strong-limit 100663296
         undo-outer-limit 1006632960)
@@ -132,6 +152,7 @@
 
 ;;;; Vertico/Marginalia
 (with-delayed-execution-priority-high
+  (el-get-bundle vertico)
   (vertico-mode)
   (savehist-mode)
   (keymap-set vertico-map "<backspace>" #'vertico-directory-delete-char)
@@ -147,16 +168,19 @@
         vertico-cycle t))
 
 (with-delayed-execution
+  (el-get-bundle marginalia)
   (marginalia-mode))
 
 ;;;; Visuals
 (with-delayed-execution
   ;; outli
+  (el-get-bundle jdtsmith/outli)
   (add-hook 'text-mode-hook #'outli-mode)
   (add-hook 'prog-mode-hook #'outli-mode)
   (setq outli-default-nobar t)
 
   ;; info-fontification
+  (el-get-bundle info+)
   (autoload 'info "info+" nil t)
   (setq Info-use-header-line nil
         Info-breadcrumbs-in-header-flag nil
@@ -164,6 +188,7 @@
   (add-hook 'Info-mode-hook #'(lambda () (setq-local global-hl-line-mode nil)))
 
   ;; olivetti
+  (el-get-bundle olivetti)
   (if (display-graphic-p)
       (progn
         (add-hook 'text-mode-hook #'olivetti-mode)
@@ -208,6 +233,7 @@
 ;;;; Consult/Orderless
 ;; orderleass
 (with-delayed-execution
+  (el-get-bundle orderless)
   (setq completion-category-defaults nil
         completion-styles '(substring orderless basic)
         completion-category-overrides '((file (styles basic partial-completion)))
@@ -223,14 +249,11 @@
 
 ;; consult
 (with-delayed-execution
+  (el-get-bundle consult)
   (with-eval-after-load 'consult
     (push "\\.newsrc-dribble" consult-preview-excluded-files)
     (push "\\.pdf" consult-preview-excluded-files)
-    (require 'consult-gh)
-    (setq consult-preview-key '(:debounce 0.5 any)
-          consult-gh-show-preview t
-          consult-gh-preview-key "M-o"
-          consult-gh-preview-buffer-mode 'org-mode))
+    (setq consult-preview-key '(:debounce 0.5 any)))
   (when (executable-find "rg")
     (setq grep-program "rg"))
   (when (executable-find "fd")
@@ -254,6 +277,11 @@
 
 ;;;; Helpful/elisp-demos
 (with-delayed-execution
+  (el-get-bundle f)
+  (el-get-bundle s)
+  (el-get-bundle elisp-refs)
+  (el-get-bundle helpful)
+  (el-get-bundle elisp-demos)
   (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update)
   (evil-define-key 'normal emacs-lisp-mode-map "K" #'helpful-at-point)
   (evil-define-key '(normal motion) helpful-mode-map
@@ -267,6 +295,10 @@
 
 ;;;; Cape/Corfu
 (with-delayed-execution
+  (el-get-bundle corfu)
+  (el-get-bundle popon)
+  (el-get-bundle corfu-terminal)
+  (el-get-bundle cape)
   (global-corfu-mode)
   (add-hook 'corfu-mode-hook 'corfu-popupinfo-mode)
   (add-hook 'evil-insert-state-exit-hook 'corfu-quit)
@@ -305,11 +337,13 @@
   (add-hook 'text-mode-hook #'my/add-capfs))
 
 (with-delayed-execution
+  (el-get-bundle which-key)
   (setq which-key-idle-delay 0.5)
   (which-key-mode))
 
 ;;;; git/tempel
 (with-delayed-execution
+  (el-get-bundle git-gutter)
   (add-hook 'text-mode-hook #'git-gutter-mode)
   (add-hook 'prog-mode-hook #'git-gutter-mode)
   (with-eval-after-load 'git-gutter
@@ -319,6 +353,11 @@
       (kbd "<localleader>gj") #'git-gutter:next-hunk
       (kbd "<localleader>gk") #'git-gutter:previous-hunk
       (kbd "<localleader>gr") #'git-gutter:revert-hunk)
+    (with-eval-after-load 'modus-themes
+      (set-face-background 'modus-themes-fringe-yellow nil)
+      (set-face-background 'modus-themes-fringe-green nil)
+      (set-face-background 'modus-themes-fringe-red nil))
+    (set-face-foreground 'git-gutter:added "chartreuse")
     (set-face-foreground 'git-gutter:modified "deep sky blue")
     (set-face-foreground 'git-gutter:deleted "dark orange"))
   (setq git-gutter:update-interval 0.2
@@ -328,6 +367,13 @@
         git-gutter:deleted-sign "│"))
 
 (with-delayed-execution
+  (el-get-bundle git-gutter)
+  (el-get-bundle magit/transient)
+  (el-get-bundle magit/ghub)
+  (el-get-bundle magit/magit-popup)
+  (el-get-bundle magit/with-editor)
+  (el-get-bundle magit/magit)
+  (el-get-bundle magit/forge)
   (push (locate-user-emacs-file "el-get/transient/lisp") load-path)
   (push (locate-user-emacs-file "el-get/ghub/lisp") load-path)
   (push (locate-user-emacs-file "el-get/magit-pop") load-path)
@@ -341,6 +387,7 @@
 
 ;; tempel (TODO: incorporate aas with tempel?)
 (with-delayed-execution
+  (el-get-bundle tempel)
   (setq fill-indent-according-to-mode t)
   (defun tempel-setup-capf ()
     (setq-local completion-at-point-functions
@@ -357,12 +404,19 @@
 
 ;;;; eglot
 (with-delayed-execution
+  (el-get-bundle! project
+    :url "https://raw.githubusercontent.com/emacs-mirror/emacs/master/lisp/progmodes/project.el")
+  (el-get-bundle rustic)
+  (el-get-bundle reformatter)
+  (el-get-bundle zig-mode)
+  (el-get-bundle external-completion)
+  (el-get-bundle eldoc-box)
+  (el-get-bundle! eglot)
   (with-eval-after-load 'eldoc-box
     (setq eldoc-box-max-pixel-width 600
           eldoc-box-max-pixel-height 700
           eldoc-box-only-multi-line t)))
 (with-delayed-execution
-  (apheleia-global-mode +1)
   (evil-define-key '(normal motion) prog-mode-map "X" #'consult-flymake)
   (if (display-graphic-p)
       (progn
@@ -404,6 +458,10 @@
 
 ;;; Leetcode
 (with-delayed-execution
+  (el-get-bundle log4e)
+  (el-get-bundle aio)
+  (el-get-bundle graphql)
+  (el-get-bundle leetcode)
   (defun set-exec-path-from-shell-PATH ()
     "Set up Emacs' `exec-path' and PATH environment variable to match
      that used by the user's shell."
@@ -437,6 +495,9 @@
 
 ;;; Compilation
 (with-delayed-execution
+  (el-get-bundle! smart-compile
+    :url "https://raw.githubusercontent.com/zenitani/elisp/master/smart-compile.el")
+  (el-get-bundle fancy-compilation)
   (with-eval-after-load 'compile
     (setq fancy-compilation-override-colors nil)
     (fancy-compilation-mode)
@@ -485,6 +546,12 @@
   (define-auto-insert "\.py" ["comp.py"
                               my/eval-auto-insert-init-form]))
 
+;;;; Misc
+(with-delayed-execution
+  (el-get-bundle sicp)
+  (el-get-bundle expand-region)
+  (el-get-bundle multiple-cursors))
+
 ;;; Key binds / Key maps
 (with-delayed-execution-priority-high
   (evil-set-leader 'normal (kbd "SPC")) ;; SPC is leader
@@ -499,7 +566,7 @@
     (kbd "<leader>fp") #'(lambda () (interactive) (find-file "~/.emacs.d/init.el"))
     (kbd "<leader>gg") #'magit
     (kbd "<leader>x") #'org-capture
-    (kbd "<leader>oa") #'or-agenda
+    (kbd "<leader>oa") #'org-agenda
     (kbd "<leader>or") #'remember
     (kbd "<leader>om") #'mastodon
     (kbd "<leader>on") #'gnus
@@ -586,17 +653,18 @@
         dired-recursive-copies 'always))
 
 ;; tabs (FIXME: new tab not cleanly init)
-(with-eval-after-load 'tab-bar
-  (defun +my/tab (tab i)
-    (propertize (concat "  " (alist-get 'name tab) "  ")
-                'face (funcall tab-bar-tab-face-function tab)))
-  (setq tab-bar-close-button-show nil
-        tab-bar-new-button-show nil
-        tab-bar-separator ""
-        tab-bar-tab-name-format-function #'+my/tab
-        tab-bar-new-tab-choice "*notes*"
-        tab-bar-tab-name-function 'tab-bar-tab-name-truncated
-        tab-bar-tab-name-truncated-max 12))
+(with-delayed-execution
+  (with-eval-after-load 'tab-bar
+    (defun +my/tab (tab i)
+      (propertize (concat "  " (alist-get 'name tab) "  ")
+                  'face (funcall tab-bar-tab-face-function tab)))
+    (setq tab-bar-close-button-show nil
+          tab-bar-new-button-show nil
+          tab-bar-separator ""
+          tab-bar-tab-name-format-function #'+my/tab
+          tab-bar-new-tab-choice "*notes*"
+          tab-bar-tab-name-function 'tab-bar-tab-name-truncated
+          tab-bar-tab-name-truncated-max 12)))
 
 ;; Window configuration (prot)
 (with-delayed-execution
@@ -625,22 +693,9 @@
            (side . bottom)
            (slot . 1)))))
 
-;;; Newsticker
-;; (fixme: keybinds, layout)
-(with-delayed-execution
-  (setq newsticker-groups '("PSA" "Gluer" "Matklad" "Lobsters" "DDW" "Arch" "HLTV"))
-  (setq newsticker-automatically-mark-visited-items-as-old t)
-  (setq newsticker-url-list
-        '(("HLTV" "https://www.hltv.org/rss/news")
-          ("Arch" "https://archlinux.org/feeds/news/")
-          ("DDW" "https://drewdevault.com/blog/index.xml")
-          ("Lobsters" "https://lobste.rs/rss")
-          ("Matklad" "https://matklad.github.io/feed.xml")
-          ("Gluer" "https://gluer.org/blog/atom.xml")
-          ("PSA" "https://psa.wf/feed/"))))
-
 ;;; Org
 (with-delayed-execution
+  (el-get-bundle org-download)
   (setq org-latex-toc-command "\\tableofcontents \\clearpage"
         org-directory "~/Dropbox/org/"
         org-ellipsis "▼"
@@ -716,17 +771,19 @@
           org-agenda-files '("~/Dropbox/org/todo.org" "~/Dropbox/org/inbox.org"))))
 
 ;;; Random
+;; ediff (http://yummymelon.com/devnull/surprise-and-emacs-defaults.html )
 (with-delayed-execution
-  ;; ediff (http://yummymelon.com/devnull/surprise-and-emacs-defaults.html )
   (with-eval-after-load 'ediff
     (setq ediff-split-window-function 'split-window-horizontally
-          ediff-window-setup-function 'ediff-setup-windows-plain))
+          ediff-window-setup-function 'ediff-setup-windows-plain)))
   
-  ;; pdf-tools
+;; pdf-tools
+(with-delayed-execution
+  (el-get-bundle vedang/pdf-tools)
   (push (expand-file-name "el-get/pdf-tools/lisp" user-emacs-directory) load-path)
   (require 'pdf-tools)
   (push '("\\.pdf\\'" . pdf-view-mode) auto-mode-alist)
-  ;; FIXME: 
+  ;; FIXME:
   (add-hook 'pdf-view-mode-hook 'evil-normal-state)
   (add-hook 'pdf-view-mode-hook 'pdf-view-fit-page-to-window)
   (evil-define-key 'normal pdf-view-mode-map
@@ -741,7 +798,9 @@
     "sb" 'pdf-view-set-slice-from-bounding-box
     "sr" 'pdf-view-reset-slice
     "zm" 'pdf-view-themed-minor-mode
-    "o" 'pdf-outline)
+    "o" 'pdf-outline))
+
+(with-delayed-execution
   ;; ref: noctuid
   (defun noct-maybe-sudo-edit ()
     "If the current file is exists and is unwritable, edit it as root with sudo."
@@ -781,9 +840,16 @@
         markdown-fontify-code-blocks-natively t
         markdown-display-remote-images t)
   (push '("\\.md\\'" . gfm-view-mode) auto-mode-alist)
-  (push '("rc\\'" . conf-unix-mode) auto-mode-alist)
+  (push '("rc\\'" . conf-unix-mode) auto-mode-alist))
 
-  ;; mastodon
+;; mastodon
+(with-delayed-execution
+  (el-get-bundle ts)
+  (el-get-bundle persist)
+  (el-get-bundle request)
+  (el-get-bundle mastodon
+    :type git :url "https://codeberg.org/martianh/mastodon.el.git")
+  (el-get-bundle rougier/mastodon-alt)
   (push (locate-user-emacs-file "el-get/mastodon/lisp") load-path)
   (setq mastodon-instance-url "https://emacs.ch"
         mastodon-auth-source-file "~/.authinfo"
@@ -801,9 +867,12 @@
     (push '(bookmark "" . "K") mastodon-tl--symbols)
     (evil-make-overriding-map mastodon-mode-map 'normal))
   (evil-define-key 'normal mastodon-mode-map
-    "q" #'kill-current-buffer)
+    "q" #'kill-current-buffer))
   
-  ;; eww
+;; eww
+(with-delayed-execution
+  (el-get-bundle language-detection)
+  (el-get-bundle shr-tag-pre-highlight)
   (with-eval-after-load 'shr
     (require 'shr-tag-pre-highlight)
     (add-to-list 'shr-external-rendering-functions
@@ -814,11 +883,13 @@
     (evil-define-key 'normal eww-mode-map
       "Y" #'eww-copy-page-url
       "q" #'kill-buffer-and-window
-      "H" #'eww-back-url))
+      "H" #'eww-back-url)))
 
-  (with-delayed-execution
-    (blink-cursor-mode -1)
-    (setq suggest-key-bindings nil))
+(with-delayed-execution
+  (el-get-bundle xclip)
+  (el-get-bundle evil-terminal-cursor-changer)
+  (blink-cursor-mode -1)
+  (setq suggest-key-bindings nil)
   (show-paren-mode)
   (global-hl-line-mode)
   (add-hook 'after-save-hook
@@ -840,8 +911,12 @@
 
 ;; Gnus
 (with-delayed-execution-priority-high
+  (el-get-bundle damiencollard/nice-citation) ;; gnus
   (require 'nice-citation)
   (load "~/.emacs.d/+gnus" nil t))
+
+(with-delayed-execution
+  (el-get 'sync))
 
 (provide 'init)
 ;;; init.el ends here

@@ -34,7 +34,7 @@
 (defun get-preferred-theme () ;; ymarco
   (let ((hour (string-to-number
                (substring (current-time-string) 11 13))))
-    (if (<= 6 hour 17)
+    (if (<= 7 hour 18)
         'modus-operandi
       'dracula)))
 (setq current-theme (get-preferred-theme))

@@ -24,7 +24,6 @@
 (el-get-bundle marginalia)
 (el-get-bundle orderless)
 (el-get-bundle consult)
-(el-get-bundle! armindarvish/consult-gh)
 
 ;; Helpfuls's requires aren't being pulled by el-get
 (el-get-bundle f)
@@ -46,10 +45,10 @@
 (el-get-bundle magit/with-editor)
 (el-get-bundle magit/magit)
 (el-get-bundle magit/forge)
+(el-get-bundle tempel)
 ;; terminal stuff, taken from doom (cursor, cliboard)
 (el-get-bundle xclip)
 (el-get-bundle evil-terminal-cursor-changer)
-(el-get-bundle tempel)
 (el-get-bundle expand-region)
 (el-get-bundle multiple-cursors)
 ;; Remove project import after 29
@@ -61,7 +60,6 @@
 (el-get-bundle external-completion)
 (el-get-bundle eldoc-box)
 (el-get-bundle! eglot)
-(el-get-bundle apheleia)
 
 ;; eye candy
 (el-get-bundle olivetti)
@@ -78,7 +76,7 @@
 (el-get-bundle ts)
 (el-get-bundle persist)
 (el-get-bundle request)
-(el-get-bundle! mastodon
+(el-get-bundle mastodon
   :type git :url "https://codeberg.org/martianh/mastodon.el.git")
 (el-get-bundle rougier/mastodon-alt)
 

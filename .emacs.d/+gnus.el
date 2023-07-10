@@ -5,7 +5,7 @@
 ;; https://github.com/redguardtoo/mastering-emacs-in-one-year-guide/blob/master/gnus-guide-en.org
 ;; https://www.bounga.org/tips/2020/05/03/multiple-smtp-accounts-in-gnus-without-external-tools/
 
-(with-delayed-execution
+(with-delayed-execution-priority-high
   ;; visuals
   (with-eval-after-load 'gnus
     ;; See: #52735
