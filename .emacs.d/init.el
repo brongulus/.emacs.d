@@ -1,8 +1,8 @@
 ;;; init.el --- Description -*- lexical-binding: t; -*-
 ;; Author: Prashant Tak <prashantrameshtak@gmail.com>
 ;; Created: June 11, 2023
-;; Modified: July 3, 2023
-;; Version: 0.0.2
+;; Modified: July 10, 2023
+;; Version: 0.0.3
 ;; This file is not part of GNU Emacs.
 ;;; Commentary:
 ;;  Most completion systems follow TnG, tab to choose next and RET to select
@@ -20,7 +20,7 @@
 ;; (add-hook 'after-init-hook 'benchmark-init/deactivate)
 
 ;; -----------------------------------------------------------------------------
-;; ;; (el-get-bundle elpa:esup)
+;; ;; (el-get-bundle esup)
 ;; -----------------------------------------------------------------------------
 (defvar my/delayed-priority-high-confs '())
 (defvar my/delayed-priority-high-conf-timer nil)
@@ -250,10 +250,15 @@
 ;; consult
 (with-delayed-execution
   (el-get-bundle consult)
+  (el-get-bundle armindarvish/consult-gh)
   (with-eval-after-load 'consult
+    (require 'consult-gh)
     (push "\\.newsrc-dribble" consult-preview-excluded-files)
     (push "\\.pdf" consult-preview-excluded-files)
-    (setq consult-preview-key '(:debounce 0.5 any)))
+    (setq consult-preview-key '(:debounce 1.0 any)
+          consult-gh-show-preview t
+          consult-gh-preview-key "RET"
+          consult-gh-preview-buffer-mode 'org-mode))
   (when (executable-find "rg")
     (setq grep-program "rg"))
   (when (executable-find "fd")
@@ -286,7 +291,7 @@
   (evil-define-key 'normal emacs-lisp-mode-map "K" #'helpful-at-point)
   (evil-define-key '(normal motion) helpful-mode-map
     "K" #'helpful-at-point
-    "q" #'kill-buffer-and-window)
+    "q" #'kill-this-buffer)
   (global-set-key (kbd "C-h f") #'helpful-callable)
   (global-set-key (kbd "C-h v") #'helpful-variable)
   (global-set-key (kbd "C-h k") #'helpful-key)
@@ -417,7 +422,24 @@
           eldoc-box-max-pixel-height 700
           eldoc-box-only-multi-line t)))
 (with-delayed-execution
+  (defun flymake-eldoc-function (report-doc &rest _) ;; lcolonq
+    "Document diagnostics at point.Intended for
+     `eldoc-documentation-functions' (which see)."
+    (let ((diags (flymake-diagnostics (point))))
+      (when diags
+        (funcall report-doc
+                 (mapconcat #'flymake-diagnostic-text diags "\n")
+                 :sort 'error))))
+  (with-eval-after-load 'eldoc
+    (add-to-list 'eldoc-documentation-functions 'flymake-eldoc-function))
+  (add-hook 'prog-mode-hook #'flymake-mode)
+
   (evil-define-key '(normal motion) prog-mode-map "X" #'consult-flymake)
+  ;; eldoc
+  (setq eldoc-echo-area-prefer-doc-buffer t
+        eldoc-idle-delay 0.1
+        eldoc-echo-area-use-multiline-p nil
+        eldoc-echo-area-display-truncation-message nil)
   (if (display-graphic-p)
       (progn
         (defun eldoc-box-scroll-up ()
@@ -436,12 +458,15 @@
           "K" #'eldoc-box-help-at-point
           (kbd "C-j") 'eldoc-box-scroll-down
           (kbd "C-k") 'eldoc-box-scroll-up))
-    (evil-define-key '(normal motion) prog-mode-map "K" #'eldoc-doc-buffer))
+    (progn
+      (defun my/eldoc-open-switch ()
+        (interactive)
+        (eldoc-doc-buffer)
+        (windmove-down))
+      (evil-define-key '(normal motion) prog-mode-map
+        "K" #'my/eldoc-open-switch)))
 
   (with-eval-after-load 'eglot
-    (if (display-graphic-p)
-        (setq eldoc-echo-area-prefer-doc-buffer t
-              eldoc-echo-area-use-multiline-p nil))
     (add-hook 'eglot-managed-mode-hook 'tempel-setup-capf)
     ;; pacman -S clang pyright rust-analyzer
     ;; yay -S jdtls jdk-openjdk jre-openjdk
@@ -561,6 +586,7 @@
     (kbd "<leader>u") #'universal-argument
     (kbd "<leader>SPC") #'consult-buffer
     (kbd "<leader>fr") #'consult-recent-file
+    (kbd "<leader>sg") #'consult-gh-search-repos
     (kbd "<leader>fs") #'save-buffer
     (kbd "<leader>qq") #'save-buffers-kill-terminal
     (kbd "<leader>fp") #'(lambda () (interactive) (find-file "~/.emacs.d/init.el"))
@@ -687,7 +713,7 @@
            (window-height . 0.25)
            (side . bottom)
            (slot . -1))
-          ("\\*\\(Compile-log\\|compilation\\|git-gutter\\:diff\\)\\*"
+          ("\\*\\(Compile-log\\|eldoc\\|compilation\\|git-gutter\\:diff\\)\\*"
            (display-buffer-in-side-window)
            (window-height . 0.25)
            (side . bottom)
@@ -783,8 +809,7 @@
   (push (expand-file-name "el-get/pdf-tools/lisp" user-emacs-directory) load-path)
   (require 'pdf-tools)
   (push '("\\.pdf\\'" . pdf-view-mode) auto-mode-alist)
-  ;; FIXME:
-  (add-hook 'pdf-view-mode-hook 'evil-normal-state)
+  (evil-set-initial-state 'pdf-view-mode 'normal)
   (add-hook 'pdf-view-mode-hook 'pdf-view-fit-page-to-window)
   (evil-define-key 'normal pdf-view-mode-map
     "q" 'kill-this-buffer

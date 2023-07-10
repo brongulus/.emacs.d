@@ -37,25 +37,25 @@
     (gnus-add-configuration
      '(article
        (horizontal 1.0
-                   (vertical 25
+                   (vertical 20
                              (group 1.0))
                    (vertical 1.0
-                             (summary 0.25 point)
+                             (summary 0.20 point)
                              (article 1.0)))))
     (gnus-add-configuration
      '(summary
        (horizontal 1.0
-                   (vertical 25
+                   (vertical 20
                              (group 1.0))
                    (vertical 1.0
                              (summary 1.0 point)))))
-    (with-eval-after-load 'gnus-summary
+    (with-eval-after-load 'gnus-summaryemacs-helpemacs-help
+      (add-hook 'gnus-article-mode-hook #'visual-line-mode)
       (keymap-set gnus-summary-mode-map "j" #'next-line)
       (keymap-set gnus-summary-mode-map "k" #'previous-line))
     (keymap-set gnus-article-mode-map "j" #'next-line)
     (keymap-set gnus-article-mode-map "k" #'previous-line)
     (keymap-set gnus-article-mode-map "q" #'kill-buffer-and-window))
-  ;; (add-hook 'gnus-article-mode-hook #'visual-line-mode)
 
   ;; input
   (setq gnus-select-method '(nntp "news.gwene.org"))
@@ -192,7 +192,9 @@
                               "nnimap+personal:sent.2023"
                               "nnimap+personal:[Gmail]/Starred")
                              ("📰 News"
+                              "gmane.emacs.announce"
                               "gmane.emacs.devel"
+                              "gmane.emacs.gnus.general"
                               "gmane.emacs.gnus.user"
                               "gmane.emacs.tramp"
                               "gwene.com.youtube.feeds.videos.xml.user.ethoslab"

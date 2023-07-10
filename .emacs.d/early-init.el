@@ -12,11 +12,13 @@
                     gc-cons-percentage 0.1
                     file-name-handler-alist my/saved-file-name-handler-alist)))
 
-(add-hook 'minibuffer-setup-hook #'(lambda ()
-                                     (setq gc-cons-threshold most-positive-fixnum)))
-(add-hook 'minibuffer-exit-hook #'(lambda ()
-                                    (garbage-collect)
-                                    (setq gc-cons-threshold (* 60 1024 1024))))
+(add-hook 'minibuffer-setup-hook
+          #'(lambda ()
+              (setq gc-cons-threshold most-positive-fixnum)))
+(add-hook 'minibuffer-exit-hook
+          #'(lambda ()
+              (garbage-collect)
+              (setq gc-cons-threshold (* 60 1024 1024))))
 
 (setq-default mode-line-format nil
               frame-inhibit-implied-resize t
@@ -58,9 +60,11 @@
       package-enable-at-startup nil
       package--init-file-ensured t ;; doom
       auto-save-default nil
+      redisplay-skip-fontification-on-input t
       server-client-instructions nil
       auto-save-list-file-prefix nil
       vc-follow-symlinks t
+      vc-handled-backends '(Git)
       make-backup-files nil
       create-lockfiles nil
       inhibit-startup-screen t
