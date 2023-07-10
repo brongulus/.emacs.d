@@ -83,12 +83,12 @@
                 scroll-preserve-screen-position 1
                 recenter-positions '(5 top bottom)
                 bookmark-default-file "~/doom-configs/.emacs.d/bookmarks"
+                bookmark-save-flag 1
+                Man-notify-method 'aggressive
                 cursor-in-non-selected-windows nil
                 help-window-select t
                 large-file-warning-threshold nil
-                show-paren-delay 0
-                initial-major-mode 'lisp-interaction-mode
-                initial-buffer-choice t))
+                show-paren-delay 0))
 
 ;;; Package Management
 (with-delayed-execution-priority-high
@@ -139,6 +139,7 @@
   (keymap-set vertico-map "TAB" #'vertico-next)
   (keymap-set vertico-map "<backtab>" #'vertico-previous)
   (keymap-set vertico-map "S-TAB" #'vertico-previous)
+  (keymap-set vertico-map "M-TAB" #'vertico-previous)
   (keymap-set vertico-map "C-j" #'vertico-next)
   (keymap-set vertico-map "C-k" #'vertico-previous)
   (setq vertico-scroll-margin 0
@@ -160,8 +161,7 @@
   (setq Info-use-header-line nil
         Info-breadcrumbs-in-header-flag nil
         Info-breadcrumbs-in-mode-line-mode t)
-  (add-hook 'Info-mode-hook #'(lambda () (setq-local global-hl-line-mode nil
-                                                     cursor-type 'hbar)))
+  (add-hook 'Info-mode-hook #'(lambda () (setq-local global-hl-line-mode nil)))
 
   ;; olivetti
   (if (display-graphic-p)
@@ -227,7 +227,8 @@
     (push "\\.newsrc-dribble" consult-preview-excluded-files)
     (push "\\.pdf" consult-preview-excluded-files)
     (require 'consult-gh)
-    (setq consult-gh-show-preview t
+    (setq consult-preview-key '(:debounce 0.5 any)
+          consult-gh-show-preview t
           consult-gh-preview-key "M-o"
           consult-gh-preview-buffer-mode 'org-mode))
   (when (executable-find "rg")
@@ -273,6 +274,7 @@
     ;; TnG completion
     (keymap-set corfu-map "TAB" #'corfu-next)
     (define-key corfu-map [tab] #'corfu-next)
+    (keymap-set corfu-map "M-TAB" #'corfu-previous)
     (keymap-set corfu-map "S-TAB" #'corfu-previous)
     (define-key corfu-map [backtab] #'corfu-previous)
 
@@ -295,10 +297,11 @@
 (with-delayed-execution
   (defun my/add-capfs ()
     (push 'cape-dabbrev completion-at-point-functions)
-    (push 'cape-symbol completion-at-point-functions)
     (push 'cape-keyword completion-at-point-functions)
     (push 'cape-file completion-at-point-functions))
   (add-hook 'prog-mode-hook #'my/add-capfs)
+  (add-hook 'emacs-lisp-mode-hook
+            #'(lambda () (push 'cape-symbol completion-at-point-functions)))
   (add-hook 'text-mode-hook #'my/add-capfs))
 
 (with-delayed-execution
@@ -399,26 +402,7 @@
   (add-hook 'python-mode-hook 'eglot-ensure)
   (add-hook 'c-mode-hook 'eglot-ensure))
 
-;;;; Dirvish
-(with-delayed-execution
-  (dirvish-override-dired-mode)
-  (add-hook 'dirvish-directory-view-mode-hook
-            #'(lambda () (setq-local truncate-lines t)))
-  (evil-define-key 'normal dirvish-mode-map "q" #'dirvish-quit)
-  (setq dirvish-attributes '(vc-state git-msg))
-  (setq dirvish-default-layout '(0 0.11 0.55)
-        dirvish-mode-line-format '(:left (path) :right (free-space omit index))
-        dirvish-use-header-line nil
-        dirvish-reuse-session nil
-        dirvish-emerge-groups ;; todo hook
-        '(("Recent files" (predicate . recent-files-2h))
-          ("Documents" (extensions "pdf" "tex" "bib" "epub"))
-          ("Video" (extensions "mp4" "mkv" "webm"))
-          ("Pictures" (extensions "jpg" "png" "svg" "gif"))
-          ("Audio" (extensions "mp3" "flac" "wav" "ape" "aac"))
-          ("Archives" (extensions "gz" "rar" "zip")))))
-
-;;;; Leetcode
+;;; Leetcode
 (with-delayed-execution
   (defun set-exec-path-from-shell-PATH ()
     "Set up Emacs' `exec-path' and PATH environment variable to match
@@ -507,22 +491,27 @@
   (evil-set-leader 'normal "'" t) ;; ' is localleader
   (evil-define-key 'normal 'global
     (kbd "<leader>r") #'query-replace-regexp
+    (kbd "<leader>u") #'universal-argument
     (kbd "<leader>SPC") #'consult-buffer
     (kbd "<leader>fr") #'consult-recent-file
     (kbd "<leader>fs") #'save-buffer
-    (kbd "<leader>qq") #'save-buffers-kill-emacs
+    (kbd "<leader>qq") #'save-buffers-kill-terminal
     (kbd "<leader>fp") #'(lambda () (interactive) (find-file "~/.emacs.d/init.el"))
     (kbd "<leader>gg") #'magit
     (kbd "<leader>x") #'org-capture
-    (kbd "<leader>oa") #'org-agenda
+    (kbd "<leader>oa") #'or-agenda
+    (kbd "<leader>or") #'remember
     (kbd "<leader>om") #'mastodon
     (kbd "<leader>on") #'gnus
     (kbd "<leader>ot") #'eshell)
-  (evil-define-key 'visual 'global (kbd ", TAB") #'untabify)
+  (evil-define-key 'visual 'global
+    (kbd ", TAB") #'untabify
+    "T" #'untabify
+    "R" #'remember-region)
   (evil-define-key 'normal 'global
     ")" #'evil-next-close-paren
     "(" #'evil-previous-open-paren
-    "-" #'dirvish
+    "-" #'dired-jump
     "+" #'er/expand-region
     (kbd "C-f") #'find-file
     ";" #'evil-ex
@@ -536,6 +525,7 @@
     (kbd "RET") #'Info-follow-nearest-node
     "n" #'Info-forward-node
     "p" #'Info-backward-node
+    "J" #'evil-scroll-down
     "K" #'helpful-at-point
     "N" #'Info-next
     "P" #'Info-prev
@@ -575,6 +565,7 @@
 ;; dired
 (with-delayed-execution
   (add-hook 'dired-mode-hook #'(lambda () (setq-local truncate-lines t)))
+  (add-hook 'dired-mode-hook #'dired-hide-details-mode)
   (setq dired-listing-switches
         "-l --almost-all --human-readable --sort=version --group-directories-first")
   (evil-define-key 'normal dired-mode-map
@@ -582,8 +573,7 @@
     "O" 'browse-url-of-dired-file
     "h" 'dired-up-directory
     "l" 'dired-find-file
-    "E" 'wdired-change-to-wdired-mode
-    "q" #'dirvish-quit)
+    "E" 'wdired-change-to-wdired-mode)
   (define-key dired-mode-map "-" 'dired-up-directory)
   (define-key dired-mode-map "~"
     #'(lambda () (interactive) (dired "/home/prashant/")))
@@ -604,7 +594,7 @@
         tab-bar-new-button-show nil
         tab-bar-separator ""
         tab-bar-tab-name-format-function #'+my/tab
-        tab-bar-new-tab-choice "*scratch*"
+        tab-bar-new-tab-choice "*notes*"
         tab-bar-tab-name-function 'tab-bar-tab-name-truncated
         tab-bar-tab-name-truncated-max 12))
 
@@ -669,6 +659,19 @@
     (interactive "sName: ")
     (insert (shell-command-to-string (concat "inkscape-figures create '" fname
                                              "' ./figures/"))))
+  ;; org-dl  (https://emacs.stackexchange.com/questions/71100/pasting-images-from-clipboard-into-orgmode )
+  (autoload 'org "org-download" nil t)
+  (with-eval-after-load 'org-download
+    (evil-define-key 'insert org-mode-map (kbd "C-S-y") 'org-download-clipboard)
+    (setq org-download-method 'directory
+          org-download-image-dir (concat
+                                  (file-name-sans-extension (buffer-file-name)) "-img")
+          org-download-image-org-width 600
+          org-download-link-format "[[file:%s]]\n"
+          org-download-abbreviate-filename-function #'file-relative-name
+          org-download-link-format-function
+          #'org-download-link-format-function-default))
+  
   (with-eval-after-load 'org
     (add-hook 'org-mode-hook 'tempel-setup-capf)
     (add-hook 'org-mode-hook 'visual-line-mode)
@@ -714,13 +717,20 @@
 
 ;;; Random
 (with-delayed-execution
+  ;; ediff (http://yummymelon.com/devnull/surprise-and-emacs-defaults.html )
+  (with-eval-after-load 'ediff
+    (setq ediff-split-window-function 'split-window-horizontally
+          ediff-window-setup-function 'ediff-setup-windows-plain))
+  
   ;; pdf-tools
   (push (expand-file-name "el-get/pdf-tools/lisp" user-emacs-directory) load-path)
   (require 'pdf-tools)
   (push '("\\.pdf\\'" . pdf-view-mode) auto-mode-alist)
   ;; FIXME: 
   (add-hook 'pdf-view-mode-hook 'evil-normal-state)
+  (add-hook 'pdf-view-mode-hook 'pdf-view-fit-page-to-window)
   (evil-define-key 'normal pdf-view-mode-map
+    "q" 'kill-this-buffer
     "j" 'pdf-view-next-line-or-next-page
     "k" 'pdf-view-previous-line-or-previous-page
     "J" 'pdf-view-next-page-command
@@ -778,16 +788,17 @@
   (setq mastodon-instance-url "https://emacs.ch"
         mastodon-auth-source-file "~/.authinfo"
         mastodon-alt-tl-box-boosted nil
+        mastodon-alt-tl-box-prefix ""
         mastodon-active-user "brongulus")
-  (push '(reply "" . "R") mastodon-tl--symbols)
-  (push '(boost "" . "B") mastodon-tl--symbols)
-  (push '(favourite "" . "F") mastodon-tl--symbols)
-  (push '(bookmark "" . "K") mastodon-tl--symbols)
   (if (display-graphic-p)
       (add-hook 'mastodon-mode-hook #'olivetti-mode))
   (add-hook 'mastodon-mode-hook #'mastodon-alt-tl-activate)
   (autoload 'mastodon "mastodon-alt" nil t)
-  (with-eval-after-load 'mastodon
+  (with-eval-after-load 'mastodon-tl
+    (push '(reply "" . "R") mastodon-tl--symbols)
+    (push '(boost "" . "B") mastodon-tl--symbols)
+    (push '(favourite "" . "F") mastodon-tl--symbols)
+    (push '(bookmark "" . "K") mastodon-tl--symbols)
     (evil-make-overriding-map mastodon-mode-map 'normal))
   (evil-define-key 'normal mastodon-mode-map
     "q" #'kill-current-buffer)
@@ -801,6 +812,7 @@
   (setq eww-header-line-format "%t")
   (eval-after-load 'eww
     (evil-define-key 'normal eww-mode-map
+      "Y" #'eww-copy-page-url
       "q" #'kill-buffer-and-window
       "H" #'eww-back-url))
 

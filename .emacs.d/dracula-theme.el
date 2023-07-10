@@ -130,6 +130,7 @@ read it before opening a new issue about your will.")
                (info-string :foreground ,dracula-yellow)
                (info-menu-star :foreground ,dracula-red)
                (info-indented-text :foreground ,other-blue)
+               (info-user-option-ref-item :foreground ,dracula-red)
                (info-special-form-ref-item :foreground ,dracula-green)
                (fixed-pitch :inherit default)
 

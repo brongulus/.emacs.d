@@ -51,6 +51,7 @@
 (el-get-bundle evil-terminal-cursor-changer)
 (el-get-bundle tempel)
 (el-get-bundle expand-region)
+(el-get-bundle multiple-cursors)
 ;; Remove project import after 29
 (el-get-bundle! project
   :url "https://raw.githubusercontent.com/emacs-mirror/emacs/master/lisp/progmodes/project.el")
@@ -72,7 +73,7 @@
 (el-get-bundle rainbow-mode)
 
 ;; random
-(el-get-bundle dirvish)
+(el-get-bundle org-download)
 ;; mastodon
 (el-get-bundle ts)
 (el-get-bundle persist)
