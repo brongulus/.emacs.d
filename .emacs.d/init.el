@@ -110,7 +110,8 @@
 
   (el-get-bundle elpa:evil)
   (el-get-bundle compat) ;; for minad's pkgs
-  (el-get-bundle evil-escape))
+  (el-get-bundle evil-escape)
+  (el-get-bundle nerd-icons))
 
 ;;;; Yay Evil!
 (with-delayed-execution
@@ -169,7 +170,10 @@
 
 (with-delayed-execution
   (el-get-bundle marginalia)
-  (marginalia-mode))
+  (el-get-bundle nerd-icons-completion)
+  (marginalia-mode)
+  (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup)
+  (nerd-icons-completion-mode))
 
 ;;;; Visuals
 (with-delayed-execution
@@ -185,7 +189,8 @@
   (setq Info-use-header-line nil
         Info-breadcrumbs-in-header-flag nil
         Info-breadcrumbs-in-mode-line-mode t)
-  (add-hook 'Info-mode-hook #'(lambda () (setq-local global-hl-line-mode nil)))
+  (add-hook 'Info-mode-hook
+            #'(lambda () (setq-local evil-normal-state-cursor 'hbar)))
 
   ;; olivetti
   (el-get-bundle olivetti)
@@ -212,26 +217,35 @@
                 global-mode-string nil
                 flymake-mode-line-format
                 '(" " flymake-mode-line-exception flymake-mode-line-counters))
-  (setq-default mode-line-end-spaces '(" " ;(vc-mode vc-mode) " "
-                                       mode-line-misc-info " %l %p "))
+  (defadvice vc-mode-line (after strip-backend () activate)
+    (when (stringp vc-mode)
+      (let ((noback (replace-regexp-in-string
+                     (format "^ %s" (vc-backend buffer-file-name))
+                     (if (display-graphic-p)
+                         (format "%s" (nerd-icons-codicon "nf-cod-git_pull_request"))
+                       (format "%s " (nerd-icons-codicon "nf-cod-git_pull_request")))
+                     vc-mode)))
+        (setq vc-mode noback))))
+  (setq-default mode-line-end-spaces '(" " mode-line-misc-info " "
+                                       (vc-mode vc-mode) " %l %p "))
   (defun my/ml-padding ()
     (let ((r-length (length (format-mode-line mode-line-end-spaces))))
       (propertize " "
                   'display `(space :align-to (- right ,r-length)))))
   (setq-default mode-line-format
                 '((:eval evil-mode-line-tag) "%e "
+                  (:eval (nerd-icons-icon-for-buffer))
                   (:eval (if (buffer-modified-p)
-                             (propertize "%b" 'face '(:slant italic)
+                             (propertize " %b " 'face '(:slant italic)
                                          'help-echo (buffer-file-name))
-                           (propertize "%b" 'help-echo (buffer-file-name))))
-                  " "
+                           (propertize " %b " 'help-echo (buffer-file-name))))
                   (:eval (when (bound-and-true-p flymake-mode)
                            flymake-mode-line-format))
                   (:eval (my/ml-padding))
                   mode-line-end-spaces)))
 
 ;;;; Consult/Orderless
-;; orderleass
+;; orderless
 (with-delayed-execution
   (el-get-bundle orderless)
   (setq completion-category-defaults nil
@@ -437,7 +451,6 @@
   (evil-define-key '(normal motion) prog-mode-map "X" #'consult-flymake)
   ;; eldoc
   (setq eldoc-echo-area-prefer-doc-buffer t
-        eldoc-idle-delay 0.1
         eldoc-echo-area-use-multiline-p nil
         eldoc-echo-area-display-truncation-message nil)
   (if (display-graphic-p)
@@ -467,11 +480,15 @@
         "K" #'my/eldoc-open-switch)))
 
   (with-eval-after-load 'eglot
+    (evil-define-key 'normal eglot-mode-map (kbd "<leader>ca") 'eglot-code-actions)
     (add-hook 'eglot-managed-mode-hook 'tempel-setup-capf)
     ;; pacman -S clang pyright rust-analyzer
     ;; yay -S jdtls jdk-openjdk jre-openjdk
     ;; rustup component add rust-analyzer
-    (push '((c++-mode c-mode) "clangd") eglot-server-programs)
+    (push '((c++-mode c-mode) "clangd"
+            "--completion-style=detailed"
+            "--header-insertion-decorators=0")
+          eglot-server-programs)
     (push '(java-mode "jdtls") eglot-server-programs)
     (push '(rust-mode "rust-analyzer") eglot-server-programs))
   (setq eglot-autoshutdown t
@@ -657,7 +674,11 @@
 ;;; dired/tabs/windows
 ;; dired
 (with-delayed-execution
-  (add-hook 'dired-mode-hook #'(lambda () (setq-local truncate-lines t)))
+  (el-get-bundle nerd-icons-dired)
+  (add-hook 'dired-mode-hook #'nerd-icons-dired-mode)
+  (add-hook 'dired-mode-hook #'(lambda ()
+                                 (setq-local truncate-lines t
+                                             evil-normal-state-cursor 'hbar)))
   (add-hook 'dired-mode-hook #'dired-hide-details-mode)
   (setq dired-listing-switches
         "-l --almost-all --human-readable --sort=version --group-directories-first")
