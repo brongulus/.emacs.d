@@ -209,3 +209,6 @@
                              ("Unread"))))
 
   (add-hook 'gnus-group-mode-hook #'gnus-topic-mode))
+
+(provide '+gnus)
+;;; +gnus.el ends here

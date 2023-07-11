@@ -305,7 +305,7 @@
   (evil-define-key 'normal emacs-lisp-mode-map "K" #'helpful-at-point)
   (evil-define-key '(normal motion) helpful-mode-map
     "K" #'helpful-at-point
-    "q" #'kill-this-buffer)
+    "q" #'kill-buffer-and-window)
   (global-set-key (kbd "C-h f") #'helpful-callable)
   (global-set-key (kbd "C-h v") #'helpful-variable)
   (global-set-key (kbd "C-h k") #'helpful-key)
@@ -317,6 +317,7 @@
   (el-get-bundle corfu)
   (el-get-bundle popon)
   (el-get-bundle corfu-terminal)
+  (el-get-bundle kind-icon)
   (el-get-bundle cape)
   (global-corfu-mode)
   (add-hook 'corfu-mode-hook 'corfu-popupinfo-mode)
@@ -343,7 +344,11 @@
 
       (add-hook 'eshell-mode-hook (lambda ()
                                   (setq-local corfu-auto nil)
-                                  (corfu-mode)))))
+                                  (corfu-mode)))
+      ;; kind-icon to nerd-icons
+      (require 'kind-icon)
+      (load "~/.emacs.d/+icons" nil t)
+      (push 'kind-icon-margin-formatter corfu-margin-formatters)))
 
 (with-delayed-execution
   (defun my/add-capfs ()

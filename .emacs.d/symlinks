@@ -1,9 +1,9 @@
 ln -sf ~/doom-configs/.emacs.d/early-init.el ~/.emacs.d/
 ln -sf ~/doom-configs/.emacs.d/init.el ~/.emacs.d/
-ln -sf ~/doom-configs/.emacs.d/packages.el ~/.emacs.d/
 ln -sf ~/doom-configs/.emacs.d/templates.el ~/.emacs.d/
 ln -sf ~/doom-configs/.emacs.d/dracula-theme.el ~/.emacs.d/
 ln -sf ~/doom-configs/.emacs.d/+gnus.el ~/.emacs.d/
+ln -sf ~/doom-configs/.emacs.d/+icons.el ~/.emacs.d/
 ln -sf ~/doom-configs/.emacs.d/bookmarks ~/.emacs.d/
 
 ln -sf ~/doom-configs/.emacs.d/.newsrc ~/.emacs.d/.local/gnus/
