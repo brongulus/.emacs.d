@@ -578,12 +578,12 @@ read it before opening a new issue about your will.")
                (message-cited-text-4 :foreground ,fg2)
                (message-mml :foreground ,dracula-green :weight normal)
                ;; mode-line
-               (mode-line :background ,dracula-bg
+               (mode-line :background ,dracula-bg ;:inherit variable-pitch
                           :overline ,dracula-comment :inverse-video nil
                           ,@(if dracula-alternate-mode-line-and-minibuffer
                                 (list :foreground fg3)
                               (list :foreground dracula-comment)))
-               (mode-line-inactive
+               (mode-line-inactive ;:inherit variable-pitch
                 :background ,dracula-bg :inverse-video nil
                 ,@(if dracula-alternate-mode-line-and-minibuffer
                       (list :foreground dracula-comment :box dracula-bg)

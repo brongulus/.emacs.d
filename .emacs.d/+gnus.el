@@ -87,7 +87,7 @@
         shr-max-width fill-column
         shr-indentation 2
         gnus-article-x-face-too-ugly ".*"
-        gnus-interactive-exit 'quiet
+        gnus-interactive-exit nil
         gnus-novice-user nil
         gnus-expert-user nil
         gnus-auto-select-first nil

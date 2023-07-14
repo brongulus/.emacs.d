@@ -5,6 +5,7 @@
 ;; Version: 0.0.3
 ;; This file is not part of GNU Emacs.
 ;;; Commentary:
+;;  Look into context-menu-mode but without tooltip!
 ;;  Most completion systems follow TnG, tab to choose next and RET to select
 ;;  Ref 1: https://zenn.dev/takeokunn/articles/56010618502ccc
 ;;  Ref 2: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
@@ -111,7 +112,7 @@
   (el-get-bundle elpa:evil)
   (el-get-bundle compat) ;; for minad's pkgs
   (el-get-bundle evil-escape)
-  (el-get-bundle nerd-icons))
+  (el-get-bundle nerd-icons)) ;; (nerd-icons-install-fonts)
 
 ;;;; Yay Evil!
 (with-delayed-execution
@@ -221,12 +222,10 @@
     (when (stringp vc-mode)
       (let ((noback (replace-regexp-in-string
                      (format "^ %s" (vc-backend buffer-file-name))
-                     (if (display-graphic-p)
-                         (format "%s" (nerd-icons-codicon "nf-cod-git_pull_request"))
-                       (format "%s " (nerd-icons-codicon "nf-cod-git_pull_request")))
+                     (format "%s " (nerd-icons-codicon "nf-cod-git_pull_request"))
                      vc-mode)))
         (setq vc-mode noback))))
-  (setq-default mode-line-end-spaces '(" " mode-line-misc-info " "
+  (setq-default mode-line-end-spaces '(" " mode-line-misc-info "  "
                                        (vc-mode vc-mode) " %l %p "))
   (defun my/ml-padding ()
     (let ((r-length (length (format-mode-line mode-line-end-spaces))))
@@ -271,7 +270,7 @@
     (push "\\.pdf" consult-preview-excluded-files)
     (setq consult-preview-key '(:debounce 1.0 any)
           consult-gh-show-preview t
-          consult-gh-preview-key "RET"
+          consult-gh-preview-key "M-o"
           consult-gh-preview-buffer-mode 'org-mode))
   (when (executable-find "rg")
     (setq grep-program "rg"))
@@ -324,6 +323,8 @@
   (add-hook 'evil-insert-state-exit-hook 'corfu-quit)
   (with-eval-after-load 'corfu
     ;; TnG completion
+    (keymap-set corfu-map "C-n" #'next-line)
+    (keymap-set corfu-map "C-p" #'previous-line)
     (keymap-set corfu-map "TAB" #'corfu-next)
     (define-key corfu-map [tab] #'corfu-next)
     (keymap-set corfu-map "M-TAB" #'corfu-previous)
@@ -348,6 +349,7 @@
       ;; kind-icon to nerd-icons
       (require 'kind-icon)
       (load "~/.emacs.d/+icons" nil t)
+      ;; (advice-add 'load-theme :before #'kind-icon-reset-cache) ;; FIXME:
       (push 'kind-icon-margin-formatter corfu-margin-formatters)))
 
 (with-delayed-execution
@@ -365,11 +367,17 @@
   (setq which-key-idle-delay 0.5)
   (which-key-mode))
 
-;;;; git/tempel
+;;;; git/tempel/indent
 (with-delayed-execution
+  (el-get-bundle highlight-indent-guides)
+  (setq highlight-indent-guides-method 'character
+        highlight-indent-guides-responsive 'top)
+  (with-eval-after-load 'highlight-indent-guides
+    (add-hook 'emacs-lisp-mode-hook #'highlight-indent-guides-auto-set-faces))
+  (add-hook 'prog-mode-hook #'highlight-indent-guides-mode)
+  (add-hook 'conf-mode-hook #'highlight-indent-guides-mode)
   (el-get-bundle git-gutter)
-  (add-hook 'text-mode-hook #'git-gutter-mode)
-  (add-hook 'prog-mode-hook #'git-gutter-mode)
+  (add-hook 'after-change-major-mode-hook #'git-gutter-mode)
   (with-eval-after-load 'git-gutter
     (evil-define-key 'normal 'git-gutter-mode
       (kbd "<localleader>gs") #'git-gutter:stage-hunk
@@ -405,6 +413,11 @@
   (push (locate-user-emacs-file "el-get/magit/lisp") load-path)
   (push (locate-user-emacs-file "el-get/forge/lisp") load-path)
   (autoload 'magit "magit" nil t)
+  ;; git-timemachine
+  (autoload 'magit-file-dispatch "magit" nil t)
+  (evil-define-key 'normal magit-blob-mode-map
+    (kbd "g[") #'magit-blob-previous
+    (kbd "g]") #'magit-blob-next)
   (global-set-key (kbd "C-c g") 'magit)
   (setq forge-owned-accounts '(("brongulus")))
   (add-hook 'magit-mode-hook #'(lambda () (require 'forge))))
@@ -426,20 +439,25 @@
     (define-key tempel-map (kbd "<backtab>") 'tempel-previous))
   (setq tempel-path "~/.emacs.d/templates.el"))
 
-;;;; eglot
+;;;; eglot/eldoc
 (with-delayed-execution
   (el-get-bundle! project
     :url "https://raw.githubusercontent.com/emacs-mirror/emacs/master/lisp/progmodes/project.el")
   (el-get-bundle rustic)
   (el-get-bundle reformatter)
   (el-get-bundle zig-mode)
+  (el-get-bundle typescript-mode)
+  (el-get-bundle go-mode)
   (el-get-bundle external-completion)
   (el-get-bundle eldoc-box)
   (el-get-bundle! eglot)
+
   (with-eval-after-load 'eldoc-box
     (setq eldoc-box-max-pixel-width 600
           eldoc-box-max-pixel-height 700
           eldoc-box-only-multi-line t)))
+
+;;;;; eldoc
 (with-delayed-execution
   (defun flymake-eldoc-function (report-doc &rest _) ;; lcolonq
     "Document diagnostics at point.Intended for
@@ -453,9 +471,12 @@
     (add-to-list 'eldoc-documentation-functions 'flymake-eldoc-function))
   (add-hook 'prog-mode-hook #'flymake-mode)
 
-  (evil-define-key '(normal motion) prog-mode-map "X" #'consult-flymake)
-  ;; eldoc
+  (evil-define-key '(normal motion) prog-mode-map
+    "X" #'consult-flymake
+    "L" #'xref-find-definitions
+    "H" #'xref-pop-marker-stack)
   (setq eldoc-echo-area-prefer-doc-buffer t
+        eldoc-idle-delay 0.3
         eldoc-echo-area-use-multiline-p nil
         eldoc-echo-area-display-truncation-message nil)
   (if (display-graphic-p)
@@ -472,6 +493,10 @@
           (with-current-buffer eldoc-box--buffer
             (with-selected-frame eldoc-box--frame
               (scroll-up 3))))
+        (evil-define-key 'insert prog-mode-map
+          (kbd "C-l") #'eldoc-box-help-at-point
+          (kbd "C-j") 'eldoc-box-scroll-down
+          (kbd "C-k") 'eldoc-box-scroll-up)
         (evil-define-key '(normal motion) eglot-mode-map
           "K" #'eldoc-box-help-at-point
           (kbd "C-j") 'eldoc-box-scroll-down
@@ -482,14 +507,21 @@
         (eldoc-doc-buffer)
         (windmove-down))
       (evil-define-key '(normal motion) prog-mode-map
-        "K" #'my/eldoc-open-switch)))
+        "K" #'my/eldoc-open-switch)
+      (evil-define-key 'insert prog-mode-map
+        (kbd "C-l") #'my/eldoc-open-switch)))
 
+;;;;; eglot
   (with-eval-after-load 'eglot
-    (evil-define-key 'normal eglot-mode-map (kbd "<leader>ca") 'eglot-code-actions)
+    (evil-define-key 'normal eglot-mode-map
+      (kbd "<leader>ca") 'eglot-code-actions
+      (kbd "<leader>ci") 'eglot-inlay-hints-mode)
     (add-hook 'eglot-managed-mode-hook 'tempel-setup-capf)
     ;; pacman -S clang pyright rust-analyzer
     ;; yay -S jdtls jdk-openjdk jre-openjdk
     ;; rustup component add rust-analyzer
+    ;; npm install typescript-language-server typescript-eslint-language-service -D
+    ;; yay -S gopls
     (push '((c++-mode c-mode) "clangd"
             "--completion-style=detailed"
             "--header-insertion-decorators=0")
@@ -497,9 +529,12 @@
     (push '(java-mode "jdtls") eglot-server-programs)
     (push '(rust-mode "rust-analyzer") eglot-server-programs))
   (setq eglot-autoshutdown t
+        read-process-output-max (* 1024 1024) ;; 1mb for LSP blobs
         rustic-lsp-client 'eglot)
   (add-hook 'c++-mode-hook 'eglot-ensure)
   (add-hook 'java-mode-hook 'eglot-ensure)
+  (add-hook 'typescript-mode-hook 'eglot-ensure)
+  (add-hook 'go-mode-hook 'eglot-ensure)
   (add-hook 'python-mode-hook 'eglot-ensure)
   (add-hook 'c-mode-hook 'eglot-ensure))
 
@@ -509,6 +544,9 @@
   (el-get-bundle aio)
   (el-get-bundle graphql)
   (el-get-bundle leetcode)
+  (el-get-bundle ht)
+  (el-get-bundle quickrun)
+  (el-get-bundle conao3/oj.el)
   (defun set-exec-path-from-shell-PATH ()
     "Set up Emacs' `exec-path' and PATH environment variable to match
      that used by the user's shell."
@@ -597,7 +635,12 @@
 (with-delayed-execution
   (el-get-bundle sicp)
   (el-get-bundle expand-region)
-  (el-get-bundle multiple-cursors))
+  (el-get-bundle multiple-cursors)
+  (evil-define-key 'insert 'global
+    (kbd "C-d") 'mc/mark-next-like-this
+    (kbd "C-v") 'mc/skip-to-next-like-this
+    (kbd "M-f") 'mc/mark-all-like-this
+    (kbd "M-e") 'mc/edit-lines))
 
 ;;; Key binds / Key maps
 (with-delayed-execution-priority-high
@@ -608,11 +651,14 @@
     (kbd "<leader>u") #'universal-argument
     (kbd "<leader>SPC") #'consult-buffer
     (kbd "<leader>fr") #'consult-recent-file
+    (kbd "<leader>sd") #'consult-find
+    (kbd "<leader>sp") #'consult-ripgrep
     (kbd "<leader>sg") #'consult-gh-search-repos
     (kbd "<leader>fs") #'save-buffer
     (kbd "<leader>qq") #'save-buffers-kill-terminal
     (kbd "<leader>fp") #'(lambda () (interactive) (find-file "~/.emacs.d/init.el"))
     (kbd "<leader>gg") #'magit
+    (kbd "<leader>gh") #'magit-file-dispatch
     (kbd "<leader>x") #'org-capture
     (kbd "<leader>oa") #'org-agenda
     (kbd "<leader>or") #'remember
@@ -623,6 +669,7 @@
     (kbd ", TAB") #'untabify
     "T" #'untabify
     "R" #'remember-region)
+  (evil-define-key 'insert 'global (kbd "C-o") #'evil-execute-in-normal-state)
   (evil-define-key 'normal 'global
     ")" #'evil-next-close-paren
     "(" #'evil-previous-open-paren
@@ -655,9 +702,11 @@
   (global-set-key [f8] #'window-toggle-side-windows)
   (global-set-key [f9] #'mark-whole-buffer)
   (global-set-key [f10] #'kill-current-buffer)
+  (global-set-key [f12] #'other-window)
   (global-set-key (kbd "C-x x") #'org-capture)
   (global-set-key (kbd "C-c a") #'org-agenda)
   (global-set-key (kbd "C-c m") #'gnus)
+  (global-set-key (kbd "C-/") #'context-menu-open)
   (global-set-key (kbd "C-'") #'er/expand-region)
   (global-set-key (kbd "C-;") #'eval-expression)
   (global-set-key (kbd "C-t") #'tab-new)
@@ -679,6 +728,7 @@
 ;;; dired/tabs/windows
 ;; dired
 (with-delayed-execution
+  (put 'dired-find-alternate-file 'disabled nil)
   (el-get-bundle nerd-icons-dired)
   (add-hook 'dired-mode-hook #'nerd-icons-dired-mode)
   (add-hook 'dired-mode-hook #'(lambda ()
@@ -691,9 +741,12 @@
     (kbd "C-t") 'tab-new
     "O" 'browse-url-of-dired-file
     "h" 'dired-up-directory
-    "l" 'dired-find-file
+    "q" 'kill-this-buffer
+    "l" 'dired-find-alternate-file
+    (kbd "RET") 'dired-find-alternate-file
     "E" 'wdired-change-to-wdired-mode)
   (define-key dired-mode-map "-" 'dired-up-directory)
+  (define-key dired-mode-map (kbd "SPC") nil)
   (define-key dired-mode-map "~"
     #'(lambda () (interactive) (dired "/home/prashant/")))
   (define-key dired-mode-map "."
@@ -714,7 +767,7 @@
           tab-bar-new-button-show nil
           tab-bar-separator ""
           tab-bar-tab-name-format-function #'+my/tab
-          tab-bar-new-tab-choice "*notes*"
+          ;; tab-bar-new-tab-choice "*notes*"
           tab-bar-tab-name-function 'tab-bar-tab-name-truncated
           tab-bar-tab-name-truncated-max 12)))
 
@@ -940,9 +993,10 @@
   (el-get-bundle xclip)
   (el-get-bundle evil-terminal-cursor-changer)
   (blink-cursor-mode -1)
-  (setq suggest-key-bindings nil)
   (show-paren-mode)
   (global-hl-line-mode)
+  (setq suggest-key-bindings nil
+        executable-prefix-env t)
   (add-hook 'after-save-hook
             'executable-make-buffer-file-executable-if-script-p)
 
@@ -979,3 +1033,20 @@
 ;;   (setq dired-mouse-drag-files t)
 ;;   (setq mouse-drag-and-drop-region-cross-program t)
 ;;   (setq pixel-scroll-precision-large-scroll-height 35.0))
+;; (use-package project
+;;   :pin gnu
+;;   :bind (("C-c k" . #'project-kill-buffers)
+;;          ("C-c m" . #'project-compile)
+;;          ("C-x f" . #'find-file)
+;;          ("C-c f" . #'project-find-file)
+;;          ("C-c F" . #'project-switch-project))
+;;   :custom
+;;   ;; This is one of my favorite things: you can customize
+;;   ;; the options shown upon switching projects.
+;;   (project-switch-commands
+;;    '((project-find-file "Find file")
+;;      (magit-project-status "Magit" ?g)
+;;      (deadgrep "Grep" ?h)))
+;;   (compilation-always-kill t)
+;;   (project-vc-merge-submodules nil)
+;;   )

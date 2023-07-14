@@ -24,7 +24,7 @@
               frame-inhibit-implied-resize t
               default-frame-alist
               '((menu-bar-lines . 0)
-                (alpha 95 95)
+                ;; (alpha 95 95)
                 (tool-bar-lines . 0)
                 (vertical-scroll-bars)
                 (left-fringe . 0)
@@ -33,22 +33,8 @@
                 (font . "Victor Mono-13.5:weight=semi-bold")))
 
 ;; Set theme and font beforehand to prevent flickering
-(defun get-preferred-theme () ;; ymarco
-  (let ((hour (string-to-number
-               (substring (current-time-string) 11 13))))
-    (if (<= 7 hour 18)
-        'modus-operandi
-      'dracula)))
-(setq current-theme (get-preferred-theme))
-(load-theme current-theme :no-confirm)
-(run-with-timer (* 60 60) (* 60 60)
-                (defun update-theme ()
-                  (let ((preferred (get-preferred-theme)))
-                    (unless (eq preferred current-theme)
-                      (disable-theme current-theme)
-                      (load-theme preferred :no-confirm)))))
-
-(set-face-attribute 
+(load-theme 'dracula :no-confirm)
+(set-face-attribute
  'variable-pitch nil :family "Noto Sans" :weight 'regular :height 135)
 (set-face-attribute
  'fixed-pitch-serif nil :family "Victor Mono" :inherit 'default)
@@ -67,11 +53,11 @@
       vc-handled-backends '(Git)
       make-backup-files nil
       create-lockfiles nil
-      inhibit-startup-screen t
-      initial-buffer-choice 'remember-notes
-      bidi-inhibit-bpa t)
+      inhibit-startup-screen t)
+      ;; initial-buffer-choice 'remember-notes)
 
 (setq-default bidi-display-reordering 'left-to-right
+              bidi-inhibit-bpa t
               line-spacing 3
               bidi-paragraph-direction 'left-to-right)
 

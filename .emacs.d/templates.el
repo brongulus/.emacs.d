@@ -6,9 +6,17 @@ fundamental-mode ;; Available everywhere
 
 c++-mode
 
-(ttt "int tt = 0; cin >> tt; \n" > "while(tt--) {" r "}")
+(ttt "int tt = 0; cin >> tt; \n" > "while(tt--) {\n" > r n "}" >)
 (forl
- "for (int " (p "i" iter) " = 0; " iter " < " (p "n") "; " iter "++) {" r "}")
+ "for (int " (p "i" iter) " = 0; " iter " < " (p "n") "; " iter "++) {\n" > r n "}" >)
+
+go-mode
+
+(goerr "if err != nil { \n" > " return nil, err" n "}" >)
+
+rust-mode
+
+(debpr "println!(\"{:?}\", " p ");")
 
 prog-mode
 
