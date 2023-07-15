@@ -222,7 +222,9 @@
     (when (stringp vc-mode)
       (let ((noback (replace-regexp-in-string
                      (format "^ %s" (vc-backend buffer-file-name))
-                     (format "%s " (nerd-icons-codicon "nf-cod-git_pull_request"))
+                     (if (display-graphic-p)
+                         (format "%s" (nerd-icons-codicon "nf-cod-git_pull_request"))
+                       (format "%s " (nerd-icons-codicon "nf-cod-git_pull_request")))
                      vc-mode)))
         (setq vc-mode noback))))
   (setq-default mode-line-end-spaces '(" " mode-line-misc-info "  "
@@ -264,6 +266,13 @@
 (with-delayed-execution
   (el-get-bundle consult)
   (el-get-bundle armindarvish/consult-gh)
+  (el-get-bundle consult-recoll)
+  (with-eval-after-load 'consult-recoll
+    (defun my/open-mpv (file)
+      (async-shell-command
+       (format "setsid -f mpv %s" (shell-quote-argument file)) nil nil))
+    (push '("video/x-matroska" . my/open-mpv) consult-recoll-open-fns)
+    (push '("video/mp4" . my/open-mpv) consult-recoll-open-fns))
   (with-eval-after-load 'consult
     (require 'consult-gh)
     (push "\\.newsrc-dribble" consult-preview-excluded-files)
@@ -651,6 +660,7 @@
     (kbd "<leader>u") #'universal-argument
     (kbd "<leader>SPC") #'consult-buffer
     (kbd "<leader>fr") #'consult-recent-file
+    (kbd "<leader>ss") #'consult-recoll
     (kbd "<leader>sd") #'consult-find
     (kbd "<leader>sp") #'consult-ripgrep
     (kbd "<leader>sg") #'consult-gh-search-repos
