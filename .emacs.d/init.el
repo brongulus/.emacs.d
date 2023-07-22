@@ -205,9 +205,10 @@
     (setq-default olivetti-body-width 90))
   
   (add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
-  ;; (add-hook 'prog-mode-hook #'(lambda ()
-  ;;                               (setq-local display-line-numbers 'relative)))
-  (evil-define-key 'normal 'global (kbd "<leader>tz") #'olivetti-mode))
+  (evil-define-key 'normal 'global
+    (kbd "<leader>ll") '(lambda () (interactive)
+                          (setq-local display-line-numbers 'relative))
+    (kbd "<leader>zz") #'olivetti-mode))
  
 ;;;; Modeline
 (with-delayed-execution
@@ -274,6 +275,7 @@
     (push '("video/x-matroska" . my/open-mpv) consult-recoll-open-fns)
     (push '("video/mp4" . my/open-mpv) consult-recoll-open-fns))
   (with-eval-after-load 'consult
+    (setq consult-locate-args "locate --ignore-case --regex")
     (require 'consult-gh)
     (push "\\.newsrc-dribble" consult-preview-excluded-files)
     (push "\\.pdf" consult-preview-excluded-files)
@@ -312,8 +314,8 @@
   (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update)
   (evil-define-key 'normal emacs-lisp-mode-map "K" #'helpful-at-point)
   (evil-define-key '(normal motion) helpful-mode-map
-    "K" #'helpful-at-point
-    "q" #'kill-buffer-and-window)
+    "K" #'helpful-at-point)
+    ;; "q" #'kill-buffer-and-window)
   (global-set-key (kbd "C-h f") #'helpful-callable)
   (global-set-key (kbd "C-h v") #'helpful-variable)
   (global-set-key (kbd "C-h k") #'helpful-key)
@@ -332,8 +334,6 @@
   (add-hook 'evil-insert-state-exit-hook 'corfu-quit)
   (with-eval-after-load 'corfu
     ;; TnG completion
-    (keymap-set corfu-map "C-n" #'next-line)
-    (keymap-set corfu-map "C-p" #'previous-line)
     (keymap-set corfu-map "TAB" #'corfu-next)
     (define-key corfu-map [tab] #'corfu-next)
     (keymap-set corfu-map "M-TAB" #'corfu-previous)
@@ -424,6 +424,7 @@
   (autoload 'magit "magit" nil t)
   ;; git-timemachine
   (autoload 'magit-file-dispatch "magit" nil t)
+  (autoload 'magit-ediff-show-unstaged "magit" nil t)
   (evil-define-key 'normal magit-blob-mode-map
     (kbd "g[") #'magit-blob-previous
     (kbd "g]") #'magit-blob-next)
@@ -661,6 +662,7 @@
     (kbd "<leader>SPC") #'consult-buffer
     (kbd "<leader>fr") #'consult-recent-file
     (kbd "<leader>ss") #'consult-recoll
+    (kbd "<leader>sa") #'consult-locate
     (kbd "<leader>sd") #'consult-find
     (kbd "<leader>sp") #'consult-ripgrep
     (kbd "<leader>sg") #'consult-gh-search-repos
@@ -669,6 +671,8 @@
     (kbd "<leader>fp") #'(lambda () (interactive) (find-file "~/.emacs.d/init.el"))
     (kbd "<leader>gg") #'magit
     (kbd "<leader>gh") #'magit-file-dispatch
+    (kbd "<leader>gd") #'(lambda () (interactive)
+                           (magit-ediff-show-unstaged buffer-file-name))
     (kbd "<leader>x") #'org-capture
     (kbd "<leader>oa") #'org-agenda
     (kbd "<leader>or") #'remember
@@ -802,7 +806,7 @@
            (window-height . 0.25)
            (side . bottom)
            (slot . -1))
-          ("\\*\\(Compile-log\\|eldoc\\|compilation\\|git-gutter\\:diff\\)\\*"
+          ("\\*\\(Compile-log\\|Locate\\|eldoc\\|compilation\\|git-gutter\\:diff\\)\\*"
            (display-buffer-in-side-window)
            (window-height . 0.25)
            (side . bottom)
@@ -830,19 +834,21 @@
     (insert (shell-command-to-string (concat "inkscape-figures create '" fname
                                              "' ./figures/"))))
   ;; org-dl  (https://emacs.stackexchange.com/questions/71100/pasting-images-from-clipboard-into-orgmode )
-  (autoload 'org "org-download" nil t)
   (with-eval-after-load 'org-download
     (evil-define-key 'insert org-mode-map (kbd "C-S-y") 'org-download-clipboard)
     (setq org-download-method 'directory
           org-download-image-dir (concat
                                   (file-name-sans-extension (buffer-file-name)) "-img")
           org-download-image-org-width 600
+          org-download-image-attr-list "#+attr_latex: :width 0.6\textwidth"
           org-download-link-format "[[file:%s]]\n"
           org-download-abbreviate-filename-function #'file-relative-name
           org-download-link-format-function
           #'org-download-link-format-function-default))
   
   (with-eval-after-load 'org
+    (require 'org-download)
+    (add-hook 'org-mode-hook 'org-download-mode)
     (add-hook 'org-mode-hook 'tempel-setup-capf)
     (add-hook 'org-mode-hook 'visual-line-mode)
     (define-key org-mode-map [f4] #'org-latex-export-to-pdf)

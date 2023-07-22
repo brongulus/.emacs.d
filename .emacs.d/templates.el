@@ -108,6 +108,8 @@ c-mode :when (re-search-backward "^\\S-*$" (line-beginning-position) 'noerror)
 
 org-mode
 
+(frac "\\frac{" p "}{" q "}")
+(sss "$")
 (caption "#+caption: ")
 (drawer ":" p ":" n r ":end:")
 (begin "#+begin_" (s name) n> r> n "#+end_" name)

@@ -82,7 +82,7 @@ read it before opening a new issue about your will.")
 
 ;; Assigment form: VARIABLE COLOR [256-COLOR [TTY-COLOR]]
 (let ((colors '(;; Upstream theme color
-                (dracula-bg      "#1B212D" "unspecified-bg" "unspecified-bg") 
+                (dracula-bg      "#181818" "#181818" "#181818")  ;; 1B212D
                 (dracula-fg      "#f8f8f2" "#ffffff" "brightwhite")
                 (dracula-current "#282a36" "#303030" "brightblack")
                 (dracula-comment "#6272a4" "#5f5faf" "blue")       
@@ -137,7 +137,7 @@ read it before opening a new issue about your will.")
                (lazy-highlight :foreground ,fg2 :background ,bg2)
                (link :foreground ,links :underline t)
                (linum :slant italic :foreground ,bg4 :background ,dracula-bg)
-               (line-number :slant italic :foreground ,bg4 :background ,dracula-bg)
+               (line-number :slant italic :foreground ,dracula-comment :background ,dracula-bg)
                (match :background ,dracula-yellow :foreground ,dracula-bg)
                (menu :background ,dracula-current :inverse-video nil
                      ,@(if dracula-alternate-mode-line-and-minibuffer

@@ -61,7 +61,7 @@
                   :face font-lock-variable-name-face)
         (reference ,(nerd-icons-codicon "nf-cod-references")
                    :face font-lock-variable-name-face)
-        (snippet ,(nerd-icons-octicon "nf-oct-tab")
+        (snippet ,(nerd-icons-codicon "nf-cod-arrow_right")
                  :face font-lock-string-face)
         (string ,(nerd-icons-codicon "nf-cod-symbol_string")
                 :face font-lock-string-face)

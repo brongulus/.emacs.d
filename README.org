@@ -2,6 +2,11 @@
 
 This contains +two+ three directories, which are my general use-case =.doom.d= profile and another profile for dev-related work =.dev.d=, and a new vanilla emacs config inside of =.emacs.d=.
 
+Currently I'm using a personal [[./.emacs.d/dracula-theme.el][theme]] based off of dracula but now looks nothing like it.
+
+[[./theme.png]]
+
+
 #+begin_quote
 At the moment, doom's profile system isn't working for me so I just have the plain vanilla installation on my device.
 #+end_quote
