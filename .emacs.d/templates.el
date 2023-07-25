@@ -9,6 +9,9 @@ c++-mode
 (ttt "int tt = 0; cin >> tt; \n" > "while(tt--) {\n" > r n "}" >)
 (forl
  "for (int " (p "i" iter) " = 0; " iter " < " (p "n") "; " iter "++) {\n" > r n "}" >)
+(pb "push_back")
+(vi "vector<int> ")
+(all (p "a" iter) ".begin(), " iter ".end()" r)
 
 go-mode
 

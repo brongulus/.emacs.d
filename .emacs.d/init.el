@@ -426,6 +426,8 @@
   (autoload 'magit-file-dispatch "magit" nil t)
   (autoload 'magit-ediff-show-unstaged "magit" nil t)
   (evil-define-key 'normal magit-blob-mode-map
+    (kbd "p") #'magit-blob-previous
+    (kbd "n") #'magit-blob-previous
     (kbd "g[") #'magit-blob-previous
     (kbd "g]") #'magit-blob-next)
   (global-set-key (kbd "C-c g") 'magit)
@@ -779,6 +781,7 @@
                   'face (funcall tab-bar-tab-face-function tab)))
     (setq tab-bar-close-button-show nil
           tab-bar-new-button-show nil
+          tab-bar-show 1
           tab-bar-separator ""
           tab-bar-tab-name-format-function #'+my/tab
           ;; tab-bar-new-tab-choice "*notes*"
@@ -892,12 +895,40 @@
           org-agenda-files '("~/Dropbox/org/todo.org" "~/Dropbox/org/inbox.org"))))
 
 ;;; Random
+;; 4ch?
+;; (with-delayed-execution
+;;   (el-get-bundle! palikar/q4)
+;;   (require 'q4))
+
 ;; ediff (http://yummymelon.com/devnull/surprise-and-emacs-defaults.html )
 (with-delayed-execution
   (with-eval-after-load 'ediff
     (setq ediff-split-window-function 'split-window-horizontally
           ediff-window-setup-function 'ediff-setup-windows-plain)))
   
+;; sdcv
+;; JMDict: https://github.com/koaeH/JMdict-sdcv
+;; Change websters name by editing its .ifo file
+(with-delayed-execution
+  (el-get-bundle posframe
+    :url "https://raw.githubusercontent.com/tumashu/posframe/master/posframe.el")
+  (el-get-bundle sdcv
+    :url "https://raw.githubusercontent.com/manateelazycat/sdcv/master/sdcv.el")
+  (with-eval-after-load 'sdcv
+    (set-face-attribute
+     'sdcv-tooltip-face nil :foreground nil :background nil :inherit 'tooltip))
+  (setq sdcv-dictionary-data-dir "~/.local/share/stardict/dic/"
+        sdcv-say-word-p nil
+        sdcv-only-data-dir nil
+        sdcv-fail-notify-string "No Match Found"
+        sdcv-env-lang "en_US.UTF-8"
+        sdcv-dictionary-complete-list
+        '("org.edrdg.jmdict-jpn-eng"
+          "Websters1913")
+        sdcv-dictionary-simple-list
+        '("org.edrdg.jmdict-jpn-eng"
+          "Websters1913")))
+
 ;; pdf-tools
 (with-delayed-execution
   (el-get-bundle vedang/pdf-tools)
@@ -919,6 +950,28 @@
     "sr" 'pdf-view-reset-slice
     "zm" 'pdf-view-themed-minor-mode
     "o" 'pdf-outline))
+
+;; Nov
+(with-delayed-execution
+  (el-get-bundle esxml)
+  (el-get-bundle nov
+    :url "https://depp.brause.cc/nov.el/nov.el")
+  (add-hook 'nov-mode-hook #'olivetti-mode)
+  (setq nov-header-line-format nil)
+  (evil-define-key 'normal nov-mode-map
+    "K" #'sdcv-search-pointer+
+    "n" #'nov-scroll-up
+    "p" #'nov-scroll-down)
+  (add-hook 'nov-mode-hook
+            (lambda ()
+              (setq-local evil-normal-state-cursor 'hbar
+                          global-hl-line-mode nil
+                          mode-line-format nil
+                          olivetti-body-width 120)
+              (face-remap-add-relative
+               'variable-pitch :family "Noto Serif JP" :height 150)))
+  (push (locate-user-emacs-file "el-get/nov") load-path)
+  (push '("\\.epub\\'" . nov-mode) auto-mode-alist))
 
 (with-delayed-execution
   ;; ref: noctuid

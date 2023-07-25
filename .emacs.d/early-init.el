@@ -53,7 +53,7 @@
       vc-handled-backends '(Git)
       make-backup-files nil
       create-lockfiles nil
-      initial-scratch-message ";; M-x butterfly\n"
+      initial-scratch-message ";; イーマックス\n;; M-x butterfly\n"
       inhibit-startup-screen t)
       ;; initial-buffer-choice 'remember-notes)
 
