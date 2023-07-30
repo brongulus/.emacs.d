@@ -101,20 +101,27 @@
   (package-initialize)
   
   (eval-and-compile
-    (setq use-package-always-ensure t
+    (setq package-native-compile t
+          package-install-upgrade-built-in t
+          use-package-always-ensure t
+          use-package-always-defer t
           use-package-expand-minimally t))
 
+  ;; vc-use-package (in-built in 30)
   (unless (package-installed-p 'vc-use-package)
     (package-vc-install "https://github.com/slotThe/vc-use-package"))
   (require 'vc-use-package)
 
+  (use-package on ;; provides hooks akin to doom
+    :vc (:fetcher gitlab :repo "ajgrf/on.el"))
   (use-package compat) ;; for minad's pkgs
   (use-package nerd-icons)) ;; (nerd-icons-install-fonts)
 
 ;;;; Yay Evil!
 (with-delayed-execution
   (use-package undo-fu)
-  (use-package undo-fu-session)
+  (use-package undo-fu-session
+    :after undo-fu)
   (setq undo-limit 67108864
         undo-strong-limit 100663296
         undo-outer-limit 1006632960)
@@ -123,6 +130,7 @@
 (with-delayed-execution-priority-high
   (use-package evil
     :demand t
+    :defer nil
     :init
     (define-key global-map (kbd "<escape>") #'keyboard-escape-quit)
     (setq evil-want-keybinding t ;; nil
@@ -153,7 +161,7 @@
   (use-package evil-escape
     :after evil
     :config
-    (evil-escape-mode)
+    (evil-escape-mode 1)
     (setq-default evil-escape-key-sequence "jk"
                   evil-escape-delay 0.15)))
 
@@ -183,13 +191,6 @@
 
 ;;;; Visuals
 (with-delayed-execution
-  ;; outli
- (use-package outli
-   :vc (:fetcher github :repo jdtsmith/outli))
-  (add-hook 'text-mode-hook #'outli-mode)
-  (add-hook 'prog-mode-hook #'outli-mode)
-  (setq outli-default-nobar t)
-
   ;; info-fontification (FIXME)
   ;; (use-package info+
     ;; :vc (:fetcher "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/info%2B.el"))
@@ -202,7 +203,7 @@
 
   ;; olivetti
   (use-package olivetti)
-  (if (display-graphic-p)
+  (when (display-graphic-p)
       (progn
         (add-hook 'text-mode-hook #'olivetti-mode)
         (add-hook 'eww-mode-hook #'olivetti-mode)
@@ -211,6 +212,13 @@
   (with-eval-after-load 'olivetti
     (setq-default olivetti-body-width 90))
   
+  ;; outli
+  (use-package outli
+    :vc (:fetcher github :repo jdtsmith/outli))
+  (add-hook 'text-mode-hook #'outli-mode)
+  (add-hook 'prog-mode-hook #'outli-mode)
+  (setq outli-default-nobar t)
+ 
   (add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
   (evil-define-key 'normal 'global
     (kbd "<leader>ll") '(lambda () (interactive)
@@ -317,9 +325,6 @@
 
 ;;;; Helpful/elisp-demos
 (with-delayed-execution
-  (use-package f)
-  (use-package s)
-  (use-package elisp-refs)
   (use-package helpful)
   (use-package elisp-demos)
   (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update)
@@ -327,6 +332,7 @@
   (evil-define-key '(normal motion) helpful-mode-map
     "K" #'helpful-at-point)
     ;; "q" #'kill-buffer-and-window)
+  (global-set-key (kbd "C-h Q") #'help-quick)
   (global-set-key (kbd "C-h f") #'helpful-callable)
   (global-set-key (kbd "C-h v") #'helpful-variable)
   (global-set-key (kbd "C-h k") #'helpful-key)
@@ -403,9 +409,9 @@
   (use-package git-gutter)
   (add-hook 'after-change-major-mode-hook #'git-gutter-mode)
   (with-eval-after-load 'modus-themes
-    (set-face-background 'modus-themes-fringe-yellow nil)
-    (set-face-background 'modus-themes-fringe-green nil)
-    (set-face-background 'modus-themes-fringe-red nil))
+    (set-face-background 'modus-themes-fringe-yellow unspecified)
+    (set-face-background 'modus-themes-fringe-green unspecified)
+    (set-face-background 'modus-themes-fringe-red unspecified))
   (with-eval-after-load 'git-gutter
     (evil-define-key 'normal 'git-gutter-mode
       (kbd "<localleader>gs") #'git-gutter:stage-hunk
@@ -463,7 +469,6 @@
 ;;;; eglot/eldoc
 (with-delayed-execution
   (use-package rustic)
-  (use-package reformatter)
   (use-package zig-mode)
   (use-package eldoc-box)
 
@@ -472,8 +477,15 @@
           eldoc-box-max-pixel-height 700
           eldoc-box-only-multi-line t)))
 
-;;;;; eldoc
+;;;;; eldoc/flymake
 (with-delayed-execution
+  (use-package flymake-collection ;; alternateved
+    :after flymake
+    :functions (flymake-collection-hook-setup)
+    :init (flymake-collection-hook-setup)
+    :custom (flymake-collection-hook-ignored-modes
+             '(eglot--managed-mode)))
+  (setq flymake-suppress-zero-counters t)
   (defun flymake-eldoc-function (report-doc &rest _) ;; lcolonq
     "Document diagnostics at point.Intended for
      `eldoc-documentation-functions' (which see)."
@@ -579,6 +591,7 @@
 (with-delayed-execution
   (eval-after-load "gud"
     '(progn
+       (setq gdb-debuginfod-enable-setting nil)
        (define-key gud-mode-map (kbd "<up>") 'comint-previous-input)
        (define-key gud-mode-map (kbd "<down>") 'comint-next-input)))
   (defun my/gdb-setup-windows ()
@@ -895,6 +908,11 @@
 (with-delayed-execution
   (use-package org-download)
   (use-package org-web-tools)
+  (use-package engrave-faces
+    :after org)
+  (use-package org-modern
+    :after org
+    :hook (org-mode . org-modern-mode))
   (setq org-latex-toc-command "\\tableofcontents \\clearpage"
         org-directory "~/Dropbox/org/"
         org-ellipsis "▼"
@@ -905,8 +923,7 @@
         org-src-preserve-indentation t
         org-src-fontify-natively t
         ;; \usepackage{listings}
-        ;; org-latex-listings 'engraved
-        ;; ;; org-latex-src-block-backend 'engraved
+        org-latex-src-block-backend 'engraved
         org-latex-pdf-process '("tectonic -X compile %f --outdir=%o -Z shell-escape"))
   (defun my/org-inkscape-watcher (fname)
     "Open inkscape and add tex code for importing the figure"
@@ -1038,7 +1055,6 @@
 
 ;;;; Nov
 (with-delayed-execution
-  (use-package esxml)
   (use-package nov)
   (add-hook 'nov-mode-hook #'olivetti-mode)
   (setq nov-header-line-format nil)
@@ -1051,8 +1067,8 @@
   (add-hook 'nov-mode-hook
             (lambda ()
               (setq-local evil-normal-state-cursor 'hbar
-                          global-hl-line-mode nil
-                          scroll-margin 100
+                          ;; global-hl-line-mode nil
+                          ;; scroll-margin 100
                           mode-line-format nil
                           olivetti-body-width 120)
               (face-remap-add-relative
@@ -1119,7 +1135,7 @@
         mastodon-alt-tl-box-boosted nil
         mastodon-alt-tl-box-prefix ""
         mastodon-active-user "brongulus")
-  (if (display-graphic-p)
+  (when (display-graphic-p)
       (add-hook 'mastodon-mode-hook #'olivetti-mode))
   (add-hook 'mastodon-mode-hook #'mastodon-alt-tl-activate)
   (autoload 'mastodon "mastodon-alt" nil t)
@@ -1141,8 +1157,12 @@
     (add-to-list 'shr-external-rendering-functions
                  '(pre . shr-tag-pre-highlight)))
 
-  (setq eww-header-line-format "%t")
+  (defun my/eww-redirect-urls (url)
+    (replace-regexp-in-string "www.reddit.com" "old.reddit.com" url))
+  (setq eww-header-line-format nil
+        eww-auto-rename-buffer 'title)
   (with-eval-after-load 'eww
+    (push 'my/eww-redirect-urls eww-url-transformers)
     (evil-define-key 'normal eww-mode-map
       "Y" #'eww-copy-page-url
       "q" #'kill-buffer-and-window
@@ -1205,17 +1225,3 @@
 ;;   (compilation-always-kill t)
 ;;   (project-vc-merge-submodules nil)
 ;;   )
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(package-selected-packages '(evil vc-use-package))
- '(package-vc-selected-packages
-   '((vc-use-package :vc-backend Git :url "https://github.com/slotThe/vc-use-package"))))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )

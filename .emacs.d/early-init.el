@@ -33,7 +33,21 @@
                 (font . "Victor Mono-13.5:weight=semi-bold")))
 
 ;; Set theme and font beforehand to prevent flickering
-(load-theme 'dracula :no-confirm)
+(defun get-preferred-theme () ;; ymarco
+  (let ((hour (string-to-number
+               (substring (current-time-string) 11 13))))
+    (if (<= 7 hour 18)
+        'modus-operandi
+      'dracula)))
+(setq current-theme (get-preferred-theme))
+(load-theme current-theme :no-confirm)
+(run-with-timer (* 60 60) (* 60 60)
+                (defun update-theme ()
+                  (let ((preferred (get-preferred-theme)))
+                    (unless (eq preferred current-theme)
+                      (disable-theme current-theme)
+                      (load-theme preferred :no-confirm)))))
+
 (set-face-attribute
  'variable-pitch nil :family "Noto Sans" :weight 'regular :height 135)
 (set-face-attribute
@@ -43,9 +57,10 @@
 
 (setq load-prefer-newer t
       frame-resize-pixelwise t
-      ;; package-enable-at-startup nil
+      package-enable-at-startup nil
       auto-save-default nil
       redisplay-skip-fontification-on-input t
+      window-combination-resize t
       server-client-instructions nil
       auto-save-list-file-prefix nil
       vc-follow-symlinks t
