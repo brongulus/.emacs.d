@@ -6,6 +6,7 @@
 ;; This file is not part of GNU Emacs.
 ;;; Commentary:
 ;;  Look into context-menu-mode but without tooltip!
+;;  TODO: use-package ify everything
 ;;  Most completion systems follow TnG, tab to choose next and RET to select
 ;;  Ref 1: https://zenn.dev/takeokunn/articles/56010618502ccc
 ;;  Ref 2: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
@@ -61,7 +62,6 @@
          (append my/delayed-priority-low-confs ',body)))
 
 ;; -----------------------------------------------------------------------------
-
 ;;; Better Defaults
 (with-delayed-execution
   (setq-default user-full-name "Prashant Tak"
@@ -76,12 +76,13 @@
                 delete-selection-mode t
                 mouse-yank-at-point t
                 custom-file (make-temp-file "emacs-custom-")
-                scroll-margin 5
+                ;; scroll-margin 5
                 maximum-scroll-margin 0.5
                 scroll-step 1
                 next-screen-context-lines 5
                 scroll-conservatively 100000
                 scroll-preserve-screen-position 1
+                pixel-scroll-precision-large-scroll-height 35.0
                 recenter-positions '(5 top bottom)
                 bookmark-default-file "~/doom-configs/.emacs.d/bookmarks"
                 bookmark-save-flag 1
@@ -93,68 +94,72 @@
 
 ;;; Package Management
 (with-delayed-execution-priority-high
-  ;(load "~/.emacs.d/packages.el" nil t)
-  (push (expand-file-name "el-get/el-get" user-emacs-directory) load-path)
-
-  (unless (require 'el-get nil 'noerror)
-    (with-current-buffer
-        (url-retrieve-synchronously
-         "https://raw.githubusercontent.com/dimitri/el-get/master/el-get-install.el")
-      (goto-char (point-max))
-      (eval-print-last-sexp)))
-
-  (with-eval-after-load 'el-get-git
-    (setq el-get-git-shallow-clone t))
+  ;(load "~/.emacs.d/packages.el" nil t);; Package.el setup
+  (require 'package)
+  (push '("gnu" . "https://elpa.gnu.org/packages/") package-archives)
+  (push '("melpa" . "https://melpa.org/packages/") package-archives)
+  (package-initialize)
   
-  (push "~/.emacs.d/el-get-user/recipes" el-get-recipe-path)
-  (setq el-get-is-lazy t)
+  (eval-and-compile
+    (setq use-package-always-ensure t
+          use-package-expand-minimally t))
 
-  (el-get-bundle elpa:evil)
-  (el-get-bundle compat) ;; for minad's pkgs
-  (el-get-bundle evil-escape)
-  (el-get-bundle nerd-icons)) ;; (nerd-icons-install-fonts)
+  (unless (package-installed-p 'vc-use-package)
+    (package-vc-install "https://github.com/slotThe/vc-use-package"))
+  (require 'vc-use-package)
+
+  (use-package compat) ;; for minad's pkgs
+  (use-package nerd-icons)) ;; (nerd-icons-install-fonts)
 
 ;;;; Yay Evil!
 (with-delayed-execution
-  (el-get-bundle undo-fu)
-  (el-get-bundle undo-fu-session)
+  (use-package undo-fu)
+  (use-package undo-fu-session)
   (setq undo-limit 67108864
         undo-strong-limit 100663296
         undo-outer-limit 1006632960)
   (undo-fu-session-global-mode))
 
 (with-delayed-execution-priority-high
-  (define-key global-map (kbd "<escape>") #'keyboard-escape-quit)
-  (setq evil-want-keybinding t ;; nil
-        evil-split-window-below t
-        evil-vsplit-window-right t
-        evil-want-C-i-jump nil
-        evil-want-C-u-scroll t
-        evil-cross-lines t
-        evil-move-cursor-back nil
-        evil-want-Y-yank-to-eol t
-        evil-auto-indent t
-        evil-move-beyond-eol t
-        evil-shift-width 2
-        evil-motion-state-modes nil
-        evil-disable-insert-state-bindings t
-        evil-undo-system 'undo-fu
-        evil-normal-state-tag  (propertize "▊" 'face '(:inherit mode-line))
-        evil-motion-state-tag  (propertize "▊" 'face '(:inherit mode-line))
-        evil-emacs-state-tag   (propertize "▊" 'face '(:inherit mode-line-inactive))
-        evil-insert-state-tag  (propertize "▊" 'face '(:inherit minibuffer-prompt))
-        evil-visual-state-tag  (propertize "▊" 'face '(:inherit success)))
+  (use-package evil
+    :demand t
+    :init
+    (define-key global-map (kbd "<escape>") #'keyboard-escape-quit)
+    (setq evil-want-keybinding t ;; nil
+          evil-split-window-below t
+          evil-vsplit-window-right t
+          evil-want-C-i-jump nil
+          evil-want-C-u-scroll t
+          evil-cross-lines t
+          evil-move-cursor-back nil
+          evil-want-Y-yank-to-eol t
+          evil-auto-indent t
+          evil-move-beyond-eol t
+          evil-shift-width 2
+          evil-motion-state-modes nil
+          evil-disable-insert-state-bindings t
+          evil-undo-system 'undo-fu
+          evil-normal-state-tag  (propertize "▊" 'face '(:inherit mode-line))
+          evil-motion-state-tag  (propertize "▊" 'face '(:inherit mode-line))
+          evil-emacs-state-tag   (propertize "▊" 'face '(:inherit mode-line-inactive))
+          evil-insert-state-tag  (propertize "▊" 'face '(:inherit minibuffer-prompt))
+          evil-visual-state-tag  (propertize "▊" 'face '(:inherit success)))
+    :config
+    (evil-mode 1)
+    (add-to-list 'evil-highlight-closing-paren-at-point-states 'normal t)
+    (evil-define-key '(normal motion) special-mode-map "q" #'quit-window) ;; QoL
+    (with-eval-after-load 'evil-maps (define-key evil-motion-state-map (kbd "TAB") nil)))
 
-  (evil-mode 1)
-  (evil-escape-mode)
-  (setq-default evil-escape-key-sequence "jk")
-  (add-to-list 'evil-highlight-closing-paren-at-point-states 'normal t)
-  (evil-define-key '(normal motion) special-mode-map "q" #'quit-window) ;; QoL
-  (with-eval-after-load 'evil-maps (define-key evil-motion-state-map (kbd "TAB") nil)))
+  (use-package evil-escape
+    :after evil
+    :config
+    (evil-escape-mode)
+    (setq-default evil-escape-key-sequence "jk"
+                  evil-escape-delay 0.15)))
 
 ;;;; Vertico/Marginalia
 (with-delayed-execution-priority-high
-  (el-get-bundle vertico)
+  (use-package vertico)
   (vertico-mode)
   (savehist-mode)
   (keymap-set vertico-map "<backspace>" #'vertico-directory-delete-char)
@@ -170,8 +175,8 @@
         vertico-cycle t))
 
 (with-delayed-execution
-  (el-get-bundle marginalia)
-  (el-get-bundle nerd-icons-completion)
+  (use-package marginalia)
+  (use-package nerd-icons-completion)
   (marginalia-mode)
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup)
   (nerd-icons-completion-mode))
@@ -179,14 +184,16 @@
 ;;;; Visuals
 (with-delayed-execution
   ;; outli
-  (el-get-bundle jdtsmith/outli)
+ (use-package outli
+   :vc (:fetcher github :repo jdtsmith/outli))
   (add-hook 'text-mode-hook #'outli-mode)
   (add-hook 'prog-mode-hook #'outli-mode)
   (setq outli-default-nobar t)
 
-  ;; info-fontification
-  (el-get-bundle info+)
-  (autoload 'info "info+" nil t)
+  ;; info-fontification (FIXME)
+  ;; (use-package info+
+    ;; :vc (:fetcher "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/info%2B.el"))
+  ;; (autoload 'info "info+" nil t) ;; FIXME:
   (setq Info-use-header-line nil
         Info-breadcrumbs-in-header-flag nil
         Info-breadcrumbs-in-mode-line-mode t)
@@ -194,7 +201,7 @@
             #'(lambda () (setq-local evil-normal-state-cursor 'hbar)))
 
   ;; olivetti
-  (el-get-bundle olivetti)
+  (use-package olivetti)
   (if (display-graphic-p)
       (progn
         (add-hook 'text-mode-hook #'olivetti-mode)
@@ -241,15 +248,18 @@
                              (propertize " %b " 'face '(:slant italic)
                                          'help-echo (buffer-file-name))
                            (propertize " %b " 'help-echo (buffer-file-name))))
-                  (:eval (when (bound-and-true-p flymake-mode)
+                  (:eval (when (and (bound-and-true-p flymake-mode)
+                                    (mode-line-window-selected-p))
                            flymake-mode-line-format))
-                  (:eval (my/ml-padding))
-                  mode-line-end-spaces)))
+                  (:eval (when (mode-line-window-selected-p)
+                           (my/ml-padding)))
+                  (:eval (when (mode-line-window-selected-p)
+                           mode-line-end-spaces)))))
 
 ;;;; Consult/Orderless
 ;; orderless
 (with-delayed-execution
-  (el-get-bundle orderless)
+  (use-package orderless)
   (setq completion-category-defaults nil
         completion-styles '(substring orderless basic)
         completion-category-overrides '((file (styles basic partial-completion)))
@@ -265,9 +275,10 @@
 
 ;; consult
 (with-delayed-execution
-  (el-get-bundle consult)
-  (el-get-bundle armindarvish/consult-gh)
-  (el-get-bundle consult-recoll)
+  (use-package consult)
+  (use-package consult-gh
+    :vc (:fetcher github :repo armindarvish/consult-gh))
+  (use-package consult-recoll)
   (with-eval-after-load 'consult-recoll
     (defun my/open-mpv (file)
       (async-shell-command
@@ -306,11 +317,11 @@
 
 ;;;; Helpful/elisp-demos
 (with-delayed-execution
-  (el-get-bundle f)
-  (el-get-bundle s)
-  (el-get-bundle elisp-refs)
-  (el-get-bundle helpful)
-  (el-get-bundle elisp-demos)
+  (use-package f)
+  (use-package s)
+  (use-package elisp-refs)
+  (use-package helpful)
+  (use-package elisp-demos)
   (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update)
   (evil-define-key 'normal emacs-lisp-mode-map "K" #'helpful-at-point)
   (evil-define-key '(normal motion) helpful-mode-map
@@ -324,11 +335,11 @@
 
 ;;;; Cape/Corfu
 (with-delayed-execution
-  (el-get-bundle corfu)
-  (el-get-bundle popon)
-  (el-get-bundle corfu-terminal)
-  (el-get-bundle kind-icon)
-  (el-get-bundle cape)
+  (use-package corfu)
+  (use-package popon)
+  (use-package corfu-terminal)
+  (use-package kind-icon)
+  (use-package cape)
   (global-corfu-mode)
   (add-hook 'corfu-mode-hook 'corfu-popupinfo-mode)
   (add-hook 'evil-insert-state-exit-hook 'corfu-quit)
@@ -372,20 +383,24 @@
   (add-hook 'text-mode-hook #'my/add-capfs))
 
 (with-delayed-execution
-  (el-get-bundle which-key)
+  (use-package which-key)
   (setq which-key-idle-delay 0.5)
   (which-key-mode))
 
 ;;;; git/tempel/indent
 (with-delayed-execution
-  (el-get-bundle highlight-indent-guides)
-  (setq highlight-indent-guides-method 'character
-        highlight-indent-guides-responsive 'top)
-  (with-eval-after-load 'highlight-indent-guides
-    (add-hook 'emacs-lisp-mode-hook #'highlight-indent-guides-auto-set-faces))
-  (add-hook 'prog-mode-hook #'highlight-indent-guides-mode)
-  (add-hook 'conf-mode-hook #'highlight-indent-guides-mode)
-  (el-get-bundle git-gutter)
+  (use-package indent-bars ;; bad bad bad
+    :vc (:fetcher github :repo "jdtsmith/indent-bars")
+    :hook ((prog-mode conf-mode) . indent-bars-mode)
+    :config
+    (setq indent-bars-color '(highlight :face-bg t)
+          indent-bars-pattern "."
+          indent-bars-width-frac 0.2
+          indent-bars-pad-frac 0.2
+          indent-bars-color-by-depth nil
+          indent-bars-highlight-current-depth '(:face default :blend 0.4)))
+  
+  (use-package git-gutter)
   (add-hook 'after-change-major-mode-hook #'git-gutter-mode)
   (with-eval-after-load 'modus-themes
     (set-face-background 'modus-themes-fringe-yellow nil)
@@ -408,19 +423,13 @@
         git-gutter:deleted-sign "│"))
 
 (with-delayed-execution
-  (el-get-bundle git-gutter)
-  (el-get-bundle magit/transient)
-  (el-get-bundle magit/ghub)
-  (el-get-bundle magit/magit-popup)
-  (el-get-bundle magit/with-editor)
-  (el-get-bundle magit/magit)
-  (el-get-bundle magit/forge)
-  (push (locate-user-emacs-file "el-get/transient/lisp") load-path)
-  (push (locate-user-emacs-file "el-get/ghub/lisp") load-path)
-  (push (locate-user-emacs-file "el-get/magit-pop") load-path)
-  (push (locate-user-emacs-file "el-get/with-editor/lisp") load-path)
-  (push (locate-user-emacs-file "el-get/magit/lisp") load-path)
-  (push (locate-user-emacs-file "el-get/forge/lisp") load-path)
+  (use-package git-gutter)
+  (use-package transient)
+  (use-package ghub)
+  (use-package magit-popup)
+  (use-package with-editor)
+  (use-package magit)
+  (use-package forge)
   (autoload 'magit "magit" nil t)
   ;; git-timemachine
   (autoload 'magit-file-dispatch "magit" nil t)
@@ -436,7 +445,7 @@
 
 ;; tempel (TODO: incorporate aas with tempel?)
 (with-delayed-execution
-  (el-get-bundle tempel)
+  (use-package tempel)
   (setq fill-indent-according-to-mode t)
   (defun tempel-setup-capf ()
     (setq-local completion-at-point-functions
@@ -453,16 +462,10 @@
 
 ;;;; eglot/eldoc
 (with-delayed-execution
-  (el-get-bundle! project
-    :url "https://raw.githubusercontent.com/emacs-mirror/emacs/master/lisp/progmodes/project.el")
-  (el-get-bundle rustic)
-  (el-get-bundle reformatter)
-  (el-get-bundle zig-mode)
-  (el-get-bundle typescript-mode)
-  (el-get-bundle go-mode)
-  (el-get-bundle external-completion)
-  (el-get-bundle eldoc-box)
-  (el-get-bundle! eglot)
+  (use-package rustic)
+  (use-package reformatter)
+  (use-package zig-mode)
+  (use-package eldoc-box)
 
   (with-eval-after-load 'eldoc-box
     (setq eldoc-box-max-pixel-width 600
@@ -481,6 +484,7 @@
                  :sort 'error))))
   (with-eval-after-load 'eldoc
     (add-to-list 'eldoc-documentation-functions 'flymake-eldoc-function))
+  (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake)
   (add-hook 'prog-mode-hook #'flymake-mode)
 
   (evil-define-key '(normal motion) prog-mode-map
@@ -546,11 +550,31 @@
   (add-hook 'c++-mode-hook 'eglot-ensure)
   (add-hook 'zig-mode-hook 'eglot-ensure)
   (add-hook 'java-mode-hook 'eglot-ensure)
-  (add-hook 'typescript-mode-hook 'eglot-ensure)
-  (add-hook 'go-mode-hook 'eglot-ensure)
+  (add-hook 'typescript-ts-mode-hook 'eglot-ensure)
+  (add-hook 'go-ts-mode-hook 'eglot-ensure)
   (add-hook 'python-mode-hook 'eglot-ensure)
   (add-hook 'c-mode-hook 'eglot-ensure))
 
+;;;; tree-sitter
+;; Run treesit-install-language-grammar
+(with-delayed-execution
+  (setq treesit-language-source-alist
+        '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+          (css "https://github.com/tree-sitter/tree-sitter-css")
+          (elisp "https://github.com/Wilfred/tree-sitter-elisp")
+          (go "https://github.com/tree-sitter/tree-sitter-go")
+          (html "https://github.com/tree-sitter/tree-sitter-html")
+          (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
+          (json "https://github.com/tree-sitter/tree-sitter-json")
+          (make "https://github.com/alemuller/tree-sitter-make")
+          (markdown "https://github.com/ikatyang/tree-sitter-markdown")
+          (python "https://github.com/tree-sitter/tree-sitter-python")
+          (rust "https://github.com/tree-sitter/tree-sitter-rust")
+          (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
+          (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")))
+  (push '("\\.ts\\'" . typescript-ts-mode) auto-mode-alist)
+  (push '("\\.go\\'" . go-ts-mode) auto-mode-alist)
+  (push '("\\.py\\'" . python-ts-mode) auto-mode-alist))
 ;;; gdb ; TODO: enable tool-bar?
 (with-delayed-execution
   (eval-after-load "gud"
@@ -591,13 +615,14 @@
 
 ;;; Leetcode
 (with-delayed-execution
-  (el-get-bundle log4e)
-  (el-get-bundle aio)
-  (el-get-bundle graphql)
-  (el-get-bundle leetcode)
-  (el-get-bundle ht)
-  (el-get-bundle quickrun)
-  (el-get-bundle conao3/oj.el)
+  (use-package log4e)
+  (use-package aio)
+  (use-package graphql)
+  (use-package leetcode)
+  (use-package ht)
+  (use-package quickrun)
+  (use-package oj
+    :vc (:fetcher github :repo conao3/oj.el))
   (defun set-exec-path-from-shell-PATH ()
     "Set up Emacs' `exec-path' and PATH environment variable to match
      that used by the user's shell."
@@ -631,9 +656,9 @@
 
 ;;; Compilation
 (with-delayed-execution
-  (el-get-bundle! smart-compile
-    :url "https://raw.githubusercontent.com/zenitani/elisp/master/smart-compile.el")
-  (el-get-bundle fancy-compilation)
+  (use-package smart-compile
+    :vc (:fetcher github :repo "zenitani/elisp"))
+  (use-package fancy-compilation)
   (with-eval-after-load 'compile
     (setq fancy-compilation-override-colors nil)
     (fancy-compilation-mode)
@@ -684,9 +709,9 @@
 
 ;;;; Misc
 (with-delayed-execution
-  (el-get-bundle sicp)
-  (el-get-bundle expand-region)
-  (el-get-bundle multiple-cursors)
+  (use-package sicp)
+  (use-package expand-region)
+  (use-package multiple-cursors)
   (evil-define-key 'insert 'global
     (kbd "C-d") 'mc/mark-next-like-this
     (kbd "C-v") 'mc/skip-to-next-like-this
@@ -704,6 +729,7 @@
     (kbd "<leader>fr") #'consult-recent-file
     (kbd "<leader>ss") #'consult-recoll
     (kbd "<leader>sa") #'consult-locate
+    (kbd "<leader>sb") #'consult-line
     (kbd "<leader>sd") #'consult-find
     (kbd "<leader>sp") #'consult-ripgrep
     (kbd "<leader>sg") #'consult-gh-search-repos
@@ -793,7 +819,7 @@
 ;; dired
 (with-delayed-execution
   (put 'dired-find-alternate-file 'disabled nil)
-  (el-get-bundle nerd-icons-dired)
+  (use-package nerd-icons-dired)
   (add-hook 'dired-mode-hook #'nerd-icons-dired-mode)
   (add-hook 'dired-mode-hook #'(lambda ()
                                  (setq-local truncate-lines t
@@ -817,6 +843,8 @@
     #'(lambda () (interactive) (dired "/home/prashant/Dotfiles/")))
   (setq dired-dwim-target t
         dired-auto-revert-buffer t
+        dired-mouse-drag-files t
+        mouse-drag-and-drop-region-cross-program t
         dired-kill-when-opening-new-dired-buffer t
         dired-recursive-deletes 'always
         dired-recursive-copies 'always))
@@ -865,8 +893,8 @@
 
 ;;; Org
 (with-delayed-execution
-  (el-get-bundle org-download)
-  (el-get-bundle org-web-tools)
+  (use-package org-download)
+  (use-package org-web-tools)
   (setq org-latex-toc-command "\\tableofcontents \\clearpage"
         org-directory "~/Dropbox/org/"
         org-ellipsis "▼"
@@ -945,15 +973,14 @@
 
 ;;;; Org-cv
 (with-delayed-execution
-  (el-get-bundle org-cv
-    :url "https://gitlab.com/Titan-C/org-cv.git")
-  (push (expand-file-name "el-get/org-cv" user-emacs-directory) load-path)
-  (with-eval-after-load 'org
-    (require 'ox-awesomecv)))
+  (use-package ox-awesomecv
+    :vc (:fetcher gitlab :repo "Titan-C/org-cv")
+    :after org
+    :init (require 'ox-awesomecv)))
 ;;; Random
 ;;;; 4ch?
 ;; (with-delayed-execution
-;;   (el-get-bundle! palikar/q4)
+;;   (use-package! palikar/q4)
 ;;   (require 'q4))
 
 ;;;; ediff (http://yummymelon.com/devnull/surprise-and-emacs-defaults.html )
@@ -966,14 +993,14 @@
 ;; JMDict: https://github.com/koaeH/JMdict-sdcv
 ;; Change websters name by editing its .ifo file
 (with-delayed-execution
-  (el-get-bundle lexic)
-  (el-get-bundle posframe
-    :url "https://raw.githubusercontent.com/tumashu/posframe/master/posframe.el")
-  (el-get-bundle sdcv
-    :url "https://raw.githubusercontent.com/manateelazycat/sdcv/master/sdcv.el")
+  (use-package lexic)
+  (use-package posframe
+    :vc (:fetcher github :repo "tumashu/posframe"))
+  (use-package sdcv
+    :vc (:fetcher github :repo "manateelazycat/sdcv"))
   (with-eval-after-load 'sdcv
     (set-face-attribute
-     'sdcv-tooltip-face nil :foreground nil :background nil :inherit 'tooltip))
+     'sdcv-tooltip-face nil :foreground 'unspecified :background 'unspecified :inherit 'tooltip))
   (setq sdcv-dictionary-data-dir "~/.local/share/stardict/dic/"
         sdcv-tooltip-timeout 30
         sdcv-say-word-p nil
@@ -991,9 +1018,7 @@
 
 ;;;; pdf-tools
 (with-delayed-execution
-  (el-get-bundle vedang/pdf-tools)
-  (push (expand-file-name "el-get/pdf-tools/lisp" user-emacs-directory) load-path)
-  (require 'pdf-tools)
+ (use-package pdf-tools)
   (push '("\\.pdf\\'" . pdf-view-mode) auto-mode-alist)
   (evil-set-initial-state 'pdf-view-mode 'normal)
   (add-hook 'pdf-view-mode-hook 'pdf-view-fit-page-to-window)
@@ -1013,9 +1038,8 @@
 
 ;;;; Nov
 (with-delayed-execution
-  (el-get-bundle esxml)
-  (el-get-bundle nov
-    :url "https://depp.brause.cc/nov.el/nov.el")
+  (use-package esxml)
+  (use-package nov)
   (add-hook 'nov-mode-hook #'olivetti-mode)
   (setq nov-header-line-format nil)
   (evil-define-key 'visual nov-mode-map
@@ -1033,7 +1057,6 @@
                           olivetti-body-width 120)
               (face-remap-add-relative
                'variable-pitch :family "Noto Serif JP" :height 150)))
-  (push (locate-user-emacs-file "el-get/nov") load-path)
   (push '("\\.epub\\'" . nov-mode) auto-mode-alist))
 
 ;;;; Misc
@@ -1069,6 +1092,7 @@
   (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
   (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
   (save-place-mode 1)
+  (pixel-scroll-precision-mode 1)
   (global-auto-revert-mode t)
   (setq global-auto-revert-non-file-buffers t
         auto-revert-verbose nil)
@@ -1083,13 +1107,13 @@
 
 ;;;; mastodon
 (with-delayed-execution
-  (el-get-bundle ts)
-  (el-get-bundle persist)
-  (el-get-bundle request)
-  (el-get-bundle mastodon
-    :type git :url "https://codeberg.org/martianh/mastodon.el.git")
-  (el-get-bundle rougier/mastodon-alt)
-  (push (locate-user-emacs-file "el-get/mastodon/lisp") load-path)
+  (use-package ts)
+  (use-package persist)
+  (use-package request)
+  (use-package mastodon
+    :vc (mastodon.el :url "https://codeberg.org/martianh/mastodon.el.git"))
+  (use-package mastodon-alt
+    :vc (:fetcher github :repo rougier/mastodon-alt))
   (setq mastodon-instance-url "https://emacs.ch"
         mastodon-auth-source-file "~/.authinfo"
         mastodon-alt-tl-box-boosted nil
@@ -1110,8 +1134,8 @@
   
 ;;;; eww
 (with-delayed-execution
-  (el-get-bundle language-detection)
-  (el-get-bundle shr-tag-pre-highlight)
+  (use-package language-detection)
+  (use-package shr-tag-pre-highlight)
   (with-eval-after-load 'shr
     (require 'shr-tag-pre-highlight)
     (add-to-list 'shr-external-rendering-functions
@@ -1126,8 +1150,8 @@
 
 ;;;; Misc-boogaloo
 (with-delayed-execution
-  (el-get-bundle xclip)
-  (el-get-bundle evil-terminal-cursor-changer)
+  (use-package xclip)
+  (use-package evil-terminal-cursor-changer)
   (blink-cursor-mode -1)
   (show-paren-mode)
   (global-hl-line-mode)
@@ -1147,28 +1171,23 @@
     (eldoc-mode +1)
     (corfu-terminal-mode +1))
   (xterm-mouse-mode 1)
-  (turn-on-xclip)
+  (xclip-mode 1)
   (etcc-on))
 
 ;;;; Gnus
 (with-delayed-execution-priority-high
-  (el-get-bundle damiencollard/nice-citation) ;; gnus
+ (use-package nice-citation
+   :vc (:fetcher github :repo damiencollard/nice-citation))
   (require 'nice-citation)
   (load "~/.emacs.d/+gnus" nil t))
 
-(with-delayed-execution
-  (el-get 'sync))
+;; (with-delayed-execution
+;;   (el-get 'sync))
 
 (provide 'init)
 ;;; init.el ends here
 
 ;; ------------------------- This contains code for the future.
-;; (if (version< emacs-version "29.0")
-;;     (pixel-scroll-mode)
-;;   (pixel-scroll-precision-mode 1)
-;;   (setq dired-mouse-drag-files t)
-;;   (setq mouse-drag-and-drop-region-cross-program t)
-;;   (setq pixel-scroll-precision-large-scroll-height 35.0))
 ;; (use-package project
 ;;   :pin gnu
 ;;   :bind (("C-c k" . #'project-kill-buffers)
@@ -1186,3 +1205,17 @@
 ;;   (compilation-always-kill t)
 ;;   (project-vc-merge-submodules nil)
 ;;   )
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages '(evil vc-use-package))
+ '(package-vc-selected-packages
+   '((vc-use-package :vc-backend Git :url "https://github.com/slotThe/vc-use-package"))))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )

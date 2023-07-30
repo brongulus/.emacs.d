@@ -43,8 +43,7 @@
 
 (setq load-prefer-newer t
       frame-resize-pixelwise t
-      package-enable-at-startup nil
-      package--init-file-ensured t ;; doom
+      ;; package-enable-at-startup nil
       auto-save-default nil
       redisplay-skip-fontification-on-input t
       server-client-instructions nil
