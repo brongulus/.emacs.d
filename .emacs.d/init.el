@@ -387,6 +387,10 @@
   (add-hook 'conf-mode-hook #'highlight-indent-guides-mode)
   (el-get-bundle git-gutter)
   (add-hook 'after-change-major-mode-hook #'git-gutter-mode)
+  (with-eval-after-load 'modus-themes
+    (set-face-background 'modus-themes-fringe-yellow nil)
+    (set-face-background 'modus-themes-fringe-green nil)
+    (set-face-background 'modus-themes-fringe-red nil))
   (with-eval-after-load 'git-gutter
     (evil-define-key 'normal 'git-gutter-mode
       (kbd "<localleader>gs") #'git-gutter:stage-hunk
@@ -394,10 +398,6 @@
       (kbd "<localleader>gj") #'git-gutter:next-hunk
       (kbd "<localleader>gk") #'git-gutter:previous-hunk
       (kbd "<localleader>gr") #'git-gutter:revert-hunk)
-    (with-eval-after-load 'modus-themes
-      (set-face-background 'modus-themes-fringe-yellow nil)
-      (set-face-background 'modus-themes-fringe-green nil)
-      (set-face-background 'modus-themes-fringe-red nil))
     (set-face-foreground 'git-gutter:added "chartreuse")
     (set-face-foreground 'git-gutter:modified "deep sky blue")
     (set-face-foreground 'git-gutter:deleted "dark orange"))
@@ -544,11 +544,50 @@
         read-process-output-max (* 1024 1024) ;; 1mb for LSP blobs
         rustic-lsp-client 'eglot)
   (add-hook 'c++-mode-hook 'eglot-ensure)
+  (add-hook 'zig-mode-hook 'eglot-ensure)
   (add-hook 'java-mode-hook 'eglot-ensure)
   (add-hook 'typescript-mode-hook 'eglot-ensure)
   (add-hook 'go-mode-hook 'eglot-ensure)
   (add-hook 'python-mode-hook 'eglot-ensure)
   (add-hook 'c-mode-hook 'eglot-ensure))
+
+;;; gdb ; TODO: enable tool-bar?
+(with-delayed-execution
+  (eval-after-load "gud"
+    '(progn
+       (define-key gud-mode-map (kbd "<up>") 'comint-previous-input)
+       (define-key gud-mode-map (kbd "<down>") 'comint-next-input)))
+  (defun my/gdb-setup-windows ()
+    "Lay out the window pattern for option `gdb-many-windows'
+    | Source(1) | IO (4) | Local(3) |
+    |           |        |          |
+    |--------------------+----------|
+    | GUD Interaction(0) | BP (2)   |"
+    (gdb-get-buffer-create 'gdb-locals-buffer)
+    ;; (gdb-get-buffer-create 'gdb-stack-buffer)
+    (gdb-get-buffer-create 'gdb-breakpoints-buffer)
+    (set-window-dedicated-p (selected-window) nil)
+    (switch-to-buffer gud-comint-buffer)
+    (delete-other-windows)
+    (let ((win0 (selected-window))
+          (win2 (split-window nil (/ (* (window-width) 2) 3) 'right))
+          (win1 (split-window nil ( / (* (window-height) 1) 4) 'above)))
+      (select-window win2)
+      (gdb-set-window-buffer (gdb-breakpoints-buffer-name))
+      (let ((win3 (split-window nil (/ (window-height) 3) 'above)))
+        (gdb-set-window-buffer (gdb-locals-buffer-name) nil win3))
+      (select-window win1)
+      (set-window-buffer win1 (or (gdb-get-source-buffer)
+                                  (list-buffers-noselect)))
+      (setq gdb-source-window-list (list (selected-window)))
+      ;; (gdb-set-window-buffer (gdb-stack-buffer-name))
+      (let ((win4 (if (< (window-width) 95)
+                      (split-window nil (/ (* (window-height) 3) 4) 'below)
+                    (split-window-right))))
+        (gdb-set-window-buffer (gdb-get-buffer-create 'gdb-inferior-io) nil win4))
+      (select-window win0)))
+  (advice-add 'gdb-setup-windows :override #'my/gdb-setup-windows)
+  (add-hook 'gdb-mode-hook #'gdb-many-windows))
 
 ;;; Leetcode
 (with-delayed-execution
@@ -677,10 +716,19 @@
                            (magit-ediff-show-unstaged buffer-file-name))
     (kbd "<leader>x") #'org-capture
     (kbd "<leader>oa") #'org-agenda
+    (kbd "<leader>dc") #'org-web-tools-read-url-as-org
+    (kbd "<leader>da") #'(lambda () (interactive)
+                           (find-file "~/Dropbox/org/links.org")
+                           (call-interactively 'org-web-tools-insert-web-page-as-entry)
+                           (message "Link successfully added to the archive."))
     (kbd "<leader>or") #'remember
     (kbd "<leader>om") #'mastodon
     (kbd "<leader>on") #'gnus
-    (kbd "<leader>ot") #'eshell)
+    (kbd "<leader>ot") #'eshell
+    (kbd "<localleader>tt") #'transpose-sexps
+    (kbd "<localleader>tw") #'transpose-words
+    (kbd "<localleader>tl") #'transpose-lines
+    (kbd "<localleader>ts") #'transpose-sentences)
   (evil-define-key 'visual 'global
     (kbd ", TAB") #'untabify
     "T" #'untabify
@@ -688,7 +736,7 @@
   (evil-define-key 'insert 'global (kbd "C-o") #'evil-execute-in-normal-state)
   (evil-define-key 'normal 'global
     ")" #'evil-next-close-paren
-    "(" #'evil-previous-open-paren
+    "(" #'backward-up-list
     "-" #'dired-jump
     "+" #'er/expand-region
     (kbd "C-f") #'find-file
@@ -697,7 +745,7 @@
     (kbd "M-.") #'xref-find-definitions
     (kbd "C-t") #'tab-new
     (kbd "C-w") #'tab-close
-    (kbd "A-f") #'fill-paragraph
+    ;; (kbd "A-f") #'fill-paragraph
     (kbd "gcc") #'comment-line)
   (evil-define-key '(normal motion) Info-mode-map
     (kbd "RET") #'Info-follow-nearest-node
@@ -818,6 +866,7 @@
 ;;; Org
 (with-delayed-execution
   (el-get-bundle org-download)
+  (el-get-bundle org-web-tools)
   (setq org-latex-toc-command "\\tableofcontents \\clearpage"
         org-directory "~/Dropbox/org/"
         org-ellipsis "▼"
@@ -842,7 +891,7 @@
     (setq org-download-method 'directory
           org-download-image-dir (concat
                                   (file-name-sans-extension (buffer-file-name)) "-img")
-          org-download-image-org-width 600
+          org-download-image-org-width 800
           org-download-image-attr-list "#+attr_latex: :width 0.6\textwidth"
           org-download-link-format "[[file:%s]]\n"
           org-download-abbreviate-filename-function #'file-relative-name
@@ -851,7 +900,7 @@
   
   (with-eval-after-load 'org
     (require 'org-download)
-    (add-hook 'org-mode-hook 'org-download-mode)
+    ;; (add-hook 'org-mode-hook 'org-download-mode)
     (add-hook 'org-mode-hook 'tempel-setup-capf)
     (add-hook 'org-mode-hook 'visual-line-mode)
     (define-key org-mode-map [f4] #'org-latex-export-to-pdf)
@@ -894,22 +943,30 @@
           org-agenda-breadcrumbs-separator " ❱ "
           org-agenda-files '("~/Dropbox/org/todo.org" "~/Dropbox/org/inbox.org"))))
 
+;;;; Org-cv
+(with-delayed-execution
+  (el-get-bundle org-cv
+    :url "https://gitlab.com/Titan-C/org-cv.git")
+  (push (expand-file-name "el-get/org-cv" user-emacs-directory) load-path)
+  (with-eval-after-load 'org
+    (require 'ox-awesomecv)))
 ;;; Random
-;; 4ch?
+;;;; 4ch?
 ;; (with-delayed-execution
 ;;   (el-get-bundle! palikar/q4)
 ;;   (require 'q4))
 
-;; ediff (http://yummymelon.com/devnull/surprise-and-emacs-defaults.html )
+;;;; ediff (http://yummymelon.com/devnull/surprise-and-emacs-defaults.html )
 (with-delayed-execution
   (with-eval-after-load 'ediff
     (setq ediff-split-window-function 'split-window-horizontally
           ediff-window-setup-function 'ediff-setup-windows-plain)))
   
-;; sdcv
+;;;; sdcv
 ;; JMDict: https://github.com/koaeH/JMdict-sdcv
 ;; Change websters name by editing its .ifo file
 (with-delayed-execution
+  (el-get-bundle lexic)
   (el-get-bundle posframe
     :url "https://raw.githubusercontent.com/tumashu/posframe/master/posframe.el")
   (el-get-bundle sdcv
@@ -918,18 +975,21 @@
     (set-face-attribute
      'sdcv-tooltip-face nil :foreground nil :background nil :inherit 'tooltip))
   (setq sdcv-dictionary-data-dir "~/.local/share/stardict/dic/"
+        sdcv-tooltip-timeout 30
         sdcv-say-word-p nil
         sdcv-only-data-dir nil
         sdcv-fail-notify-string "No Match Found"
         sdcv-env-lang "en_US.UTF-8"
         sdcv-dictionary-complete-list
-        '("org.edrdg.jmdict-jpn-eng"
+        '("Sanseido"
+          "org.edrdg.jmdict-jpn-eng"
           "Websters1913")
         sdcv-dictionary-simple-list
-        '("org.edrdg.jmdict-jpn-eng"
+        '("Sanseido"
+          "org.edrdg.jmdict-jpn-eng"
           "Websters1913")))
 
-;; pdf-tools
+;;;; pdf-tools
 (with-delayed-execution
   (el-get-bundle vedang/pdf-tools)
   (push (expand-file-name "el-get/pdf-tools/lisp" user-emacs-directory) load-path)
@@ -951,13 +1011,15 @@
     "zm" 'pdf-view-themed-minor-mode
     "o" 'pdf-outline))
 
-;; Nov
+;;;; Nov
 (with-delayed-execution
   (el-get-bundle esxml)
   (el-get-bundle nov
     :url "https://depp.brause.cc/nov.el/nov.el")
   (add-hook 'nov-mode-hook #'olivetti-mode)
   (setq nov-header-line-format nil)
+  (evil-define-key 'visual nov-mode-map
+    "K" #'sdcv-search-pointer+)
   (evil-define-key 'normal nov-mode-map
     "K" #'sdcv-search-pointer+
     "n" #'nov-scroll-up
@@ -966,6 +1028,7 @@
             (lambda ()
               (setq-local evil-normal-state-cursor 'hbar
                           global-hl-line-mode nil
+                          scroll-margin 100
                           mode-line-format nil
                           olivetti-body-width 120)
               (face-remap-add-relative
@@ -973,6 +1036,7 @@
   (push (locate-user-emacs-file "el-get/nov") load-path)
   (push '("\\.epub\\'" . nov-mode) auto-mode-alist))
 
+;;;; Misc
 (with-delayed-execution
   ;; ref: noctuid
   (defun noct-maybe-sudo-edit ()
@@ -1011,11 +1075,13 @@
   (winner-mode 1)
   (setq markdown-command "multimarkdown"
         markdown-fontify-code-blocks-natively t
+        markdown-max-image-size '(800 . 800)
         markdown-display-remote-images t)
+  (add-hook 'markdown-mode-hook #'markdown-toggle-inline-images)
   (push '("\\.md\\'" . gfm-view-mode) auto-mode-alist)
   (push '("rc\\'" . conf-unix-mode) auto-mode-alist))
 
-;; mastodon
+;;;; mastodon
 (with-delayed-execution
   (el-get-bundle ts)
   (el-get-bundle persist)
@@ -1042,7 +1108,7 @@
   (evil-define-key 'normal mastodon-mode-map
     "q" #'kill-current-buffer))
   
-;; eww
+;;;; eww
 (with-delayed-execution
   (el-get-bundle language-detection)
   (el-get-bundle shr-tag-pre-highlight)
@@ -1052,12 +1118,13 @@
                  '(pre . shr-tag-pre-highlight)))
 
   (setq eww-header-line-format "%t")
-  (eval-after-load 'eww
+  (with-eval-after-load 'eww
     (evil-define-key 'normal eww-mode-map
       "Y" #'eww-copy-page-url
       "q" #'kill-buffer-and-window
       "H" #'eww-back-url)))
 
+;;;; Misc-boogaloo
 (with-delayed-execution
   (el-get-bundle xclip)
   (el-get-bundle evil-terminal-cursor-changer)
@@ -1083,7 +1150,7 @@
   (turn-on-xclip)
   (etcc-on))
 
-;; Gnus
+;;;; Gnus
 (with-delayed-execution-priority-high
   (el-get-bundle damiencollard/nice-citation) ;; gnus
   (require 'nice-citation)

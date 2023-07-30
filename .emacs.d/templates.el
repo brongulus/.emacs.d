@@ -113,6 +113,7 @@ org-mode
 
 (frac "\\frac{" p "}{" q "}")
 (sss "$")
+(props ":PROPERTIES:\n" r> n ":END:")
 (caption "#+caption: ")
 (drawer ":" p ":" n r ":end:")
 (begin "#+begin_" (s name) n> r> n "#+end_" name)

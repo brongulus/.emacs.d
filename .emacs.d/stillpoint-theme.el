@@ -53,8 +53,8 @@
       (((background dark))     (:foreground "white" :background ,empty-black))
       (t                       (:foreground "black" :background ,off-white))))
    `(cursor
-     ((((background light))     (:background "cyan"))
-      (((background dark))      (:background "red"))))
+     ((((background light))     (:background "black"))
+      (((background dark))      (:background "white"))))
    `(escape-glyph
      ((default                  (:foreground "brown"))
       (((background dark))      (:foreground "cyan"))))
@@ -63,7 +63,7 @@
    `(minibuffer-prompt
      ((t                        (:weight bold))))
    `(highlight
-     ((((background light))     (:background ,yellow-hl))
+     ((((background light))     (:background ,select-light))
       (((background dark))      (:background ,dark-blue))))
    `(region
      ((default                  (:extend t))

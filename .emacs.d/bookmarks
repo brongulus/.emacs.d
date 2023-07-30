@@ -2,7 +2,12 @@
 ;;; This format is meant to be slightly human-readable;
 ;;; nevertheless, you probably don't want to edit it.
 ;;; -*- End Of Bookmark File Format Version Stamp -*-
-(("Media"
+(("README.md"
+ (filename . "~/fkn-algorithm/README.md")
+ (front-context-string . "amic Programming")
+ (rear-context-string . "rm.md)\n\n* I. Dyn")
+ (position . 2015))
+("Media"
  (filename . "/mnt/Data/Downloads/Media/")
  (front-context-string . "Anime\n  drwxrwxr")
  (rear-context-string . "0K Jul  2 13:53 ")
