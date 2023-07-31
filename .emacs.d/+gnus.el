@@ -49,10 +49,11 @@
                              (group 1.0))
                    (vertical 1.0
                              (summary 1.0 point)))))
-    (with-eval-after-load 'gnus-summaryemacs-helpemacs-help
+    (with-eval-after-load 'gnus-summary
       (add-hook 'gnus-article-mode-hook #'visual-line-mode)
       (keymap-set gnus-summary-mode-map "j" #'next-line)
       (keymap-set gnus-summary-mode-map "k" #'previous-line))
+    
     (keymap-set gnus-article-mode-map "j" #'next-line)
     (keymap-set gnus-article-mode-map "k" #'previous-line)
     (keymap-set gnus-article-mode-map "q" #'kill-buffer-and-window))
@@ -79,6 +80,7 @@
   (setq gnus-asynchronous t
         gnus-use-cache t
         gnus-cache-remove-articles nil
+        gnus-large-newsgroup 200
         ;; gnus-fetch-old-headers t
         ;; gnus-blocked-images nil
         gnus-always-read-dribble-file t
@@ -161,6 +163,9 @@
     ;; fetch news every 10 minutes if emacs has been idle for 1 min
     (gnus-demon-add-handler #'my/gnus-demon-scan 10 1)
 
+    (keymap-set gnus-topic-mode-map "RET" #'(lambda ()
+                                              (interactive)
+                                              (gnus-topic-select-group 200)))
     (setq global-mode-string
           (append global-mode-string 
                   (list '(:eval (propertize 

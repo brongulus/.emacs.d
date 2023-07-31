@@ -91,7 +91,7 @@ read it before opening a new issue about your will.")
                 (dracula-orange  "#ffb86c" "#ffaf5f" "brightred")  
                 (dracula-pink    "#ff79c6" "#ff87d7" "magenta")    
                 (dracula-purple  "#A986C5" "#af87ff" "brightmagenta")
-                (dracula-red     "#E48582" "#ff8787" "red")         
+                (dracula-red     "#FB7385" "#ff8787" "red")         
                 (dracula-yellow  "#FFCB6B" "#ffd700" "brightyellow")
                 ;; Other colors
                 (links           "#80cbc4" "#87d7ff" "brightblue")
@@ -278,6 +278,14 @@ read it before opening a new issue about your will.")
                (enh-ruby-string-delimiter-face :foreground ,dracula-yellow)
                ;; eww
                (eww-valid-certificate :foreground ,dracula-green)
+               ;; flymake
+               (flymake-error :underline (:style wave :color ,dracula-red)
+                              :background ,bg2)
+               (flymake-warning :underline (:style wave :color ,dracula-yellow)
+                                :background ,bg2)
+               (flymake-note :underline (:style wave :color ,dracula-green)
+                                :background ,bg2)
+
                ;; flyspell
                (flyspell-duplicate :underline (:style wave :color ,dracula-orange))
                (flyspell-incorrect :underline (:style wave :color ,dracula-red))
@@ -896,6 +904,13 @@ read it before opening a new issue about your will.")
                ,(funcall get-func (alist-get 'dracula-purple colors))
                ,(funcall get-func (alist-get 'dracula-cyan colors))
                ,(funcall get-func (alist-get 'dracula-fg colors))])))))
+
+;; ppy ; as comment-face
+(add-hook 'prog-mode-hook
+          (lambda ()
+            (font-lock-add-keywords
+             nil
+             '((";" . 'shadow)))))
 
 
 ;;;###autoload

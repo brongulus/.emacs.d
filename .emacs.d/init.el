@@ -6,7 +6,7 @@
 ;; This file is not part of GNU Emacs.
 ;;; Commentary:
 ;;  Look into context-menu-mode but without tooltip!
-;;  TODO: use-package ify everything
+;;  TODO: (use-package evil-define-map) from eldoc/flymake
 ;;  Most completion systems follow TnG, tab to choose next and RET to select
 ;;  Ref 1: https://zenn.dev/takeokunn/articles/56010618502ccc
 ;;  Ref 2: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
@@ -52,11 +52,13 @@
                          (cancel-timer my/delayed-priority-low-conf-timer))))))))
 
 (defmacro with-delayed-execution-priority-high (&rest body)
+  "Macro for delayed execution of processes (in BODY) with higher priority."
   (declare (indent 0))
   `(setq my/delayed-priority-high-confs
          (append my/delayed-priority-high-confs ',body)))
 
 (defmacro with-delayed-execution (&rest body)
+  "Macro for delayed execution of processes (in BODY) with lower priority."
   (declare (indent 0))
   `(setq my/delayed-priority-low-confs
          (append my/delayed-priority-low-confs ',body)))
@@ -113,19 +115,23 @@
   (require 'vc-use-package)
 
   (use-package on ;; provides hooks akin to doom
-    :vc (:fetcher gitlab :repo "ajgrf/on.el"))
+    :vc (:fetcher gitlab :repo "ajgrf/on.el")
+    :demand t)
   (use-package compat) ;; for minad's pkgs
-  (use-package nerd-icons)) ;; (nerd-icons-install-fonts)
+  (use-package nerd-icons
+    :demand t)) ;; (nerd-icons-install-fonts)
 
 ;;;; Yay Evil!
 (with-delayed-execution
-  (use-package undo-fu)
-  (use-package undo-fu-session
-    :after undo-fu)
-  (setq undo-limit 67108864
+  (use-package undo-fu
+    :config
+    (setq undo-limit 67108864
         undo-strong-limit 100663296
-        undo-outer-limit 1006632960)
-  (undo-fu-session-global-mode))
+        undo-outer-limit 1006632960))
+  (use-package undo-fu-session
+    :after undo-fu
+    :config
+    (undo-fu-session-global-mode)))
 
 (with-delayed-execution-priority-high
   (use-package evil
@@ -150,13 +156,17 @@
           evil-normal-state-tag  (propertize "▊" 'face '(:inherit mode-line))
           evil-motion-state-tag  (propertize "▊" 'face '(:inherit mode-line))
           evil-emacs-state-tag   (propertize "▊" 'face '(:inherit mode-line-inactive))
-          evil-insert-state-tag  (propertize "▊" 'face '(:inherit minibuffer-prompt))
-          evil-visual-state-tag  (propertize "▊" 'face '(:inherit success)))
+          evil-insert-state-tag  (propertize "▊" 'face '(:inherit success))
+          evil-visual-state-tag  (propertize "▊" 'face '(:inherit minibuffer-prompt)))
     :config
     (evil-mode 1)
     (add-to-list 'evil-highlight-closing-paren-at-point-states 'normal t)
-    (evil-define-key '(normal motion) special-mode-map "q" #'quit-window) ;; QoL
-    (with-eval-after-load 'evil-maps (define-key evil-motion-state-map (kbd "TAB") nil)))
+    (with-eval-after-load 'evil-maps
+      (evil-define-key '(normal motion) special-mode-map "q" #'quit-window) ;; QoL
+      ;; useless?
+      ;; (define-key evil-normal-state-map (kbd "K") nil)
+      ;; (define-key evil-motion-state-map (kbd "K") nil)
+      (define-key evil-motion-state-map (kbd "TAB") nil)))
 
   (use-package evil-escape
     :after evil
@@ -167,27 +177,34 @@
 
 ;;;; Vertico/Marginalia
 (with-delayed-execution-priority-high
-  (use-package vertico)
-  (vertico-mode)
-  (savehist-mode)
-  (keymap-set vertico-map "<backspace>" #'vertico-directory-delete-char)
-  (keymap-set vertico-map "RET" #'vertico-directory-enter)
-  (keymap-set vertico-map "TAB" #'vertico-next)
-  (keymap-set vertico-map "<backtab>" #'vertico-previous)
-  (keymap-set vertico-map "S-TAB" #'vertico-previous)
-  (keymap-set vertico-map "M-TAB" #'vertico-previous)
-  (keymap-set vertico-map "C-j" #'vertico-next)
-  (keymap-set vertico-map "C-k" #'vertico-previous)
-  (setq vertico-scroll-margin 0
-        vertico-resize nil
-        vertico-cycle t))
-
+  (use-package vertico
+    :defer nil
+    :init
+    (vertico-mode)
+    (savehist-mode)
+    :bind (:map vertico-map
+                ("<backspace" . vertico-directory-delete-char)
+                ("RET" . vertico-directory-enter)
+                ("TAB" . vertico-next)
+                ("<backtab>" . vertico-previous)
+                ("S-TAB" . vertico-previous)
+                ("M-TAB" . vertico-previous)
+                ("C-j" . vertico-next)
+                ("C-k" . vertico-previous))
+    :config
+    (setq vertico-scroll-margin 0
+          vertico-resize nil
+          vertico-cycle t)))
+  
 (with-delayed-execution
-  (use-package marginalia)
-  (use-package nerd-icons-completion)
-  (marginalia-mode)
-  (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup)
-  (nerd-icons-completion-mode))
+  (use-package marginalia
+    :init
+    (marginalia-mode))
+  (use-package nerd-icons-completion
+    :after marginalia
+    :config
+    (nerd-icons-completion-mode)
+    (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup)))
 
 ;;;; Visuals
 (with-delayed-execution
@@ -202,28 +219,25 @@
             #'(lambda () (setq-local evil-normal-state-cursor 'hbar)))
 
   ;; olivetti
-  (use-package olivetti)
-  (when (display-graphic-p)
-      (progn
-        (add-hook 'text-mode-hook #'olivetti-mode)
-        (add-hook 'eww-mode-hook #'olivetti-mode)
-        (add-hook 'Info-mode-hook #'olivetti-mode)
-        (add-hook 'prog-mode-hook #'olivetti-mode)))
-  (with-eval-after-load 'olivetti
+  (use-package olivetti
+    :if (display-graphic-p)
+    :hook ((text-mode eww-mode Info-mode prog-mode) . olivetti-mode)
+    :config
     (setq-default olivetti-body-width 90))
-  
-  ;; outli
-  (use-package outli
-    :vc (:fetcher github :repo jdtsmith/outli))
-  (add-hook 'text-mode-hook #'outli-mode)
-  (add-hook 'prog-mode-hook #'outli-mode)
-  (setq outli-default-nobar t)
+
+  ;; outli/breadcrumb
+  (with-eval-after-load 'vc-use-package
+    (use-package outli
+      :vc (:fetcher github :repo jdtsmith/outli)
+      :hook ((text-mode prog-mode) . outli-mode)
+      :config
+      (setq outli-default-nobar t))
+    (use-package breadcrumb
+      :vc (:fetcher github :repo "joaotavora/breadcrumb")
+      :config
+      (setq breadcrumb-imenu-crumb-separator (format "%s" (nerd-icons-octicon "nf-oct-triangle_right")))))
  
-  (add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
-  (evil-define-key 'normal 'global
-    (kbd "<leader>ll") '(lambda () (interactive)
-                          (setq-local display-line-numbers 'relative))
-    (kbd "<leader>zz") #'olivetti-mode))
+  (add-hook 'prog-mode-hook #'display-fill-column-indicator-mode))
  
 ;;;; Modeline
 (with-delayed-execution
@@ -234,15 +248,16 @@
                 global-mode-string nil
                 flymake-mode-line-format
                 '(" " flymake-mode-line-exception flymake-mode-line-counters))
-  (defadvice vc-mode-line (after strip-backend () activate)
-    (when (stringp vc-mode)
-      (let ((noback (replace-regexp-in-string
-                     (format "^ %s" (vc-backend buffer-file-name))
-                     (if (display-graphic-p)
-                         (format "%s" (nerd-icons-codicon "nf-cod-git_pull_request"))
-                       (format "%s " (nerd-icons-codicon "nf-cod-git_pull_request")))
-                     vc-mode)))
-        (setq vc-mode noback))))
+  (with-eval-after-load 'nerd-icons
+    (defadvice vc-mode-line (after strip-backend () activate)
+      (when (stringp vc-mode)
+        (let ((noback (replace-regexp-in-string
+                       (format "^ %s" (vc-backend buffer-file-name))
+                       (if (display-graphic-p)
+                           (format "%s" (nerd-icons-codicon "nf-cod-git_pull_request"))
+                         (format "%s " (nerd-icons-codicon "nf-cod-git_pull_request")))
+                       vc-mode)))
+          (setq vc-mode noback)))))
   (setq-default mode-line-end-spaces '(" " mode-line-misc-info "  "
                                        (vc-mode vc-mode) " %l %p "))
   (defun my/ml-padding ()
@@ -256,6 +271,10 @@
                              (propertize " %b " 'face '(:slant italic)
                                          'help-echo (buffer-file-name))
                            (propertize " %b " 'help-echo (buffer-file-name))))
+                  (:eval (when (mode-line-window-selected-p)
+                           (format "%s"
+                                   (propertize (breadcrumb-imenu-crumbs)
+                                               'face 'font-lock-comment-face))))
                   (:eval (when (and (bound-and-true-p flymake-mode)
                                     (mode-line-window-selected-p))
                            flymake-mode-line-format))
@@ -267,95 +286,113 @@
 ;;;; Consult/Orderless
 ;; orderless
 (with-delayed-execution
-  (use-package orderless)
-  (setq completion-category-defaults nil
-        completion-styles '(substring orderless basic)
-        completion-category-overrides '((file (styles basic partial-completion)))
-        completion-ignore-case t
-        read-buffer-completion-ignore-case t
-        read-file-name-completion-ignore-case t
-        completion-in-region-function
-        (lambda (&rest args)
-          (apply (if vertico-mode
-                     #'consult-completion-in-region
-                   #'completion--in-region)
-                 args))))
+  (use-package orderless
+    :demand t
+    ;; :after vertico
+    :config
+    (setq completion-category-defaults nil
+          completion-styles '(substring orderless basic)
+          completion-category-overrides '((file (styles basic partial-completion)))
+          completion-ignore-case t
+          read-buffer-completion-ignore-case t
+          read-file-name-completion-ignore-case t
+          completion-in-region-function
+          (lambda (&rest args)
+            (apply (if vertico-mode
+                       #'consult-completion-in-region
+                     #'completion--in-region)
+                   args)))))
 
 ;; consult
 (with-delayed-execution
-  (use-package consult)
-  (use-package consult-gh
-    :vc (:fetcher github :repo armindarvish/consult-gh))
-  (use-package consult-recoll)
-  (with-eval-after-load 'consult-recoll
-    (defun my/open-mpv (file)
-      (async-shell-command
-       (format "setsid -f mpv %s" (shell-quote-argument file)) nil nil))
-    (push '("video/x-matroska" . my/open-mpv) consult-recoll-open-fns)
-    (push '("video/mp4" . my/open-mpv) consult-recoll-open-fns))
-  (with-eval-after-load 'consult
+  (use-package consult
+    :hook (completion-list-mode . consult-preview-at-point-mode)
+    :bind (("C-x f" . consult-recent-file)
+           ("C-<return>" . consult-bookmark)
+           ("C-x b" . consult-buffer))
+    :config
+    (global-set-key [remap list-buffers] 'consult-buffer)
+    (global-set-key [remap isearch-forward] 'consult-line)
     (setq consult-locate-args "locate --ignore-case --regex")
-    (require 'consult-gh)
-    (push "\\.newsrc-dribble" consult-preview-excluded-files)
-    (push "\\.pdf" consult-preview-excluded-files)
+    (with-eval-after-load 'consult
+      (push "\\.newsrc-dribble" consult-preview-excluded-files)
+      (push "\\.pdf" consult-preview-excluded-files))
+    (when (executable-find "rg")
+      (setq grep-program "rg"))
+    (when (executable-find "fd")
+      (setq find-program "fd"))
+    (setq register-preview-function #'consult-register-format
+          xref-show-xrefs-function #'consult-xref
+          xref-show-definitions-function #'consult-xref))
+
+  (use-package recentf ;; FIXME
+    :ensure nil
+    :after consult
+    :init
+    (setq recentf-save-file  "~/.emacs.d/.recentf")
+    (recentf-mode)
+    (add-hook 'kill-emacs-hook #'recentf-cleanup)
+    (setq recentf-max-menu-items 10000
+          recentf-max-saved-items 10000
+          recentf-exclude '(".recentf" "\\.gpg\\")
+          recentf-filename-handlers '(substring-no-properties
+                                      abbreviate-file-name)))
+    
+  (use-package consult-gh
+    :vc (:fetcher github :repo armindarvish/consult-gh)
+    :after consult
+    :commands (consult-gh-search-repos)
+    :config
     (setq consult-preview-key '(:debounce 1.0 any)
           consult-gh-show-preview t
           consult-gh-preview-key "M-o"
           consult-gh-preview-buffer-mode 'org-mode))
-  (when (executable-find "rg")
-    (setq grep-program "rg"))
-  (when (executable-find "fd")
-    (setq find-program "fd"))
-  (setq register-preview-function #'consult-register-format
-        xref-show-xrefs-function #'consult-xref
-        xref-show-definitions-function #'consult-xref)
-  (setq recentf-max-menu-items 10000
-        recentf-max-saved-items 10000
-        recentf-save-file  "~/.emacs.d/.recentf"
-        recentf-exclude '(".recentf" "\\.gpg\\")
-        recentf-filename-handlers '(substring-no-properties
-                                    abbreviate-file-name))
-  (recentf-mode)
-  (add-hook 'kill-emacs-hook #'recentf-cleanup)
-  (global-set-key (kbd "C-x f") 'consult-recent-file)
-  (global-set-key (kbd "C-<return>") 'consult-bookmark)
-  (global-set-key (kbd "C-x b") 'consult-buffer)
-  (global-set-key [remap list-buffers] 'consult-buffer)
-  (global-set-key [remap isearch-forward] 'consult-line))
+
+  (use-package consult-recoll
+    :after consult
+    :custom
+    (defun my/open-mpv (file)
+      (async-shell-command
+       (format "setsid -f mpv %s" (shell-quote-argument file)) nil nil))
+    (push '("video/x-matroska" . my/open-mpv) consult-recoll-open-fns)
+    (push '("video/mp4" . my/open-mpv) consult-recoll-open-fns)))
 
 ;;;; Helpful/elisp-demos
 (with-delayed-execution
-  (use-package helpful)
-  (use-package elisp-demos)
-  (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update)
+  (use-package helpful
+    ;; :hook (on-first-input . helpful-mode)
+    :bind (("C-h Q" . help-quick)
+           ("C-h v" . helpful-variable)
+           ("C-h f" . helpful-function)
+           ("C-h k" . helpful-key)
+           ("C-h x" . helpful-command)
+           ("C-h '" . describe-face)))
+
+  (use-package elisp-demos
+    :after helpful
+    :config
+    (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update))
+
   (evil-define-key 'normal emacs-lisp-mode-map "K" #'helpful-at-point)
   (evil-define-key '(normal motion) helpful-mode-map
-    "K" #'helpful-at-point)
+    "K" #'helpful-at-point))
     ;; "q" #'kill-buffer-and-window)
-  (global-set-key (kbd "C-h Q") #'help-quick)
-  (global-set-key (kbd "C-h f") #'helpful-callable)
-  (global-set-key (kbd "C-h v") #'helpful-variable)
-  (global-set-key (kbd "C-h k") #'helpful-key)
-  (global-set-key (kbd "C-h '") #'describe-face)
-  (global-set-key (kbd "C-h x") #'helpful-command))
 
 ;;;; Cape/Corfu
 (with-delayed-execution
-  (use-package corfu)
-  (use-package popon)
-  (use-package corfu-terminal)
-  (use-package kind-icon)
-  (use-package cape)
-  (global-corfu-mode)
-  (add-hook 'corfu-mode-hook 'corfu-popupinfo-mode)
-  (add-hook 'evil-insert-state-exit-hook 'corfu-quit)
-  (with-eval-after-load 'corfu
-    ;; TnG completion
-    (keymap-set corfu-map "TAB" #'corfu-next)
-    (define-key corfu-map [tab] #'corfu-next)
-    (keymap-set corfu-map "M-TAB" #'corfu-previous)
-    (keymap-set corfu-map "S-TAB" #'corfu-previous)
-    (define-key corfu-map [backtab] #'corfu-previous)
+  (use-package corfu
+    ;; :hook (on-first-buffer . global-corfu-mode)
+    :init (global-corfu-mode)
+    :bind (:map corfu-map
+           ("TAB" . corfu-next)
+           ([tab] . corfu-next)
+           ("M-TAB" . corfu-previous)
+           ("S-TAB" . corfu-previous)
+           ([backtab] . corfu-previous))
+    :config
+    (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)
+    (add-hook 'eshell-mode #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
+    (add-hook 'evil-insert-state-exit-hook #'corfu-quit)
 
     (setq corfu-cycle t
           corfu-auto t
@@ -367,31 +404,36 @@
           corfu-preview-current nil
           corfu-popupinfo-delay '(0.2 . 0.1)
           corfu-preselect-first nil
-          tab-always-indent 'complete)
+          tab-always-indent 'complete))
 
-      (add-hook 'eshell-mode-hook (lambda ()
-                                  (setq-local corfu-auto nil)
-                                  (corfu-mode)))
-      ;; kind-icon to nerd-icons
-      (require 'kind-icon)
-      (load "~/.emacs.d/+icons" nil t)
-      ;; (advice-add 'load-theme :before #'kind-icon-reset-cache) ;; FIXME:
-      (push 'kind-icon-margin-formatter corfu-margin-formatters)))
+  (use-package corfu-terminal
+    :unless (display-graphic-p)
+    :after corfu)
+  (use-package kind-icon
+    :after nerd-icons
+    ;; :demand t
+    :init
+    (load "~/.emacs.d/+icons" nil t)
+    ;; (advice-add 'load-theme :before #'kind-icon-reset-cache) ;; FIXME:
+    (push 'kind-icon-margin-formatter corfu-margin-formatters))
+  
+  (use-package cape ;; FIXME
+    :after corfu
+    :config
+    (defun my/add-capfs ()
+      (push 'cape-dabbrev completion-at-point-functions)
+      (push 'cape-keyword completion-at-point-functions)
+      (push 'cape-file completion-at-point-functions))
+    (add-hook 'prog-mode-hook #'my/add-capfs)
+    (add-hook 'emacs-lisp-mode-hook
+              #'(lambda () (push 'cape-symbol completion-at-point-functions)))
+    (add-hook 'text-mode-hook #'my/add-capfs)))
 
 (with-delayed-execution
-  (defun my/add-capfs ()
-    (push 'cape-dabbrev completion-at-point-functions)
-    (push 'cape-keyword completion-at-point-functions)
-    (push 'cape-file completion-at-point-functions))
-  (add-hook 'prog-mode-hook #'my/add-capfs)
-  (add-hook 'emacs-lisp-mode-hook
-            #'(lambda () (push 'cape-symbol completion-at-point-functions)))
-  (add-hook 'text-mode-hook #'my/add-capfs))
-
-(with-delayed-execution
-  (use-package which-key)
-  (setq which-key-idle-delay 0.5)
-  (which-key-mode))
+  (use-package which-key
+    :hook (on-first-input . which-key-mode)
+    :config
+    (setq which-key-idle-delay 0.5)))
 
 ;;;; git/tempel/indent
 (with-delayed-execution
@@ -406,12 +448,20 @@
           indent-bars-color-by-depth nil
           indent-bars-highlight-current-depth '(:face default :blend 0.4)))
   
-  (use-package git-gutter)
-  (add-hook 'after-change-major-mode-hook #'git-gutter-mode)
+  (use-package git-gutter
+    :hook (after-change-major-mode . git-gutter-mode)
+    :config
+    (setq git-gutter:update-interval 0.2
+          fringes-outside-margins t
+          git-gutter:added-sign "│"
+          git-gutter:modified-sign "│"
+          git-gutter:deleted-sign "│"))
+
   (with-eval-after-load 'modus-themes
-    (set-face-background 'modus-themes-fringe-yellow unspecified)
-    (set-face-background 'modus-themes-fringe-green unspecified)
-    (set-face-background 'modus-themes-fringe-red unspecified))
+    (set-face-background 'modus-themes-fringe-yellow nil)
+    (set-face-background 'modus-themes-fringe-green nil)
+    (set-face-background 'modus-themes-fringe-red nil))
+
   (with-eval-after-load 'git-gutter
     (evil-define-key 'normal 'git-gutter-mode
       (kbd "<localleader>gs") #'git-gutter:stage-hunk
@@ -421,21 +471,19 @@
       (kbd "<localleader>gr") #'git-gutter:revert-hunk)
     (set-face-foreground 'git-gutter:added "chartreuse")
     (set-face-foreground 'git-gutter:modified "deep sky blue")
-    (set-face-foreground 'git-gutter:deleted "dark orange"))
-  (setq git-gutter:update-interval 0.2
-        fringes-outside-margins t
-        git-gutter:added-sign "│"
-        git-gutter:modified-sign "│"
-        git-gutter:deleted-sign "│"))
+    (set-face-foreground 'git-gutter:deleted "dark orange")))
 
 (with-delayed-execution
-  (use-package git-gutter)
-  (use-package transient)
-  (use-package ghub)
-  (use-package magit-popup)
-  (use-package with-editor)
   (use-package magit)
-  (use-package forge)
+  (use-package transient
+    :after magit)
+  (use-package ghub
+    :after magit)
+  (use-package magit-popup)
+  (use-package with-editor
+    :after magit)
+  (use-package forge
+    :after magit)
   (autoload 'magit "magit" nil t)
   ;; git-timemachine
   (autoload 'magit-file-dispatch "magit" nil t)
@@ -451,53 +499,63 @@
 
 ;; tempel (TODO: incorporate aas with tempel?)
 (with-delayed-execution
-  (use-package tempel)
-  (setq fill-indent-according-to-mode t)
-  (defun tempel-setup-capf ()
-    (setq-local completion-at-point-functions
-                (cons #'tempel-complete
-                      completion-at-point-functions)))
-  (add-hook 'conf-mode-hook 'tempel-setup-capf)
-  (add-hook 'prog-mode-hook 'tempel-setup-capf)
-  (add-hook 'text-mode-hook 'tempel-setup-capf)
-  (with-eval-after-load 'tempel
-    (define-key tempel-map (kbd "<tab>") 'tempel-next)
-    (define-key tempel-map (kbd "TAB") 'tempel-next)
-    (define-key tempel-map (kbd "<backtab>") 'tempel-previous))
-  (setq tempel-path "~/.emacs.d/templates.el"))
+  (use-package tempel
+    :init
+    (defun tempel-setup-capf ()
+      (setq-local completion-at-point-functions
+                  (cons #'tempel-complete
+                        completion-at-point-functions)))
+    :hook ((conf-mode prog-mode text-mode) . tempel-setup-capf)
+    :bind (:map tempel-map
+           ("<tab>" . tempel-next)
+           ("TAB" . tempel-next)
+           ("<backtab>" . tempel-previous))
+    :config
+    (setq fill-indent-according-to-mode t)
+    (setq tempel-path "~/.emacs.d/templates.el")))
 
-;;;; eglot/eldoc
+;;;; eglot/eldoc/flymake
 (with-delayed-execution
-  (use-package rustic)
-  (use-package zig-mode)
-  (use-package eldoc-box)
-
-  (with-eval-after-load 'eldoc-box
+  (use-package rustic
+    :mode ("\\.rs\\'" . rustic-mode))
+  (use-package zig-mode
+    :mode ("\\.zig\\'" . zig-mode))
+  (use-package eldoc-box
+    :config
     (setq eldoc-box-max-pixel-width 600
           eldoc-box-max-pixel-height 700
-          eldoc-box-only-multi-line t)))
+          eldoc-box-only-multi-line t)
+    :init
+    (defun my/eldoc-open-switch ()
+      (interactive)
+      (eldoc-doc-buffer)
+      (windmove-down))
+    (add-hook 'prog-mode-hook
+              #'(lambda ()
+                  (if (display-graphic-p) ;; FIXME
+                      (setq-local evil-lookup-func 'eldoc-box-help-at-point)
+                    (setq-local evil-lookup-func 'my/eldoc-open-switch))))
+    (evil-define-key 'insert prog-mode-map
+      (kbd "C-l") #'evil-lookup)))
 
 ;;;;; eldoc/flymake
 (with-delayed-execution
+  (use-package flymake-popon
+    :after flymake
+    :hook flymake-mode)
   (use-package flymake-collection ;; alternateved
     :after flymake
     :functions (flymake-collection-hook-setup)
     :init (flymake-collection-hook-setup)
     :custom (flymake-collection-hook-ignored-modes
              '(eglot--managed-mode)))
-  (setq flymake-suppress-zero-counters t)
-  (defun flymake-eldoc-function (report-doc &rest _) ;; lcolonq
-    "Document diagnostics at point.Intended for
-     `eldoc-documentation-functions' (which see)."
-    (let ((diags (flymake-diagnostics (point))))
-      (when diags
-        (funcall report-doc
-                 (mapconcat #'flymake-diagnostic-text diags "\n")
-                 :sort 'error))))
-  (with-eval-after-load 'eldoc
-    (add-to-list 'eldoc-documentation-functions 'flymake-eldoc-function))
-  (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake)
-  (add-hook 'prog-mode-hook #'flymake-mode)
+  
+  (use-package flymake
+    :ensure nil
+    :hook prog-mode
+    :config
+    (setq flymake-suppress-zero-counters t)
+    (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake))
 
   (evil-define-key '(normal motion) prog-mode-map
     "X" #'consult-flymake
@@ -507,40 +565,12 @@
         eldoc-idle-delay 0.3
         eldoc-echo-area-use-multiline-p nil
         eldoc-echo-area-display-truncation-message nil)
-  (if (display-graphic-p)
-      (progn
-        (defun eldoc-box-scroll-up ()
-          "Scroll up in `eldoc-box--frame'"
-          (interactive)
-          (with-current-buffer eldoc-box--buffer
-            (with-selected-frame eldoc-box--frame
-              (scroll-down 3))))
-        (defun eldoc-box-scroll-down ()
-          "Scroll down in `eldoc-box--frame'"
-          (interactive)
-          (with-current-buffer eldoc-box--buffer
-            (with-selected-frame eldoc-box--frame
-              (scroll-up 3))))
-        (evil-define-key 'insert prog-mode-map
-          (kbd "C-l") #'eldoc-box-help-at-point
-          (kbd "C-j") 'eldoc-box-scroll-down
-          (kbd "C-k") 'eldoc-box-scroll-up)
-        (evil-define-key '(normal motion) eglot-mode-map
-          "K" #'eldoc-box-help-at-point
-          (kbd "C-j") 'eldoc-box-scroll-down
-          (kbd "C-k") 'eldoc-box-scroll-up))
-    (progn
-      (defun my/eldoc-open-switch ()
-        (interactive)
-        (eldoc-doc-buffer)
-        (windmove-down))
-      (evil-define-key '(normal motion) prog-mode-map
-        "K" #'my/eldoc-open-switch)
-      (evil-define-key 'insert prog-mode-map
-        (kbd "C-l") #'my/eldoc-open-switch)))
+  
 
 ;;;;; eglot
-  (with-eval-after-load 'eglot
+  (use-package eglot
+    :hook ((c++-mode zig-mode rust-mode java-mode typescript-ts-mode go-ts-mode python-mode c-mode) . eglot-ensure)
+    :config
     (evil-define-key 'normal eglot-mode-map
       (kbd "<leader>ca") 'eglot-code-actions
       (kbd "<leader>ci") 'eglot-inlay-hints-mode)
@@ -555,17 +585,10 @@
             "--header-insertion-decorators=0")
           eglot-server-programs)
     (push '(java-mode "jdtls") eglot-server-programs)
-    (push '(rust-mode "rust-analyzer") eglot-server-programs))
-  (setq eglot-autoshutdown t
-        read-process-output-max (* 1024 1024) ;; 1mb for LSP blobs
-        rustic-lsp-client 'eglot)
-  (add-hook 'c++-mode-hook 'eglot-ensure)
-  (add-hook 'zig-mode-hook 'eglot-ensure)
-  (add-hook 'java-mode-hook 'eglot-ensure)
-  (add-hook 'typescript-ts-mode-hook 'eglot-ensure)
-  (add-hook 'go-ts-mode-hook 'eglot-ensure)
-  (add-hook 'python-mode-hook 'eglot-ensure)
-  (add-hook 'c-mode-hook 'eglot-ensure))
+    (push '(rust-mode "rust-analyzer") eglot-server-programs)
+    (setq eglot-autoshutdown t
+          read-process-output-max (* 1024 1024) ;; 1mb for LSP blobs
+          rustic-lsp-client 'eglot)))
 
 ;;;; tree-sitter
 ;; Run treesit-install-language-grammar
@@ -628,57 +651,49 @@
 
 ;;; Leetcode
 (with-delayed-execution
-  (use-package log4e)
-  (use-package aio)
-  (use-package graphql)
-  (use-package leetcode)
-  (use-package ht)
-  (use-package quickrun)
-  (use-package oj
-    :vc (:fetcher github :repo conao3/oj.el))
-  (defun set-exec-path-from-shell-PATH ()
-    "Set up Emacs' `exec-path' and PATH environment variable to match
+  (use-package leetcode
+    :after org
+    :config
+    (defun set-exec-path-from-shell-PATH ()
+      "Set up Emacs' `exec-path' and PATH environment variable to match
      that used by the user's shell."
-    (interactive)
-    (let ((path-from-shell (replace-regexp-in-string
-                            "[ \t\n]*$" "" (shell-command-to-string
-                                            "$SHELL --login -c 'echo $PATH'"
-                                            ))))
-      (setq exec-path (split-string path-from-shell path-separator))))
+      (interactive)
+      (let ((path-from-shell (replace-regexp-in-string
+                              "[ \t\n]*$" "" (shell-command-to-string
+                                              "$SHELL --login -c 'echo $PATH'"
+                                              ))))
+        (setq exec-path (split-string path-from-shell path-separator))))
 
-  (set-exec-path-from-shell-PATH)
+    (set-exec-path-from-shell-PATH)
 
-  (with-eval-after-load 'leetcode
     (setq leetcode-prefer-language "python3"
           leetcode-save-solutions t
           leetcode-directory "/mnt/Data/Documents/problems/leetcode")
     (keymap-set leetcode--problems-mode-map "j" #'next-line)
     (define-key leetcode-solution-mode-map (kbd "\C-q") #'leetcode-quit)
     (keymap-set leetcode--problems-mode-map "k" #'previous-line)
-    (keymap-set leetcode--problems-mode-map "q" #'leetcode-quit))
+    (keymap-set leetcode--problems-mode-map "q" #'leetcode-quit)
 
-  (defun my/leetcode-problem-at-point ()
-    "Open leetcode problem by name using string at point. Run after M-x leetcode"
-    (interactive)
-    (let ((prob (replace-regexp-in-string "\\\"" "" (thing-at-point 'string))))
-      (tab-new)
-      (leetcode-show-problem-by-slug
-       (leetcode--slugify-title prob))))
-  (with-eval-after-load 'org
-    (define-key org-mode-map (kbd "C-l") #'my/leetcode-problem-at-point)))
+    (defun my/leetcode-problem-at-point ()
+      "Open leetcode problem by name using string at point. Run after M-x leetcode"
+      (interactive)
+      (let ((prob (replace-regexp-in-string "\\\"" "" (thing-at-point 'string))))
+        (tab-new)
+        (leetcode-show-problem-by-slug
+         (leetcode--slugify-title prob))))
 
+    (with-eval-after-load 'org
+      (define-key org-mode-map (kbd "C-l") #'my/leetcode-problem-at-point)))
+
+  (use-package oj
+    :after eglot
+    :vc (:fetcher github :repo conao3/oj.el)))
 ;;; Compilation
 (with-delayed-execution
   (use-package smart-compile
-    :vc (:fetcher github :repo "zenitani/elisp"))
-  (use-package fancy-compilation)
-  (with-eval-after-load 'compile
-    (setq fancy-compilation-override-colors nil)
-    (fancy-compilation-mode)
-    (setq compilation-scroll-output 'first-error
-          compilation-always-kill t
-          compilation-environment '("TERM=xterm-256color"))) ;; flat
-  (with-eval-after-load 'smart-compile
+    :vc (:fetcher github :repo "zenitani/elisp")
+    ;; :hook on-first-buffer
+    :config
     (push '("\\.rkt\\'" . "racket %F") smart-compile-alist)
     (push '("\\.rs\\'" . "rustc %F && ./%n") smart-compile-alist)
     ;; (push '("\\.rs\\'" . "cargo build && cargo run") smart-compile-alist)
@@ -686,17 +701,25 @@
     (push '("\\.py\\'" . "python %F < in%n") smart-compile-alist)
     (push '("\\.cpp\\'" .
             "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL -I/mnt/Data/Documents/problems/include %F && ./a.out < in%n")
-          smart-compile-alist))
-  ;; Copy input from clipboard
-  (defun paste-input (&optional arg)
-    (interactive)
-    (find-file (concat "in" (file-name-sans-extension
-                             (file-name-nondirectory buffer-file-name))))
-    (erase-buffer)
-    (clipboard-yank)
-    (basic-save-buffer)
-    (kill-current-buffer)
-    (message "Populated input file")))
+          smart-compile-alist)
+    ;; Copy input from clipboard
+    (defun paste-input (&optional arg)
+      (interactive)
+      (find-file (concat "in" (file-name-sans-extension
+                               (file-name-nondirectory buffer-file-name))))
+      (erase-buffer)
+      (clipboard-yank)
+      (basic-save-buffer)
+      (kill-current-buffer)
+      (message "Populated input file")))
+
+  (use-package fancy-compilation
+    :after smart-compile
+    :config
+    (setq fancy-compilation-override-colors nil)
+    (setq compilation-scroll-output 'first-error
+          compilation-always-kill t
+          compilation-environment '("TERM=xterm-256color")))) ;; flat
 
 ;; File-templates
 (with-delayed-execution
@@ -720,16 +743,17 @@
   (define-auto-insert "\.py" ["comp.py"
                               my/eval-auto-insert-init-form]))
 
-;;;; Misc
+;;; Misc
 (with-delayed-execution
   (use-package sicp)
   (use-package expand-region)
-  (use-package multiple-cursors)
-  (evil-define-key 'insert 'global
-    (kbd "C-d") 'mc/mark-next-like-this
-    (kbd "C-v") 'mc/skip-to-next-like-this
-    (kbd "M-f") 'mc/mark-all-like-this
-    (kbd "M-e") 'mc/edit-lines))
+  (use-package multiple-cursors
+    :config
+    (evil-define-key 'insert 'global
+      (kbd "C-d") 'mc/mark-next-like-this
+      (kbd "C-v") 'mc/skip-to-next-like-this
+      (kbd "M-f") 'mc/mark-all-like-this
+      (kbd "M-e") 'mc/edit-lines)))
 
 ;;; Key binds / Key maps
 (with-delayed-execution-priority-high
@@ -753,6 +777,9 @@
     (kbd "<leader>gh") #'magit-file-dispatch
     (kbd "<leader>gd") #'(lambda () (interactive)
                            (magit-ediff-show-unstaged buffer-file-name))
+    (kbd "<leader>ll") '(lambda () (interactive)
+                          (setq-local display-line-numbers 'relative))
+    (kbd "<leader>zz") #'olivetti-mode
     (kbd "<leader>x") #'org-capture
     (kbd "<leader>oa") #'org-agenda
     (kbd "<leader>dc") #'org-web-tools-read-url-as-org
@@ -790,7 +817,8 @@
     (kbd "RET") #'Info-follow-nearest-node
     "n" #'Info-forward-node
     "p" #'Info-backward-node
-    "J" #'evil-scroll-down
+    "H" #'Info-history-back
+    "L" #'Info-history-forward
     "K" #'helpful-at-point
     "N" #'Info-next
     "P" #'Info-prev
@@ -802,7 +830,7 @@
   (global-set-key [f2] #'save-buffer)
   (global-set-key [f3] #'paste-input)
   (global-set-key [f4] #'smart-compile)
-  (global-set-key [f8] #'window-toggle-side-windows)
+  (global-set-key (kbd "C-`") #'window-toggle-side-windows) ;; FIXME:
   (global-set-key [f9] #'mark-whole-buffer)
   (global-set-key [f10] #'kill-current-buffer)
   (global-set-key [f12] #'other-window)
@@ -831,36 +859,40 @@
 ;;; dired/tabs/windows
 ;; dired
 (with-delayed-execution
+  (use-package nerd-icons-dired
+    :after nerd-icons
+    :hook (dired-mode . nerd-icons-dired-mode))
   (put 'dired-find-alternate-file 'disabled nil)
-  (use-package nerd-icons-dired)
-  (add-hook 'dired-mode-hook #'nerd-icons-dired-mode)
   (add-hook 'dired-mode-hook #'(lambda ()
                                  (setq-local truncate-lines t
                                              evil-normal-state-cursor 'hbar)))
-  (add-hook 'dired-mode-hook #'dired-hide-details-mode)
-  (setq dired-listing-switches
+  (use-package dired
+    :ensure nil
+    :config
+    (add-hook 'dired-mode-hook #'dired-hide-details-mode)
+    (setq dired-listing-switches
         "-l --almost-all --human-readable --sort=version --group-directories-first")
-  (evil-define-key 'normal dired-mode-map
-    (kbd "C-t") 'tab-new
-    "O" 'browse-url-of-dired-file
-    "h" 'dired-up-directory
-    "q" 'kill-this-buffer
-    "l" 'dired-find-alternate-file
-    (kbd "RET") 'dired-find-alternate-file
-    "E" 'wdired-change-to-wdired-mode)
-  (define-key dired-mode-map "-" 'dired-up-directory)
-  (define-key dired-mode-map (kbd "SPC") nil)
-  (define-key dired-mode-map "~"
-    #'(lambda () (interactive) (dired "/home/prashant/")))
-  (define-key dired-mode-map "."
-    #'(lambda () (interactive) (dired "/home/prashant/Dotfiles/")))
-  (setq dired-dwim-target t
-        dired-auto-revert-buffer t
-        dired-mouse-drag-files t
-        mouse-drag-and-drop-region-cross-program t
-        dired-kill-when-opening-new-dired-buffer t
-        dired-recursive-deletes 'always
-        dired-recursive-copies 'always))
+    (evil-define-key 'normal dired-mode-map
+      (kbd "C-t") 'tab-new
+      "O" 'browse-url-of-dired-file
+      "h" 'dired-up-directory
+      "q" 'kill-this-buffer
+      "l" 'dired-find-alternate-file
+      (kbd "RET") 'dired-find-alternate-file
+      "E" 'wdired-change-to-wdired-mode)
+    (define-key dired-mode-map "-" 'dired-up-directory)
+    (define-key dired-mode-map (kbd "SPC") nil)
+    (define-key dired-mode-map "~"
+                #'(lambda () (interactive) (dired "/home/prashant/")))
+    (define-key dired-mode-map "."
+                #'(lambda () (interactive) (dired "/home/prashant/Dotfiles/")))
+    (setq dired-dwim-target t
+          dired-auto-revert-buffer t
+          dired-mouse-drag-files t
+          mouse-drag-and-drop-region-cross-program t
+          dired-kill-when-opening-new-dired-buffer t
+          dired-recursive-deletes 'always
+          dired-recursive-copies 'always)))
 
 ;; tabs (FIXME: new tab not cleanly init)
 (with-delayed-execution
@@ -906,33 +938,10 @@
 
 ;;; Org
 (with-delayed-execution
-  (use-package org-download)
-  (use-package org-web-tools)
-  (use-package engrave-faces
-    :after org)
-  (use-package org-modern
+  (use-package org-download
     :after org
-    :hook (org-mode . org-modern-mode))
-  (setq org-latex-toc-command "\\tableofcontents \\clearpage"
-        org-directory "~/Dropbox/org/"
-        org-ellipsis "▼"
-        org-pretty-entities t
-        org-startup-indented t
-        org-adapt-indentation t
-        org-startup-folded t
-        org-src-preserve-indentation t
-        org-src-fontify-natively t
-        ;; \usepackage{listings}
-        org-latex-src-block-backend 'engraved
-        org-latex-pdf-process '("tectonic -X compile %f --outdir=%o -Z shell-escape"))
-  (defun my/org-inkscape-watcher (fname)
-    "Open inkscape and add tex code for importing the figure"
-    (interactive "sName: ")
-    (insert (shell-command-to-string (concat "inkscape-figures create '" fname
-                                             "' ./figures/"))))
-  ;; org-dl  (https://emacs.stackexchange.com/questions/71100/pasting-images-from-clipboard-into-orgmode )
-  (with-eval-after-load 'org-download
-    (evil-define-key 'insert org-mode-map (kbd "C-S-y") 'org-download-clipboard)
+    :bind ("C-S-y" . org-download-clipboard)
+    :config
     (setq org-download-method 'directory
           org-download-image-dir (concat
                                   (file-name-sans-extension (buffer-file-name)) "-img")
@@ -942,17 +951,44 @@
           org-download-abbreviate-filename-function #'file-relative-name
           org-download-link-format-function
           #'org-download-link-format-function-default))
-  
-  (with-eval-after-load 'org
-    (require 'org-download)
-    ;; (add-hook 'org-mode-hook 'org-download-mode)
+
+  (use-package org-web-tools
+    :after org)
+  (use-package engrave-faces
+    :after org)
+  (use-package org-modern
+    :after org
+    :hook (org-mode . org-modern-mode))
+  (use-package org
+    :ensure nil
+    :config
+    (setq org-latex-toc-command "\\tableofcontents \\clearpage"
+          org-directory "~/Dropbox/org/"
+          org-ellipsis "▼"
+          org-pretty-entities t
+          org-startup-indented t
+          org-adapt-indentation t
+          org-startup-folded t
+          org-src-preserve-indentation t
+          org-src-fontify-natively t
+          ;; \usepackage{listings}
+          org-latex-src-block-backend 'engraved
+          org-latex-pdf-process '("tectonic -X compile %f --outdir=%o -Z shell-escape"))
+    (defun my/org-inkscape-watcher (fname)
+      "Open inkscape and add tex code for importing the figure"
+      (interactive "sName: ")
+      (insert (shell-command-to-string (concat "inkscape-figures create '" fname
+                                               "' ./figures/"))))
     (add-hook 'org-mode-hook 'tempel-setup-capf)
     (add-hook 'org-mode-hook 'visual-line-mode)
     (define-key org-mode-map [f4] #'org-latex-export-to-pdf)
     (define-key org-mode-map [f5] #'my/org-inkscape-watcher)))
 ;;;; Org-Capture
 (with-delayed-execution
-  (with-eval-after-load 'org-capture
+  (use-package org-capture
+    :ensure nil
+    :after org
+    :config
     (add-hook 'org-capture-mode-hook 'evil-insert-state)
     (setq +org-capture-readings-file "~/Dropbox/org/links.org"
           +org-capture-log-file "~/Dropbox/org/log.org"
@@ -981,7 +1017,10 @@
 
 ;;;; Org-agenda
 (with-delayed-execution
-  (with-eval-after-load 'org-agenda
+  (use-package org-agenda
+    :after org
+    :ensure nil
+    :config
     (setq org-agenda-start-with-log-mode t
           org-log-done t
           org-log-into-drawer t
@@ -1012,68 +1051,77 @@
 (with-delayed-execution
   (use-package lexic)
   (use-package posframe
-    :vc (:fetcher github :repo "tumashu/posframe"))
+    :vc (:fetcher github :repo "tumashu/posframe")
+    ;; :hook on-first-buffer
+    )
   (use-package sdcv
-    :vc (:fetcher github :repo "manateelazycat/sdcv"))
-  (with-eval-after-load 'sdcv
+    :vc (:fetcher github :repo "manateelazycat/sdcv")
+    :after posframe
+    :config
     (set-face-attribute
-     'sdcv-tooltip-face nil :foreground 'unspecified :background 'unspecified :inherit 'tooltip))
-  (setq sdcv-dictionary-data-dir "~/.local/share/stardict/dic/"
-        sdcv-tooltip-timeout 30
-        sdcv-say-word-p nil
-        sdcv-only-data-dir nil
-        sdcv-fail-notify-string "No Match Found"
-        sdcv-env-lang "en_US.UTF-8"
-        sdcv-dictionary-complete-list
-        '("Sanseido"
-          "org.edrdg.jmdict-jpn-eng"
-          "Websters1913")
-        sdcv-dictionary-simple-list
-        '("Sanseido"
-          "org.edrdg.jmdict-jpn-eng"
-          "Websters1913")))
+     'sdcv-tooltip-face nil :foreground 'unspecified :background 'unspecified :inherit 'tooltip)
+    (setq sdcv-dictionary-data-dir "~/.local/share/stardict/dic/"
+          sdcv-tooltip-timeout 30
+          sdcv-say-word-p nil
+          sdcv-only-data-dir nil
+          sdcv-fail-notify-string "No Match Found"
+          sdcv-env-lang "en_US.UTF-8"
+          sdcv-dictionary-complete-list
+          '("Sanseido"
+            "org.edrdg.jmdict-jpn-eng"
+            "Websters1913")
+          sdcv-dictionary-simple-list
+          '("Sanseido"
+            "org.edrdg.jmdict-jpn-eng"
+            "Websters1913"))))
 
 ;;;; pdf-tools
 (with-delayed-execution
- (use-package pdf-tools)
-  (push '("\\.pdf\\'" . pdf-view-mode) auto-mode-alist)
-  (evil-set-initial-state 'pdf-view-mode 'normal)
-  (add-hook 'pdf-view-mode-hook 'pdf-view-fit-page-to-window)
-  (evil-define-key 'normal pdf-view-mode-map
-    "q" 'kill-this-buffer
-    "j" 'pdf-view-next-line-or-next-page
-    "k" 'pdf-view-previous-line-or-previous-page
-    "J" 'pdf-view-next-page-command
-    "K" 'pdf-view-previous-page-command
-    "gg" 'pdf-view-goto-page
-    "w" 'pdf-view-fit-width-to-window
-    "f" 'pdf-view-fit-height-to-window
-    "sb" 'pdf-view-set-slice-from-bounding-box
-    "sr" 'pdf-view-reset-slice
-    "zm" 'pdf-view-themed-minor-mode
-    "o" 'pdf-outline))
+  (use-package pdf-tools
+    ;; :hook on-first-input
+    :mode ("\\.pdf\\'" . pdf-view-mode)
+    :config
+    (push '("\\.pdf\\'" . pdf-view-mode) auto-mode-alist)
+    (evil-set-initial-state 'pdf-view-mode 'normal)
+    (add-hook 'pdf-view-mode-hook 'pdf-view-fit-page-to-window)
+    (evil-define-key 'normal pdf-view-mode-map
+      "q" 'kill-this-buffer
+      "j" 'pdf-view-next-line-or-next-page
+      "k" 'pdf-view-previous-line-or-previous-page
+      "J" 'pdf-view-next-page-command
+      "K" 'pdf-view-previous-page-command
+      "gg" 'pdf-view-goto-page
+      "w" 'pdf-view-fit-width-to-window
+      "f" 'pdf-view-fit-height-to-window
+      "sb" 'pdf-view-set-slice-from-bounding-box
+      "sr" 'pdf-view-reset-slice
+      "zm" 'pdf-view-themed-minor-mode
+      "o" 'pdf-outline)))
 
 ;;;; Nov
 (with-delayed-execution
-  (use-package nov)
-  (add-hook 'nov-mode-hook #'olivetti-mode)
-  (setq nov-header-line-format nil)
-  (evil-define-key 'visual nov-mode-map
-    "K" #'sdcv-search-pointer+)
-  (evil-define-key 'normal nov-mode-map
-    "K" #'sdcv-search-pointer+
-    "n" #'nov-scroll-up
-    "p" #'nov-scroll-down)
-  (add-hook 'nov-mode-hook
-            (lambda ()
-              (setq-local evil-normal-state-cursor 'hbar
-                          ;; global-hl-line-mode nil
-                          ;; scroll-margin 100
-                          mode-line-format nil
-                          olivetti-body-width 120)
-              (face-remap-add-relative
-               'variable-pitch :family "Noto Serif JP" :height 150)))
-  (push '("\\.epub\\'" . nov-mode) auto-mode-alist))
+  (use-package nov
+    ;; :hook on-first-buffer
+    :mode ("\\.epub\\'" . nov-mode)
+    :config
+    (add-hook 'nov-mode-hook #'olivetti-mode)
+    (setq nov-header-line-format nil)
+    (evil-define-key 'visual nov-mode-map
+      "K" #'sdcv-search-pointer+)
+    (evil-define-key 'normal nov-mode-map
+      "K" #'sdcv-search-pointer+
+      "n" #'nov-scroll-up
+      "p" #'nov-scroll-down)
+    (add-hook 'nov-mode-hook
+              (lambda ()
+                (setq-local evil-normal-state-cursor 'hbar
+                            ;; global-hl-line-mode nil
+                            ;; scroll-margin 100
+                            mode-line-format nil
+                            olivetti-body-width 120)
+                (face-remap-add-relative
+                 'variable-pitch :family "Noto Serif JP" :height 150)))
+    (push '("\\.epub\\'" . nov-mode) auto-mode-alist)))
 
 ;;;; Misc
 (with-delayed-execution
@@ -1113,47 +1161,49 @@
   (setq global-auto-revert-non-file-buffers t
         auto-revert-verbose nil)
   (winner-mode 1)
-  (setq markdown-command "multimarkdown"
-        markdown-fontify-code-blocks-natively t
-        markdown-max-image-size '(800 . 800)
-        markdown-display-remote-images t)
-  (add-hook 'markdown-mode-hook #'markdown-toggle-inline-images)
-  (push '("\\.md\\'" . gfm-view-mode) auto-mode-alist)
-  (push '("rc\\'" . conf-unix-mode) auto-mode-alist))
+  (use-package markdown-mode
+    ;; :hook on-first-buffer
+    :mode ("\\.md\\'" . markdown-mode)
+    :config
+    (setq markdown-command "multimarkdown"
+          markdown-fontify-code-blocks-natively t
+          markdown-max-image-size '(800 . 800)
+          markdown-display-remote-images t)
+    (add-hook 'markdown-mode-hook #'markdown-toggle-inline-images)
+    (push '("\\.md\\'" . gfm-view-mode) auto-mode-alist)
+    (push '("rc\\'" . conf-unix-mode) auto-mode-alist)))
 
 ;;;; mastodon
 (with-delayed-execution
-  (use-package ts)
-  (use-package persist)
-  (use-package request)
   (use-package mastodon
-    :vc (mastodon.el :url "https://codeberg.org/martianh/mastodon.el.git"))
+    :vc (mastodon.el :url "https://codeberg.org/martianh/mastodon.el.git")
+    :config
+    (setq mastodon-instance-url "https://emacs.ch"
+          mastodon-auth-source-file "~/.authinfo"))
   (use-package mastodon-alt
-    :vc (:fetcher github :repo rougier/mastodon-alt))
-  (setq mastodon-instance-url "https://emacs.ch"
-        mastodon-auth-source-file "~/.authinfo"
-        mastodon-alt-tl-box-boosted nil
-        mastodon-alt-tl-box-prefix ""
-        mastodon-active-user "brongulus")
-  (when (display-graphic-p)
+    :vc (:fetcher github :repo rougier/mastodon-alt)
+    :hook (mastodon-mode . mastodon-alt-tl-activate)
+    :config
+    (setq mastodon-alt-tl-box-boosted nil
+          mastodon-alt-tl-box-prefix ""
+          mastodon-active-user "brongulus")
+    (when (display-graphic-p)
       (add-hook 'mastodon-mode-hook #'olivetti-mode))
-  (add-hook 'mastodon-mode-hook #'mastodon-alt-tl-activate)
-  (autoload 'mastodon "mastodon-alt" nil t)
-  (with-eval-after-load 'mastodon-tl
     (push '(reply "" . "R") mastodon-tl--symbols)
     (push '(boost "" . "B") mastodon-tl--symbols)
     (push '(favourite "" . "F") mastodon-tl--symbols)
     (push '(bookmark "" . "K") mastodon-tl--symbols)
-    (evil-make-overriding-map mastodon-mode-map 'normal))
-  (evil-define-key 'normal mastodon-mode-map
-    "q" #'kill-current-buffer))
+    (evil-make-overriding-map mastodon-mode-map 'normal)
+    (evil-define-key 'normal mastodon-mode-map
+      "q" #'kill-current-buffer)))
   
 ;;;; eww
 (with-delayed-execution
-  (use-package language-detection)
-  (use-package shr-tag-pre-highlight)
-  (with-eval-after-load 'shr
-    (require 'shr-tag-pre-highlight)
+  (use-package language-detection
+    :after eww)
+  (use-package shr-tag-pre-highlight
+    :after shr
+    :config
     (add-to-list 'shr-external-rendering-functions
                  '(pre . shr-tag-pre-highlight)))
 
@@ -1170,8 +1220,12 @@
 
 ;;;; Misc-boogaloo
 (with-delayed-execution
-  (use-package xclip)
-  (use-package evil-terminal-cursor-changer)
+  (use-package xclip
+    :unless (display-graphic-p)
+    :init (xclip-mode 1))
+  (use-package evil-terminal-cursor-changer
+    :unless (display-graphic-p)
+    :init (etcc-on))
   (blink-cursor-mode -1)
   (show-paren-mode)
   (global-hl-line-mode)
@@ -1189,20 +1243,14 @@
 (with-delayed-execution
   (unless (display-graphic-p)
     (eldoc-mode +1)
-    (corfu-terminal-mode +1))
-  (xterm-mouse-mode 1)
-  (xclip-mode 1)
-  (etcc-on))
+    (xterm-mouse-mode 1)))
 
-;;;; Gnus
+;;;; Gnus ;; FIXME
 (with-delayed-execution-priority-high
  (use-package nice-citation
+   :demand t
    :vc (:fetcher github :repo damiencollard/nice-citation))
-  (require 'nice-citation)
   (load "~/.emacs.d/+gnus" nil t))
-
-;; (with-delayed-execution
-;;   (el-get 'sync))
 
 (provide 'init)
 ;;; init.el ends here
