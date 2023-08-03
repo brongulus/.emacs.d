@@ -362,7 +362,7 @@
 
   (use-package elisp-demos
     ;; :after helpful
-    :config
+    :init
     (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update))
 
   (evil-define-key 'normal emacs-lisp-mode-map "K" #'helpful-at-point)
@@ -468,6 +468,7 @@
 
 (with-delayed-execution
   (use-package magit
+    :commands (magit magit-file-dispatch magit-log-all magit-ediff-show-unstaged)
     :bind (:map magit-mode-map
                 ("q" . magit-kill-this-buffer)))
   (use-package transient
@@ -479,11 +480,6 @@
     :after magit)
   (use-package forge
     :after magit)
-  (autoload 'magit "magit" nil t)
-  ;; git-timemachine
-  (autoload 'magit-file-dispatch "magit" nil t)
-  (autoload 'magit-log-all "magit" nil t)
-  (autoload 'magit-ediff-show-unstaged "magit" nil t)
   (evil-define-key 'normal magit-blob-mode-map
     (kbd "q") #'magit-kill-this-buffer
     (kbd "p") #'magit-blob-previous
@@ -701,7 +697,7 @@
     (push '("\\.java\\'" . "javac %F && java ./%n") smart-compile-alist)
     (push '("\\.py\\'" . "python %F < in%n") smart-compile-alist)
     (push '("\\.cpp\\'" .
-            "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL -I/mnt/Data/Documents/problems/include %F && ./a.out < in%n")
+            "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL -I/mnt/Data/Documents/problems/include %f")
           smart-compile-alist)
     ;; Copy input from clipboard
     (defun paste-input (&optional arg)
@@ -837,6 +833,7 @@
   (global-set-key [f3] #'paste-input)
   (global-set-key [f4] #'smart-compile)
   (global-set-key (kbd "C-`") #'window-toggle-side-windows)
+  (global-set-key [f8] #'window-toggle-side-windows)
   (global-set-key [f9] #'mark-whole-buffer)
   (global-set-key [f10] #'kill-current-buffer)
   (global-set-key [f12] #'other-window)

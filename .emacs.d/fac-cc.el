@@ -3,7 +3,7 @@
 ;; Copyright (C) 2023  Prashant Tak
 
 ;; Author: Prashant Tak <prashantrameshtak@gmail.com>
-;; Package-Requires: ((emacs "24.3") (diff-lisp))
+;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: competitive programming
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -21,11 +21,13 @@
 
 ;;; Commentary:
 
+;; If you want richer diffs between output and answer, install diff-lisp package
+;; I have opted to make that choice optional as I don't want external packages.
+
 ;; TODO:
-;; compile output compare (test) Make it work with debug!
 ;; Add run timeout per testcase
 ;; Error handling while fetching ip/op
-;; C-M-b?, C-a C-d remove tc
+;; C-a C-d remove tc
 
 ;;; Code:
 (require 'json)
@@ -34,8 +36,8 @@
 (require 'files)
 
 (require 'widget)
-(require 'diff-lisp)
-(require 'f)
+(if (package-installed-p 'diff-lisp)
+    (require 'diff-lisp))
 (eval-when-compile (require 'wid-edit))
 
 ;;;; Competitive Companion
@@ -57,6 +59,7 @@
     (make-network-process :name "Fetch Contest" :buffer "*fetch*" :family nil
                           :server t :host cc-listen-host :service cc-listen-port
                           :sentinel 'cc-listen-sentinel :filter 'cc-listen-filter))
+
 (defun cc-listen-stop nil
   "Stop the competitive-companion tcp listener."
   (interactive)
@@ -65,7 +68,8 @@
   (message "Stopped listening to competitive-companion"))
 
 (defun cc-listen-filter (proc string)
-  "Parses the incoming JSON data (STRING) from competitive-companion and populates the testcase files."
+  "Parses the incoming JSON data (STRING) from competitive-companion
+and populates the testcase files."
   (let* ((json-input (json-read-from-string
                      (replace-regexp-in-string ".*\r\n" ""
                                                string)))
@@ -103,6 +107,12 @@
   (cc-listen-start)
   (run-at-time 120 nil #'cc-listen-stop))
 
+(defun cc-read-file (filename)
+  "Return the contents of FILENAME."
+  (with-temp-buffer
+    (insert-file-contents-literally filename)
+    (buffer-string)))
+
 (defun cc-run-all-tests nil
   "Run all the available testcases for the current problem."
   (interactive)
@@ -110,38 +120,59 @@
                          default-directory nil "ans.*txt")))
          (i 1)
          (results ""))
-    (while (< i (1+ tests))
-      (let ((test-output ;; TODO: Error handling (2>/dev/null handles debug output)
-             ;; make-process
+    (while (< i (1+ tests)) ;; TODO: What if there's RTE, TLE?
+      (let* ((test-output ;; (2>./deb.txt handles debug output)
              (shell-command-to-string (concat "./a.out < ./in"
-                                              (format "%s" i) ".txt 2>/dev/null")))
-            (test-ans (f-read-text (concat "./ans"
+                                              (format "%s" i) ".txt 2> ./deb.txt")))
+            (test-debug (cc-read-file "./deb.txt"))
+            (test-ans (cc-read-file (concat "./ans"
                                            (format "%s" i) ".txt"))))
         (if (string-equal test-output test-ans)
             (setq results (concat results "Testcase " (format "%s" i) " passed!\n"))
-          ;; Ediff output?
-          (if (package-installed-p 'diff-lisp)
-              (setq results (concat results (diff-lisp-diff-strings
-                                             test-output test-ans
-                                             (concat "Testcase "
-                                                     (format "%s" i) " mismatch!"))))
-            (setq results (concat results
-                                  "Output Mismatch!\nOutput:\n%s\nAns:\n%s\n"
-                                  test-output test-ans)))))
-      (setq i (1+ i)))
+          (progn
+            (if (fboundp 'diff-lisp-diff-strings)
+                (setq results (concat results (diff-lisp-diff-strings
+                                               test-output test-ans
+                                               (concat "Testcase "
+                                                       (format "%s" i) " mismatch!"))))
+              (setq results (concat results
+                                    "Testcase " (format "%s" i)
+                                    " mismatch!\nOutput:\n" test-output
+                                    "\nAns:\n" test-ans "\n"))
+            (unless (string-equal "" test-debug)
+              (setq results (concat results "Debug:\n" test-debug))))))
+        (setq i (1+ i)))
+    ;; Populate the results buffer
+    (delete-file "./deb.txt")
     (with-current-buffer (get-buffer-create "*Results*")
-      (insert (format "%s"results)))
-    (display-buffer-in-side-window
-     "*Results*" `((side . right)
-                   (slot . 0)
-                   (window-width 0.2)))
+      (let ((display-buffer-mark-dedicated t))
+        (display-buffer (current-buffer)
+                        '(display-buffer-in-side-window
+                          (side . right)
+                          (direction . right)
+                          (slot . 0)
+                          (window-width . 40)
+                          (window-parameters
+                           (dedicated . t)
+                           (no-delete-other-windows . t)))))
+        (let ((inhibit-read-only t)) (erase-buffer))
+        (remove-overlays)
+        (insert (format "%s"results))
+        (diff-mode)
+        (use-local-map
+         (make-composed-keymap
+          (list (let ((map (make-sparse-keymap)))
+                  (define-key map (kbd "q") 'kill-buffer-and-window)
+                  (if (bound-and-true-p evil-mode)
+                      (evil-make-overriding-map map 'normal))
+                  map))
+          widget-keymap)))
     (windmove-right)
-    (switch-to-buffer "*Results*")
-    (diff-mode)
-    (setq results "")))
+    (setq results ""))))
 
+(global-set-key (kbd "C-M-b") #'cc-run-all-tests)
 
-;;;; Widget
+;;;; TODO: Widget
 
 (defface persistent-variable '((t :inherit custom-variable-tag
                                 :height 1.2
@@ -314,7 +345,7 @@
                    :format "%{%v%}"
                    :value-face 'font-lock-comment-face
                    :value
-                    (f-read-text
+                    (cc-read-file
                      "/mnt/Data/Documents/problems/Codeforces/1842/a/in1.txt")
                    :indent 2
                     )

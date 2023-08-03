@@ -3,10 +3,11 @@
 
 This contains +two+ three directories, which are my general use-case =.doom.d= profile and another profile for dev-related work =.dev.d=, and a new vanilla emacs config inside of =.emacs.d=.
 
-Currently I'm using a personal [[./.emacs.d/dracula-theme.el][theme]] based off of dracula but now looks nothing like it.
+Currently I'm using a personal [[./.emacs.d/dracula-theme.el][theme]] based off of dracula that now looks nothing like it.
 
 [[./theme.png]]
 
+I'm also working on a new project, it allows for parsing testcases for competitive-programming contests leveraging the =competitive-companion= browser extension, you can look at the same in [[/.emacs.d/fac-cc.el][fac-cc.el]]. It's very much a work in progress and is inspired by the sublime text extension.
 
 #+begin_quote
 At the moment, doom's profile system isn't working for me so I just have the plain vanilla installation on my device.
@@ -21,7 +22,5 @@ Doom allows for easy switching between profiles by creating new profiles in =~/.
 #+end_src
 
 The data for this profile is stored in =~/.emacs.d/profiles/= directory. To switch to a profile, first create its config files and then run =doom --profile dev sync= and whenever you wish to run emacs with that profile, just do =emacs --profile dev=.
-
-I'm also working on a new project, it allows for parsing testcases for competitive-programming contests leveraging the =competitive-companion= browser extension, you can look at the same in [[/.emacs.d/fac-cc.el][fac-cc.el]]. It's very much a work in progress and is inspired by the sublime text extension.
 
 [[https://gist.github.com/hlissner/46d6423a49f19d30e34336eb5bc1a07e][Reference]]
