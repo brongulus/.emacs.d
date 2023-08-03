@@ -1,4 +1,4 @@
-;;; fac-cc.el --- FastOlympicCoding Competitive Companion Helper  -*- lexical-binding: t; -*-
+;;; foxy.el --- (foc-cc) FastOlympicCoding Competitive Companion Helper  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2023  Prashant Tak
 
@@ -24,9 +24,15 @@
 ;; If you want richer diffs between output and answer, install diff-lisp package
 ;; I have opted to make that choice optional as I don't want external packages.
 
+;; _,-=._              /|_/|
+;; `-.}   `=._,.-=-._.,  @ @._,
+;;    `._ _,-.   )      _,.-'
+;;       `    G.m-"^m`m'        by Dmytro O. Redchuk
+
 ;; TODO:
 ;; Add run timeout per testcase
 ;; Error handling while fetching ip/op
+;; Add new testcases function
 ;; C-a C-d remove tc
 
 ;;; Code:
@@ -42,32 +48,31 @@
 
 ;;;; Competitive Companion
 ;; https://stackoverflow.com/a/6200347
-;; if python check
-(defvar cc-compile-command "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL -I/mnt/Data/Documents/problems/include "
+(defvar foxy-compile-command "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL "
   "The command used to compile the source file.")
 
-(defvar cc-listen-port 27121
+(defvar foxy-listen-port 27121
     "Port of the server.")
 
-(defvar cc-listen-host "127.0.0.1"
+(defvar foxy-listen-host "127.0.0.1"
     "Host of the server.")
 
-(defun cc-listen-start nil
+(defun foxy-listen-start nil
     "Start the competitive-companion tcp client listener."
     (interactive)
     (message "Started listening for competitive-companion")
     (make-network-process :name "Fetch Contest" :buffer "*fetch*" :family nil
-                          :server t :host cc-listen-host :service cc-listen-port
-                          :sentinel 'cc-listen-sentinel :filter 'cc-listen-filter))
+                          :server t :host foxy-listen-host :service foxy-listen-port
+                          :sentinel 'foxy-listen-sentinel :filter 'foxy-listen-filter))
 
-(defun cc-listen-stop nil
+(defun foxy-listen-stop nil
   "Stop the competitive-companion tcp listener."
   (interactive)
   (delete-process "Fetch Contest")
   (kill-buffer "*fetch*")
   (message "Stopped listening to competitive-companion"))
 
-(defun cc-listen-filter (proc string)
+(defun foxy-listen-filter (proc string)
   "Parses the incoming JSON data (STRING) from competitive-companion
 and populates the testcase files."
   (let* ((json-input (json-read-from-string
@@ -79,54 +84,67 @@ and populates the testcase files."
          (tests (cdr (assoc 'tests json-input)))
          (i 1))
     (make-directory prob-name)
-    ;; iterate over number of testcases and populate input and output files
+    ;; iterate over number of testcases
     (while (< i (1+ (length tests)))
+      ;; populate input file
       (find-file (concat default-directory prob-name "/in"
                          (format "%s" i)".txt"))
       (insert (format "%s" (cdr (assoc 'input
-                                       (aref (cdr (assoc 'tests json-input)) i)))))
+                                       (aref (cdr (assoc 'tests json-input)) (1- i))))))
       (basic-save-buffer)
       (kill-buffer)
+      ;; populate output file
       (find-file (concat default-directory prob-name "/ans"
-                         (format "%s" i) ".txt"))
+                           (format "%s" i) ".txt"))
       (insert (format "%s" (cdr (assoc 'output
-                                       (aref (cdr (assoc 'tests json-input)) i)))))
+                                       (aref (cdr (assoc 'tests json-input)) (1- i))))))
       (basic-save-buffer)
       (kill-buffer)
       (setq i (1+ i)))
       (message "Testcases added for %s" prob-name)))
 
-(defun cc-listen-sentinel (proc msg)
+(defun foxy-listen-sentinel (proc msg)
   "Echo client quit when MSG says broken connection."
   (when (string= msg "connection broken by remote peer\n")
     (message (format "Client %s has quit" proc))))
 
-(defun cc-start-server-with-timer nil
+(defun foxy-start-server-with-timer nil
   "Start the server that listens to competitive-companion for 2 minutes."
   (interactive)
-  (cc-listen-start)
-  (run-at-time 120 nil #'cc-listen-stop))
+  (foxy-listen-start)
+  (run-at-time 120 nil #'foxy-listen-stop))
 
-(defun cc-read-file (filename)
+(defun foxy-read-file (filename)
   "Return the contents of FILENAME."
   (with-temp-buffer
     (insert-file-contents-literally filename)
     (buffer-string)))
 
-(defun cc-run-all-tests nil
+(defun foxy-run-all-tests nil
   "Run all the available testcases for the current problem."
   (interactive)
-  (let ((tests (length (directory-files
+  ;; Compile if cpp file
+  (unless (string-equal (file-name-extension buffer-file-name) "py")
+                                        ;(file-exists-p "a.out")
+    (compile (concat foxy-compile-command buffer-file-name))
+    (sleep-for 5)) ;; FIXME!!!
+  (let ((bin-name
+         (if (string-equal (file-name-extension buffer-file-name) "py")
+             (concat "python " (file-relative-name (buffer-file-name) default-directory))
+           "./a.out"))
+        (tests (length (directory-files
                          default-directory nil "ans.*txt")))
          (i 1)
          (results ""))
     (while (< i (1+ tests)) ;; TODO: What if there's RTE, TLE?
+      ;; Get the output, debug data and the answer as strings
       (let* ((test-output ;; (2>./deb.txt handles debug output)
-             (shell-command-to-string (concat "./a.out < ./in"
+             (shell-command-to-string (concat bin-name " < ./in"
                                               (format "%s" i) ".txt 2> ./deb.txt")))
-            (test-debug (cc-read-file "./deb.txt"))
-            (test-ans (cc-read-file (concat "./ans"
+            (test-debug (foxy-read-file "./deb.txt"))
+            (test-ans (foxy-read-file (concat "./ans"
                                            (format "%s" i) ".txt"))))
+        ;; If output is same as test, continue else show all three strings
         (if (string-equal test-output test-ans)
             (setq results (concat results "Testcase " (format "%s" i) " passed!\n"))
           (progn
@@ -138,12 +156,12 @@ and populates the testcase files."
               (setq results (concat results
                                     "Testcase " (format "%s" i)
                                     " mismatch!\nOutput:\n" test-output
-                                    "\nAns:\n" test-ans "\n"))
+                                    "\nAns:\n" test-ans "\n")))
             (unless (string-equal "" test-debug)
               (setq results (concat results "Debug:\n" test-debug))))))
-        (setq i (1+ i)))
-    ;; Populate the results buffer
-    (delete-file "./deb.txt")
+      (delete-file "./deb.txt")
+      (setq i (1+ i)))
+    ;; Populate the results buffer and show in a side window
     (with-current-buffer (get-buffer-create "*Results*")
       (let ((display-buffer-mark-dedicated t))
         (display-buffer (current-buffer)
@@ -157,20 +175,21 @@ and populates the testcase files."
                            (no-delete-other-windows . t)))))
         (let ((inhibit-read-only t)) (erase-buffer))
         (remove-overlays)
-        (insert (format "%s"results))
+        (insert (format "%s" results))
         (diff-mode)
         (use-local-map
          (make-composed-keymap
           (list (let ((map (make-sparse-keymap)))
                   (define-key map (kbd "q") 'kill-buffer-and-window)
+                  (define-key map (kbd "C-M-b") 'window-toggle-side-windows)
                   (if (bound-and-true-p evil-mode)
                       (evil-make-overriding-map map 'normal))
                   map))
-          widget-keymap)))
-    (windmove-right)
-    (setq results ""))))
+          widget-keymap))))
+    (windmove-right))
 
-(global-set-key (kbd "C-M-b") #'cc-run-all-tests)
+(global-set-key (kbd "C-M-b") #'foxy-run-all-tests)
+(global-set-key (kbd "C-M-l") #'foxy-start-server-with-timer)
 
 ;;;; TODO: Widget
 
@@ -345,7 +364,7 @@ and populates the testcase files."
                    :format "%{%v%}"
                    :value-face 'font-lock-comment-face
                    :value
-                    (cc-read-file
+                    (foxy-read-file
                      "/mnt/Data/Documents/problems/Codeforces/1842/a/in1.txt")
                    :indent 2
                     )
@@ -366,5 +385,5 @@ and populates the testcase files."
       widget-keymap))
     (widget-setup)))
 
-(provide 'fac-cc)
-;;; fac-cc.el ends here
+(provide 'foxy)
+;;; foxy.el ends here

@@ -7,7 +7,7 @@ Currently I'm using a personal [[./.emacs.d/dracula-theme.el][theme]] based off 
 
 [[./theme.png]]
 
-I'm also working on a new project, it allows for parsing testcases for competitive-programming contests leveraging the =competitive-companion= browser extension, you can look at the same in [[/.emacs.d/fac-cc.el][fac-cc.el]]. It's very much a work in progress and is inspired by the sublime text extension.
+I'm also working on a new project, it allows for parsing testcases for competitive-programming contests leveraging the =competitive-companion= browser extension, you can look at the same in [[/.emacs.d/foxy.el][foxy.el]]. It's very much a work in progress and is inspired by the sublime text extension.
 
 #+begin_quote
 At the moment, doom's profile system isn't working for me so I just have the plain vanilla installation on my device.

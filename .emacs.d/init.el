@@ -563,7 +563,7 @@
   (use-package zig-mode
     :mode ("\\.zig\\'" . zig-mode))
   (use-package eglot
-    :hook ((c++-mode zig-mode rust-mode java-mode typescript-ts-mode go-ts-mode python-mode c-mode) . eglot-ensure)
+    :hook ((c++-mode zig-mode rust-mode java-mode typescript-ts-mode go-ts-mode python-ts-mode c-mode) . eglot-ensure)
     :config
     (evil-define-key 'normal eglot-mode-map
       (kbd "<leader>ca") 'eglot-code-actions
@@ -686,8 +686,10 @@
 ;;; Compilation
 (with-delayed-execution
   (use-package diff-lisp
+    :disabled t
     :vc (:fetcher github :repo "redguardtoo/diff-lisp"))
-  (load "~/.emacs.d/fac-cc" nil t)
+  (load "~/.emacs.d/foxy" nil t)
+  (setq foxy-compile-command "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL -I/mnt/Data/Documents/problems/include ")
   (use-package smart-compile
     :vc (:fetcher github :repo "zenitani/elisp")
     :config
@@ -757,7 +759,8 @@
 (with-delayed-execution-priority-high
   (evil-set-leader 'normal (kbd "SPC")) ;; SPC is leader
   (evil-set-leader 'normal "'" t) ;; ' is localleader
-  (define-key evil-normal-state-map (kbd "<leader>w") 'evil-window-map)
+  (define-key evil-normal-state-map (kbd "<leader>w") #'evil-window-map)
+  (define-key evil-normal-state-map (kbd "<leader>h") help-map)
   (evil-define-key 'normal 'global
     (kbd "<leader>r") #'query-replace-regexp
     (kbd "<leader>u") #'universal-argument
