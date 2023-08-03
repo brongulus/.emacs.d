@@ -33,7 +33,8 @@
                 (font . "Victor Mono-13.5:weight=semi-bold")))
 
 ;; Set theme and font beforehand to prevent flickering
-(defun get-preferred-theme () ;; ymarco
+(defun get-preferred-theme ()
+  "Set the current theme based on the time, thanks ymarco."
   (let ((hour (string-to-number
                (substring (current-time-string) 11 13))))
     (if (<= 7 hour 18)

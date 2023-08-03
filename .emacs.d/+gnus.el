@@ -31,7 +31,8 @@
                    (cdr (nth 2 gnus-topic-unreads))))) ;; personal uc
         (if (eq uc 0)
             ""
-          (format " 📥 %s " uc))))
+          (concat (nerd-icons-faicon "nf-fa-inbox")
+                  (format " %s" uc)))))
 
     ;; Better UI
     (gnus-add-configuration
@@ -170,8 +171,7 @@
           (append global-mode-string 
                   (list '(:eval (propertize 
                                  (my/gnus-unread-count)
-                                 'help-echo "Gnus : Unread"
-                                 'face '(:inverse-video t))))))
+                                 'help-echo "Gnus : Unread")))))
 
     (define-key gnus-group-mode-map "g" 'srb-gnus-group-get-new-news)
     (define-key gnus-topic-mode-map "g" 'srb-gnus-group-get-new-news)
@@ -197,6 +197,7 @@
                               "nnimap+personal:sent.2023"
                               "nnimap+personal:[Gmail]/Starred")
                              ("📰 News"
+                              "gwene.com.blogspot.petr-mitrichev"
                               "gmane.emacs.announce"
                               "gmane.emacs.devel"
                               "gmane.emacs.gnus.general"

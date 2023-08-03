@@ -6,7 +6,7 @@
 ;; This file is not part of GNU Emacs.
 ;;; Commentary:
 ;;  Look into context-menu-mode but without tooltip!
-;;  TODO: (use-package evil-define-map) from eldoc/flymake
+;;  TODO: (use-package evil-define-map)
 ;;  Most completion systems follow TnG, tab to choose next and RET to select
 ;;  Ref 1: https://zenn.dev/takeokunn/articles/56010618502ccc
 ;;  Ref 2: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
@@ -75,15 +75,16 @@
                 indent-tabs-mode nil
                 enable-recursive-minibuffers t
                 fill-column 80
+                custom-safe-themes t
                 delete-selection-mode t
                 mouse-yank-at-point t
                 custom-file (make-temp-file "emacs-custom-")
-                ;; scroll-margin 5
                 maximum-scroll-margin 0.5
-                scroll-step 1
-                next-screen-context-lines 5
-                scroll-conservatively 100000
-                scroll-preserve-screen-position 1
+                ;; scroll-margin 5
+                ;; scroll-step 1
+                ;; next-screen-context-lines 5
+                ;; scroll-conservatively 100000
+                ;; scroll-preserve-screen-position 1
                 pixel-scroll-precision-large-scroll-height 35.0
                 recenter-positions '(5 top bottom)
                 bookmark-default-file "~/doom-configs/.emacs.d/bookmarks"
@@ -114,23 +115,21 @@
     (package-vc-install "https://github.com/slotThe/vc-use-package"))
   (require 'vc-use-package)
 
-  (use-package on ;; provides hooks akin to doom
-    :vc (:fetcher gitlab :repo "ajgrf/on.el")
-    :demand t)
-  (use-package compat) ;; for minad's pkgs
   (use-package nerd-icons
     :demand t)) ;; (nerd-icons-install-fonts)
 
 ;;;; Yay Evil!
 (with-delayed-execution
   (use-package undo-fu
+    :demand t
     :config
     (setq undo-limit 67108864
         undo-strong-limit 100663296
         undo-outer-limit 1006632960))
   (use-package undo-fu-session
+    :demand t
     :after undo-fu
-    :config
+    :init
     (undo-fu-session-global-mode)))
 
 (with-delayed-execution-priority-high
@@ -162,15 +161,12 @@
     (evil-mode 1)
     (add-to-list 'evil-highlight-closing-paren-at-point-states 'normal t)
     (with-eval-after-load 'evil-maps
-      (evil-define-key '(normal motion) special-mode-map "q" #'quit-window) ;; QoL
-      ;; useless?
-      ;; (define-key evil-normal-state-map (kbd "K") nil)
-      ;; (define-key evil-motion-state-map (kbd "K") nil)
+      (evil-define-key '(normal motion) special-mode-map "q" #'quit-window)
       (define-key evil-motion-state-map (kbd "TAB") nil)))
 
   (use-package evil-escape
     :after evil
-    :config
+    :init
     (evil-escape-mode 1)
     (setq-default evil-escape-key-sequence "jk"
                   evil-escape-delay 0.15)))
@@ -183,7 +179,7 @@
     (vertico-mode)
     (savehist-mode)
     :bind (:map vertico-map
-                ("<backspace" . vertico-directory-delete-char)
+                ("<backspace>" . vertico-directory-delete-char)
                 ("RET" . vertico-directory-enter)
                 ("TAB" . vertico-next)
                 ("<backtab>" . vertico-previous)
@@ -201,8 +197,8 @@
     :init
     (marginalia-mode))
   (use-package nerd-icons-completion
-    :after marginalia
-    :config
+    :after nerd-icons
+    :init
     (nerd-icons-completion-mode)
     (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup)))
 
@@ -211,7 +207,7 @@
   ;; info-fontification (FIXME)
   ;; (use-package info+
     ;; :vc (:fetcher "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/info%2B.el"))
-  ;; (autoload 'info "info+" nil t) ;; FIXME:
+  ;; (autoload 'info "info+" nil t)
   (setq Info-use-header-line nil
         Info-breadcrumbs-in-header-flag nil
         Info-breadcrumbs-in-mode-line-mode t)
@@ -272,9 +268,7 @@
                                          'help-echo (buffer-file-name))
                            (propertize " %b " 'help-echo (buffer-file-name))))
                   (:eval (when (mode-line-window-selected-p)
-                           (format "%s"
-                                   (propertize (breadcrumb-imenu-crumbs)
-                                               'face 'font-lock-comment-face))))
+                           (breadcrumb-imenu-crumbs)))
                   (:eval (when (and (bound-and-true-p flymake-mode)
                                     (mode-line-window-selected-p))
                            flymake-mode-line-format))
@@ -288,7 +282,6 @@
 (with-delayed-execution
   (use-package orderless
     :demand t
-    ;; :after vertico
     :config
     (setq completion-category-defaults nil
           completion-styles '(substring orderless basic)
@@ -325,7 +318,7 @@
           xref-show-xrefs-function #'consult-xref
           xref-show-definitions-function #'consult-xref))
 
-  (use-package recentf ;; FIXME
+  (use-package recentf
     :ensure nil
     :after consult
     :init
@@ -360,7 +353,6 @@
 ;;;; Helpful/elisp-demos
 (with-delayed-execution
   (use-package helpful
-    ;; :hook (on-first-input . helpful-mode)
     :bind (("C-h Q" . help-quick)
            ("C-h v" . helpful-variable)
            ("C-h f" . helpful-function)
@@ -369,7 +361,7 @@
            ("C-h '" . describe-face)))
 
   (use-package elisp-demos
-    :after helpful
+    ;; :after helpful
     :config
     (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update))
 
@@ -381,8 +373,9 @@
 ;;;; Cape/Corfu
 (with-delayed-execution
   (use-package corfu
-    ;; :hook (on-first-buffer . global-corfu-mode)
     :init (global-corfu-mode)
+    :hook ((corfu-mode . corfu-popupinfo-mode)
+           (evil-insert-state-exit . corfu-quit))
     :bind (:map corfu-map
            ("TAB" . corfu-next)
            ([tab] . corfu-next)
@@ -390,10 +383,7 @@
            ("S-TAB" . corfu-previous)
            ([backtab] . corfu-previous))
     :config
-    (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)
     (add-hook 'eshell-mode #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
-    (add-hook 'evil-insert-state-exit-hook #'corfu-quit)
-
     (setq corfu-cycle t
           corfu-auto t
           corfu-auto-prefix 2
@@ -411,15 +401,15 @@
     :after corfu)
   (use-package kind-icon
     :after nerd-icons
-    ;; :demand t
     :init
     (load "~/.emacs.d/+icons" nil t)
-    ;; (advice-add 'load-theme :before #'kind-icon-reset-cache) ;; FIXME:
-    (push 'kind-icon-margin-formatter corfu-margin-formatters))
-  
-  (use-package cape ;; FIXME
-    :after corfu
+    (push 'kind-icon-margin-formatter corfu-margin-formatters)
     :config
+    (advice-add 'load-theme :after #'kind-icon-reset-cache)) ;; FIXME
+  
+  (use-package cape
+    :after corfu
+    :init
     (defun my/add-capfs ()
       (push 'cape-dabbrev completion-at-point-functions)
       (push 'cape-keyword completion-at-point-functions)
@@ -431,33 +421,36 @@
 
 (with-delayed-execution
   (use-package which-key
-    :hook (on-first-input . which-key-mode)
     :config
     (setq which-key-idle-delay 0.5)))
 
 ;;;; git/tempel/indent
 (with-delayed-execution
   (use-package indent-bars ;; bad bad bad
+    :disabled t
     :vc (:fetcher github :repo "jdtsmith/indent-bars")
     :hook ((prog-mode conf-mode) . indent-bars-mode)
     :config
     (setq indent-bars-color '(highlight :face-bg t)
           indent-bars-pattern "."
           indent-bars-width-frac 0.2
-          indent-bars-pad-frac 0.2
+          indent-bars-pad-frac 0.0
           indent-bars-color-by-depth nil
           indent-bars-highlight-current-depth '(:face default :blend 0.4)))
   
   (use-package git-gutter
     :hook (after-change-major-mode . git-gutter-mode)
+    :defer t
     :config
-    (setq git-gutter:update-interval 0.2
+    (setq git-gutter:update-interval 0 ;;0.2
           fringes-outside-margins t
           git-gutter:added-sign "│"
           git-gutter:modified-sign "│"
           git-gutter:deleted-sign "│"))
 
-  (with-eval-after-load 'modus-themes
+  (use-package modus-themes
+    :ensure nil
+    :config
     (set-face-background 'modus-themes-fringe-yellow nil)
     (set-face-background 'modus-themes-fringe-green nil)
     (set-face-background 'modus-themes-fringe-red nil))
@@ -474,7 +467,9 @@
     (set-face-foreground 'git-gutter:deleted "dark orange")))
 
 (with-delayed-execution
-  (use-package magit)
+  (use-package magit
+    :bind (:map magit-mode-map
+                ("q" . magit-kill-this-buffer)))
   (use-package transient
     :after magit)
   (use-package ghub
@@ -487,8 +482,10 @@
   (autoload 'magit "magit" nil t)
   ;; git-timemachine
   (autoload 'magit-file-dispatch "magit" nil t)
+  (autoload 'magit-log-all "magit" nil t)
   (autoload 'magit-ediff-show-unstaged "magit" nil t)
   (evil-define-key 'normal magit-blob-mode-map
+    (kbd "q") #'magit-kill-this-buffer
     (kbd "p") #'magit-blob-previous
     (kbd "n") #'magit-blob-previous
     (kbd "g[") #'magit-blob-previous
@@ -515,34 +512,36 @@
     (setq tempel-path "~/.emacs.d/templates.el")))
 
 ;;;; eglot/eldoc/flymake
+;;;;; eldoc
 (with-delayed-execution
-  (use-package rustic
-    :mode ("\\.rs\\'" . rustic-mode))
-  (use-package zig-mode
-    :mode ("\\.zig\\'" . zig-mode))
+  (use-package eldoc
+    :ensure nil
+    :init (unless (display-graphic-p) (global-eldoc-mode))
+    :config
+    (setq eldoc-echo-area-prefer-doc-buffer t
+          eldoc-idle-delay 0.1
+          eldoc-echo-area-use-multiline-p nil
+          eldoc-echo-area-display-truncation-message nil))
   (use-package eldoc-box
     :config
     (setq eldoc-box-max-pixel-width 600
           eldoc-box-max-pixel-height 700
           eldoc-box-only-multi-line t)
     :init
-    (defun my/eldoc-open-switch ()
-      (interactive)
-      (eldoc-doc-buffer)
-      (windmove-down))
     (add-hook 'prog-mode-hook
               #'(lambda ()
                   (if (display-graphic-p) ;; FIXME
                       (setq-local evil-lookup-func 'eldoc-box-help-at-point)
-                    (setq-local evil-lookup-func 'my/eldoc-open-switch))))
+                    (setq-local evil-lookup-func 'eldoc-doc-buffer))))
     (evil-define-key 'insert prog-mode-map
       (kbd "C-l") #'evil-lookup)))
 
-;;;;; eldoc/flymake
+;;;;; flymake
 (with-delayed-execution
   (use-package flymake-popon
     :after flymake
     :hook flymake-mode)
+
   (use-package flymake-collection ;; alternateved
     :after flymake
     :functions (flymake-collection-hook-setup)
@@ -561,13 +560,12 @@
     "X" #'consult-flymake
     "L" #'xref-find-definitions
     "H" #'xref-pop-marker-stack)
-  (setq eldoc-echo-area-prefer-doc-buffer t
-        eldoc-idle-delay 0.3
-        eldoc-echo-area-use-multiline-p nil
-        eldoc-echo-area-display-truncation-message nil)
-  
 
 ;;;;; eglot
+  (use-package rustic
+    :mode ("\\.rs\\'" . rustic-mode))
+  (use-package zig-mode
+    :mode ("\\.zig\\'" . zig-mode))
   (use-package eglot
     :hook ((c++-mode zig-mode rust-mode java-mode typescript-ts-mode go-ts-mode python-mode c-mode) . eglot-ensure)
     :config
@@ -688,11 +686,14 @@
   (use-package oj
     :after eglot
     :vc (:fetcher github :repo conao3/oj.el)))
+
 ;;; Compilation
 (with-delayed-execution
+  (use-package diff-lisp
+    :vc (:fetcher github :repo "redguardtoo/diff-lisp"))
+  (load "~/.emacs.d/fac-cc" nil t)
   (use-package smart-compile
     :vc (:fetcher github :repo "zenitani/elisp")
-    ;; :hook on-first-buffer
     :config
     (push '("\\.rkt\\'" . "racket %F") smart-compile-alist)
     (push '("\\.rs\\'" . "rustc %F && ./%n") smart-compile-alist)
@@ -706,7 +707,8 @@
     (defun paste-input (&optional arg)
       (interactive)
       (find-file (concat "in" (file-name-sans-extension
-                               (file-name-nondirectory buffer-file-name))))
+                               (file-name-nondirectory buffer-file-name))
+                         ".txt"))
       (erase-buffer)
       (clipboard-yank)
       (basic-save-buffer)
@@ -759,6 +761,7 @@
 (with-delayed-execution-priority-high
   (evil-set-leader 'normal (kbd "SPC")) ;; SPC is leader
   (evil-set-leader 'normal "'" t) ;; ' is localleader
+  (define-key evil-normal-state-map (kbd "<leader>w") 'evil-window-map)
   (evil-define-key 'normal 'global
     (kbd "<leader>r") #'query-replace-regexp
     (kbd "<leader>u") #'universal-argument
@@ -775,6 +778,7 @@
     (kbd "<leader>fp") #'(lambda () (interactive) (find-file "~/.emacs.d/init.el"))
     (kbd "<leader>gg") #'magit
     (kbd "<leader>gh") #'magit-file-dispatch
+    (kbd "<leader>gl") #'magit-log-all
     (kbd "<leader>gd") #'(lambda () (interactive)
                            (magit-ediff-show-unstaged buffer-file-name))
     (kbd "<leader>ll") '(lambda () (interactive)
@@ -801,6 +805,8 @@
     "R" #'remember-region)
   (evil-define-key 'insert 'global (kbd "C-o") #'evil-execute-in-normal-state)
   (evil-define-key 'normal 'global
+    ;; "n" #'evil-scroll-down
+    ;; "N" #'evil-scroll-up
     ")" #'evil-next-close-paren
     "(" #'backward-up-list
     "-" #'dired-jump
@@ -830,7 +836,7 @@
   (global-set-key [f2] #'save-buffer)
   (global-set-key [f3] #'paste-input)
   (global-set-key [f4] #'smart-compile)
-  (global-set-key (kbd "C-`") #'window-toggle-side-windows) ;; FIXME:
+  (global-set-key (kbd "C-`") #'window-toggle-side-windows)
   (global-set-key [f9] #'mark-whole-buffer)
   (global-set-key [f10] #'kill-current-buffer)
   (global-set-key [f12] #'other-window)
@@ -862,14 +868,15 @@
   (use-package nerd-icons-dired
     :after nerd-icons
     :hook (dired-mode . nerd-icons-dired-mode))
-  (put 'dired-find-alternate-file 'disabled nil)
-  (add-hook 'dired-mode-hook #'(lambda ()
-                                 (setq-local truncate-lines t
-                                             evil-normal-state-cursor 'hbar)))
+  
   (use-package dired
     :ensure nil
     :config
+    (put 'dired-find-alternate-file 'disabled nil)
     (add-hook 'dired-mode-hook #'dired-hide-details-mode)
+    (add-hook 'dired-mode-hook #'(lambda ()
+                                   (setq-local truncate-lines t
+                                               evil-normal-state-cursor 'hbar)))
     (setq dired-listing-switches
         "-l --almost-all --human-readable --sort=version --group-directories-first")
     (evil-define-key 'normal dired-mode-map
@@ -894,11 +901,12 @@
           dired-recursive-deletes 'always
           dired-recursive-copies 'always)))
 
-;; tabs (FIXME: new tab not cleanly init)
+;; tabs
 (with-delayed-execution
   (with-eval-after-load 'tab-bar
     (defun +my/tab (tab i)
-      (propertize (concat "  " (alist-get 'name tab) "  ")
+      (propertize (concat  "▌ " ;(nerd-icons-icon-for-buffer) " "
+                           (alist-get 'name tab))
                   'face (funcall tab-bar-tab-face-function tab)))
     (setq tab-bar-close-button-show nil
           tab-bar-new-button-show nil
@@ -1051,9 +1059,7 @@
 (with-delayed-execution
   (use-package lexic)
   (use-package posframe
-    :vc (:fetcher github :repo "tumashu/posframe")
-    ;; :hook on-first-buffer
-    )
+    :vc (:fetcher github :repo "tumashu/posframe"))
   (use-package sdcv
     :vc (:fetcher github :repo "manateelazycat/sdcv")
     :after posframe
@@ -1077,13 +1083,26 @@
 
 ;;;; pdf-tools
 (with-delayed-execution
+  ;; (use-package image-roll
+  ;;   :vc (:fetcher github :repo "aikrahguzar/image-roll.el"))
   (use-package pdf-tools
-    ;; :hook on-first-input
+    ;; :vc (pdf-tools :url "https://github.com/aikrahguzar/pdf-tools"
+    ;;                :branch "upstream-pdf-roll"
+    ;;                :lisp-dir "lisp/")
     :mode ("\\.pdf\\'" . pdf-view-mode)
-    :config
-    (push '("\\.pdf\\'" . pdf-view-mode) auto-mode-alist)
+    :hook (pdf-view-mode . pdf-view-fit-page-to-window)
+    ;; :init (require 'pdf-roll)
+    :init
+    (add-hook 'pdf-view-mode-hook
+              '(lambda ()
+                 (setq-local mode-line-format
+                             '((:eval evil-mode-line-tag)
+                               (:eval (nerd-icons-icon-for-buffer))
+                               " %b "
+                               (:eval (my/ml-padding))
+                               (:eval (format "%s/" (pdf-view-current-page)))
+                               (:eval (format "%s" (pdf-cache-number-of-pages)))))))
     (evil-set-initial-state 'pdf-view-mode 'normal)
-    (add-hook 'pdf-view-mode-hook 'pdf-view-fit-page-to-window)
     (evil-define-key 'normal pdf-view-mode-map
       "q" 'kill-this-buffer
       "j" 'pdf-view-next-line-or-next-page
@@ -1101,10 +1120,9 @@
 ;;;; Nov
 (with-delayed-execution
   (use-package nov
-    ;; :hook on-first-buffer
     :mode ("\\.epub\\'" . nov-mode)
+    :hook (nov-mode . olivetti-mode)
     :config
-    (add-hook 'nov-mode-hook #'olivetti-mode)
     (setq nov-header-line-format nil)
     (evil-define-key 'visual nov-mode-map
       "K" #'sdcv-search-pointer+)
@@ -1120,39 +1138,18 @@
                             mode-line-format nil
                             olivetti-body-width 120)
                 (face-remap-add-relative
-                 'variable-pitch :family "Noto Serif JP" :height 150)))
-    (push '("\\.epub\\'" . nov-mode) auto-mode-alist)))
+                 'variable-pitch :family "Noto Serif JP" :height 150)))))
 
 ;;;; Misc
 (with-delayed-execution
-  ;; ref: noctuid
-  (defun noct-maybe-sudo-edit ()
-    "If the current file is exists and is unwritable, edit it as root with sudo."
-    (interactive)
-    (let* ((file (or buffer-file-name
-                     (when (derived-mode-p 'dired-mode 'wdired-mode)
-                       default-directory)))
-           (parent (file-name-directory file))
-           ;; don't try to lookup password with auth-source
-           auth-sources)
-      (when (and file
-                 (not (file-writable-p file))
-                 (or (file-exists-p file)
-                     ;; might want to create a file
-                     (and (file-exists-p parent)
-                          (not (file-writable-p parent))))
-                 ;; don't want to edit Emacs source files as root
-                 (not (string-match "/usr/share/emacs/.*" file)))
-        (let ((method (file-remote-p default-directory 'method))
-              (user (file-remote-p default-directory 'user))
-              (host (file-remote-p default-directory 'host))
-              (localname (file-remote-p file 'localname)))
-          (find-file (if method
-                         (concat "/" method ":" user "@" host
-                                 "|sudo:" host ":" localname)
-                       (concat "/sudo:root@localhost:" file)))))))
-  (evil-define-key 'normal 'global (kbd "<leader>fu") #'noct-maybe-sudo-edit)
+  (defun sudo-find-file (file-name)
+  "Like find file, but opens the file as root."
+  (interactive "FSudo Find File: ")
+  (let ((tramp-file-name (concat "/sudo::" (expand-file-name file-name))))
+    (find-file tramp-file-name)))
+  (evil-define-key 'normal 'global (kbd "<leader>fu") #'sudo-find-file)
  
+  (push '("rc\\'" . conf-unix-mode) auto-mode-alist)
   (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
   (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
   (save-place-mode 1)
@@ -1162,16 +1159,14 @@
         auto-revert-verbose nil)
   (winner-mode 1)
   (use-package markdown-mode
-    ;; :hook on-first-buffer
     :mode ("\\.md\\'" . markdown-mode)
+    :hook (markdown-mode . markdown-toggle-inline-images)
     :config
     (setq markdown-command "multimarkdown"
           markdown-fontify-code-blocks-natively t
           markdown-max-image-size '(800 . 800)
           markdown-display-remote-images t)
-    (add-hook 'markdown-mode-hook #'markdown-toggle-inline-images)
-    (push '("\\.md\\'" . gfm-view-mode) auto-mode-alist)
-    (push '("rc\\'" . conf-unix-mode) auto-mode-alist)))
+    (push '("\\.md\\'" . gfm-view-mode) auto-mode-alist)))
 
 ;;;; mastodon
 (with-delayed-execution
@@ -1179,6 +1174,7 @@
     :vc (mastodon.el :url "https://codeberg.org/martianh/mastodon.el.git")
     :config
     (setq mastodon-instance-url "https://emacs.ch"
+          mastodon-active-user "brongulus"
           mastodon-auth-source-file "~/.authinfo"))
   (use-package mastodon-alt
     :vc (:fetcher github :repo rougier/mastodon-alt)
@@ -1208,7 +1204,11 @@
                  '(pre . shr-tag-pre-highlight)))
 
   (defun my/eww-redirect-urls (url)
-    (replace-regexp-in-string "www.reddit.com" "old.reddit.com" url))
+    (cond ((string-match-p "reddit.com" url)
+           (replace-regexp-in-string "www.reddit.com" "old.reddit.com" url))
+          ((string-match-p "twitter.com" url)
+           (replace-regexp-in-string "twitter.com" "nitter.net" url))
+          (t url)))
   (setq eww-header-line-format nil
         eww-auto-rename-buffer 'title)
   (with-eval-after-load 'eww
@@ -1242,7 +1242,6 @@
 ;; Terminal session (taken from doom)
 (with-delayed-execution
   (unless (display-graphic-p)
-    (eldoc-mode +1)
     (xterm-mouse-mode 1)))
 
 ;;;; Gnus ;; FIXME
@@ -1273,3 +1272,4 @@
 ;;   (compilation-always-kill t)
 ;;   (project-vc-merge-submodules nil)
 ;;   )
+(put 'list-timers 'disabled nil)
