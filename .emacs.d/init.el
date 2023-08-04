@@ -6,7 +6,7 @@
 ;; This file is not part of GNU Emacs.
 ;;; Commentary:
 ;;  Look into context-menu-mode but without tooltip!
-;;  TODO: (use-package evil-define-map)
+;;  TODO: (use-package evil-define-map) Learn about repeat map/mode, org-agenda-to-appt
 ;;  Most completion systems follow TnG, tab to choose next and RET to select
 ;;  Ref 1: https://zenn.dev/takeokunn/articles/56010618502ccc
 ;;  Ref 2: https://zenn.dev/zk_phi/books/cba129aacd4c1418ade4
@@ -14,16 +14,6 @@
 ;;; Code:
 
 ;;; Startup hacks
-;; -----------------------------------------------------------------------------
-;; ;; (el-get-bundle benchmark-init)
-;; (load "/home/prashant/.emacs.d/el-get/benchmark-init/benchmark-init.el"
-;;       'no-error nil 'no-suffix)
-;; (require 'benchmark-init)
-;; (add-hook 'after-init-hook 'benchmark-init/deactivate)
-
-;; -----------------------------------------------------------------------------
-;; ;; (el-get-bundle esup)
-;; -----------------------------------------------------------------------------
 (defvar my/delayed-priority-high-confs '())
 (defvar my/delayed-priority-high-conf-timer nil)
 
@@ -99,15 +89,20 @@
 (with-delayed-execution-priority-high
   ;(load "~/.emacs.d/packages.el" nil t);; Package.el setup
   (require 'package)
-  (push '("gnu" . "https://elpa.gnu.org/packages/") package-archives)
   (push '("melpa" . "https://melpa.org/packages/") package-archives)
+  (setq package-archive-priorities '(("gnu" . 5) ;; highest priority
+                                     ("nongnu" . 4)
+                                     ("melpa" . 3)))
   (package-initialize)
+  (unless package-archive-contents
+    (package-refresh-contents))
   
   (eval-and-compile
     (setq package-native-compile t
           package-install-upgrade-built-in t
           use-package-always-ensure t
           use-package-always-defer t
+          use-package-enable-imenu-support t
           use-package-expand-minimally t))
 
   ;; vc-use-package (in-built in 30)
@@ -367,8 +362,8 @@
 
   (evil-define-key 'normal emacs-lisp-mode-map "K" #'helpful-at-point)
   (evil-define-key '(normal motion) helpful-mode-map
-    "K" #'helpful-at-point))
-    ;; "q" #'kill-buffer-and-window)
+    "K" #'helpful-at-point
+    "q" #'(lambda nil (interactive)(quit-window t))))
 
 ;;;; Cape/Corfu
 (with-delayed-execution
@@ -677,11 +672,7 @@
          (leetcode--slugify-title prob))))
 
     (with-eval-after-load 'org
-      (define-key org-mode-map (kbd "C-l") #'my/leetcode-problem-at-point)))
-
-  (use-package oj
-    :after eglot
-    :vc (:fetcher github :repo conao3/oj.el)))
+      (define-key org-mode-map (kbd "C-l") #'my/leetcode-problem-at-point))))
 
 ;;; Compilation
 (with-delayed-execution
@@ -764,6 +755,8 @@
   (evil-define-key 'normal 'global
     (kbd "<leader>r") #'query-replace-regexp
     (kbd "<leader>u") #'universal-argument
+    (kbd "<leader>]") #'flymake-goto-next-error
+    (kbd "<leader>[") #'flymake-goto-prev-error
     (kbd "<leader>SPC") #'consult-buffer
     (kbd "<leader>fr") #'consult-recent-file
     (kbd "<leader>ss") #'consult-recoll
@@ -792,6 +785,7 @@
                            (message "Link successfully added to the archive."))
     (kbd "<leader>or") #'remember
     (kbd "<leader>om") #'mastodon
+    (kbd "<leader>of") #'elfeed
     (kbd "<leader>on") #'gnus
     (kbd "<leader>ot") #'eshell
     (kbd "<localleader>tt") #'transpose-sexps
@@ -1083,15 +1077,12 @@
 
 ;;;; pdf-tools
 (with-delayed-execution
-  ;; (use-package image-roll
-  ;;   :vc (:fetcher github :repo "aikrahguzar/image-roll.el"))
   (use-package pdf-tools
     ;; :vc (pdf-tools :url "https://github.com/aikrahguzar/pdf-tools"
     ;;                :branch "upstream-pdf-roll"
     ;;                :lisp-dir "lisp/")
     :mode ("\\.pdf\\'" . pdf-view-mode)
     :hook (pdf-view-mode . pdf-view-fit-page-to-window)
-    ;; :init (require 'pdf-roll)
     :init
     (add-hook 'pdf-view-mode-hook
               '(lambda ()
@@ -1142,6 +1133,19 @@
 
 ;;;; Misc
 (with-delayed-execution
+  (defun window-split-toggle ()
+  "Toggle between horizontal and vertical split with two windows."
+  (interactive)
+  (if (> (length (window-list)) 2)
+      (error "Can't toggle with more than 2 windows!")
+    (let ((func (if (window-full-height-p)
+                    #'split-window-vertically
+                  #'split-window-horizontally)))
+      (delete-other-windows)
+      (funcall func)
+      (save-selected-window
+        (other-window 1)
+        (switch-to-buffer (other-buffer))))))
   (defun sudo-find-file (file-name)
   "Like find file, but opens the file as root."
   (interactive "FSudo Find File: ")
@@ -1215,6 +1219,8 @@
     (push 'my/eww-redirect-urls eww-url-transformers)
     (evil-define-key 'normal eww-mode-map
       "Y" #'eww-copy-page-url
+      "r" #'eww-reload
+      "R" #'eww-readable
       "q" #'kill-buffer-and-window
       "H" #'eww-back-url)))
 
@@ -1244,6 +1250,71 @@
   (unless (display-graphic-p)
     (xterm-mouse-mode 1)))
 
+;;;; Elfeed
+(with-delayed-execution
+  (use-package elfeed
+    :commands (elfeed)
+    :bind (:map elfeed-show-mode-map
+           ("o" . browse-url-at-point)
+           ("e" . (lambda nil
+                    (interactive)
+                    (progn
+                      (beginning-of-buffer)
+                      (beginning-of-line)
+                      (forward-paragraph)
+                      (previous-line)
+                      (forward-word 2))
+                    (eww-browse-url
+                     (browse-url-url-at-point))))
+           ("SPC" . nil)
+           :map elfeed-search-mode-map
+           ("q" . kill-this-buffer)
+           ("g" . elfeed-update)
+           ("SPC" . nil))
+    :config
+    (evil-make-overriding-map elfeed-show-mode-map 'normal)
+    (evil-make-overriding-map elfeed-search-mode-map 'normal)
+    (setq elfeed-search-filter "@1-week-ago "
+          elfeed-search-date-format '("%b %d %H:%M" 12 :left)
+          elfeed-feeds
+          '(("https://lobste.rs/rss" feeds)
+            ("https://nitter.net/hermitcraft_/rss" feeds)
+            ("https://lwn.net/headlines/rss" feeds)
+            ("https://gluer.org/blog/atom.xml" tech)
+            ("https://drewdevault.com/blog/index.xml" tech)
+            ("https://blog.nawaz.org/feeds/all.atom.xml" tech)
+            ("https://archlinux.org/feeds/news/" tech)
+            ("https://archlinux.org/feeds/planet/" tech)
+            ("https://sourcehut.org/blog/index.xml" tech)
+            ("https://matklad.github.io/feed.xml" tech)
+            ("https://vimeo.com/andrewrk/videos/rss" tech)
+            ("https://www.youtube.com/feeds/videos.xml?channel_id=UCpGJxlhKXfdOKkBhuDH6ujA"
+           ikechan yt)
+            ("https://www.youtube.com/feeds/videos.xml?channel_id=UCL8EOznhSyreT9O0-KFxgZQ"
+           kotatsugame yt)
+            ("https://www.youtube.com/feeds/videos.xml?channel_id=UC2_krAagEXVPftDXZCDiVZA"
+           kaname yt)
+            ("https://www.youtube.com/feeds/videos.xml?channel_id=UCqnP1HkcAnueBjyKCdaoNHg"
+           joshua yt)
+            ("https://www.hltv.org/rss/news" csgo)
+            ("https://www.dust2.us/rss" csgo)
+            ("https://api.quantamagazine.org/feed/" science)
+            ("https://psa.wf/feed/" dl))))
+
+  (use-package elfeed-tube
+    :after elfeed
+    :demand t
+    :config
+    (setq elfeed-tube-fields
+          '(duration thumbnail description))
+    (elfeed-tube-setup))
+
+  (use-package elfeed-tube-mpv
+    :after elfeed
+    :bind (:map elfeed-show-mode-map
+                ("O" . elfeed-tube-mpv)
+                ("f" . elfeed-tube-fetch))))
+
 ;;;; Gnus ;; FIXME
 (with-delayed-execution-priority-high
  (use-package nice-citation
@@ -1272,4 +1343,3 @@
 ;;   (compilation-always-kill t)
 ;;   (project-vc-merge-submodules nil)
 ;;   )
-(put 'list-timers 'disabled nil)

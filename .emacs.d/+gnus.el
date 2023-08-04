@@ -203,6 +203,7 @@
                               "gmane.emacs.gnus.general"
                               "gmane.emacs.gnus.user"
                               "gmane.emacs.tramp"
+                              "gmane.emacs.bugs"
                               "gwene.com.youtube.feeds.videos.xml.user.ethoslab"
                               "gmane.comp.web.qutebrowser"
                               "gmane.comp.web.elinks.user"

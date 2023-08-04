@@ -85,13 +85,13 @@ read it before opening a new issue about your will.")
                 (dracula-bg      "#181818" "#181818" "#181818")  ;; 1B212D
                 (dracula-fg      "#f8f8f2" "#ffffff" "brightwhite")
                 (dracula-current "#282a36" "#303030" "brightblack")
-                (dracula-comment "#6272a4" "#5f5faf" "blue")       
-                (dracula-cyan    "#82aaff" "#87d7ff" "brightcyan") 
-                (dracula-green   "#50fa7b" "#5fff87" "green")      
-                (dracula-orange  "#ffb86c" "#ffaf5f" "brightred")  
-                (dracula-pink    "#ff79c6" "#ff87d7" "magenta")    
+                (dracula-comment "#6272a4" "#5f5faf" "blue")
+                (dracula-cyan    "#82aaff" "#87d7ff" "brightcyan")
+                (dracula-green   "#50fa7b" "#5fff87" "green")
+                (dracula-orange  "#ffb86c" "#ffaf5f" "brightred")
+                (dracula-pink    "#ff79c6" "#ff87d7" "magenta")
                 (dracula-purple  "#A986C5" "#af87ff" "brightmagenta")
-                (dracula-red     "#FB7385" "#ff8787" "red")         
+                (dracula-red     "#FB7385" "#ff8787" "red")
                 (dracula-yellow  "#FFCB6B" "#ffd700" "brightyellow")
                 ;; Other colors
                 (links           "#80cbc4" "#87d7ff" "brightblue")
@@ -770,8 +770,8 @@ read it before opening a new issue about your will.")
                                         :foreground ,dracula-fg
                                         :weight bold)
                ;; tab-bar & tab-line (since Emacs 27.1)
-               (tab-bar :foreground ,dracula-yellow :background ,dracula-bg
-                        :inherit variable-pitch)
+               (tab-bar :foreground ,dracula-yellow :background ,dracula-bg)
+                        ;; :inherit variable-pitch)
                (tab-bar-tab :foreground ,dracula-yellow :background ,dracula-bg)
                (tab-bar-tab-inactive :foreground ,dracula-comment :background ,dracula-bg)
                (tab-line :foreground ,dracula-purple :background ,dracula-current
@@ -905,12 +905,14 @@ read it before opening a new issue about your will.")
                ,(funcall get-func (alist-get 'dracula-cyan colors))
                ,(funcall get-func (alist-get 'dracula-fg colors))])))))
 
-;; ppy ; as comment-face
+;; ppy ; as comment-face and hl-todo (FIXME)
 (add-hook 'prog-mode-hook
           (lambda ()
             (font-lock-add-keywords
              nil
-             '((";" . 'shadow)))))
+             '((";" . 'shadow)
+               ("FIXME" . 'error)
+               ("TODO" . 'success)))))
 
 
 ;;;###autoload
