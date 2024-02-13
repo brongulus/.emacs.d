@@ -1,8 +1,0 @@
-# -*- mode: snippet -*-
-# name: Displayed Math
-# key: bb
-# condition: t
-# --
-\[
-${1}
-\] $0

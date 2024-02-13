@@ -39,6 +39,7 @@
 (require 'json)
 ;; (require 'subr)
 (require 'timer)
+(require 'cl-lib)
 (require 'files)
 
 (require 'widget)
@@ -123,12 +124,8 @@ and populates the testcase files."
 (defun foxy-run-all-tests nil
   "Run all the available testcases for the current problem."
   (interactive)
-  ;; Compile if cpp file
-  (unless (string-equal (file-name-extension buffer-file-name) "py")
-                                        ;(file-exists-p "a.out")
-    (compile (concat foxy-compile-command buffer-file-name))
-    (sleep-for 5)) ;; FIXME!!!
-  (let ((bin-name
+  (let ((file-ext (format "%s" (file-name-extension buffer-file-name)))
+        (bin-name
          (if (string-equal (file-name-extension buffer-file-name) "py")
              (concat "python " (file-relative-name (buffer-file-name) default-directory))
            "./a.out"))
@@ -136,6 +133,11 @@ and populates the testcase files."
                          default-directory nil "ans.*txt")))
          (i 1)
          (results ""))
+    ;; Compile if cpp file
+    (unless (string-equal file-ext "py")
+                                        ;(file-exists-p "a.out")
+      (compile (concat foxy-compile-command buffer-file-name))
+      (sleep-for 5)) ;; FIXME!!!
     (while (< i (1+ tests)) ;; TODO: What if there's RTE, TLE?
       ;; Get the output, debug data and the answer as strings
       (let* ((test-output ;; (2>./deb.txt handles debug output)
@@ -186,9 +188,30 @@ and populates the testcase files."
                       (evil-make-overriding-map map 'normal))
                   map))
           widget-keymap))))
-    (windmove-right))
+  (windmove-right))
+
+(defun elem-index (item seq)
+  (cl-position item seq :test #'string-equal))
+
+(defun foxy-cycle-files (&optional step)
+  "Go STEP steps in the current directory listing.
+Given a step of 1 (the default), will go to the next file. -1 means previous file."
+  (interactive)
+  (when (not buffer-file-name)
+    (user-error "Not visiting a file - cannot cycle"))
+  (let* ((arg (or step 1))
+         (dir (substring default-directory 0 -1))
+         (dirs (seq-filter #'file-directory-p
+                (directory-files
+                 (file-name-directory (directory-file-name
+                                       (file-name-directory default-directory)))
+                 t directory-files-no-dot-files-regexp nil)))
+         (index (elem-index dir dirs))
+         (new-index (mod (+ arg index) (length dirs))))
+   (find-file (concat (nth new-index dirs) "/main.cpp"))))
 
 (global-set-key (kbd "C-M-b") #'foxy-run-all-tests)
+(global-set-key (kbd "C-M-c") #'foxy-cycle-files)
 (global-set-key (kbd "C-M-l") #'foxy-start-server-with-timer)
 
 ;;;; TODO: Widget

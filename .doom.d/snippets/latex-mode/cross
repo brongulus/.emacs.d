@@ -1,6 +1,0 @@
-# -*- mode: snippet -*-
-# name: curl
-# key: curl
-# condition: t
-# --
-\nabla\times $0

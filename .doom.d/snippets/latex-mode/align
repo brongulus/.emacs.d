@@ -1,8 +1,0 @@
-# -*- mode: snippet -*-
-# name: align
-# key: align
-# condition: t
-# --
-\begin{align*}
-        ${1:${VISUAL}}
-\end{align*}

@@ -1,4 +1,0 @@
-ln -s ~/doom-configs/.dev.d/ ~
-ln -s ~/doom-configs/.doom.d/ ~
-rm ~/.emacs.d/.local/gnus/.newsrc.eld
-ln -s ~/doom-configs/.doom.d/.newsrc ~/.emacs.d/.local/gnus/

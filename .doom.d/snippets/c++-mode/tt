@@ -1,9 +1,0 @@
-# -*- mode: snippet -*-
-# name: tt
-# key: tt
-# condition: t
-# --
-int tt; cin >> tt;
-while(tt--) {
-  $0
-}

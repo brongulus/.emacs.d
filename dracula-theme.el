@@ -55,10 +55,58 @@ The theme has to be reloaded after changing anything in this group."
   :type 'number
   :group 'dracula)
 
+(defcustom dracula-tab-min-width 10
+  "Minimum width of a tab in characters."
+  :type 'integer
+  :group 'tab-bar)
+
+(defcustom dracula-tab-max-width 30
+  "Maximum width of a tab in characters."
+  :type 'integer
+  :group 'tab-bar)
+
 (defcustom dracula-alternate-mode-line-and-minibuffer nil
   "Use less bold and pink in the minibuffer."
   :type 'boolean
   :group 'dracula)
+
+(defun dracula-tab-line-name-buffer (buffer &rest _buffers)
+  (with-current-buffer buffer
+            (let* ((window-width (window-width (get-buffer-window)))
+               (tab-amount (length (tab-bar-tabs)))
+               (window-max-tab-width (if (>= (* (+ dracula-tab-max-width 3) tab-amount) window-width)
+                                         (/ window-width tab-amount)
+                                       dracula-tab-max-width))
+               (tab-width (- (cond ((> window-max-tab-width dracula-tab-max-width)
+                                    dracula-tab-max-width)
+                                   ((< window-max-tab-width dracula-tab-min-width)
+                                    dracula-tab-min-width)
+                                   (t window-max-tab-width))
+                             3)) ;; compensation for ' x ' button
+               (buffer-name (string-trim (buffer-name)))
+               (name-width (length buffer-name)))
+          (if (>= name-width tab-width)
+              (concat  " " (truncate-string-to-width buffer-name (- tab-width 2)) "…")
+            (let* ((padding (make-string (+ (/ (- tab-width name-width) 2) 1) ?\s))
+                   (buffer-name (concat padding buffer-name)))
+              (concat buffer-name (make-string (- tab-width (length buffer-name)) ?\s)))))))
+
+(setq tab-line-close-button-show nil
+      tab-line-new-button-show nil
+      tab-line-separator ""
+      tab-line-tab-name-function #'dracula-tab-line-name-buffer)
+      
+(defun dired-vc-left()
+  (interactive)
+  (let ((dir (if (eq (vc-root-dir) nil)
+                 (dired-noselect default-directory)
+               (dired-noselect (vc-root-dir)))))
+    (display-buffer-in-side-window
+     dir `((side . left)
+           (slot . 0)
+           (window-width . 0.2)
+           (window-parameters . ((mode-line-format . (" %b"))))))
+    (windmove-left)))
 
 (defvar dracula-use-24-bit-colors-on-256-colors-terms nil
   "Use true colors even on terminals announcing less capabilities.
@@ -81,30 +129,36 @@ read it before opening a new issue about your will.")
 ;;;; Theme definition:
 
 ;; Assigment form: VARIABLE COLOR [256-COLOR [TTY-COLOR]]
+
 (let ((colors '(;; Upstream theme color
-                (dracula-bg      "#181818" "#181818" "#181818")  ;; 1B212D
+                (dracula-bg      "#1b222d" "#1b222d" "#181818")  ;; 1B212D
                 (dracula-fg      "#f8f8f2" "#ffffff" "brightwhite")
                 (dracula-current "#282a36" "#303030" "brightblack")
                 (dracula-comment "#6272a4" "#5f5faf" "blue")
                 (dracula-cyan    "#82aaff" "#87d7ff" "brightcyan")
-                (dracula-green   "#50fa7b" "#5fff87" "green")
-                (dracula-orange  "#ffb86c" "#ffaf5f" "brightred")
+                (dracula-green   "#8fc8bb" "#5fff87" "green")
+                (dracula-orange  "#ffd484" "#ffd484" "brightred")
                 (dracula-pink    "#ff79c6" "#ff87d7" "magenta")
                 (dracula-purple  "#A986C5" "#af87ff" "brightmagenta")
                 (dracula-red     "#FB7385" "#ff8787" "red")
-                (dracula-yellow  "#FFCB6B" "#ffd700" "brightyellow")
+                (dracula-yellow  "#ffd484" "#ffd484" "brightyellow")
+                (dracula-hl      "#98a8c5" "#98a8c5" "grey")
                 ;; Other colors
                 (links           "#80cbc4" "#87d7ff" "brightblue")
                 (bg-alt          "#1E2738" "#1e1e1e" "brightblack")
                 (bg2             "#2b2a3e" "#121212" "brightblack")
-                (bg3             "#2B3141" "#262626" "brightblack")
+                (bg3             "#39465e" "#262626" "brightblack")
                 (bg4             "#1E2633" "#444444" "brightblack")
                 (fg2             "#e2e2dc" "#e4e4e4" "brightwhite")
                 (fg3             "#ccccc7" "#c6c6c6" "white")
                 (fg4             "#b6b6b2" "#b2b2b2" "white")
+                ;; (dark-red        "#db4b4b" "#870000" "red") ; 40% darker
+                ;; (dark-green      "#41a6b5" "#00af00" "green") ; 40% darker
+                (light-blue      "#98a8c5" "#98a8c5" "brightblue") ; string
                 (other-blue      "#0189cc" "#0087ff" "brightblue")))
+      (box-width (/ (line-pixel-height) 2))
       (faces '(;; default / basic faces
-               (cursor :background ,fg2)
+               ;; (cursor :background ,other-blue)
                (default :background ,dracula-bg :foreground ,dracula-fg)
                (default-italic :slant italic)
                (error :foreground ,dracula-red)
@@ -137,8 +191,9 @@ read it before opening a new issue about your will.")
                (lazy-highlight :foreground ,fg2 :background ,bg2)
                (link :foreground ,links :underline t)
                (linum :slant italic :foreground ,bg4 :background ,dracula-bg)
-               (line-number :slant italic :foreground ,dracula-comment :background ,dracula-bg)
-               (match :background ,dracula-yellow :foreground ,dracula-bg)
+               (line-number :foreground ,dracula-comment :background ,dracula-bg)
+               (line-number-current-line :foreground ,dracula-yellow :background ,dracula-bg)
+               (match :background ,dracula-hl :foreground ,dracula-bg)
                (menu :background ,dracula-current :inverse-video nil
                      ,@(if dracula-alternate-mode-line-and-minibuffer
                            (list :foreground fg3)
@@ -168,7 +223,7 @@ read it before opening a new issue about your will.")
                (font-lock-reference-face :inherit font-lock-constant-face) ;; obsolete
                (font-lock-regexp-grouping-backslash :foreground ,dracula-cyan)
                (font-lock-regexp-grouping-construct :foreground ,dracula-purple)
-               (font-lock-string-face :foreground ,dracula-yellow)
+               (font-lock-string-face :foreground ,light-blue)
                (font-lock-type-face :inherit font-lock-builtin-face)
                (font-lock-variable-name-face :foreground ,dracula-fg :weight bold)
                (font-lock-warning-face :inherit warning :background ,bg2)
@@ -201,6 +256,18 @@ read it before opening a new issue about your will.")
                ;; corfu
                (corfu-default :inherit tooltip :background ,bg-alt)
                (corfu-current :background ,bg3 :foreground ,dracula-fg)
+               ;; diff
+               ;; (diff-added :background ,dark-green :foreground ,dracula-fg :extend t)
+               ;; (diff-removed :background ,dark-red :foreground ,dracula-fg :extend t)
+               ;; (diff-refine-added :background ,dracula-green
+               ;;                    :foreground ,dracula-bg)
+               ;; (diff-refine-removed :background ,dracula-red
+               ;;                      :foreground ,dracula-fg)
+               ;; (diff-indicator-added :foreground ,dracula-green)
+               ;; (diff-indicator-removed :foreground ,dracula-red)
+               ;; (diff-indicator-changed :foreground ,dracula-orange)
+               ;; (diff-error :foreground ,dracula-red, :background ,dracula-bg
+               ;;             :weight bold)
                ;; diff-hl
                (diff-hl-change :foreground ,dracula-orange :background ,dracula-orange)
                (diff-hl-delete :foreground ,dracula-red :background ,dracula-red)
@@ -243,6 +310,17 @@ read it before opening a new issue about your will.")
                (diredp-link-priv :foreground ,dracula-orange)
                (diredp-autofile-name :foreground ,dracula-yellow)
                (diredp-tagged-autofile-name :foreground ,dracula-yellow)
+               ;; ediff
+               ;; (ediff-odd-diff-A :background ,bg3)
+               ;; (ediff-even-diff-A :background ,bg3)
+               ;; (ediff-odd-diff-B :background ,bg3)
+               ;; (ediff-even-diff-B :background ,bg3)
+               ;; (ediff-current-diff-A :background ,dark-red)
+               ;; (ediff-fine-diff-A :background ,dracula-red :foreground ,dracula-fg)
+               ;; (ediff-current-diff-B :background ,dark-green)
+               ;; (ediff-fine-diff-B :background ,dracula-green :foreground ,dracula-bg)
+               ;; (ediff-current-diff-C :background ,other-blue)
+               ;; (ediff-fine-diff-C :background ,dracula-cyan :foreground ,dracula-bg)
                ;; eldoc-box
                (eldoc-box-border :background ,dracula-comment)
                ;; elfeed
@@ -357,75 +435,8 @@ read it before opening a new issue about your will.")
                ;; haskell-mode
                (haskell-operator-face :foreground ,dracula-pink)
                (haskell-constructor-face :foreground ,dracula-purple)
-               ;; helm
-               (helm-bookmark-w3m :foreground ,dracula-purple)
-               (helm-buffer-not-saved :foreground ,dracula-purple :background ,dracula-bg)
-               (helm-buffer-process :foreground ,dracula-orange :background ,dracula-bg)
-               (helm-buffer-saved-out :foreground ,dracula-fg :background ,dracula-bg)
-               (helm-buffer-size :foreground ,dracula-fg :background ,dracula-bg)
-               (helm-candidate-number :foreground ,dracula-bg :background ,dracula-fg)
-               (helm-ff-directory :foreground ,dracula-green :background ,dracula-bg :weight bold)
-               (helm-ff-dotted-directory :foreground ,dracula-green :background ,dracula-bg :weight normal)
-               (helm-ff-executable :foreground ,other-blue :background ,dracula-bg :weight normal)
-               (helm-ff-file :foreground ,dracula-fg :background ,dracula-bg :weight normal)
-               (helm-ff-invalid-symlink :foreground ,dracula-pink :background ,dracula-bg :weight bold)
-               (helm-ff-prefix :foreground ,dracula-bg :background ,dracula-pink :weight normal)
-               (helm-ff-symlink :foreground ,dracula-pink :background ,dracula-bg :weight bold)
-               (helm-grep-cmd-line :foreground ,dracula-fg :background ,dracula-bg)
-               (helm-grep-file :foreground ,dracula-fg :background ,dracula-bg)
-               (helm-grep-finish :foreground ,fg2 :background ,dracula-bg)
-               (helm-grep-lineno :foreground ,dracula-fg :background ,dracula-bg)
-               (helm-grep-match :inherit match)
-               (helm-grep-running :foreground ,dracula-green :background ,dracula-bg)
-               (helm-header :foreground ,fg2 :background ,dracula-bg :underline nil :box nil)
-               (helm-moccur-buffer :foreground ,dracula-green :background ,dracula-bg)
-               (helm-selection :background ,bg2 :underline nil)
-               (helm-selection-line :background ,bg2)
-               (helm-separator :foreground ,dracula-purple :background ,dracula-bg)
-               (helm-source-go-package-godoc-description :foreground ,dracula-yellow)
-               (helm-source-header :foreground ,dracula-pink :background ,dracula-bg :underline nil :weight bold)
-               (helm-time-zone-current :foreground ,dracula-orange :background ,dracula-bg)
-               (helm-time-zone-home :foreground ,dracula-purple :background ,dracula-bg)
-               (helm-visible-mark :foreground ,dracula-bg :background ,bg3)
                ;; highlight-indentation minor mode
                (highlight-indentation-face :background ,bg2)
-               ;; icicle
-               (icicle-whitespace-highlight :background ,dracula-fg)
-               (icicle-special-candidate :foreground ,fg2)
-               (icicle-extra-candidate :foreground ,fg2)
-               (icicle-search-main-regexp-others :foreground ,dracula-fg)
-               (icicle-search-current-input :foreground ,dracula-pink)
-               (icicle-search-context-level-8 :foreground ,dracula-orange)
-               (icicle-search-context-level-7 :foreground ,dracula-orange)
-               (icicle-search-context-level-6 :foreground ,dracula-orange)
-               (icicle-search-context-level-5 :foreground ,dracula-orange)
-               (icicle-search-context-level-4 :foreground ,dracula-orange)
-               (icicle-search-context-level-3 :foreground ,dracula-orange)
-               (icicle-search-context-level-2 :foreground ,dracula-orange)
-               (icicle-search-context-level-1 :foreground ,dracula-orange)
-               (icicle-search-main-regexp-current :foreground ,dracula-fg)
-               (icicle-saved-candidate :foreground ,dracula-fg)
-               (icicle-proxy-candidate :foreground ,dracula-fg)
-               (icicle-mustmatch-completion :foreground ,dracula-purple)
-               (icicle-multi-command-completion :foreground ,fg2 :background ,bg2)
-               (icicle-msg-emphasis :foreground ,dracula-green)
-               (icicle-mode-line-help :foreground ,fg4)
-               (icicle-match-highlight-minibuffer :foreground ,dracula-orange)
-               (icicle-match-highlight-Completions :foreground ,dracula-green)
-               (icicle-key-complete-menu-local :foreground ,dracula-fg)
-               (icicle-key-complete-menu :foreground ,dracula-fg)
-               (icicle-input-completion-fail-lax :foreground ,dracula-pink)
-               (icicle-input-completion-fail :foreground ,dracula-pink)
-               (icicle-historical-candidate-other :foreground ,dracula-fg)
-               (icicle-historical-candidate :foreground ,dracula-fg)
-               (icicle-current-candidate-highlight :foreground ,dracula-orange :background ,bg3)
-               (icicle-Completions-instruction-2 :foreground ,fg4)
-               (icicle-Completions-instruction-1 :foreground ,fg4)
-               (icicle-completion :foreground ,dracula-fg)
-               (icicle-complete-input :foreground ,dracula-orange)
-               (icicle-common-match-highlight-Completions :foreground ,dracula-purple)
-               (icicle-candidate-part :foreground ,dracula-fg)
-               (icicle-annotation :foreground ,fg4)
                ;; icomplete
                (icompletep-determined :foreground ,dracula-orange)
                ;; ido
@@ -570,6 +581,9 @@ read it before opening a new issue about your will.")
                (markdown-table-face :foreground ,dracula-purple)
                (markdown-list-face :foreground ,dracula-cyan)
                (markdown-language-keyword-face :foreground ,dracula-comment)
+               ;; meow
+               (meow-beacon-indicator :foreground ,dracula-green :inverse-video t)
+               (meow-insert-indicator :foreground ,dracula-yellow :inverse-video t)
                ;; message
                (message-header-to :foreground ,dracula-fg :weight bold)
                (message-header-cc :foreground ,dracula-fg :bold bold)
@@ -586,12 +600,12 @@ read it before opening a new issue about your will.")
                (message-cited-text-4 :foreground ,fg2)
                (message-mml :foreground ,dracula-green :weight normal)
                ;; mode-line
-               (mode-line :background ,dracula-bg ;:inherit variable-pitch
+               (mode-line :background ,dracula-bg ;; :inherit variable-pitch
                           :overline ,dracula-comment :inverse-video nil
                           ,@(if dracula-alternate-mode-line-and-minibuffer
                                 (list :foreground fg3)
                               (list :foreground dracula-comment)))
-               (mode-line-inactive ;:inherit variable-pitch
+               (mode-line-inactive ;; :inherit variable-pitch
                 :background ,dracula-bg :inverse-video nil
                 ,@(if dracula-alternate-mode-line-and-minibuffer
                       (list :foreground dracula-comment :box dracula-bg)
@@ -774,12 +788,13 @@ read it before opening a new issue about your will.")
                         ;; :inherit variable-pitch)
                (tab-bar-tab :foreground ,dracula-yellow :background ,dracula-bg)
                (tab-bar-tab-inactive :foreground ,dracula-comment :background ,dracula-bg)
-               (tab-line :foreground ,dracula-purple :background ,dracula-current
-                         :height 0.9 :inherit variable-pitch)
-               (tab-line-tab :foreground ,dracula-pink :background ,dracula-bg
-                             :box (:line-width 2 :color ,dracula-bg :style nil))
-               (tab-line-tab-inactive :foreground ,dracula-purple :background ,bg2
-                                      :box (:line-width 2 :color ,bg2 :style nil))
+               (tab-line :background ,bg2
+                         :height 1.0 :inherit variable-pitch
+                         :box (:line-width -1 :color ,bg2))
+               (tab-line-tab :foreground ,dracula-yellow :background ,dracula-bg
+                             :box (:line-width 2 :color ,dracula-bg))
+               (tab-line-tab-inactive :foreground ,dracula-comment :background ,bg2
+                                      :box (:line-width 2 :color ,bg2))
                (tab-line-tab-current :inherit tab-line-tab)
                (tab-line-close-highlight :foreground ,dracula-red)
                ;; telephone-line
@@ -905,9 +920,38 @@ read it before opening a new issue about your will.")
                ,(funcall get-func (alist-get 'dracula-cyan colors))
                ,(funcall get-func (alist-get 'dracula-fg colors))])))))
 
+;; mode-line
+(setq-default flymake-mode-line-counter-format
+              '("" flymake-mode-line-error-counter
+                flymake-mode-line-warning-counter
+                flymake-mode-line-note-counter "")
+              global-mode-string nil
+              flymake-mode-line-format
+              '(" "
+                flymake-mode-line-exception
+                flymake-mode-line-counters)
+              mode-line-end-spaces '(" " mode-line-misc-info "  "
+                                      (vc-mode vc-mode) " Ln %l, %p %m "))
+(setq-default mode-line-format
+              '(;; (:eval evil-mode-line-tag)
+                (:eval (when (mode-line-window-selected-p)
+                         (meow-indicator)))
+                "%e "
+                (:eval (if (buffer-modified-p)
+                           (propertize " %b " 'face '(:slant italic :inverse-video t)
+                                       'help-echo (buffer-file-name))
+                         (propertize " %b " 'help-echo (buffer-file-name))))
+                (:eval (when (and (bound-and-true-p flymake-mode)
+                                  (mode-line-window-selected-p))
+                         flymake-mode-line-format))
+                mode-line-format-right-align
+                (:eval (when (mode-line-window-selected-p)
+                         mode-line-end-spaces))))
+
 ;; ppy ; as comment-face and hl-todo (FIXME)
 (add-hook 'prog-mode-hook
           (lambda ()
+            ;; (setq-local display-line-numbers 'relative)
             (font-lock-add-keywords
              nil
              '((";" . 'shadow)

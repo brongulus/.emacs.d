@@ -1,8 +1,0 @@
-# -*- mode: snippet -*-
-# name: definition
-# key: def
-# condition: t
-# --
-\begin{definition}[$1]
-$2
-\end{definition}$0
