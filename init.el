@@ -1,3 +1,4 @@
+;; -*- coding: utf-8; lexical-binding: t -*-
 ;;; --------------------------
 ;;; Defaults? Better? Maybe...
 ;;; --------------------------
@@ -15,7 +16,7 @@
                 (left-fringe . 0)
                 (right-fringe . 0)
                 (internal-border-width . 20)
-                (fullscreen . maximized))
+                (fullscreen . fullboth))
               cursor-in-non-selected-windows nil
               bidi-display-reordering 'left-to-right
               bidi-inhibit-bpa t
@@ -28,6 +29,8 @@
               enable-recursive-minibuffers t
               show-paren-delay 0
               custom-safe-themes t
+              ring-bell-function 'ignore
+              use-short-answers t
               ;; tramp
               vc-handled-backends '(Git)
               tramp-default-method "ssh"
@@ -63,7 +66,6 @@
  (concat
   "-o ControlPath=\~/.ssh/control/ssh-%%r@%%h:%%p "
   "-o ControlMaster=auto -o ControlPersist=yes"))
-(remove-hook 'find-file-hook 'vc-refresh-state)
 (with-eval-after-load 'tramp
   (add-to-list 'tramp-remote-path 'tramp-own-remote-path))
 (setq xref-search-program 'ripgrep
@@ -75,7 +77,6 @@
 (fset 'display-startup-echo-area-message'ignore)
 (add-hook 'prog-mode-hook (electric-pair-mode t))
 (add-hook 'prog-mode-hook (show-paren-mode t))
-(fset 'yes-or-no-p 'y-or-n-p)
 (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
 (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
 (save-place-mode 1)
@@ -84,6 +85,9 @@
 (setq global-auto-revert-non-file-buffers t
       auto-revert-verbose nil)
 (load-theme 'alabaster :no-confirm)
+(defadvice load-theme (before theme-dont-propagate activate)
+  "Disable theme before loading new one."
+  (mapc #'disable-theme custom-enabled-themes))
 
 ;;; ----------------------------------------------------
 ;;; Built-in packages (project, recentf, dired, ediff)
@@ -140,8 +144,10 @@
         '("\\*Messages\\*"
           "Output\\*$"
           "\\*Async Shell Command\\*"
-          "\\*Results\\*"
           help-mode
+          "magit:.\*"
+          "\\*Warnings\\*"
+          "\\*Occur\\*"
           compilation-mode
           "^\\*term.*\\*$" term-mode)
         popper-mode-line nil)
@@ -171,6 +177,12 @@
     (setq vertico-scroll-margin 0
           vertico-resize nil
           vertico-cycle t))
+
+(use-package marginalia
+  :config (marginalia-mode))
+
+(use-package embark
+  :bind ("C-," . embark-act))
 
 (use-package corfu
   :init (global-corfu-mode)
@@ -204,7 +216,6 @@
         undo-outer-limit 1006632960))
 
 (use-package undo-fu-session
-  :after undo-fu
   :init
   (undo-fu-session-global-mode))
 
@@ -322,6 +333,7 @@
      '("Z" . undo-fu-only-redo)
      '("+" . meow-block)
      '("-" . dired-jump)
+     '("*" . isearch-forward-symbol-at-point)
      '("/" . isearch-forward)
      '("'" . repeat)
      '("<escape>" . ignore)))
@@ -390,7 +402,8 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(package-selected-packages '(magit meow corfu orderless popper)))
+ '(package-selected-packages
+   '(embark consult marginalia magit meow corfu orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
