@@ -4,8 +4,14 @@
 ;;; --------------------------
 (setq read-process-output-max (* 1024 1024)) ;; 1mb
 (setq gc-cons-threshold 100000000)
-
 (set-frame-font "VictorMono Nerd Font Mono 16" nil t)
+
+(when (string-equal system-type "android")
+  (let ((termuxpath "/data/data/com.termux/files/usr/"))
+    (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin"))
+    (setenv "LD_LIBRARY_PATH" (concat (getenv "LD_LIBRARY_PATH") ":" termuxpath "lib"))
+    (push (concat termuxpath "bin") exec-path))
+  (set-frame-font "monospace 16" nil t))
 ;; (set-face-attribute
 ;;  'variable-pitch nil :family "Roboto" :height 180)
 
