@@ -118,6 +118,8 @@
   (recentf-auto-cleanup 'never)
   :bind ("C-x f" . #'recentf-open))
 
+(global-set-key (kbd "C-x v f") #'(lambda() (interactive)
+                                    (vc-git-push t)))
 (global-set-key (kbd "C--") #'(lambda () (interactive) (dired "/data/data/com.termux/files/home/")))
 (global-set-key (kbd "C-'") #'(lambda () (interactive)
                                 (term "/data/data/com.termux/files/usr/bin/fish")))
@@ -160,6 +162,7 @@
           "\\*Async Shell Command\\*"
           help-mode
           "magit:.\*"
+          "vc-git :.\*"
           "\\*Warnings\\*"
           "\\*Occur\\*"
           compilation-mode
@@ -211,9 +214,9 @@
   :config (marginalia-mode))
 
 (use-package embark
-  :defer nil
+  :demand
   :after minibuffer
-  :bind ("C-," . embark-act)
+  :bind ("C-," . embark-act-with-completing-read)
   :config ;; karthink
   (defun with-minibuffer-keymap (keymap)
     (lambda (fn &rest args)
@@ -223,8 +226,6 @@
                       (make-composed-keymap keymap (current-local-map)))))
         (apply fn args))))
 
-  (defvar embark-prompter)
-  
   (defvar embark-completing-read-prompter-map
     (let ((map (make-sparse-keymap)))
       (define-key map (kbd "C-<tab>") 'abort-recursive-edit)
@@ -236,7 +237,7 @@
   (defun embark-act-with-completing-read (&optional arg)
     (interactive "P")
     (let* ((embark-prompter 'embark-completing-read-prompter)
-           (embark-indicator (lambda (_keymap targets) nil)))
+           (embark-indicators (delete 'embark-mixed-indicator embark-indicators)))
       (embark-act arg)))
   (define-key vertico-map (kbd "C-<tab>") 'embark-act-with-completing-read))
 
