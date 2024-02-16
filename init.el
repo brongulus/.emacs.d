@@ -4,14 +4,16 @@
 ;;; --------------------------
 (setq read-process-output-max (* 1024 1024)) ;; 1mb
 (setq gc-cons-threshold 100000000)
-(set-frame-font "VictorMono Nerd Font Mono 16" nil t)
 
 (when (string-equal system-type "android")
   (let ((termuxpath "/data/data/com.termux/files/usr/"))
     (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin"))
     (setenv "LD_LIBRARY_PATH" (concat (getenv "LD_LIBRARY_PATH") ":" termuxpath "lib"))
     (push (concat termuxpath "bin") exec-path))
+  (setq overriding-text-conversion-style nil)
   (set-frame-font "monospace 16" nil t))
+(when (member "VictorMono Nerd Font Mono" (font-family-list))
+  (set-frame-font "VictorMono Nerd Font Mono 16" nil t))
 ;; (set-face-attribute
 ;;  'variable-pitch nil :family "Roboto" :height 180)
 
@@ -87,10 +89,16 @@
 (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
 (save-place-mode 1)
 (blink-cursor-mode -1)
-;; (global-auto-revert-mode t)
+(global-auto-revert-mode t)
+(delete-selection-mode t)
 (setq global-auto-revert-non-file-buffers t
       auto-revert-verbose nil)
-(load-theme 'alabaster :no-confirm)
+;; Load theme based on the time of the day
+(let ((hour (substring (current-time-string) 11 13)))
+  (if (and (string-lessp hour "17")
+          (string-greaterp hour "08"))
+      (load-theme 'alabaster :no-confirm)
+    (load-theme 'dracula :no-confirm)))
 (defadvice load-theme (before theme-dont-propagate activate)
   "Disable theme before loading new one."
   (mapc #'disable-theme custom-enabled-themes))
@@ -179,7 +187,22 @@
                 ("M-TAB" . vertico-previous)
                 ("C-j" . vertico-next)
                 ("C-k" . vertico-previous))
-    :config
+    :config ;; src: https://www.reddit.com/r/emacs/comments/zl6amy/completionatpoint_using_completingread_icomplete/
+    (defun completing-read-in-region (start end collection &optional predicate)
+      "Prompt for completion of region in the minibuffer if non-unique.
+   Use as a value for `completion-in-region-function'."
+      (let* ((initial (buffer-substring-no-properties start end))
+             (all (completion-all-completions initial collection predicate
+                                              (length initial)))
+             (completion (catch 'done
+                           (atomic-change-group
+                             (let ((completion
+                                    (completing-read "Completion: " collection predicate nil initial)))
+                               (throw 'done completion))))))
+        (cond (completion (completion--replace start end completion) t)
+              (t (message "No completion") nil))))
+    (setq completion-in-region-function #'completing-read-in-region
+          tab-always-indent 'complete)
     (setq vertico-scroll-margin 0
           vertico-resize nil
           vertico-cycle t))
@@ -188,30 +211,34 @@
   :config (marginalia-mode))
 
 (use-package embark
-  :bind ("C-," . embark-act))
+  :defer nil
+  :after minibuffer
+  :bind ("C-," . embark-act)
+  :config ;; karthink
+  (defun with-minibuffer-keymap (keymap)
+    (lambda (fn &rest args)
+      (minibuffer-with-setup-hook
+          (:append (lambda ()
+                     (use-local-map
+                      (make-composed-keymap keymap (current-local-map)))))
+        (apply fn args))))
 
-(use-package corfu
-  :init (global-corfu-mode)
-  :hook (corfu-mode . corfu-popupinfo-mode)
-  :bind (:map corfu-map
-              ("TAB" . corfu-next)
-              ([tab] . corfu-next)
-              ("M-TAB" . corfu-previous)
-              ("S-TAB" . corfu-previous)
-              ([backtab] . corfu-previous))
-  :config
-  (add-hook 'eshell-mode #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
-  (setq corfu-cycle t
-        corfu-auto t
-        corfu-auto-prefix 2
-        corfu-auto-delay 0
-        corfu-separator 32
-        corfu-quit-no-match t
-        corfu-quit-at-boundary 'separator
-        corfu-preview-current nil
-        corfu-popupinfo-delay '(0.2 . 0.1)
-        corfu-preselect-first nil
-        tab-always-indent 'complete))
+  (defvar embark-prompter)
+  
+  (defvar embark-completing-read-prompter-map
+    (let ((map (make-sparse-keymap)))
+      (define-key map (kbd "C-<tab>") 'abort-recursive-edit)
+      map))
+  
+  (advice-add 'embark-completing-read-prompter :around
+              (with-minibuffer-keymap embark-completing-read-prompter-map))
+  
+  (defun embark-act-with-completing-read (&optional arg)
+    (interactive "P")
+    (let* ((embark-prompter 'embark-completing-read-prompter)
+           (embark-indicator (lambda (_keymap targets) nil)))
+      (embark-act arg)))
+  (define-key vertico-map (kbd "C-<tab>") 'embark-act-with-completing-read))
 
 (use-package undo-fu
   :bind (("C-x u" . undo-fu-only-undo)
@@ -245,8 +272,6 @@
   (meow-global-mode 1)
   (defun meow-setup()
     (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty)
-    (add-hook 'meow-insert-exit-hook #'(lambda ()
-                                         (when corfu-mode (corfu-quit))))
     (define-key meow-insert-state-keymap (kbd "j") #'my-jk)
     (with-eval-after-load 'dired
       (define-key dired-mode-map "-" 'dired-up-directory))
@@ -350,7 +375,8 @@
   :config
   (with-eval-after-load 'transient
     (transient-bind-q-to-quit))
-  (setq magit-commit-show-diff nil)
+  (setq magit-commit-show-diff nil
+        magit-auto-revert-mode nil)
   (remove-hook 'server-switch-hook 'magit-commit-diff)
   (remove-hook 'with-editor-filter-visit-hook 'magit-commit-diff))
 
