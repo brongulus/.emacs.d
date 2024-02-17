@@ -91,6 +91,7 @@
 (blink-cursor-mode -1)
 (global-auto-revert-mode t)
 (delete-selection-mode t)
+(global-set-key [remap kill-buffer] 'kill-this-buffer)
 (setq global-auto-revert-non-file-buffers t
       auto-revert-verbose nil)
 ;; Load theme based on the time of the day
@@ -106,10 +107,6 @@
 ;;; ----------------------------------------------------
 ;;; Built-in packages (project, recentf, dired, ediff)
 ;;; ----------------------------------------------------
-(use-package project
-  :config
-  (add-to-list 'project-switch-commands '(magit-project-status "Magit" ?m)))
-
 (use-package recentf
   :ensure nil
   :init (recentf-mode 1)
@@ -242,6 +239,7 @@
   (define-key vertico-map (kbd "C-<tab>") 'embark-act-with-completing-read))
 
 (use-package undo-fu
+  :demand t
   :bind (("C-x u" . undo-fu-only-undo)
          ("C-z" . undo-fu-only-redo))
   :config
@@ -250,8 +248,10 @@
         undo-outer-limit 1006632960))
 
 (use-package undo-fu-session
+  :demand t
   :init
-  (undo-fu-session-global-mode))
+  (unless (string-equal system-type "android")
+    (undo-fu-session-global-mode)))
 
 (defun my-jk () ;; src: wasamasa
   (interactive)
@@ -272,7 +272,8 @@
   :config
   (meow-global-mode 1)
   (defun meow-setup()
-    (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty)
+    (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
+          meow-keypad-leader-dispatch ctl-x-map)
     (define-key meow-insert-state-keymap (kbd "j") #'my-jk)
     (with-eval-after-load 'dired
       (define-key dired-mode-map "-" 'dired-up-directory))
@@ -371,16 +372,6 @@
      '("<escape>" . ignore)))
   (meow-setup))
 
-(use-package magit
-  ;; :commands (magit magit-file-dispatch magit-log-all magit-ediff-show-unstaged)
-  :config
-  (with-eval-after-load 'transient
-    (transient-bind-q-to-quit))
-  (setq magit-commit-show-diff nil
-        magit-auto-revert-mode nil)
-  (remove-hook 'server-switch-hook 'magit-commit-diff)
-  (remove-hook 'with-editor-filter-visit-hook 'magit-commit-diff))
-
 ;;; -------------------------------------------------
 ;;; Competitive programming setup (snippets and foxy)
 ;;; -------------------------------------------------
@@ -436,7 +427,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(embark consult marginalia magit meow corfu orderless popper)))
+   '(howm vertico undo-fu undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
