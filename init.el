@@ -39,6 +39,7 @@
               custom-safe-themes t
               ring-bell-function 'ignore
               use-short-answers t
+              vc-follow-symlinks t
               ;; tramp
               vc-handled-backends '(Git)
               tramp-default-method "ssh"
@@ -88,20 +89,18 @@
 (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
 (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
 (save-place-mode 1)
+(savehist-mode)
 (blink-cursor-mode -1)
 (global-auto-revert-mode t)
-(delete-selection-mode t)
 (global-set-key [remap kill-buffer] 'kill-this-buffer)
 (setq global-auto-revert-non-file-buffers t
       auto-revert-verbose nil)
 ;; Load theme based on the time of the day
 (let ((hour (substring (current-time-string) 11 13)))
-  (if (and (string-lessp hour "17")
-          (string-greaterp hour "08"))
+  (if (and (string-lessp hour "17") (string-greaterp hour "08"))
       (load-theme 'alabaster :no-confirm)
     (load-theme 'dracula :no-confirm)))
 (defadvice load-theme (before theme-dont-propagate activate)
-  "Disable theme before loading new one."
   (mapc #'disable-theme custom-enabled-themes))
 
 ;;; ----------------------------------------------------
@@ -117,6 +116,7 @@
 
 (global-set-key (kbd "C-x v f") #'(lambda() (interactive)
                                     (vc-git-push t)))
+(global-set-key (kbd "C-x v e") #'vc-ediff) 
 (global-set-key (kbd "C--") #'(lambda () (interactive) (dired "/data/data/com.termux/files/home/")))
 (global-set-key (kbd "C-'") #'(lambda () (interactive)
                                 (term "/data/data/com.termux/files/usr/bin/fish")))
@@ -171,8 +171,7 @@
 (use-package orderless
   :ensure t
   :custom
-  (completion-styles '(orderless basic))
-  (completion-category-overrides '((file (styles basic partial-completion)))))
+  (completion-styles '(orderless basic)))
 
 (use-package vertico
     :defer nil
@@ -213,30 +212,10 @@
 (use-package embark
   :demand
   :after minibuffer
-  :bind ("C-," . embark-act-with-completing-read)
-  :config ;; karthink
-  (defun with-minibuffer-keymap (keymap)
-    (lambda (fn &rest args)
-      (minibuffer-with-setup-hook
-          (:append (lambda ()
-                     (use-local-map
-                      (make-composed-keymap keymap (current-local-map)))))
-        (apply fn args))))
-
-  (defvar embark-completing-read-prompter-map
-    (let ((map (make-sparse-keymap)))
-      (define-key map (kbd "C-<tab>") 'abort-recursive-edit)
-      map))
-  
-  (advice-add 'embark-completing-read-prompter :around
-              (with-minibuffer-keymap embark-completing-read-prompter-map))
-  
-  (defun embark-act-with-completing-read (&optional arg)
-    (interactive "P")
-    (let* ((embark-prompter 'embark-completing-read-prompter)
-           (embark-indicators (delete 'embark-mixed-indicator embark-indicators)))
-      (embark-act arg)))
-  (define-key vertico-map (kbd "C-<tab>") 'embark-act-with-completing-read))
+  :bind ("C-," . embark-act)
+  :config
+  (setq embark-prompter 'embark-completing-read-prompter
+        embark-indicators (delete 'embark-mixed-indicator embark-indicators)))
 
 (use-package undo-fu
   :demand t
@@ -420,6 +399,8 @@
 
 (load "~/.emacs.d/foxy" nil t)
 (setq foxy-compile-command "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 ")
+
+(setq delete-active-region t)
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
