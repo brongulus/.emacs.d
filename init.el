@@ -59,11 +59,13 @@
               tab-bar-new-button-show nil
               tab-bar-show 1
               tab-bar-separator "")
-              ;; tab-bar-tab-name-function #'dracula-tab-line-name-buffer)
+;; tab-bar-tab-name-function #'dracula-tab-line-name-buffer)
 
 (setq inhibit-startup-screen t
       load-prefer-newer t
       isearch-wrap-pause 'no
+      isearch-lazy-count t
+      search-whitespace-regexp ".*?"
       make-backup-files nil
       create-lockfiles nil
       uniquify-buffer-name-style 'forward)
@@ -80,7 +82,10 @@
 (setq xref-search-program 'ripgrep
       xref-auto-jump-to-first-xref nil ; 'move
       xref-show-definitions-function 'xref-show-definitions-completing-read
-      xref-show-xrefs-function 'xref-show-definitions-completing-read)
+      xref-show-xrefs-function 'xref-show-definitions-completing-read) ;; xref-goto-xref
+;; #'dabbrev-completion resets the global variables first so we do the same
+(advice-add #'dabbrev-capf :before #'dabbrev--reset-global-variables)
+(add-hook 'completion-at-point-functions #'dabbrev-capf 100)
 
 ;;; Misc
 (fset 'display-startup-echo-area-message'ignore)
@@ -103,9 +108,40 @@
 (defadvice load-theme (before theme-dont-propagate activate)
   (mapc #'disable-theme custom-enabled-themes))
 
-;;; ----------------------------------------------------
-;;; Built-in packages (project, recentf, dired, ediff)
-;;; ----------------------------------------------------
+;;; -------------------------------------------------------------
+;;; Built-in packages (icomplete, project, recentf, dired, ediff)
+;;; -------------------------------------------------------------
+(use-package icomplete
+  :init
+  (fido-vertical-mode)
+  :bind (:map icomplete-fido-mode-map
+              ("<backspace>" . icomplete-fido-backward-updir)
+              ("TAB" . icomplete-forward-completions)
+              ("<backtab>" . icomplete-backward-completions))
+  :bind (:map icomplete-minibuffer-map
+              ("C-," . embark-act))
+  :hook (icomplete-minibuffer-setup . (lambda ()
+                                        (setq-local completion-styles '(orderless basic))))
+  :config ;; src: https://www.reddit.com/r/emacs/comments/zl6amy/completionatpoint_using_completingread_icomplete/
+  (defun completing-read-in-region (start end collection &optional predicate)
+    "Prompt for completion of region in the minibuffer if non-unique.
+   Use as a value for `completion-in-region-function'."
+    (let* ((initial (buffer-substring-no-properties start end))
+           (all (completion-all-completions initial collection predicate
+                                            (length initial)))
+           (completion (catch 'done
+                         (atomic-change-group
+                           (let ((completion
+                                  (completing-read "Completion: " collection predicate nil initial)))
+                             (throw 'done completion))))))
+      (cond (completion (completion--replace start end completion) t)
+            (t (message "No completion") nil))))
+  (setq completion-in-region-function #'completing-read-in-region
+        tab-always-indent 'complete
+        icomplete-in-buffer t
+        completions-group t
+        icomplete-compute-delay 0))
+
 (use-package recentf
   :ensure nil
   :init (recentf-mode 1)
@@ -123,17 +159,17 @@
 (add-hook 'dired-mode-hook #'dired-hide-details-mode)
 
 (with-eval-after-load 'ediff
-    (setq ediff-split-window-function 'split-window-horizontally
-          ediff-window-setup-function 'ediff-setup-windows-plain)
-    (setq-local display-line-numbers nil))
+  (setq ediff-split-window-function 'split-window-horizontally
+        ediff-window-setup-function 'ediff-setup-windows-plain)
+  (setq-local display-line-numbers nil))
 
 (defadvice term-handle-exit
-  (after term-kill-buffer-on-exit activate)
-(kill-buffer))
+    (after term-kill-buffer-on-exit activate)
+  (kill-buffer))
 
-;;; ------------------------------------------------------------------------
-;;; ELPA packages (popper, orderless, meow, vertico, corfu, undo-fu+session)
-;;; ------------------------------------------------------------------------
+;;; ---------------------------------------------------------------------------------
+;;; ELPA packages (popper, orderless, marginalia, embark, meow, eat, undo-fu+session)
+;;; ---------------------------------------------------------------------------------
 (require 'package)
 ;; (push '("melpa" . "https://melpa.org/packages/") package-archives)
 (package-initialize)
@@ -175,40 +211,8 @@
   :custom
   (completion-styles '(orderless basic)))
 
-(use-package vertico
-    :defer nil
-    :init
-    (vertico-mode)
-    :bind (:map vertico-map
-                ("<backspace>" . vertico-directory-delete-char)
-                ("RET" . vertico-directory-enter)
-                ("TAB" . vertico-next)
-                ("<backtab>" . vertico-previous)
-                ("S-TAB" . vertico-previous)
-                ("M-TAB" . vertico-previous)
-                ("C-j" . vertico-next)
-                ("C-k" . vertico-previous))
-    :config ;; src: https://www.reddit.com/r/emacs/comments/zl6amy/completionatpoint_using_completingread_icomplete/
-    (defun completing-read-in-region (start end collection &optional predicate)
-      "Prompt for completion of region in the minibuffer if non-unique.
-   Use as a value for `completion-in-region-function'."
-      (let* ((initial (buffer-substring-no-properties start end))
-             (all (completion-all-completions initial collection predicate
-                                              (length initial)))
-             (completion (catch 'done
-                           (atomic-change-group
-                             (let ((completion
-                                    (completing-read "Completion: " collection predicate nil initial)))
-                               (throw 'done completion))))))
-        (cond (completion (completion--replace start end completion) t)
-              (t (message "No completion") nil))))
-    (setq completion-in-region-function #'completing-read-in-region
-          tab-always-indent 'complete)
-    (setq vertico-scroll-margin 0
-          vertico-resize nil
-          vertico-cycle t))
-
 (use-package marginalia
+  :demand
   :config (marginalia-mode))
 
 (use-package embark
@@ -237,6 +241,7 @@
 (use-package eat
   :config
   (add-to-list 'meow-mode-state-list '(eat-mode . insert))
+  (add-to-list 'meow-mode-state-list '(log-edit-mode . insert))
   :custom
   (eat-kill-buffer-on-exit t))
 
@@ -416,7 +421,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(eat howm vertico undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(eat howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
