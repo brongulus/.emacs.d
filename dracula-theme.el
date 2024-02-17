@@ -229,6 +229,35 @@ read it before opening a new issue about your will.")
                (font-lock-warning-face :inherit warning :background ,bg2)
                ;; auto-complete
                (ac-completion-face :underline t :foreground ,dracula-pink)
+               ;; ansi-color
+               (ansi-color-black :foreground ,dracula-bg :background ,dracula-bg)
+               (ansi-color-bright-black :foreground "black" :background "black")
+               (ansi-color-blue :foreground ,dracula-purple :background ,dracula-purple)
+               (ansi-color-bright-blue :foreground ,dracula-purple
+                                       :background ,dracula-purple
+                                       :weight bold)
+               (ansi-color-cyan :foreground ,dracula-cyan :background ,dracula-cyan)
+               (ansi-color-bright-cyan :foreground ,dracula-cyan
+                                       :background ,dracula-cyan
+                                       :weight bold)
+               (ansi-color-green :foreground ,dracula-green :background ,dracula-green)
+               (ansi-color-bright-green :foreground ,dracula-green
+                                        :background ,dracula-green
+                                        :weight bold)
+               (ansi-color-magenta :foreground ,dracula-pink :background ,dracula-pink)
+               (ansi-color-bright-magenta :foreground ,dracula-pink
+                                          :background ,dracula-pink
+                                          :weight bold)
+               (ansi-color-red :foreground ,dracula-red :background ,dracula-red)
+               (ansi-color-bright-red :foreground ,dracula-red
+                                      :background ,dracula-red
+                                      :weight bold)
+               (ansi-color-white :foreground ,dracula-fg :background ,dracula-fg)
+               (ansi-color-bright-white :foreground "white" :background "white")
+               (ansi-color-yellow :foreground ,dracula-yellow :background ,dracula-yellow)
+               (ansi-color-bright-yellow :foreground ,dracula-yellow
+                                         :background ,dracula-yellow
+                                         :weight bold)
                ;; company
                (company-echo-common :foreground ,dracula-bg :background ,dracula-fg)
                (company-preview :background ,dracula-current :foreground ,other-blue)
@@ -948,15 +977,14 @@ read it before opening a new issue about your will.")
                 (:eval (when (mode-line-window-selected-p)
                          mode-line-end-spaces))))
 
-;; ppy ; as comment-face and hl-todo (FIXME)
 (add-hook 'prog-mode-hook
           (lambda ()
+            (hi-lock-face-phrase-buffer "todo" 'hi-green)
+            (hi-lock-face-phrase-buffer "fixme" 'hi-salmon)
             ;; (setq-local display-line-numbers 'relative)
             (font-lock-add-keywords
              nil
-             '((";" . 'shadow)
-               ("FIXME" . 'error)
-               ("TODO" . 'success)))))
+             '((";" . 'shadow)))))
 
 
 ;;;###autoload

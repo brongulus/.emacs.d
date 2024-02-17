@@ -159,12 +159,14 @@
           "\\*Async Shell Command\\*"
           help-mode
           "magit:.\*"
+          "\\*eat\\*"
           "vc-git :.\*"
           "\\*Warnings\\*"
           "\\*Occur\\*"
           compilation-mode
           "^\\*term.*\\*$" term-mode)
-        popper-mode-line nil)
+        popper-mode-line nil
+        popper-window-height 0.33)
   (popper-mode +1)
   (popper-echo-mode +1))
 
@@ -231,6 +233,12 @@
   :init
   (unless (string-equal system-type "android")
     (undo-fu-session-global-mode)))
+
+(use-package eat
+  :config
+  (add-to-list 'meow-mode-state-list '(eat-mode . insert))
+  :custom
+  (eat-kill-buffer-on-exit t))
 
 (defun my-jk () ;; src: wasamasa
   (interactive)
@@ -408,7 +416,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(howm vertico undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(eat howm vertico undo-fu undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

@@ -43,11 +43,11 @@
    ;; Frame
    '(fringe ((t (:background "#f7f7f7"))))
    `(mode-line ((t (:background "#e8e8e8" :foreground "black"
-                                :box (:line-width -1 :color ,border-color)))))
+                                :overline "black"))))
    '(mode-line-highlight ((t (:box (:line-width 2 :color "#9599B0")))))
    `(mode-line-inactive
      ((t (:inherit mode-line :background "#f5f5f5" :foreground "grey20"
-                   :box (:line-width -1 :color ,border-color) :weight light))))
+                   :overline ,border-color :weight light))))
 
    ;; Parens
    `(show-paren-match ((t (:background ,passive-color))))
@@ -130,6 +130,11 @@
                 mode-line-format-right-align
                 (:eval (when (mode-line-window-selected-p)
                          mode-line-end-spaces))))
+
+(add-hook 'prog-mode-hook
+          (lambda ()
+            (hi-lock-face-phrase-buffer "todo" 'hi-green)
+            (hi-lock-face-phrase-buffer "fixme" 'hi-salmon)))
 
 ;;;###autoload
 (when load-file-name
