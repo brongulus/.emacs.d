@@ -871,6 +871,13 @@ read it before opening a new issue about your will.")
                (undo-tree-visualizer-default-face :foreground ,fg2)
                (undo-tree-visualizer-register-face :foreground ,dracula-purple)
                (undo-tree-visualizer-unmodified-face :foreground ,dracula-fg)
+               ;; vc-mode
+               ;; ,@(if vc-annotate-background-mode
+                 ;;     (progn
+                 ;;       (vc-annotate-face-CCCCFF :foreground "black")
+                 ;;       (vc-annotate-face-CCFFDE :foreground "black")
+                 ;;       (vc-annotate-face-FFCCCC :foreground "black")
+                 ;;       (vc-annotate-face-FFF0CC :foreground "black")))
                ;; web-mode
                (web-mode-builtin-face :inherit font-lock-builtin-face)
                (web-mode-comment-face :inherit font-lock-comment-face)
@@ -977,10 +984,16 @@ read it before opening a new issue about your will.")
                 (:eval (when (mode-line-window-selected-p)
                          mode-line-end-spaces))))
 
+(if (and (boundp 'vc-annotate-background-mode)
+         vc-annotate-background-mode)
+    (add-hook 'vc-annotate-mode-hook
+              (lambda ()
+                  (face-remap-add-relative 'default :foreground "black"))))
+
 (add-hook 'prog-mode-hook
           (lambda ()
-            (hi-lock-face-phrase-buffer "todo" 'hi-green)
-            (hi-lock-face-phrase-buffer "fixme" 'hi-salmon)
+            (hi-lock-face-phrase-buffer "todo:" 'hi-green)
+            (hi-lock-face-phrase-buffer "fixme:" 'hi-salmon)
             ;; (setq-local display-line-numbers 'relative)
             (font-lock-add-keywords
              nil

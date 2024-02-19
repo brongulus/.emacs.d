@@ -71,7 +71,8 @@
       uniquify-buffer-name-style 'forward)
 
 ;;; SSH Stuff
-(setq project-vc-merge-submodules nil)
+(setq project-vc-merge-submodules nil
+      vc-annotate-background-mode t)
 (customize-set-variable
  'tramp-ssh-controlmaster-options
  (concat
@@ -150,9 +151,20 @@
   (recentf-auto-cleanup 'never)
   :bind ("C-x f" . #'recentf-open))
 
+(use-package with-editor
+  :defer 1
+  :hook ((eshell-mode . with-editor-export-git-editor)
+         (eshell-mode . with-editor-export-editor)))
+(defun vc-interactive-rebase ()
+  (interactive)
+  (with-current-buffer (eshell)
+    (eshell-return-to-prompt)
+    (insert "git rebase -i")
+    (eshell-send-input)))
 (global-set-key (kbd "C-x v f") #'(lambda() (interactive)
                                     (vc-git-push t)))
 (global-set-key (kbd "C-x v e") #'vc-ediff) 
+(global-set-key (kbd "C-x v R") #'vc-interactive-rebase) 
 (global-set-key (kbd "C--") #'(lambda () (interactive) (dired "/data/data/com.termux/files/home/")))
 (global-set-key (kbd "C-'") #'(lambda () (interactive)
                                 (term "/data/data/com.termux/files/usr/bin/fish")))
@@ -200,6 +212,7 @@
           "\\*Warnings\\*"
           "\\*Occur\\*"
           compilation-mode
+          "^\\*eshell.*\\*$" eshell-mode
           "^\\*term.*\\*$" term-mode)
         popper-mode-line nil
         popper-window-height 0.33)
@@ -213,7 +226,10 @@
 
 (use-package marginalia
   :demand
-  :config (marginalia-mode))
+  :init (marginalia-mode)
+  :config
+  (setq marginalia-annotator-registry
+      (assq-delete-all 'file marginalia-annotator-registry)))
 
 (use-package embark
   :demand
@@ -239,8 +255,10 @@
     (undo-fu-session-global-mode)))
 
 (use-package eat
+  :bind ("C-." . #'eat)
   :config
   (add-to-list 'meow-mode-state-list '(eat-mode . insert))
+  (add-to-list 'meow-mode-state-list '(eshell-mode . insert))
   (add-to-list 'meow-mode-state-list '(log-edit-mode . insert))
   :custom
   (eat-kill-buffer-on-exit t))
@@ -421,7 +439,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(eat howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(with-editor avy eat howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

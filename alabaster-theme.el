@@ -100,6 +100,8 @@
    '(magit-diff-none ((t (:inherit diff-context :foreground "grey20"))))
    '(magit-item-highlight ((t (:background nil :foreground "black"))))
 
+   ;; Custom
+   '(ansi-color-bright-green ((t (:bold t :foreground "green2"))))
    ;; Done
    ))
 
