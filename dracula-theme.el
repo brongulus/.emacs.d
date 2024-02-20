@@ -224,7 +224,7 @@ read it before opening a new issue about your will.")
                (font-lock-regexp-grouping-backslash :foreground ,dracula-cyan)
                (font-lock-regexp-grouping-construct :foreground ,dracula-purple)
                (font-lock-string-face :foreground ,light-blue)
-               (font-lock-type-face :inherit font-lock-builtin-face)
+               (font-lock-type-face :foreground ,dracula-yellow)
                (font-lock-variable-name-face :foreground ,dracula-fg :weight bold)
                (font-lock-warning-face :inherit warning :background ,bg2)
                ;; ansi-color

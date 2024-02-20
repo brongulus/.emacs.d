@@ -1,1 +1,12 @@
-.doom.d/webkit/cookies .doom.d/webkit/history
+.doom.d/webkit/cookies
+.doom.d/webkit/history
+auto-save-list/
+elpa/
+undo-fu-session/
+org-persist/
+transient/
+recentf
+history
+ido.last
+places
+tramp

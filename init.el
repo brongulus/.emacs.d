@@ -77,8 +77,7 @@
       make-backup-files nil
       create-lockfiles nil
       uniquify-buffer-name-style 'forward
-      global-auto-revert-non-file-buffers t
-      flymake-suppress-zero-counters t)
+      global-auto-revert-non-file-buffers t)
 
 (with-eval-after-load 'xref
   (setq xref-search-program 'ripgrep
@@ -92,7 +91,6 @@
 (fset 'display-startup-echo-area-message'ignore)
 (add-hook 'prog-mode-hook (electric-pair-mode t))
 (add-hook 'prog-mode-hook (show-paren-mode t))
-(add-hook 'prog-mode-hook #'flymake-mode)
 (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
 (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
 (save-place-mode 1)
@@ -191,6 +189,19 @@
   (isearch-wrap-pause 'no)
   (isearch-lazy-count t)
   (search-whitespace-regexp ".*?"))
+
+(use-package flymake
+  :ensure nil
+  :hook (prog-mode . flymake-mode)
+  :config
+  (setq flymake-suppress-zero-counters t)
+  (with-eval-after-load 'eldoc
+    ;; Show flymake diagnostics first.
+    (setq eldoc-documentation-functions
+          (cons #'flymake-eldoc-function
+                (remove #'flymake-eldoc-function eldoc-documentation-functions)))
+    ;; Show all eldoc feedback.
+    (setq eldoc-documentation-strategy #'eldoc-documentation-compose)))
 
 (use-package recentf
   :ensure nil
@@ -438,10 +449,24 @@
 
 (setq delete-active-region t)
 
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (message "Emacs ready in %s with %d garbage collections."
+                     (format "%.2f seconds"
+                             (float-time
+                              (time-subtract after-init-time before-init-time)))
+                     gcs-done)))
+
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(benchmark-init with-editor avy eat howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(esup benchmark-init with-editor avy eat howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(widget-button ((t (:foreground unspecified)))))
