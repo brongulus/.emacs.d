@@ -102,6 +102,8 @@
 
    ;; Custom
    '(ansi-color-bright-green ((t (:bold t :foreground "green2"))))
+   '(line-number ((t (:foreground "grey50"))))
+   '(line-number-current-line ((t (:foreground "black"))))
    ;; Done
    ))
 

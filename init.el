@@ -56,6 +56,7 @@
               custom-safe-themes t
               ring-bell-function 'ignore
               use-short-answers t
+              initial-major-mode 'fundamental-mode
               ;; dired
               dired-dwim-target t
               dired-auto-revert-buffer t
@@ -109,6 +110,7 @@
 
 (global-set-key (kbd "M-s r") #'query-replace)
 (global-set-key (kbd "M-s R") #'query-replace-regexp)
+(global-set-key (kbd "C-h '") #'describe-face)
 (global-set-key (kbd "C--") #'(lambda () (interactive) (dired "/data/data/com.termux/files/home/")))
 (global-set-key (kbd "C-'") #'(lambda () (interactive)
                                 (term "/data/data/com.termux/files/usr/bin/fish")))
@@ -294,14 +296,15 @@
 
 (use-package meow
   :demand t
+  :init (meow-global-mode 1)
   :config
-  (meow-global-mode 1)
   (defun meow-setup()
     (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
           meow-keypad-leader-dispatch ctl-x-map)
     (define-key meow-insert-state-keymap (kbd "j") #'my-jk)
     (with-eval-after-load 'dired
-      (define-key dired-mode-map "-" 'dired-up-directory))
+      (define-key dired-mode-map "-" 'dired-up-directory)
+      (define-key dired-mode-map "E" 'wdired-change-to-wdired-mode))
     (global-set-key (kbd "M-<right>") 'windmove-right)
     (global-set-key (kbd "M-<left>") 'windmove-left)
     (global-set-key (kbd "M-<up>") 'windmove-up)
@@ -313,23 +316,6 @@
      '("j" . meow-next)
      '("k" . meow-prev)
      '("<escape>" . ignore))
-    (meow-leader-define-key
-     ;; SPC j/k will run the original command in MOTION state.
-     '("j" . "H-j")
-     '("k" . "H-k")
-     ;; Use SPC (0-9) for digit arguments.
-     '("1" . meow-digit-argument)
-     '("2" . meow-digit-argument)
-     '("3" . meow-digit-argument)
-     '("4" . meow-digit-argument)
-     '("5" . meow-digit-argument)
-     '("6" . meow-digit-argument)
-     '("7" . meow-digit-argument)
-     '("8" . meow-digit-argument)
-     '("9" . meow-digit-argument)
-     '("0" . meow-digit-argument)
-     '("/" . meow-keypad-describe-key)
-     '("?" . meow-cheatsheet))
     (meow-normal-define-key
      '("0" . meow-expand-0)
      '("9" . meow-expand-9)
@@ -393,7 +379,8 @@
      '("z" . meow-pop-selection)
      '("Z" . undo-fu-only-redo)
      '("+" . meow-block)
-     '("-" . dired-jump)
+     '("-" . negative-argument)
+     '("\\" . dired-jump)
      '("*" . isearch-forward-symbol-at-point)
      '("/" . isearch-forward)
      '("'" . repeat)
