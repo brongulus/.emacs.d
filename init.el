@@ -201,7 +201,9 @@
   :bind (("C-`"   . popper-toggle)
          ("M-`"   . popper-cycle)
          ("C-M-`" . popper-toggle-type))
-  :config
+  :hook ((minibuffer-setup . popper-mode)
+         (minibuffer-setup . popper-echo-mode))
+  :init
   (setq popper-reference-buffers
         '("\\*Messages\\*"
           "Output\\*$"
@@ -216,9 +218,7 @@
           "^\\*eshell.*\\*$" eshell-mode
           "^\\*term.*\\*$" term-mode)
         popper-mode-line nil
-        popper-window-height 0.33)
-  (popper-mode +1)
-  (popper-echo-mode +1))
+        popper-window-height 0.33))
 
 (use-package orderless
   :after minibuffer
