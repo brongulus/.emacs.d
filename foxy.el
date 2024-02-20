@@ -42,10 +42,10 @@
 (require 'cl-lib)
 (require 'files)
 
-(require 'widget)
+;; (require 'widget)
+;; (require 'wid-edit)
 (if (package-installed-p 'diff-lisp)
     (require 'diff-lisp))
-(eval-when-compile (require 'wid-edit))
 
 ;;;; Competitive Companion
 ;; https://stackoverflow.com/a/6200347
@@ -216,197 +216,197 @@ Given a step of 1 (the default), will go to the next file. -1 means previous fil
 
 ;;;; TODO: Widget
 
-(defface persistent-variable '((t :inherit custom-variable-tag
-                                :height 1.2
-                                :weight semi-bold))
-  "Face for Persistent menu headers.")
+;; (defface persistent-variable '((t :inherit custom-variable-tag
+;;                                 :height 1.2
+;;                                 :weight semi-bold))
+;;   "Face for Persistent menu headers.")
 
-(custom-set-faces
- `(widget-button ((t (:foreground unspecified)))))
+;; (custom-set-faces
+;;  `(widget-button ((t (:foreground unspecified)))))
 
-(defmacro with-visible-org-buffer (body)
-  `(if-let
-       ((win (seq-find (lambda (w)
-                         (eq
-                          (buffer-mode (window-buffer w))
-                         'org-mode))
-              (window-list))))
-       (with-current-buffer (window-buffer win)
-        (progn ,body))
-     (message "No org-buffer visible!")))
+;; (defmacro with-visible-org-buffer (body)
+;;   `(if-let
+;;        ((win (seq-find (lambda (w)
+;;                          (eq
+;;                           (buffer-mode (window-buffer w))
+;;                          'org-mode))
+;;               (window-list))))
+;;        (with-current-buffer (window-buffer win)
+;;         (progn ,body))
+;;      (message "No org-buffer visible!")))
 
-(defmacro persistent-choice (desc val choices notify-func)
-  `(progn
-    (widget-create 'menu-choice
-     :format
-     (concat "%{%t%}"
-      (propertize " " 'display
-       '(space :align-to 20))
-      "%[%v%]")
-     :tag ,desc
-     :sample-face 'persistent-variable
-     :value ,val
-     ;; :help-echo "Choose color theme"
-     :notify #',notify-func
-     ,@(cl-loop for (choice-tag . choice-val) in choices
-        collect
-        `'(choice-item :tag ,choice-tag :value ,choice-val)))
-    (widget-insert "\n")))
+;; (defmacro persistent-choice (desc val choices notify-func)
+;;   `(progn
+;;     (widget-create 'menu-choice
+;;      :format
+;;      (concat "%{%t%}"
+;;       (propertize " " 'display
+;;        '(space :align-to 20))
+;;       "%[%v%]")
+;;      :tag ,desc
+;;      :sample-face 'persistent-variable
+;;      :value ,val
+;;      ;; :help-echo "Choose color theme"
+;;      :notify #',notify-func
+;;      ,@(cl-loop for (choice-tag . choice-val) in choices
+;;         collect
+;;         `'(choice-item :tag ,choice-tag :value ,choice-val)))
+;;     (widget-insert "\n")))
 
-(defmacro persistent-toggler (desc var &optional var-values on-string off-string)
-  `(progn
-     (widget-insert (propertize ,desc 'face 'persistent-variable))
-     (widget-insert (propertize " " 'display '(space :align-to 20)))
-     ,(if (not var-values)
-          `(widget-create 'toggle
-            :value (with-visible-org-buffer ,var)
-            :on (concat
-                 (propertize ,(or on-string " on ")
-                  'face '(:inherit success :box t
-                          :weight semi-bold :slant italic
-                          :height 1.2)))
-            :off (concat
-                  (propertize ,(or off-string " off ")
-                   'face '(:inherit error :box t
-                           :weight semi-bold
-                           :height 1.2 )))
-            :notify
-            (lambda (widget &rest ignore)
-              (with-visible-org-buffer
-               (if (commandp ',var)
-                   (,var (if (widget-value widget) 1 0))
-                 (setq ,var (widget-value widget))))))
-        `(widget-create 'toggle
-          :value (eq ,var ',(caar var-values))
-          :on
-          (concat
-           (propertize ,(cdr (car var-values))
-            'face '(:box t :weight semi-bold :slant italic
-                    :inherit success :height 1.2))
-           "  "
-           (propertize ,(cdr (cadr var-values))
-            'face 'shadow
-                  ;; '(:box t :weight semi-bold
-                  ;;   :inherit shadow :height 1.2)
-            ))
-          :off (concat
-                (propertize ,(cdr (car var-values))
-                 'face 'shadow
-                       ;; '(:box t :weight semi-bold
-                       ;;   :inherit shadow :height 1.2)
-                       )
-                "  "
-                (propertize ,(cdr (cadr var-values))
-                 'face '(:box t :weight semi-bold :slant italic
-                         :inherit success :height 1.2)))
-          ;; :notify (lambda (widget &rest _)
-          ;;           (setq org-latex-preview-default-process
-          ;;            (if (widget-value widget)
-          ;;                ',(caar var-values) ',(caadr var-values))))
-          ))
-     (widget-insert "\n")))
+;; (defmacro persistent-toggler (desc var &optional var-values on-string off-string)
+;;   `(progn
+;;      (widget-insert (propertize ,desc 'face 'persistent-variable))
+;;      (widget-insert (propertize " " 'display '(space :align-to 20)))
+;;      ,(if (not var-values)
+;;           `(widget-create 'toggle
+;;             :value (with-visible-org-buffer ,var)
+;;             :on (concat
+;;                  (propertize ,(or on-string " on ")
+;;                   'face '(:inherit success :box t
+;;                           :weight semi-bold :slant italic
+;;                           :height 1.2)))
+;;             :off (concat
+;;                   (propertize ,(or off-string " off ")
+;;                    'face '(:inherit error :box t
+;;                            :weight semi-bold
+;;                            :height 1.2 )))
+;;             :notify
+;;             (lambda (widget &rest ignore)
+;;               (with-visible-org-buffer
+;;                (if (commandp ',var)
+;;                    (,var (if (widget-value widget) 1 0))
+;;                  (setq ,var (widget-value widget))))))
+;;         `(widget-create 'toggle
+;;           :value (eq ,var ',(caar var-values))
+;;           :on
+;;           (concat
+;;            (propertize ,(cdr (car var-values))
+;;             'face '(:box t :weight semi-bold :slant italic
+;;                     :inherit success :height 1.2))
+;;            "  "
+;;            (propertize ,(cdr (cadr var-values))
+;;             'face 'shadow
+;;                   ;; '(:box t :weight semi-bold
+;;                   ;;   :inherit shadow :height 1.2)
+;;             ))
+;;           :off (concat
+;;                 (propertize ,(cdr (car var-values))
+;;                  'face 'shadow
+;;                        ;; '(:box t :weight semi-bold
+;;                        ;;   :inherit shadow :height 1.2)
+;;                        )
+;;                 "  "
+;;                 (propertize ,(cdr (cadr var-values))
+;;                  'face '(:box t :weight semi-bold :slant italic
+;;                          :inherit success :height 1.2)))
+;;           ;; :notify (lambda (widget &rest _)
+;;           ;;           (setq org-latex-preview-default-process
+;;           ;;            (if (widget-value widget)
+;;           ;;                ',(caar var-values) ',(caadr var-values))))
+;;           ))
+;;      (widget-insert "\n")))
 
-(defun persistent-toggle ()
-  "Show or hide the persistent menu."
-  (interactive)
-  (if-let ((win (cl-some (lambda (w)
-                           (and (string= (buffer-name (window-buffer w))
-                                   "*persistent*")
-                                w))
-                         (window-list))))
-      (delete-window win)
-    (persistent-make-buffer)))
+;; (defun persistent-toggle ()
+;;   "Show or hide the persistent menu."
+;;   (interactive)
+;;   (if-let ((win (cl-some (lambda (w)
+;;                            (and (string= (buffer-name (window-buffer w))
+;;                                    "*persistent*")
+;;                                 w))
+;;                          (window-list))))
+;;       (delete-window win)
+;;     (persistent-make-buffer)))
 
-(define-key emacs-lisp-mode-map (kbd "<f6>") #'persistent-toggle)
+;; (define-key emacs-lisp-mode-map (kbd "<f6>") #'persistent-toggle)
 
-(defun persistent-make-buffer ()
-  "Create the test buffer."
-  (interactive)
-  (with-current-buffer (get-buffer-create "*tests*")
-    (let ((display-buffer-mark-dedicated t))
-      (display-buffer (current-buffer)
-                      '(display-buffer-in-side-window
-                        (slot . -20)
-                        (direction . right)
-                        (side . right)
-                        (window-width . 40)
-                        (window-parameters
-                         (dedicated . t)
-                         (no-delete-other-windows . t)))))
-    (let ((inhibit-read-only t)) (erase-buffer))
-    (remove-overlays)
-    (widget-insert "\n           ")
-    (widget-create 'push-button
-                   :format "%{%[[PREVIEW!]%]%}"
-                   ;; :button-prefix "       "
-                   :sample-face '(:height 2.0 :box (:line-width 2))
-                   :help-echo "Preview LaTeX fragments in document"
-                   :notify (lambda (widget &rest _)
-                             (with-visible-org-buffer
-                              (org-latex-preview '(16)))))
-    (widget-insert "\n\n ")
-    ;; hide testcase
-    (widget-create 'push-button
-                   :format "%{%[[test 0]%]%}"
-                   :help-echo "Show/hide testcase input"
-                   :notify (lambda (widget &rest _)))
-    (widget-insert "  ")
-    ;; edit tc
-    (widget-create 'push-button
-                   :format "%{%[[edit]%]%}"
-                   :value "in1.txt"
-                   :help-echo "Edit the current testcase"
-                   :notify (lambda (widget &rest ignore)
-                             (message "Switch to: %s"
-                                      (widget-value widget))
-                             (display-buffer
-                              (find-file-noselect
-                               (file-name-concat
-                                "/mnt/Data/Documents/problems/Codeforces/1842/a/"
-                                (widget-value widget)))
-                              '((display-buffer-reuse-window
-                                 display-buffer-reuse-mode-window
-                                 display-buffer-use-some-window)))))
-    (widget-insert "  ")
-    ;; run tc
-    (widget-create 'push-button
-                   :format "%{%[[run]%]%}"
-                   :value "in1.txt"
-                   :help-echo "Run the current testcase"
-                   :notify (lambda (widget &rest ignore)
-                             (message "Running testcase")
-                             (compile
-                              (concat "g++ "
-                               "/mnt/Data/Documents/problems/Codeforces/1842/a/a.cpp"
-                                      " && ./a.out < "
-                               (file-name-concat
-                                "/mnt/Data/Documents/problems/Codeforces/1842/a/"
-                                (widget-value widget))))))
-    (widget-insert "\n")
-    (widget-create 'editable-field ;; FIXME (widget-insert)
-                   :format "%{%v%}"
-                   :value-face 'font-lock-comment-face
-                   :value
-                    (foxy-read-file
-                     "/mnt/Data/Documents/problems/Codeforces/1842/a/in1.txt")
-                   :indent 2
-                    )
+;; (defun persistent-make-buffer ()
+;;   "Create the test buffer."
+;;   (interactive)
+;;   (with-current-buffer (get-buffer-create "*tests*")
+;;     (let ((display-buffer-mark-dedicated t))
+;;       (display-buffer (current-buffer)
+;;                       '(display-buffer-in-side-window
+;;                         (slot . -20)
+;;                         (direction . right)
+;;                         (side . right)
+;;                         (window-width . 40)
+;;                         (window-parameters
+;;                          (dedicated . t)
+;;                          (no-delete-other-windows . t)))))
+;;     (let ((inhibit-read-only t)) (erase-buffer))
+;;     (remove-overlays)
+;;     (widget-insert "\n           ")
+;;     (widget-create 'push-button
+;;                    :format "%{%[[PREVIEW!]%]%}"
+;;                    ;; :button-prefix "       "
+;;                    :sample-face '(:height 2.0 :box (:line-width 2))
+;;                    :help-echo "Preview LaTeX fragments in document"
+;;                    :notify (lambda (widget &rest _)
+;;                              (with-visible-org-buffer
+;;                               (org-latex-preview '(16)))))
+;;     (widget-insert "\n\n ")
+;;     ;; hide testcase
+;;     (widget-create 'push-button
+;;                    :format "%{%[[test 0]%]%}"
+;;                    :help-echo "Show/hide testcase input"
+;;                    :notify (lambda (widget &rest _)))
+;;     (widget-insert "  ")
+;;     ;; edit tc
+;;     (widget-create 'push-button
+;;                    :format "%{%[[edit]%]%}"
+;;                    :value "in1.txt"
+;;                    :help-echo "Edit the current testcase"
+;;                    :notify (lambda (widget &rest ignore)
+;;                              (message "Switch to: %s"
+;;                                       (widget-value widget))
+;;                              (display-buffer
+;;                               (find-file-noselect
+;;                                (file-name-concat
+;;                                 "/mnt/Data/Documents/problems/Codeforces/1842/a/"
+;;                                 (widget-value widget)))
+;;                               '((display-buffer-reuse-window
+;;                                  display-buffer-reuse-mode-window
+;;                                  display-buffer-use-some-window)))))
+;;     (widget-insert "  ")
+;;     ;; run tc
+;;     (widget-create 'push-button
+;;                    :format "%{%[[run]%]%}"
+;;                    :value "in1.txt"
+;;                    :help-echo "Run the current testcase"
+;;                    :notify (lambda (widget &rest ignore)
+;;                              (message "Running testcase")
+;;                              (compile
+;;                               (concat "g++ "
+;;                                "/mnt/Data/Documents/problems/Codeforces/1842/a/a.cpp"
+;;                                       " && ./a.out < "
+;;                                (file-name-concat
+;;                                 "/mnt/Data/Documents/problems/Codeforces/1842/a/"
+;;                                 (widget-value widget))))))
+;;     (widget-insert "\n")
+;;     (widget-create 'editable-field ;; FIXME (widget-insert)
+;;                    :format "%{%v%}"
+;;                    :value-face 'font-lock-comment-face
+;;                    :value
+;;                     (foxy-read-file
+;;                      "/mnt/Data/Documents/problems/Codeforces/1842/a/in1.txt")
+;;                    :indent 2
+;;                     )
 
-    ;; TODO: Time (ms) and next test
-    (widget-insert "\n\n\n\n")
+;;     ;; TODO: Time (ms) and next test
+;;     (widget-insert "\n\n\n\n")
    
-    (use-local-map
-     (make-composed-keymap
-      (list (let ((map (make-sparse-keymap)))
-              (define-key map (kbd "<mouse-1>") 'widget-button-click)
-              (define-key map (kbd "RET") 'widget-button-press)
-              (define-key map (kbd "q") 'kill-buffer-and-window)
-              (define-key map (kbd "<f6>") 'kill-buffer-and-window)
-              (if (bound-and-true-p evil-mode)
-                  (evil-make-overriding-map map 'normal))
-              map))
-      widget-keymap))
-    (widget-setup)))
+;;     (use-local-map
+;;      (make-composed-keymap
+;;       (list (let ((map (make-sparse-keymap)))
+;;               (define-key map (kbd "<mouse-1>") 'widget-button-click)
+;;               (define-key map (kbd "RET") 'widget-button-press)
+;;               (define-key map (kbd "q") 'kill-buffer-and-window)
+;;               (define-key map (kbd "<f6>") 'kill-buffer-and-window)
+;;               (if (bound-and-true-p evil-mode)
+;;                   (evil-make-overriding-map map 'normal))
+;;               map))
+;;       widget-keymap))
+;;     (widget-setup)))
 
 (provide 'foxy)
 ;;; foxy.el ends here

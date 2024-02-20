@@ -720,7 +720,8 @@ read it before opening a new issue about your will.")
 (setq-default global-mode-string nil
               mode-line-end-spaces
               '(" " mode-line-misc-info "  "
-                (vc-mode vc-mode) " Ln %l, %p %m "))
+                (vc-mode vc-mode)
+                " Ln %l, %p %m "))
 (setq-default mode-line-format
               '(;; (:eval evil-mode-line-tag)
                 (:eval (when (mode-line-window-selected-p)

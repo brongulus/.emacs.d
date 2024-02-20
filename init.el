@@ -2,52 +2,7 @@
 ;;; --------------------------
 ;;; Defaults? Better? Maybe...
 ;;; --------------------------
-(setq read-process-output-max (* 1024 1024)) ;; 1mb
-(setq gc-cons-threshold 100000000)
-
-(use-package package
-  :ensure nil
-  :init (package-initialize)
-  :config
-  ;; (push '("melpa" . "https://melpa.org/packages/") package-archives)
-  (unless package-archive-contents
-    (package-refresh-contents))
-  (setq package-native-compile t
-        package-install-upgrade-built-in t
-        package-check-signature nil
-        use-package-always-ensure t
-        use-package-always-defer t
-        use-package-enable-imenu-support t
-        use-package-expand-minimally t))
-
-;; Android
-(when (string-equal system-type "android")
-  (let ((termuxpath "/data/data/com.termux/files/usr/"))
-    (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin"))
-    (setenv "LD_LIBRARY_PATH" (concat (getenv "LD_LIBRARY_PATH") ":" termuxpath "lib"))
-    (push (concat termuxpath "bin") exec-path))
-  (setq overriding-text-conversion-style nil)
-  (set-frame-font "monospace 16" nil t))
-
-(when (member "VictorMono Nerd Font Mono" (font-family-list))
-  (set-frame-font "VictorMono Nerd Font Mono 16" nil t))
-;; (set-face-attribute
-;;  'variable-pitch nil :family "Roboto" :height 180)
-
-(setq-default default-frame-alist
-              '((menu-bar-lines . 0)
-                (tool-bar-lines . 0)
-                (vertical-scroll-bars)
-                (left-fringe . 0)
-                (right-fringe . 0)
-                (internal-border-width . 20)
-                (fullscreen . fullboth))
-              cursor-in-non-selected-windows nil
-              bidi-display-reordering 'left-to-right
-              bidi-inhibit-bpa t
-              bidi-paragraph-direction 'left-to-right
-              ;; misc
-              line-spacing 3
+(setq-default line-spacing 3
               cursor-type 'bar
               tab-width 2
               indent-tabs-mode nil
@@ -72,7 +27,8 @@
               tab-bar-separator "")
 
 ;;; Misc
-(setq inhibit-startup-screen t
+(setq read-process-output-max (* 2 1024 1024)
+      inhibit-startup-screen t
       load-prefer-newer t
       make-backup-files nil
       create-lockfiles nil
@@ -93,10 +49,11 @@
 (add-hook 'prog-mode-hook (show-paren-mode t))
 (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
 (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
-(save-place-mode 1)
-(savehist-mode)
+(with-eval-after-load 'minibuffer
+  (save-place-mode 1)
+  (savehist-mode)
+  (global-auto-revert-mode t))
 (blink-cursor-mode -1)
-(global-auto-revert-mode t)
 (global-set-key [remap kill-buffer] 'kill-this-buffer)
 ;; Load theme based on the time of the day
 (let ((hour (substring (current-time-string) 11 13)))
@@ -126,10 +83,26 @@
 ;;; -------------------------------------------------------------
 ;;; Built-in packages (icomplete, project, recentf, dired, ediff)
 ;;; -------------------------------------------------------------
+(use-package package
+  :ensure nil
+  :init (package-initialize)
+  :config
+  ;; (push '("melpa" . "https://melpa.org/packages/") package-archives)
+  (unless package-archive-contents
+    (package-refresh-contents))
+  (setq package-native-compile t
+        package-install-upgrade-built-in t
+        package-check-signature nil
+        use-package-always-ensure t
+        use-package-always-defer t
+        use-package-enable-imenu-support t
+        use-package-expand-minimally t))
+
 (use-package icomplete
   :init
   (fido-vertical-mode)
   :bind (:map icomplete-fido-mode-map
+              ("C-<return>" . icomplete-fido-exit)
               ("<backspace>" . icomplete-fido-backward-updir)
               ("TAB" . icomplete-forward-completions)
               ("<backtab>" . icomplete-backward-completions))
@@ -159,7 +132,7 @@
         icomplete-compute-delay 0))
 
 (use-package vc
-  :defer 1
+  :defer t
   :ensure nil
   :bind (("C-x v f" . (lambda () (interactive)
                         (vc-git-push t)))
@@ -205,7 +178,6 @@
 
 (use-package recentf
   :ensure nil
-  :init (recentf-mode 1)
   :bind ("C-x f" . #'recentf-open)
   :custom
   (recentf-max-menu-items 25)
@@ -229,7 +201,7 @@
   :bind (("C-`"   . popper-toggle)
          ("M-`"   . popper-cycle)
          ("C-M-`" . popper-toggle-type))
-  :init
+  :config
   (setq popper-reference-buffers
         '("\\*Messages\\*"
           "Output\\*$"
@@ -401,7 +373,7 @@
 ;;; -------------------------------------------------
 ;;; Competitive programming setup (snippets and foxy)
 ;;; -------------------------------------------------
-(define-skeleton cpp-header "Base c++ template for competitive programming." nil
+(define-skeleton cpp-header "Base c++ template for competitive programming." ""
   "#include<bits/stdc++.h>\n"
   "using namespace std;\n"
   "\n#ifdef LOCAL\n"
@@ -444,29 +416,14 @@
 (add-hook 'c++-mode-hook 'abbrev-mode)
 (add-hook 'c++-mode-hook 'init-c++-abbrevs)
 
-(load "~/.emacs.d/foxy" nil t)
+(autoload 'foxy-listen-start "~/.emacs.d/foxy" nil t)
+(autoload 'foxy-run-all-tests "~/.emacs.d/foxy" nil t)
 (setq foxy-compile-command "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 ")
 
 (setq delete-active-region t)
 
-(add-hook 'emacs-startup-hook
-          (lambda ()
-            (message "Emacs ready in %s with %d garbage collections."
-                     (format "%.2f seconds"
-                             (float-time
-                              (time-subtract after-init-time before-init-time)))
-                     gcs-done)))
-
+(provide 'init)
+;;; init.el ends here
 (custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(esup benchmark-init with-editor avy eat howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(widget-button ((t (:foreground unspecified)))))
+   '(eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
