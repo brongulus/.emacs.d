@@ -5,6 +5,22 @@
 (setq read-process-output-max (* 1024 1024)) ;; 1mb
 (setq gc-cons-threshold 100000000)
 
+(use-package package
+  :ensure nil
+  :init (package-initialize)
+  :config
+  ;; (push '("melpa" . "https://melpa.org/packages/") package-archives)
+  (unless package-archive-contents
+    (package-refresh-contents))
+  (setq package-native-compile t
+        package-install-upgrade-built-in t
+        package-check-signature nil
+        use-package-always-ensure t
+        use-package-always-defer t
+        use-package-enable-imenu-support t
+        use-package-expand-minimally t))
+
+;; Android
 (when (string-equal system-type "android")
   (let ((termuxpath "/data/data/com.termux/files/usr/"))
     (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin"))
@@ -12,6 +28,7 @@
     (push (concat termuxpath "bin") exec-path))
   (setq overriding-text-conversion-style nil)
   (set-frame-font "monospace 16" nil t))
+
 (when (member "VictorMono Nerd Font Mono" (font-family-list))
   (set-frame-font "VictorMono Nerd Font Mono 16" nil t))
 ;; (set-face-attribute
@@ -39,13 +56,6 @@
               custom-safe-themes t
               ring-bell-function 'ignore
               use-short-answers t
-              vc-follow-symlinks t
-              ;; tramp
-              vc-handled-backends '(Git)
-              tramp-default-method "ssh"
-              remote-file-name-inhibit-cache nil
-              remote-file-name-inhibit-locks t
-              tramp-verbose 1
               ;; dired
               dired-dwim-target t
               dired-auto-revert-buffer t
@@ -59,39 +69,29 @@
               tab-bar-new-button-show nil
               tab-bar-show 1
               tab-bar-separator "")
-;; tab-bar-tab-name-function #'dracula-tab-line-name-buffer)
 
+;;; Misc
 (setq inhibit-startup-screen t
       load-prefer-newer t
-      isearch-wrap-pause 'no
-      isearch-lazy-count t
-      search-whitespace-regexp ".*?"
       make-backup-files nil
       create-lockfiles nil
-      uniquify-buffer-name-style 'forward)
+      uniquify-buffer-name-style 'forward
+      global-auto-revert-non-file-buffers t
+      flymake-suppress-zero-counters t)
 
-;;; SSH Stuff
-(setq project-vc-merge-submodules nil
-      vc-annotate-background-mode t)
-(customize-set-variable
- 'tramp-ssh-controlmaster-options
- (concat
-  "-o ControlPath=\~/.ssh/control/ssh-%%r@%%h:%%p "
-  "-o ControlMaster=auto -o ControlPersist=yes"))
-(with-eval-after-load 'tramp
-  (add-to-list 'tramp-remote-path 'tramp-own-remote-path))
-(setq xref-search-program 'ripgrep
-      xref-auto-jump-to-first-xref nil ; 'move
-      xref-show-definitions-function 'xref-show-definitions-completing-read
-      xref-show-xrefs-function 'xref-show-definitions-completing-read) ;; xref-goto-xref
+(with-eval-after-load 'xref
+  (setq xref-search-program 'ripgrep
+        xref-auto-jump-to-first-xref nil ; 'move
+        xref-show-definitions-function 'xref-show-definitions-completing-read
+        xref-show-xrefs-function 'xref-show-definitions-completing-read))
 ;; #'dabbrev-completion resets the global variables first so we do the same
 (advice-add #'dabbrev-capf :before #'dabbrev--reset-global-variables)
 (add-hook 'completion-at-point-functions #'dabbrev-capf 100)
 
-;;; Misc
 (fset 'display-startup-echo-area-message'ignore)
 (add-hook 'prog-mode-hook (electric-pair-mode t))
 (add-hook 'prog-mode-hook (show-paren-mode t))
+(add-hook 'prog-mode-hook #'flymake-mode)
 (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
 (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
 (save-place-mode 1)
@@ -99,8 +99,6 @@
 (blink-cursor-mode -1)
 (global-auto-revert-mode t)
 (global-set-key [remap kill-buffer] 'kill-this-buffer)
-(setq global-auto-revert-non-file-buffers t
-      auto-revert-verbose nil)
 ;; Load theme based on the time of the day
 (let ((hour (substring (current-time-string) 11 13)))
   (if (and (string-lessp hour "17") (string-greaterp hour "08"))
@@ -108,6 +106,22 @@
     (load-theme 'dracula :no-confirm)))
 (defadvice load-theme (before theme-dont-propagate activate)
   (mapc #'disable-theme custom-enabled-themes))
+
+(global-set-key (kbd "M-s r") #'query-replace)
+(global-set-key (kbd "M-s R") #'query-replace-regexp)
+(global-set-key (kbd "C--") #'(lambda () (interactive) (dired "/data/data/com.termux/files/home/")))
+(global-set-key (kbd "C-'") #'(lambda () (interactive)
+                                (term "/data/data/com.termux/files/usr/bin/fish")))
+(add-hook 'dired-mode-hook #'dired-hide-details-mode)
+
+(with-eval-after-load 'ediff
+  (setq ediff-split-window-function 'split-window-horizontally
+        ediff-window-setup-function 'ediff-setup-windows-plain)
+  (setq-local display-line-numbers nil))
+
+(defadvice term-handle-exit
+    (after term-kill-buffer-on-exit activate)
+  (kill-buffer))
 
 ;;; -------------------------------------------------------------
 ;;; Built-in packages (icomplete, project, recentf, dired, ediff)
@@ -123,7 +137,7 @@
               ("C-," . embark-act))
   :hook (icomplete-minibuffer-setup . (lambda ()
                                         (setq-local completion-styles '(orderless basic))))
-  :config ;; src: https://www.reddit.com/r/emacs/comments/zl6amy/completionatpoint_using_completingread_icomplete/
+  :config ;; src: https://www.reddit.com/r/emacs/comments/zl6amy/
   (defun completing-read-in-region (start end collection &optional predicate)
     "Prompt for completion of region in the minibuffer if non-unique.
    Use as a value for `completion-in-region-function'."
@@ -133,7 +147,8 @@
            (completion (catch 'done
                          (atomic-change-group
                            (let ((completion
-                                  (completing-read "Completion: " collection predicate nil initial)))
+                                  (completing-read "Completion: "
+                                                   collection predicate nil initial)))
                              (throw 'done completion))))))
       (cond (completion (completion--replace start end completion) t)
             (t (message "No completion") nil))))
@@ -143,60 +158,61 @@
         completions-group t
         icomplete-compute-delay 0))
 
+(use-package vc
+  :defer 1
+  :ensure nil
+  :bind (("C-x v f" . (lambda () (interactive)
+                        (vc-git-push t)))
+         ("C-x v e" . vc-ediff)
+         ("C-x v R" . vc-interactive-rebase))
+  :config
+  (defun vc-interactive-rebase ()
+    (interactive)
+    (with-current-buffer (eshell)
+      (eshell-return-to-prompt)
+      (insert "git rebase -i")
+      (eshell-send-input)))
+  
+  (setq vc-handled-backends '(Git)
+        vc-follow-symlinks t
+        project-vc-merge-submodules nil
+        vc-annotate-background-mode t)
+  
+  (if (string= (car custom-enabled-themes) "dracula")
+      (add-hook 'vc-annotate-mode-hook
+                (lambda ()
+                  (face-remap-add-relative 'default :foreground "black")))))
+
+(use-package isearch
+  :ensure nil
+  :custom
+  (isearch-wrap-pause 'no)
+  (isearch-lazy-count t)
+  (search-whitespace-regexp ".*?"))
+
 (use-package recentf
   :ensure nil
   :init (recentf-mode 1)
+  :bind ("C-x f" . #'recentf-open)
   :custom
   (recentf-max-menu-items 25)
-  (recentf-auto-cleanup 'never)
-  :bind ("C-x f" . #'recentf-open))
+  (recentf-auto-cleanup 'never))
 
-(use-package with-editor
-  :defer 1
-  :hook ((eshell-mode . with-editor-export-git-editor)
-         (eshell-mode . with-editor-export-editor)))
-(defun vc-interactive-rebase ()
-  (interactive)
-  (with-current-buffer (eshell)
-    (eshell-return-to-prompt)
-    (insert "git rebase -i")
-    (eshell-send-input)))
-(global-set-key (kbd "C-x v f") #'(lambda() (interactive)
-                                    (vc-git-push t)))
-(global-set-key (kbd "C-x v e") #'vc-ediff) 
-(global-set-key (kbd "C-x v R") #'vc-interactive-rebase) 
-(global-set-key (kbd "C--") #'(lambda () (interactive) (dired "/data/data/com.termux/files/home/")))
-(global-set-key (kbd "C-'") #'(lambda () (interactive)
-                                (term "/data/data/com.termux/files/usr/bin/fish")))
-(add-hook 'dired-mode-hook #'dired-hide-details-mode)
-
-(with-eval-after-load 'ediff
-  (setq ediff-split-window-function 'split-window-horizontally
-        ediff-window-setup-function 'ediff-setup-windows-plain)
-  (setq-local display-line-numbers nil))
-
-(defadvice term-handle-exit
-    (after term-kill-buffer-on-exit activate)
-  (kill-buffer))
-
+(use-package tramp
+  :config
+  (setq tramp-ssh-controlmaster-options
+        (concat
+         "-o ControlPath=\~/.ssh/control/ssh-%%r@%%h:%%p "
+         "-o ControlMaster=auto -o ControlPersist=yes")
+        tramp-default-method "ssh"
+        remote-file-name-inhibit-cache nil
+        remote-file-name-inhibit-locks t
+        tramp-verbose 1)
+  (add-to-list 'tramp-remote-path 'tramp-own-remote-path))
 ;;; ---------------------------------------------------------------------------------
 ;;; ELPA packages (popper, orderless, marginalia, embark, meow, eat, undo-fu+session)
 ;;; ---------------------------------------------------------------------------------
-(require 'package)
-;; (push '("melpa" . "https://melpa.org/packages/") package-archives)
-(package-initialize)
-(unless package-archive-contents
-  (package-refresh-contents))
-(setq package-native-compile t
-      package-install-upgrade-built-in t
-      package-check-signature nil
-      use-package-always-ensure t
-      use-package-always-defer t
-      use-package-enable-imenu-support t
-      use-package-expand-minimally t)
-
 (use-package popper
-  :ensure t
   :bind (("C-`"   . popper-toggle)
          ("M-`"   . popper-cycle)
          ("C-M-`" . popper-toggle-type))
@@ -220,19 +236,17 @@
   (popper-echo-mode +1))
 
 (use-package orderless
-  :ensure t
+  :after minibuffer
   :custom
   (completion-styles '(orderless basic)))
 
 (use-package marginalia
-  :demand
   :init (marginalia-mode)
   :config
   (setq marginalia-annotator-registry
       (assq-delete-all 'file marginalia-annotator-registry)))
 
 (use-package embark
-  :demand
   :after minibuffer
   :bind ("C-," . embark-act)
   :config
@@ -256,12 +270,13 @@
 
 (use-package eat
   :bind ("C-." . #'eat)
-  :config
-  (add-to-list 'meow-mode-state-list '(eat-mode . insert))
-  (add-to-list 'meow-mode-state-list '(eshell-mode . insert))
-  (add-to-list 'meow-mode-state-list '(log-edit-mode . insert))
   :custom
   (eat-kill-buffer-on-exit t))
+
+(use-package with-editor
+  :defer 1
+  :hook ((eshell-mode . with-editor-export-git-editor)
+         (eshell-mode . with-editor-export-editor)))
 
 (defun my-jk () ;; src: wasamasa
   (interactive)
@@ -291,6 +306,9 @@
     (global-set-key (kbd "M-<left>") 'windmove-left)
     (global-set-key (kbd "M-<up>") 'windmove-up)
     (global-set-key (kbd "M-<down>") 'windmove-down)
+    (push '(eat-mode . insert) meow-mode-state-list)
+    (push '(eshell-mode . insert) meow-mode-state-list)
+    (push '(log-edit-mode . insert) meow-mode-state-list)
     (meow-motion-overwrite-define-key
      '("j" . meow-next)
      '("k" . meow-prev)
@@ -439,10 +457,4 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(with-editor avy eat howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(widget-button ((t (:foreground unspecified)))))
+   '(benchmark-init with-editor avy eat howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
