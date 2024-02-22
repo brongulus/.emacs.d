@@ -256,6 +256,11 @@ read it before opening a new issue about your will.")
                (ansi-color-bright-yellow :foreground ,dracula-yellow
                                          :background ,dracula-yellow
                                          :weight bold)
+               ;; avy
+               (avy-lead-face :inherit secondary-selection :weight bold)
+               (avy-lead-face-0 :inherit secondary-selection :weight bold)
+               (avy-lead-face-1 :inherit secondary-selection :weight bold)
+               (avy-lead-face-2 :inherit secondary-selection :weight bold)
                ;; completions
                (completions-annotations :inherit font-lock-comment-face)
                (completions-common-part :foreground ,dracula-yellow)
@@ -710,23 +715,25 @@ read it before opening a new issue about your will.")
 ;; mode-line
 (with-eval-after-load 'flymake
   (setq-default flymake-mode-line-counter-format
-                '("" flymake-mode-line-error-counter
+                '(flymake-mode-line-error-counter
                   flymake-mode-line-warning-counter
-                  flymake-mode-line-note-counter "")
+                  flymake-mode-line-note-counter)
                 flymake-mode-line-format
-                '(" "
-                  flymake-mode-line-exception
+                '(flymake-mode-line-exception
                   flymake-mode-line-counters)))
 (setq-default global-mode-string nil
               mode-line-end-spaces
-              '(" " mode-line-misc-info "  "
-                (vc-mode vc-mode)
-                " Ln %l, %p %m "))
+              '("" mode-line-misc-info " (" mode-name
+                (:eval (replace-regexp-in-string "^ Git" "" vc-mode)) ")"))
+(defun my/ml-padding ()
+    (let ((r-length (length (format-mode-line mode-line-end-spaces))))
+      (propertize " "
+                  'display `(space :align-to (- right ,r-length)))))
+
 (setq-default mode-line-format
-              '(;; (:eval evil-mode-line-tag)
-                (:eval (when (mode-line-window-selected-p)
+              '((:eval (when (mode-line-window-selected-p)
                          (meow-indicator)))
-                "%e "
+                "%e"
                 (:eval (if (buffer-modified-p)
                            (propertize " %b " 'face '(:slant italic :inverse-video t)
                                        'help-echo (buffer-file-name))
@@ -734,7 +741,9 @@ read it before opening a new issue about your will.")
                 (:eval (when (and (bound-and-true-p flymake-mode)
                                   (mode-line-window-selected-p))
                          flymake-mode-line-format))
-                mode-line-format-right-align
+                (:eval (if (string> emacs-version "29.2")
+                           mode-line-format-right-align
+                         (my/ml-padding)))
                 (:eval (when (mode-line-window-selected-p)
                          mode-line-end-spaces))))
 

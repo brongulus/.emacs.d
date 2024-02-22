@@ -158,9 +158,20 @@
 
 (use-package isearch
   :ensure nil
+  :bind ("C-s" . isearch-forward)
+  :config
+  (repeat-mode 1)
+  (defvar isearch-repeat-map
+    (let ((map (make-sparse-keymap)))
+      (define-key map (kbd "s") #'isearch-repeat-forward)
+      (define-key map (kbd "r") #'isearch-repeat-backward)
+      map))
+  (put 'isearch-repeat-forward  'repeat-map 'isearch-repeat-map)
+  (put 'isearch-repeat-backward 'repeat-map 'isearch-repeat-map)
   :custom
   (isearch-wrap-pause 'no)
   (isearch-lazy-count t)
+  (isearch-allow-scroll 'unlimited)
   (search-whitespace-regexp ".*?"))
 
 (use-package flymake
@@ -225,6 +236,9 @@
   :custom
   (completion-styles '(orderless basic)))
 
+(use-package avy
+  :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer))
+
 (use-package marginalia
   :init (marginalia-mode)
   :config
@@ -284,34 +298,32 @@
   (defun meow-setup()
     (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
           meow-keypad-leader-dispatch ctl-x-map)
+    (dolist (item '(word line block find till))
+      (push `(,item . 0) meow-expand-hint-counts))
     (define-key meow-insert-state-keymap (kbd "j") #'my-jk)
     (with-eval-after-load 'dired
       (define-key dired-mode-map "-" 'dired-up-directory)
       (define-key dired-mode-map "E" 'wdired-change-to-wdired-mode))
-    (global-set-key (kbd "M-<right>") 'windmove-right)
-    (global-set-key (kbd "M-<left>") 'windmove-left)
-    (global-set-key (kbd "M-<up>") 'windmove-up)
-    (global-set-key (kbd "M-<down>") 'windmove-down)
-    (push '(eat-mode . insert) meow-mode-state-list)
-    (push '(eshell-mode . insert) meow-mode-state-list)
-    (push '(log-edit-mode . insert) meow-mode-state-list)
+    (dolist (imode '(eat-mode eshell-mode log-edit-mode))
+      (push `(,imode . insert) meow-mode-state-list))
     (meow-motion-overwrite-define-key
      '("j" . meow-next)
      '("k" . meow-prev)
      '("<escape>" . ignore))
     (meow-normal-define-key
-     '("0" . meow-expand-0)
-     '("9" . meow-expand-9)
-     '("8" . meow-expand-8)
-     '("7" . meow-expand-7)
-     '("6" . meow-expand-6)
-     '("5" . meow-expand-5)
-     '("4" . meow-expand-4)
-     '("3" . meow-expand-3)
-     '("2" . meow-expand-2)
-     '("1" . meow-expand-1)
+     '("0" . meow-digit-argument)
+     '("9" . meow-digit-argument)
+     '("8" . meow-digit-argument)
+     '("7" . meow-digit-argument)
+     '("6" . meow-digit-argument)
+     '("5" . meow-digit-argument)
+     '("4" . meow-digit-argument)
+     '("3" . meow-digit-argument)
+     '("2" . meow-digit-argument)
+     '("1" . meow-digit-argument)
      '("-" . negative-argument)
-     '(";" . meow-reverse)
+     '("C-;" . meow-reverse)
+     '(";" . meow-cancel-selection)
      '("," . meow-inner-of-thing)
      '("." . meow-bounds-of-thing)
      '("[" . meow-beginning-of-thing)
@@ -327,7 +339,7 @@
      '("e" . meow-next-word)
      '("E" . meow-next-symbol)
      '("f" . meow-find)
-     '("g" . meow-cancel-selection)
+     '("g" . avy-goto-char-timer)
      '("G" . meow-grab)
      '("h" . meow-left)
      '("H" . meow-left-expand)
@@ -345,10 +357,11 @@
      '("O" . meow-to-block)
      '("p" . meow-yank)
      '("q" . meow-quit)
-     '("Q" . meow-goto-line)
-     '("r" . meow-replace)
-     '("R" . meow-swap-grab)
-     '("s" . meow-visit)
+     '("Q" . kill-this-buffer)
+     '("r" . replace-regexp)
+     '("R" . kmacro-call-macro)
+     '("s" . kmacro-start-macro)
+     '("S" . kmacro-end-macro)
      '("t" . meow-till)
      '("u" . undo-fu-only-undo)
      '("U" . meow-page-up)
@@ -365,7 +378,10 @@
      '("-" . negative-argument)
      '("\\" . dired-jump)
      '("*" . isearch-forward-symbol-at-point)
+     '("%" . mark-whole-buffer)
      '("/" . isearch-forward)
+     '(">" . indent-rigidly-right)
+     '("<" . indent-rigidly-left)
      '("'" . repeat)
      '("<escape>" . ignore)))
   (meow-setup))
@@ -425,5 +441,15 @@
 (provide 'init)
 ;;; init.el ends here
 (custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
  '(package-selected-packages
    '(eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )

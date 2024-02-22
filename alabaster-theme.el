@@ -42,12 +42,12 @@
 
    ;; Frame
    '(fringe ((t (:background "#f7f7f7"))))
-   `(mode-line ((t (:background "#e8e8e8" :foreground "black"
-                                :overline "black"))))
+   `(mode-line ((t (:background "#e8e8e8" :foreground "black"))))
+                              ;;  :overline "black"))))
    '(mode-line-highlight ((t (:box (:line-width 2 :color "#9599B0")))))
    `(mode-line-inactive
-     ((t (:inherit mode-line :background "#f5f5f5" :foreground "grey20"
-                   :overline ,border-color :weight light))))
+     ((t (:inherit mode-line :background "#f5f5f5" :foreground "grey20"))))
+              ;;     :overline ,border-color :weight light))))
 
    ;; Parens
    `(show-paren-match ((t (:background ,passive-color))))
@@ -102,36 +102,53 @@
 
    ;; Custom
    '(ansi-color-bright-green ((t (:bold t :foreground "green2"))))
+   '(avy-lead-face ((t (:inherit secondary-selection :weight bold))))
+   '(avy-lead-face-0 ((t (:inherit secondary-selection :weight bold))))
+   '(avy-lead-face-1 ((t (:inherit secondary-selection :weight bold))))
+   '(avy-lead-face-2 ((t (:inherit secondary-selection :weight bold))))
    '(line-number ((t (:foreground "grey50"))))
    '(line-number-current-line ((t (:foreground "black"))))
+   '(vertical-border ((t (:foreground "grey"))))
+   '(meow-beacon-indicator ((t (:background "medium spring green"))))
+   `(meow-normal-indicator ((t (:background ,selection-color))))
+   `(meow-insert-indicator ((t (:background ,highlight-color))))
    ;; Done
    ))
 
 ;; mode-line
-(setq-default flymake-mode-line-counter-format
-              '("" flymake-mode-line-error-counter
-                flymake-mode-line-warning-counter
-                flymake-mode-line-note-counter "")
-              global-mode-string nil
-              flymake-mode-line-format
-              '(" "
-                flymake-mode-line-exception
-                flymake-mode-line-counters)
-              mode-line-end-spaces '(" " mode-line-misc-info "  "
-                                      (vc-mode vc-mode) " Ln %l, %p %m "))
+(with-eval-after-load 'flymake
+  (setq-default flymake-mode-line-counter-format
+                '(flymake-mode-line-error-counter
+                  flymake-mode-line-warning-counter
+                  flymake-mode-line-note-counter)
+                flymake-mode-line-format
+                '(flymake-mode-line-exception
+                  flymake-mode-line-counters)))
+(setq-default global-mode-string nil
+              mode-line-end-spaces
+              '("" mode-line-misc-info " (" mode-name
+                (:eval (replace-regexp-in-string "^ Git" "" vc-mode)) ")"))
+(defun my/ml-padding ()
+    (let ((r-length (length (format-mode-line mode-line-end-spaces))))
+      (propertize " "
+                  'display `(space :align-to (- right ,r-length)))))
+
 (setq-default mode-line-format
-              '(;; (:eval evil-mode-line-tag)
-                (:eval (when (mode-line-window-selected-p)
+              '((:eval (when (mode-line-window-selected-p)
                          (meow-indicator)))
-                "%e "
+                "%e"
                 (:eval (if (buffer-modified-p)
-                           (propertize " %b " 'face '(:slant italic :inverse-video t)
+                           (propertize " %b " 'face '(:slant italic
+                                                      :foreground "#AAAAAA"
+                                                      :inverse-video t)
                                        'help-echo (buffer-file-name))
                          (propertize " %b " 'help-echo (buffer-file-name))))
                 (:eval (when (and (bound-and-true-p flymake-mode)
                                   (mode-line-window-selected-p))
                          flymake-mode-line-format))
-                mode-line-format-right-align
+                (:eval (if (string> emacs-version "29.2")
+                           mode-line-format-right-align
+                         (my/ml-padding)))
                 (:eval (when (mode-line-window-selected-p)
                          mode-line-end-spaces))))
 
