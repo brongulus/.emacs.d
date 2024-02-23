@@ -72,10 +72,11 @@
 (global-set-key (kbd "C-'") #'(lambda () (interactive)
                                 (term "/data/data/com.termux/files/usr/bin/fish")))
 (add-hook 'dired-mode-hook #'dired-hide-details-mode)
-
+(push '("\\.bin\\'" . hexl-mode) auto-mode-alist)
 (with-eval-after-load 'ediff
   (setq ediff-split-window-function 'split-window-horizontally
-        ediff-window-setup-function 'ediff-setup-windows-plain)
+        ediff-window-setup-function 'ediff-setup-windows-plain
+        ediff-keep-variants nil)
   (setq-local display-line-numbers nil))
 
 (defadvice term-handle-exit
@@ -307,12 +308,13 @@
   :config
   (defun meow-setup()
     (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
-          meow-keypad-leader-dispatch ctl-x-map)
+          meow-keypad-leader-dispatch ctl-x-map
+          meow-use-cursor-position-hack t)
     (dolist (item '(word line block find till))
       (push `(,item . 0) meow-expand-hint-counts))
     (define-key meow-insert-state-keymap (kbd "j") #'my-jk)
     (with-eval-after-load 'dired
-      (define-key dired-mode-map "-" 'dired-up-directory)
+      (define-key dired-mode-map "\\" 'dired-up-directory)
       (define-key dired-mode-map "E" 'wdired-change-to-wdired-mode))
     (dolist (imode '(eat-mode eshell-mode log-edit-mode))
       (push `(,imode . insert) meow-mode-state-list))
