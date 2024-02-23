@@ -723,8 +723,7 @@ read it before opening a new issue about your will.")
                   flymake-mode-line-counters)))
 (setq-default global-mode-string nil
               mode-line-end-spaces
-              '("" mode-line-misc-info " (" mode-name
-                (:eval (replace-regexp-in-string "^ Git" "" vc-mode)) ")"))
+              '("" mode-line-misc-info " (" mode-name vc-mode ")"))
 (defun my/ml-padding ()
     (let ((r-length (length (format-mode-line mode-line-end-spaces))))
       (propertize " "

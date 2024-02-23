@@ -2,6 +2,8 @@
 ;;; --------------------------
 ;;; Defaults? Better? Maybe...
 ;;; --------------------------
+(when (member "VictorMono Nerd Font Mono" (font-family-list))
+  (set-frame-font "VictorMono Nerd Font Mono 16" nil t))
 (setq-default line-spacing 3
               cursor-type 'bar
               tab-width 2
@@ -156,11 +158,19 @@
                 (lambda ()
                   (face-remap-add-relative 'default :foreground "black")))))
 
+(use-package repeat
+  :ensure nil
+  :hook (after-init . silent-repeat-mode)
+  :config
+  (defun silent-repeat-mode ()
+    (let ((inhibit-message t)
+          (message-log-max nil))
+      (repeat-mode))))
+
 (use-package isearch
   :ensure nil
   :bind ("C-s" . isearch-forward)
   :config
-  (repeat-mode 1)
   (defvar isearch-repeat-map
     (let ((map (make-sparse-keymap)))
       (define-key map (kbd "s") #'isearch-repeat-forward)
@@ -212,8 +222,8 @@
   :bind (("C-`"   . popper-toggle)
          ("M-`"   . popper-cycle)
          ("C-M-`" . popper-toggle-type))
-  :hook ((minibuffer-setup . popper-mode)
-         (minibuffer-setup . popper-echo-mode))
+  :hook ((after-init . popper-mode)
+         (after-init . popper-echo-mode))
   :init
   (setq popper-reference-buffers
         '("\\*Messages\\*"
@@ -377,7 +387,7 @@
      '("+" . meow-block)
      '("-" . negative-argument)
      '("\\" . dired-jump)
-     '("*" . isearch-forward-symbol-at-point)
+     '("*" . isearch-forward-thing-at-point)
      '("%" . mark-whole-buffer)
      '("/" . isearch-forward)
      '(">" . indent-rigidly-right)
