@@ -55,47 +55,11 @@ The theme has to be reloaded after changing anything in this group."
   :type 'number
   :group 'dracula)
 
-(defcustom dracula-tab-min-width 10
-  "Minimum width of a tab in characters."
-  :type 'integer
-  :group 'tab-bar)
-
-(defcustom dracula-tab-max-width 30
-  "Maximum width of a tab in characters."
-  :type 'integer
-  :group 'tab-bar)
-
 (defcustom dracula-alternate-mode-line-and-minibuffer nil
   "Use less bold and pink in the minibuffer."
   :type 'boolean
   :group 'dracula)
 
-(defun dracula-tab-line-name-buffer (buffer &rest _buffers)
-  (with-current-buffer buffer
-            (let* ((window-width (window-width (get-buffer-window)))
-               (tab-amount (length (tab-bar-tabs)))
-               (window-max-tab-width (if (>= (* (+ dracula-tab-max-width 3) tab-amount) window-width)
-                                         (/ window-width tab-amount)
-                                       dracula-tab-max-width))
-               (tab-width (- (cond ((> window-max-tab-width dracula-tab-max-width)
-                                    dracula-tab-max-width)
-                                   ((< window-max-tab-width dracula-tab-min-width)
-                                    dracula-tab-min-width)
-                                   (t window-max-tab-width))
-                             3)) ;; compensation for ' x ' button
-               (buffer-name (string-trim (buffer-name)))
-               (name-width (length buffer-name)))
-          (if (>= name-width tab-width)
-              (concat  " " (truncate-string-to-width buffer-name (- tab-width 2)) "…")
-            (let* ((padding (make-string (+ (/ (- tab-width name-width) 2) 1) ?\s))
-                   (buffer-name (concat padding buffer-name)))
-              (concat buffer-name (make-string (- tab-width (length buffer-name)) ?\s)))))))
-
-(setq tab-line-close-button-show nil
-      tab-line-new-button-show nil
-      tab-line-separator ""
-      tab-line-tab-name-function #'dracula-tab-line-name-buffer)
-      
 (defun dired-vc-left()
   (interactive)
   (let ((dir (if (eq (vc-root-dir) nil)
@@ -584,20 +548,11 @@ read it before opening a new issue about your will.")
                ;; spam
                (spam :inherit gnus-summary-normal-read :foreground ,dracula-orange
                      :strike-through t :slant oblique)
-               ;; tab-bar & tab-line (since Emacs 27.1)
-               (tab-bar :foreground ,dracula-yellow :background ,dracula-bg)
-                        ;; :inherit variable-pitch)
-               (tab-bar-tab :foreground ,dracula-yellow :background ,dracula-bg)
-               (tab-bar-tab-inactive :foreground ,dracula-comment :background ,dracula-bg)
-               (tab-line :background ,bg2
-                         :height 1.0 :inherit variable-pitch
-                         :box (:line-width -1 :color ,bg2))
-               (tab-line-tab :foreground ,dracula-yellow :background ,dracula-bg
-                             :box (:line-width 2 :color ,dracula-bg))
-               (tab-line-tab-inactive :foreground ,dracula-comment :background ,bg2
-                                      :box (:line-width 2 :color ,bg2))
-               (tab-line-tab-current :inherit tab-line-tab)
-               (tab-line-close-highlight :foreground ,dracula-red)
+               ;; tab-bar
+               (tab-bar :foreground ,dracula-yellow :background "#13181f")
+               ;;; defined below in the naming function
+               ;; (tab-bar-tab :foreground ,dracula-yellow :background ,dracula-bg)
+               ;; (tab-bar-tab-inactive :foreground ,dracula-comment :background ,dracula-bg)
                ;; term
                (term :foreground ,dracula-fg :background ,dracula-bg)
                (term-color-black :foreground ,dracula-bg :background ,dracula-comment)
@@ -723,7 +678,7 @@ read it before opening a new issue about your will.")
                   flymake-mode-line-counters)))
 (setq-default global-mode-string nil
               mode-line-end-spaces
-              '("" mode-line-misc-info " (" mode-name vc-mode ")"))
+              '("" mode-line-misc-info "Ln %l (" mode-name vc-mode ")"))
 (defun my/ml-padding ()
     (let ((r-length (length (format-mode-line mode-line-end-spaces))))
       (propertize " "
@@ -762,6 +717,33 @@ read it before opening a new issue about your will.")
                (file-name-as-directory (file-name-directory load-file-name))))
 
 (provide-theme 'dracula)
+
+;; tabs
+(with-eval-after-load 'tab-bar
+  (defun clean-tab-name (tab i)
+    (let* ((name (alist-get 'name tab))
+          (total-width (frame-width))
+          (tabs (delq (tab-bar--current-tab) (tab-bar-tabs)))
+          (tab-bar-width (apply '+ (mapcar (lambda (tab) (length (alist-get 'name tab))) tabs)))
+          (padding (/ (- total-width tab-bar-width) (length tabs)))
+          (padstr (if (> padding 0)
+                      (make-string (/ padding 2) ?\s)
+                    "")))
+      (if (eq (car tab) 'current-tab)
+          (propertize (concat "│" padstr name padstr)
+                      'face `(:background "#1b222d" :slant italic :foreground "#ffd484" :box ,`(:line-width (0 . ,(/ (line-pixel-height) 8)) :color "#1b222d")))
+        (propertize (concat "│" padstr name padstr)
+                    'face `(:background "#13181f" :foreground "#6272a4" :box ,`(:line-width (0 . -1) :color "black"))))))
+
+  (advice-add 'tab-bar-tab-name-format-default :override #'clean-tab-name)
+
+  (setq tab-bar-close-button-show nil
+        tab-bar-auto-width nil
+        tab-bar-new-button-show nil
+        tab-bar-show 1
+        tab-bar-separator ""))
+        ;; tab-bar-tab-name-function 'tab-bar-tab-name-truncated
+        ;; tab-bar-tab-name-truncated-max 12))
 
 ;; Local Variables:
 ;; indent-tabs-mode: nil
