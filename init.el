@@ -2,8 +2,8 @@
 ;;; --------------------------
 ;;; Defaults? Better? Maybe...
 ;;; --------------------------
-(when (member "VictorMono Nerd Font Mono" (font-family-list))
-  (set-frame-font "VictorMono Nerd Font Mono 16" nil t))
+;; (when (member "VictorMono Nerd Font Mono" (font-family-list))
+;;   (set-frame-font "VictorMono Nerd Font Mono 16" nil t))
 (setq-default line-spacing 3
               cursor-type 'bar
               tab-width 2
@@ -14,6 +14,8 @@
               ring-bell-function 'ignore
               use-short-answers t
               initial-major-mode 'fundamental-mode
+              debug-on-error t
+              warning-minimum-level :error
               ;; dired
               dired-dwim-target t
               dired-auto-revert-buffer t
@@ -21,12 +23,7 @@
               mouse-drag-and-drop-region-cross-program t
               dired-kill-when-opening-new-dired-buffer t
               dired-recursive-deletes 'always
-              dired-recursive-copies 'always
-              ;; tab-bar
-              tab-bar-close-button-show nil
-              tab-bar-new-button-show nil
-              tab-bar-show 1
-              tab-bar-separator "")
+              dired-recursive-copies 'always)
 
 ;;; Misc
 (setq read-process-output-max (* 2 1024 1024)
@@ -35,7 +32,8 @@
       make-backup-files nil
       create-lockfiles nil
       uniquify-buffer-name-style 'forward
-      global-auto-revert-non-file-buffers t)
+      global-auto-revert-non-file-buffers t
+      auto-revert-verbose nil)
 
 (with-eval-after-load 'xref
   (setq xref-search-program 'ripgrep
@@ -72,7 +70,6 @@
 (global-set-key (kbd "C-'") #'(lambda () (interactive)
                                 (term "/data/data/com.termux/files/usr/bin/fish")))
 (add-hook 'dired-mode-hook #'dired-hide-details-mode)
-(push '("\\.bin\\'" . hexl-mode) auto-mode-alist)
 (with-eval-after-load 'ediff
   (setq ediff-split-window-function 'split-window-horizontally
         ediff-window-setup-function 'ediff-setup-windows-plain
@@ -131,8 +128,8 @@
   (setq completion-in-region-function #'completing-read-in-region
         tab-always-indent 'complete
         icomplete-in-buffer t
-        completions-group t
-        icomplete-compute-delay 0))
+        icomplete-scroll t
+        completions-group t))
 
 (use-package vc
   :defer t
@@ -190,7 +187,12 @@
   :hook (prog-mode . flymake-mode)
   :config
   (setq flymake-suppress-zero-counters t)
+  (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake)
   (with-eval-after-load 'eldoc
+    (setq eldoc-echo-area-prefer-doc-buffer t
+          eldoc-idle-delay 0.1
+          eldoc-echo-area-use-multiline-p nil
+          eldoc-echo-area-display-truncation-message nil)
     ;; Show flymake diagnostics first.
     (setq eldoc-documentation-functions
           (cons #'flymake-eldoc-function
@@ -235,6 +237,7 @@
           "\\*eat\\*"
           "vc-git :.\*"
           "\\*Warnings\\*"
+          "\\*Backtrace\\*"
           "\\*Occur\\*"
           compilation-mode
           "^\\*eshell.*\\*$" eshell-mode
@@ -279,7 +282,8 @@
     (undo-fu-session-global-mode)))
 
 (use-package eat
-  :bind ("C-." . #'eat)
+  :bind ("C-." . (lambda () (interactive)
+                   (eat "fish")))
   :custom
   (eat-kill-buffer-on-exit t))
 
@@ -340,6 +344,8 @@
      '("." . meow-bounds-of-thing)
      '("[" . meow-beginning-of-thing)
      '("]" . meow-end-of-thing)
+     '("{" . flymake-goto-prev-error)
+     '("}" . flymake-goto-next-error)
      '("a" . meow-append)
      '("A" . meow-open-below)
      '("b" . meow-back-word)
@@ -368,6 +374,7 @@
      '("o" . meow-block)
      '("O" . meow-to-block)
      '("p" . meow-yank)
+     '("P" . meow-yank-pop)
      '("q" . meow-quit)
      '("Q" . kill-this-buffer)
      '("r" . replace-regexp)
@@ -401,53 +408,47 @@
 ;;; -------------------------------------------------
 ;;; Competitive programming setup (snippets and foxy)
 ;;; -------------------------------------------------
-(define-skeleton cpp-header "Base c++ template for competitive programming." ""
-  "#include<bits/stdc++.h>\n"
-  "using namespace std;\n"
-  "\n#ifdef LOCAL\n"
-  "#include \"algo/debug.h\"\n"
-  "#else\n"
-  "#define debug(...) 42\n"
-  "#endif\n"
-  "\nint main () {\n"
-  "\tios::sync_with_stdio(0);\n"
-  "\tcin.tie(0);\n"
-  "\t" _ "\n"
-  "}")
+(push '("\\.bin\\'" . hexl-mode) auto-mode-alist)
+(setq treesit-language-source-alist ;; treesit-install-language-grammar
+        '((go "https://github.com/tree-sitter/tree-sitter-go")
+          (rust "https://github.com/tree-sitter/tree-sitter-rust")
+          (typescript "https://github.com/tree-sitter/tree-sitter-typescript"
+                      "master" "typescript/src")))
+(push '("\\.rs\\'" . rust-ts-mode) auto-mode-alist)
+(add-hook 'rust-ts-mode-hook #'eglot-ensure)
+(add-hook 'rust-ts-mode-hook (lambda ()
+                               (setq-local tab-width 4)))
+(with-eval-after-load 'eglot
+  (setq eglot-autoshutdown t)
+  (add-to-list 'eglot-server-programs ;; standalone r-a support (from rustic)
+             `(rust-ts-mode .
+                            ("rust-analyzer" :initializationOptions
+                             (:detachedFiles
+                              ,(vector (file-local-name (file-truename buffer-file-name))))))))
 
-(define-skeleton cpp-for-loop
-  "Insert a C++ for loop with user-defined iterator and termination variable." ""
-  > "for (int " (setq iterator (read-char "Iterator variable: ")) " = 0; " iterator " < "
-  > (read-char "Termination: ") "; " iterator "++) {\n\t\t"
-  > _ "\n}"
-  > (indent-according-to-mode)
-  > (delete-char -1))
+(push '("\\.ts\\'" . typescript-ts-mode) auto-mode-alist)
+(push '("\\.go\\'" . go-ts-mode) auto-mode-alist)
 
-(define-skeleton cpp-tests "Run multiple testcases." ""
-  > "int tt = 0; cin >> tt;\n\t"
-  > "while(tt--) {\n\t\t"
-  > _ "\n}"
-  > (indent-according-to-mode)
-  > (delete-char -1))
+(load "~/.emacs.d/comp" nil t)
 
-(define-skeleton cpp-all "Run from beginning to end of iterator." ""
-  > (setq var (read-from-minibuffer "")) ".begin(), " var ".end()"
-  > (forward-char)
-  > _)
-
-(setq save-abbrevs nil)
-(defun init-c++-abbrevs ()
-  (define-abbrev c++-mode-abbrev-table "gtc" "" 'cpp-header)
-  (define-abbrev c++-mode-abbrev-table "forl" "" 'cpp-for-loop)
-  (define-abbrev c++-mode-abbrev-table "all" "" 'cpp-all)
-  (define-abbrev c++-mode-abbrev-table "ttt" "" 'cpp-tests))
-(add-hook 'c++-mode-hook 'abbrev-mode)
-(add-hook 'c++-mode-hook 'init-c++-abbrevs)
-
-(autoload 'foxy-listen-start "~/.emacs.d/foxy" nil t)
-(autoload 'foxy-run-all-tests "~/.emacs.d/foxy" nil t)
-(setq foxy-compile-command "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 ")
-
+(use-package foxy
+  :ensure nil
+  :load-path "~/.emacs.d"
+  :bind (("C-M-l" . foxy-listen-start)
+         ("C-M-c" . foxy-cycle-files)
+         ("C-M-b" . foxy-run-all-tests))
+  :init
+  (add-hook 'c++-mode-hook
+            (lambda ()
+              (setq-local foxy-compile-command
+                          "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 ")))
+  (add-hook 'rust-ts-mode-hook
+            (lambda ()
+              (setq-local foxy-compile-command "rustc -o a.out ")))
+  (add-hook 'go-ts-mode-hook
+            (lambda ()
+              (setq-local foxy-compile-command "go build -o a.out "))))
+  
 (setq delete-active-region t)
 
 (provide 'init)
@@ -459,9 +460,3 @@
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    '(eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )

@@ -5,6 +5,8 @@ elpa/
 undo-fu-session/
 org-persist/
 transient/
+eshell/
+tree-sitter/
 recentf
 history
 ido.last

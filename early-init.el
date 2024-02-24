@@ -37,9 +37,6 @@
   (setq overriding-text-conversion-style nil)
   (set-frame-font "monospace 16" nil t))
 
-;; Font
-;; (when (member "VictorMono Nerd Font Mono" (font-family-list))
-;;   (set-frame-font "VictorMono Nerd Font Mono 16" nil t))
 ;; (set-face-attribute
 ;;  'variable-pitch nil :family "Roboto" :height 180)
 
@@ -47,18 +44,21 @@
               '((menu-bar-lines . 0)
                 (tool-bar-lines . 0)
                 (vertical-scroll-bars)
-                (left-fringe . 0)
-                (right-fringe . 0)
-                (internal-border-width . 20)
+                (left-fringe . 20)
+                (right-fringe . 20)
+                (internal-border-width . 10)
                 (fullscreen . fullboth)
                 (font . "VictorMono Nerd Font Mono-16"))
               cursor-in-non-selected-windows nil
-              frame-inhibit-implied-resize t
+              frame-inhibit-implied-resize nil
               bidi-display-reordering 'left-to-right
               bidi-inhibit-bpa t
               bidi-paragraph-direction 'left-to-right)
 
 (fset 'display-startup-echo-area-message 'ignore)
+
+(setf (cdr (assq 'continuation fringe-indicator-alist))
+      '(nil right-curly-arrow))
 
 (setq package-enable-at-startup nil
       redisplay-skip-fontification-on-input t

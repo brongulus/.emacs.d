@@ -49,8 +49,10 @@
 
 ;;;; Competitive Companion
 ;; https://stackoverflow.com/a/6200347
-(defvar foxy-compile-command "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL "
+(defvar foxy-compile-command ;"g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL "
   "The command used to compile the source file.")
+
+(make-variable-buffer-local 'foxy-compile-command)
 
 (defvar foxy-listen-port 27121
     "Port of the server.")
@@ -124,16 +126,16 @@ and populates the testcase files."
 (defun foxy-run-all-tests nil
   "Run all the available testcases for the current problem."
   (interactive)
-  (let ((file-ext (format "%s" (file-name-extension buffer-file-name)))
+  (let* ((file-ext (format "%s" (file-name-extension buffer-file-name)))
         (bin-name
-         (if (string-equal (file-name-extension buffer-file-name) "py")
+         (if (string-equal file-ext "py")
              (concat "python " (file-relative-name (buffer-file-name) default-directory))
            "./a.out"))
         (tests (length (directory-files
                          default-directory nil "ans.*txt")))
          (i 1)
          (results ""))
-    ;; Compile if cpp file
+    ;; Compile if cpp/rs file
     (unless (string-equal file-ext "py")
                                         ;(file-exists-p "a.out")
       (compile (concat foxy-compile-command buffer-file-name))
@@ -199,7 +201,8 @@ Given a step of 1 (the default), will go to the next file. -1 means previous fil
   (interactive)
   (when (not buffer-file-name)
     (user-error "Not visiting a file - cannot cycle"))
-  (let* ((arg (or step 1))
+  (let* ((file-ext (format "%s" (file-name-extension buffer-file-name)))
+         (arg (or step 1))
          (dir (substring default-directory 0 -1))
          (dirs (seq-filter #'file-directory-p
                 (directory-files
@@ -208,7 +211,7 @@ Given a step of 1 (the default), will go to the next file. -1 means previous fil
                  t directory-files-no-dot-files-regexp nil)))
          (index (elem-index dir dirs))
          (new-index (mod (+ arg index) (length dirs))))
-   (find-file (concat (nth new-index dirs) "/main.cpp"))))
+   (find-file (concat (nth new-index dirs) "/main." file-ext))))
 
 (global-set-key (kbd "C-M-b") #'foxy-run-all-tests)
 (global-set-key (kbd "C-M-c") #'foxy-cycle-files)
