@@ -41,13 +41,11 @@
    '(yellow ((t (:foreground "yellow"))))
 
    ;; Frame
-   '(fringe ((t (:background "#f7f7f7"))))
-   `(mode-line ((t (:background "#e8e8e8" :foreground "black"))))
-                              ;;  :overline "black"))))
+   '(fringe ((t (:background "grey99"))))
+   '(mode-line ((t (:background "#e8e8e8" :foreground "black"))))
    '(mode-line-highlight ((t (:box (:line-width 2 :color "#9599B0")))))
-   `(mode-line-inactive
+   '(mode-line-inactive
      ((t (:inherit mode-line :background "#f5f5f5" :foreground "grey20"))))
-              ;;     :overline ,border-color :weight light))))
 
    ;; Parens
    `(show-paren-match ((t (:background ,passive-color))))
@@ -112,7 +110,9 @@
    '(meow-beacon-indicator ((t (:background "medium spring green"))))
    `(meow-normal-indicator ((t (:background ,selection-color))))
    `(meow-insert-indicator ((t (:background ,highlight-color))))
-   ;; Done
+   `(tab-bar ((t (:background "#E8E8E8"))))
+   `(tab-bar-tab ((t (:background "grey99" :foreground "black"))))
+   `(tab-bar-tab-inactive ((t (:background "#E8E8E8" :foreground "grey20" :box ,`(:line-width (1 . -1) :color "#E8E8E8")))))
    ))
 
 ;; mode-line
@@ -126,7 +126,7 @@
                   flymake-mode-line-counters)))
 (setq-default global-mode-string nil
               mode-line-end-spaces
-              '("" mode-line-misc-info " (" mode-name vc-mode ")"))
+              '("" mode-line-misc-info "Ln %l (" mode-name vc-mode ")"))
 (defun my/ml-padding ()
     (let ((r-length (length (format-mode-line mode-line-end-spaces))))
       (propertize " "
@@ -155,6 +155,32 @@
           (lambda ()
             (hi-lock-face-phrase-buffer "todo" 'hi-green)
             (hi-lock-face-phrase-buffer "fixme" 'hi-salmon)))
+
+;; tabs
+(with-eval-after-load 'tab-bar
+  (defun clean-tab-name (tab i)
+    (let* ((name (alist-get 'name tab))
+          (total-width (frame-width))
+          (tabs (delq (tab-bar--current-tab) (tab-bar-tabs)))
+          (tab-bar-width (apply '+ (mapcar (lambda (tab) (length (alist-get 'name tab))) tabs)))
+          (padding (/ (- total-width tab-bar-width) (length tabs)))
+          (padstr (if (> padding 0)
+                      (make-string (/ padding 2) ?\s)
+                    "")))
+      (if (eq (car tab) 'current-tab)
+          (propertize (concat "│" padstr name padstr)
+                      'face `(:background "grey99" :foreground "black" :slant italic :box ,`(:line-width ,(/ (line-pixel-height) 8) :color "grey99")))
+        (propertize (concat padstr name padstr)
+                    'face `(:background "#E8E8E8" :foreground "grey20" :box ,`(:line-width ,(/ (line-pixel-height) 8) :color "#E8E8E8"))))))
+
+  (advice-add 'tab-bar-tab-name-format-default :override #'clean-tab-name)
+
+  (setq tab-bar-close-button-show nil
+        tab-bar-new-button-show nil
+        tab-bar-show 1
+        tab-bar-separator ""))
+        ;; tab-bar-tab-name-function 'tab-bar-tab-name-truncated
+        ;; tab-bar-tab-name-truncated-max 12))
 
 ;;;###autoload
 (when load-file-name

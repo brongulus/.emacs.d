@@ -120,7 +120,6 @@ read it before opening a new issue about your will.")
                 ;; (dark-green      "#41a6b5" "#00af00" "green") ; 40% darker
                 (light-blue      "#98a8c5" "#98a8c5" "brightblue") ; string
                 (other-blue      "#0189cc" "#0087ff" "brightblue")))
-      (box-width (/ (line-pixel-height) 2))
       (faces '(;; default / basic faces
                ;; (cursor :background ,other-blue)
                (default :background ,dracula-bg :foreground ,dracula-fg)
@@ -172,23 +171,23 @@ read it before opening a new issue about your will.")
                (success :foreground ,dracula-green)
                (tooltip :foreground ,dracula-fg :background ,bg-alt)
                (trailing-whitespace :background ,dracula-orange)
-               (vertical-border :foreground ,bg2)
+               (vertical-border :foreground ,bg3)
                (warning :foreground ,dracula-orange)
                ;; syntax / font-lock
-               (font-lock-builtin-face :foreground ,dracula-cyan :slant italic)
+               (font-lock-builtin-face :foreground ,dracula-green :slant italic)
                (font-lock-comment-face :inherit shadow :slant italic)
                (font-lock-comment-delimiter-face :inherit shadow)
                (font-lock-constant-face :foreground ,dracula-purple)
                (font-lock-doc-face :foreground ,dracula-comment)
                (font-lock-function-name-face :foreground ,dracula-green :weight bold)
-               (font-lock-keyword-face :foreground ,dracula-red :weight bold)
+               (font-lock-keyword-face :foreground ,dracula-yellow :weight bold)
                (font-lock-negation-char-face :foreground ,dracula-cyan)
                (font-lock-preprocessor-face :foreground ,dracula-orange)
                (font-lock-reference-face :inherit font-lock-constant-face) ;; obsolete
                (font-lock-regexp-grouping-backslash :foreground ,dracula-cyan)
                (font-lock-regexp-grouping-construct :foreground ,dracula-purple)
                (font-lock-string-face :foreground ,light-blue)
-               (font-lock-type-face :foreground ,dracula-yellow)
+               (font-lock-type-face :foreground ,dracula-yellow :slant italic)
                (font-lock-variable-name-face :foreground ,dracula-fg :weight bold)
                (font-lock-warning-face :inherit warning :background ,bg2)
                ;; ansi-color
@@ -551,8 +550,8 @@ read it before opening a new issue about your will.")
                ;; tab-bar
                (tab-bar :foreground ,dracula-yellow :background "#13181f")
                ;;; defined below in the naming function
-               ;; (tab-bar-tab :foreground ,dracula-yellow :background ,dracula-bg)
-               ;; (tab-bar-tab-inactive :foreground ,dracula-comment :background ,dracula-bg)
+               (tab-bar-tab :foreground ,dracula-yellow :background ,dracula-bg)
+               (tab-bar-tab-inactive :foreground ,dracula-comment :background "#13181f" :box ,`(:line-width (1 . -1) :color "black"))
                ;; term
                (term :foreground ,dracula-fg :background ,dracula-bg)
                (term-color-black :foreground ,dracula-bg :background ,dracula-comment)
@@ -680,6 +679,7 @@ read it before opening a new issue about your will.")
               mode-line-end-spaces
               '("" mode-line-misc-info "Ln %l (" mode-name vc-mode ")"))
 (defun my/ml-padding ()
+  "Adding padding to the modeline so that spme elements can be right aligned."
     (let ((r-length (length (format-mode-line mode-line-end-spaces))))
       (propertize " "
                   'display `(space :align-to (- right ,r-length)))))
@@ -732,8 +732,8 @@ read it before opening a new issue about your will.")
       (if (eq (car tab) 'current-tab)
           (propertize (concat "│" padstr name padstr)
                       'face `(:background "#1b222d" :slant italic :foreground "#ffd484" :box ,`(:line-width (0 . ,(/ (line-pixel-height) 8)) :color "#1b222d")))
-        (propertize (concat "│" padstr name padstr)
-                    'face `(:background "#13181f" :foreground "#6272a4" :box ,`(:line-width (0 . -1) :color "black"))))))
+        (propertize (concat padstr name padstr)
+                    'face `(:background "#13181f" :foreground "#6272a4" :box ,`(:line-width (2 . -1) :color "black"))))))
 
   (advice-add 'tab-bar-tab-name-format-default :override #'clean-tab-name)
 
