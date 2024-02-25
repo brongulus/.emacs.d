@@ -40,9 +40,6 @@
         xref-auto-jump-to-first-xref nil ; 'move
         xref-show-definitions-function 'xref-show-definitions-completing-read
         xref-show-xrefs-function 'xref-show-definitions-completing-read))
-;; #'dabbrev-completion resets the global variables first so we do the same
-(advice-add #'dabbrev-capf :before #'dabbrev--reset-global-variables)
-(add-hook 'completion-at-point-functions #'dabbrev-capf 100)
 
 (fset 'display-startup-echo-area-message'ignore)
 (add-hook 'prog-mode-hook (electric-pair-mode t))
@@ -110,13 +107,14 @@
               ("C-," . embark-act))
   :hook (icomplete-minibuffer-setup . (lambda ()
                                         (setq-local completion-styles '(orderless basic))))
+  :functions completing-read-in-region
   :config ;; src: https://www.reddit.com/r/emacs/comments/zl6amy/
   (defun completing-read-in-region (start end collection &optional predicate)
     "Prompt for completion of region in the minibuffer if non-unique.
    Use as a value for `completion-in-region-function'."
     (let* ((initial (buffer-substring-no-properties start end))
-           (all (completion-all-completions initial collection predicate
-                                            (length initial)))
+           ;; (all (completion-all-completions initial collection predicate
+           ;;                                  (length initial)))
            (completion (catch 'done
                          (atomic-change-group
                            (let ((completion
@@ -131,9 +129,13 @@
         icomplete-scroll t
         completions-group t))
 
+
+
 (use-package vc
   :defer t
   :ensure nil
+  :defines project-vc-merge-submodules vc-annotate-background-mode
+  :functions vc-git-push eshell-return-to-prompt eshell-send-input
   :bind (("C-x v f" . (lambda () (interactive)
                         (vc-git-push t)))
          ("C-x v e" . vc-ediff)
@@ -185,6 +187,7 @@
 (use-package flymake
   :ensure nil
   :hook (prog-mode . flymake-mode)
+  :functions flymake-eldoc-function
   :config
   (setq flymake-suppress-zero-counters t)
   (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake)
@@ -208,6 +211,8 @@
   (recentf-auto-cleanup 'never))
 
 (use-package tramp
+  :defer 2
+  :defines tramp-default-method tramp-ssh-controlmaster-options tramp-verbose tramp-remote-path
   :config
   (setq tramp-ssh-controlmaster-options
         (concat
@@ -227,6 +232,7 @@
          ("C-M-`" . popper-toggle-type))
   :hook ((after-init . popper-mode)
          (after-init . popper-echo-mode))
+  :defines popper-reference-buffers popper-mode-line popper-window-height
   :init
   (setq popper-reference-buffers
         '("\\*Messages\\*"
@@ -234,6 +240,7 @@
           "\\*Async Shell Command\\*"
           help-mode
           "magit:.\*"
+          "\\*pabbrev suggestions\\*"
           "\\*eat\\*"
           "vc-git :.\*"
           "\\*Warnings\\*"
@@ -254,6 +261,8 @@
   :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer))
 
 (use-package marginalia
+  :defines marginalia-annotator-registry
+  :functions marginalia-mode
   :init (marginalia-mode)
   :config
   (setq marginalia-annotator-registry
@@ -262,6 +271,7 @@
 (use-package embark
   :after minibuffer
   :bind ("C-," . embark-act)
+  :defines embark-indicators embark-prompter
   :config
   (setq embark-prompter 'embark-completing-read-prompter
         embark-indicators (delete 'embark-mixed-indicator embark-indicators)))
@@ -277,20 +287,26 @@
 
 (use-package undo-fu-session
   :demand t
+  :functions undo-fu-session-global-mode
   :init
   (unless (string-equal system-type "android")
     (undo-fu-session-global-mode)))
 
 (use-package eat
+  :functions eat
   :bind ("C-." . (lambda () (interactive)
                    (eat "fish")))
   :custom
   (eat-kill-buffer-on-exit t))
 
 (use-package with-editor
-  :defer 1
   :hook ((eshell-mode . with-editor-export-git-editor)
          (eshell-mode . with-editor-export-editor)))
+
+(use-package pabbrev ;; completion-preview-mode if emacs>30
+  :hook (prog-mode . global-pabbrev-mode)
+  :custom
+  (pabbrev-idle-timer-verbose nil))
 
 (defun my-jk () ;; src: wasamasa
   (interactive)
@@ -308,6 +324,9 @@
 
 (use-package meow
   :demand t
+  :defines meow-keypad-leader-dispatch meow-cheatsheet-layout-qwerty meow-digit-argument meow-mode-state-list
+  meow-digit-argument meow-expand-hint-counts meow-use-cursor-position-hack meow-cheatsheet-layout
+  :functions meow-global-mode meow-motion-overwrite-define-key meow-normal-define-key
   :init (meow-global-mode 1)
   :config
   (defun meow-setup()
@@ -408,18 +427,31 @@
 ;;; -------------------------------------------------
 ;;; Competitive programming setup (snippets and foxy)
 ;;; -------------------------------------------------
+(use-package markdown-mode
+  :defer 2)
+
+(use-package eldoc-box
+  :ensure nil
+  :bind ("C-l" . eldoc-box-help-at-point)
+  :defines eldoc-box-max-pixel-height eldoc-box-max-pixel-width eldoc-box-only-multi-line
+  :config
+  (setq eldoc-box-max-pixel-width 600
+        eldoc-box-max-pixel-height 700
+        eldoc-box-only-multi-line t))
+
 (push '("\\.bin\\'" . hexl-mode) auto-mode-alist)
 (setq treesit-language-source-alist ;; treesit-install-language-grammar
-        '((go "https://github.com/tree-sitter/tree-sitter-go")
-          (rust "https://github.com/tree-sitter/tree-sitter-rust")
-          (typescript "https://github.com/tree-sitter/tree-sitter-typescript"
-                      "master" "typescript/src")))
+      '((go "https://github.com/tree-sitter/tree-sitter-go")
+        (rust "https://github.com/tree-sitter/tree-sitter-rust")
+        (typescript "https://github.com/tree-sitter/tree-sitter-typescript"
+                    "master" "typescript/src")))
 (push '("\\.rs\\'" . rust-ts-mode) auto-mode-alist)
 (add-hook 'rust-ts-mode-hook #'eglot-ensure)
 (add-hook 'rust-ts-mode-hook (lambda ()
                                (setq-local tab-width 4)))
 (with-eval-after-load 'eglot
-  (setq eglot-autoshutdown t)
+  (setq eglot-autoshutdown t
+        eglot-inlay-hints-mode nil)
   (add-to-list 'eglot-server-programs ;; standalone r-a support (from rustic)
              `(rust-ts-mode .
                             ("rust-analyzer" :initializationOptions
@@ -459,4 +491,10 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(pabbrev markdown-mode eldoc-box eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
