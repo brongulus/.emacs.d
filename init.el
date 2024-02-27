@@ -4,79 +4,71 @@
 ;;; --------------------------
 ;; (when (member "VictorMono Nerd Font Mono" (font-family-list))
 ;;   (set-frame-font "VictorMono Nerd Font Mono 16" nil t))
-(setq-default line-spacing 3
-              cursor-type 'bar
-              tab-width 2
-              indent-tabs-mode nil
-              enable-recursive-minibuffers t
-              show-paren-delay 0
-              custom-safe-themes t
-              ring-bell-function 'ignore
-              use-short-answers t
-              initial-major-mode 'fundamental-mode
-              debug-on-error t
-              warning-minimum-level :error
-              ;; dired
-              dired-dwim-target t
-              dired-auto-revert-buffer t
-              dired-mouse-drag-files t
-              mouse-drag-and-drop-region-cross-program t
-              dired-kill-when-opening-new-dired-buffer t
-              dired-recursive-deletes 'always
-              dired-recursive-copies 'always)
+(use-package emacs
+  :ensure nil
+  :defines global-auto-revert-non-file-buffers auto-revert-verbose xref-search-program
+  xref-show-definitions-function xref-show-xrefs-function ediff-split-window-function
+  ediff-keep-variants xref-auto-jump-to-first-xref ediff-window-setup-function
+  :bind ("C-h '" . describe-face)
+  :config
+  (setq-default line-spacing 3
+                cursor-type 'bar
+                tab-width 2
+                indent-tabs-mode nil
+                enable-recursive-minibuffers t
+                show-paren-delay 0
+                custom-safe-themes t
+                ring-bell-function 'ignore
+                use-short-answers t
+                initial-major-mode 'fundamental-mode
+                debug-on-error t
+                warning-minimum-level :error)
+  (setq read-process-output-max (* 2 1024 1024)
+        inhibit-startup-screen t
+        load-prefer-newer t
+        make-backup-files nil
+        create-lockfiles nil
+        uniquify-buffer-name-style 'forward
+        global-auto-revert-non-file-buffers t
+        auto-revert-verbose nil)
 
-;;; Misc
-(setq read-process-output-max (* 2 1024 1024)
-      inhibit-startup-screen t
-      load-prefer-newer t
-      make-backup-files nil
-      create-lockfiles nil
-      uniquify-buffer-name-style 'forward
-      global-auto-revert-non-file-buffers t
-      auto-revert-verbose nil)
+  (add-hook 'prog-mode-hook (electric-pair-mode t))
+  (add-hook 'prog-mode-hook (show-paren-mode t))
+  (fset 'display-startup-echo-area-message'ignore)
+  (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
+  (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
 
-(with-eval-after-load 'xref
-  (setq xref-search-program 'ripgrep
-        xref-auto-jump-to-first-xref nil ; 'move
-        xref-show-definitions-function 'xref-show-definitions-completing-read
-        xref-show-xrefs-function 'xref-show-definitions-completing-read))
+  (with-eval-after-load 'xref
+    (setq xref-search-program 'ripgrep
+          xref-auto-jump-to-first-xref nil ; 'move
+          xref-show-definitions-function 'xref-show-definitions-completing-read
+          xref-show-xrefs-function 'xref-show-definitions-completing-read))
 
-(fset 'display-startup-echo-area-message'ignore)
-(add-hook 'prog-mode-hook (electric-pair-mode t))
-(add-hook 'prog-mode-hook (show-paren-mode t))
-(set-display-table-slot standard-display-table 'truncation 32) ;; hides $
-(set-display-table-slot standard-display-table 'wrap 32) ;; hides \
-(with-eval-after-load 'minibuffer
-  (save-place-mode 1)
-  (savehist-mode)
-  (global-auto-revert-mode t))
-(blink-cursor-mode -1)
-(global-set-key [remap kill-buffer] 'kill-this-buffer)
-;; Load theme based on the time of the day
-(let ((hour (substring (current-time-string) 11 13)))
-  (if (and (string-lessp hour "17") (string-greaterp hour "08"))
-      (load-theme 'alabaster :no-confirm)
-    (load-theme 'dracula :no-confirm)))
-(defadvice load-theme (before theme-dont-propagate activate)
-  (mapc #'disable-theme custom-enabled-themes))
+  (with-eval-after-load 'minibuffer
+    (save-place-mode 1)
+    (savehist-mode)
+    (global-auto-revert-mode t)
+    (blink-cursor-mode -1))
+  ;; Load theme based on the time of the day
+  (let ((hour (substring (current-time-string) 11 13)))
+    (if (and (string-lessp hour "17") (string-greaterp hour "08"))
+        (load-theme 'alabaster :no-confirm)
+      (load-theme 'dracula :no-confirm)))
+  (defadvice load-theme (before theme-dont-propagate activate)
+    (mapc #'disable-theme custom-enabled-themes))
 
-(global-set-key (kbd "M-s r") #'query-replace)
-(global-set-key (kbd "M-s R") #'query-replace-regexp)
-(global-set-key (kbd "C-h '") #'describe-face)
-(global-set-key (kbd "C--") #'(lambda () (interactive) (dired "/data/data/com.termux/files/home/")))
-(global-set-key (kbd "C-'") #'(lambda () (interactive)
-                                (term "/data/data/com.termux/files/usr/bin/fish")))
-(add-hook 'dired-mode-hook #'dired-hide-details-mode)
-(with-eval-after-load 'ediff
-  (setq ediff-split-window-function 'split-window-horizontally
-        ediff-window-setup-function 'ediff-setup-windows-plain
-        ediff-keep-variants nil)
-  (setq-local display-line-numbers nil))
-
-(defadvice term-handle-exit
-    (after term-kill-buffer-on-exit activate)
-  (kill-buffer))
-
+  (global-set-key (kbd "C--") #'(lambda () (interactive) (dired "/data/data/com.termux/files/home/")))
+  (global-set-key (kbd "C-'") #'(lambda () (interactive)
+                                  (term "/data/data/com.termux/files/usr/bin/fish")))
+  (with-eval-after-load 'ediff
+    (setq ediff-split-window-function 'split-window-horizontally
+          ediff-window-setup-function 'ediff-setup-windows-plain
+          ediff-keep-variants nil)
+    (setq-local display-line-numbers nil))
+  
+  (defadvice term-handle-exit
+      (after term-kill-buffer-on-exit activate)
+    (kill-buffer)))
 ;;; -------------------------------------------------------------
 ;;; Built-in packages (icomplete, project, recentf, dired, ediff)
 ;;; -------------------------------------------------------------
@@ -94,6 +86,21 @@
         use-package-always-defer t
         use-package-enable-imenu-support t
         use-package-expand-minimally t))
+
+(use-package dired
+  :ensure nil
+  :hook (dired-mode . dired-hide-details-mode)
+  :bind (:map dired-mode-map
+              ("\\" . dired-up-directory)
+              ("E" . wdired-change-to-wdired-mode))
+  :config
+  (setq-default dired-dwim-target t
+                dired-auto-revert-buffer t
+                dired-mouse-drag-files t
+                mouse-drag-and-drop-region-cross-program t
+                dired-kill-when-opening-new-dired-buffer t
+                dired-recursive-deletes 'always
+                dired-recursive-copies 'always))
 
 (use-package icomplete
   :init
@@ -128,8 +135,6 @@
         icomplete-in-buffer t
         icomplete-scroll t
         completions-group t))
-
-
 
 (use-package vc
   :defer t
@@ -304,9 +309,12 @@
          (eshell-mode . with-editor-export-editor)))
 
 (use-package pabbrev ;; completion-preview-mode if emacs>30
-  :hook (prog-mode . global-pabbrev-mode)
+  :ensure nil
+  :load-path "~/.emacs.d/pabbrev"
+  :hook ((prog-mode text-mode) . global-pabbrev-mode)
   :custom
-  (pabbrev-idle-timer-verbose nil))
+  (pabbrev-idle-timer-verbose nil)
+  (pabbrev-overlay-decorators nil))
 
 (defun my-jk () ;; src: wasamasa
   (interactive)
@@ -325,8 +333,8 @@
 (use-package meow
   :demand t
   :defines meow-keypad-leader-dispatch meow-cheatsheet-layout-qwerty meow-digit-argument meow-mode-state-list
-  meow-digit-argument meow-expand-hint-counts meow-use-cursor-position-hack meow-cheatsheet-layout
-  :functions meow-global-mode meow-motion-overwrite-define-key meow-normal-define-key
+  meow-digit-argument meow-expand-hint-counts meow-use-cursor-position-hack meow-cheatsheet-layout meow-insert-state-keymap
+  :functions meow-global-mode meow-motion-overwrite-define-key meow-normal-define-key meow-setup
   :init (meow-global-mode 1)
   :config
   (defun meow-setup()
@@ -336,9 +344,6 @@
     (dolist (item '(word line block find till))
       (push `(,item . 0) meow-expand-hint-counts))
     (define-key meow-insert-state-keymap (kbd "j") #'my-jk)
-    (with-eval-after-load 'dired
-      (define-key dired-mode-map "\\" 'dired-up-directory)
-      (define-key dired-mode-map "E" 'wdired-change-to-wdired-mode))
     (dolist (imode '(eat-mode eshell-mode log-edit-mode))
       (push `(,imode . insert) meow-mode-state-list))
     (meow-motion-overwrite-define-key
@@ -439,27 +444,50 @@
         eldoc-box-max-pixel-height 700
         eldoc-box-only-multi-line t))
 
-(push '("\\.bin\\'" . hexl-mode) auto-mode-alist)
 (setq treesit-language-source-alist ;; treesit-install-language-grammar
       '((go "https://github.com/tree-sitter/tree-sitter-go")
         (rust "https://github.com/tree-sitter/tree-sitter-rust")
         (typescript "https://github.com/tree-sitter/tree-sitter-typescript"
                     "master" "typescript/src")))
+
 (push '("\\.rs\\'" . rust-ts-mode) auto-mode-alist)
-(add-hook 'rust-ts-mode-hook #'eglot-ensure)
 (add-hook 'rust-ts-mode-hook (lambda ()
                                (setq-local tab-width 4)))
-(with-eval-after-load 'eglot
+
+(push '("\\.go\\'" . go-ts-mode) auto-mode-alist)
+(with-eval-after-load 'project
+  (defun project-find-go-module (dir)
+    (when-let ((root (locate-dominating-file dir "go.mod")))
+      (cons 'go-module root)))
+  (cl-defmethod project-root ((project (head go-module)))
+    (cdr project))
+  (add-hook 'project-find-functions #'project-find-go-module))
+
+(push '("\\.ts\\'" . typescript-ts-mode) auto-mode-alist)
+(push '("\\.bin\\'" . hexl-mode) auto-mode-alist)
+
+(use-package eglot
+  :hook ((rust-ts-mode go-ts-mode) . eglot-ensure)
+  :functions eglot-format-buffer
+  :config
   (setq eglot-autoshutdown t
         eglot-inlay-hints-mode nil)
+  (setq-default eglot-workspace-configuration
+    '((:gopls .
+        ((staticcheck . t)
+         (matcher . "CaseSensitive")))))
   (add-to-list 'eglot-server-programs ;; standalone r-a support (from rustic)
              `(rust-ts-mode .
                             ("rust-analyzer" :initializationOptions
-                             (:detachedFiles
-                              ,(vector (file-local-name (file-truename buffer-file-name))))))))
-
-(push '("\\.ts\\'" . typescript-ts-mode) auto-mode-alist)
-(push '("\\.go\\'" . go-ts-mode) auto-mode-alist)
+                             (:check (:command "clippy")
+                              :detachedFiles
+                              ,(vector (file-local-name (file-truename buffer-file-name)))))))
+  (add-hook 'go-ts-mode-hook (lambda ()
+                               (add-hook 'before-save-hook #'eglot-format-buffer -10 t)
+                               (add-hook 'before-save-hook
+                                         (lambda ()
+                                           (call-interactively 'eglot-code-action-organize-imports))
+                                         nil t))))
 
 (load "~/.emacs.d/comp" nil t)
 
@@ -491,7 +519,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(pabbrev markdown-mode eldoc-box eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(markdown-mode eldoc-box eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
