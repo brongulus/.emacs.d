@@ -34,6 +34,12 @@
 
   (add-hook 'prog-mode-hook (electric-pair-mode t))
   (add-hook 'prog-mode-hook (show-paren-mode t))
+  (add-hook 'prog-mode-hook (lambda ()
+                              (add-hook 'before-save-hook
+                                        (lambda ()
+                                          (let ((current-prefix-arg t))
+                                            (call-interactively 'untabify)))))
+            nil t)
   (fset 'display-startup-echo-area-message'ignore)
   (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
   (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
@@ -113,23 +119,30 @@
   :bind (:map icomplete-minibuffer-map
               ("C-," . embark-act))
   :hook (icomplete-minibuffer-setup . (lambda ()
-                                        (setq-local completion-styles '(orderless basic))))
+                                        (setq-local completion-styles '(orderless basic)
+                                                    truncate-lines t)))
   :functions completing-read-in-region
-  :config ;; src: https://www.reddit.com/r/emacs/comments/zl6amy/
+  :defines completion
+  :config ;; src: https://github.com/JasZhe/vimilla-emacs
   (defun completing-read-in-region (start end collection &optional predicate)
-    "Prompt for completion of region in the minibuffer if non-unique.
-   Use as a value for `completion-in-region-function'."
-    (let* ((initial (buffer-substring-no-properties start end))
-           ;; (all (completion-all-completions initial collection predicate
-           ;;                                  (length initial)))
-           (completion (catch 'done
-                         (atomic-change-group
-                           (let ((completion
-                                  (completing-read "Completion: "
-                                                   collection predicate nil initial)))
-                             (throw 'done completion))))))
-      (cond (completion (completion--replace start end completion) t)
-            (t (message "No completion") nil))))
+  "Prompt for completion of region in the minibuffer if non-unique.
+      Use as a value for `completion-in-region-function'."
+  (let* ((initial (buffer-substring-no-properties start end))
+         (limit (car (completion-boundaries initial collection predicate "")))
+         (all (completion-all-completions initial collection predicate (length initial)))
+         (completion (cond
+                      ((atom all) nil)
+                      ((and (consp all) (atom (cdr all)))
+                       (concat (substring initial 0 limit) (car all)))
+                      (t
+                       (setq completion
+                             (catch 'done
+                               (atomic-change-group
+                                 (let ((completion
+                                        (completing-read "Completion: " collection predicate nil initial)))
+                                   (throw 'done completion)))))))))
+  (cond (completion (completion--replace start end completion) t)
+        (t (message "No completion") nil))))
   (setq completion-in-region-function #'completing-read-in-region
         tab-always-indent 'complete
         icomplete-in-buffer t
@@ -159,6 +172,18 @@
         vc-annotate-background-mode t)
   
   (if (string= (car custom-enabled-themes) "dracula")
+      ;; (advice-add 'vc-annotate-lines :after
+      ;;             (lambda (&rest args)
+      ;;               (let ((limit (car args)))
+      ;;                 ;; TODO: move point back
+      ;;                 (forward-line (- limit))
+      ;;                 (while (< (point) limit)
+      ;;                   (let* ((start (point))
+      ;;                         (end (progn (forward-line 1) (point)))
+      ;;                         (tmp-face (get-text-property (point) 'face)))
+      ;;                     (put-text-property start end 'face tmp-face)
+      ;;                     )))
+      ;;               nil))))
       (add-hook 'vc-annotate-mode-hook
                 (lambda ()
                   (face-remap-add-relative 'default :foreground "black")))))
@@ -174,15 +199,10 @@
 
 (use-package isearch
   :ensure nil
-  :bind ("C-s" . isearch-forward)
-  :config
-  (defvar isearch-repeat-map
-    (let ((map (make-sparse-keymap)))
-      (define-key map (kbd "s") #'isearch-repeat-forward)
-      (define-key map (kbd "r") #'isearch-repeat-backward)
-      map))
-  (put 'isearch-repeat-forward  'repeat-map 'isearch-repeat-map)
-  (put 'isearch-repeat-backward 'repeat-map 'isearch-repeat-map)
+  :bind (("C-s" . isearch-forward)
+         :repeat-map isearch-repeat-map
+         ("s" . isearch-repeat-forward)
+         ("r" . isearch-repeat-backward))
   :custom
   (isearch-wrap-pause 'no)
   (isearch-lazy-count t)
@@ -433,7 +453,9 @@
 ;;; Competitive programming setup (snippets and foxy)
 ;;; -------------------------------------------------
 (use-package markdown-mode
-  :defer 2)
+  :defines markdown-fontify-code-blocks-natively
+  :config
+  (setq markdown-fontify-code-blocks-natively t))
 
 (use-package eldoc-box
   :ensure nil
@@ -451,9 +473,6 @@
                     "master" "typescript/src")))
 
 (push '("\\.rs\\'" . rust-ts-mode) auto-mode-alist)
-(add-hook 'rust-ts-mode-hook (lambda ()
-                               (setq-local tab-width 4)))
-
 (push '("\\.go\\'" . go-ts-mode) auto-mode-alist)
 (with-eval-after-load 'project
   (defun project-find-go-module (dir)
@@ -467,11 +486,18 @@
 (push '("\\.bin\\'" . hexl-mode) auto-mode-alist)
 
 (use-package eglot
-  :hook ((rust-ts-mode go-ts-mode) . eglot-ensure)
-  :functions eglot-format-buffer
+  :hook (((rust-ts-mode go-ts-mode) . eglot-ensure))
+  :functions eglot-format-buffer jsonrpc--log-event
+  :defines go-ts-mode-indent-offset
   :config
-  (setq eglot-autoshutdown t
+  (fset #'jsonrpc--log-event #'ignore)
+  (setq eglot-events-buffer-size 0
+        eglot-autoshutdown t
         eglot-inlay-hints-mode nil)
+  (add-hook 'rust-ts-mode-hook (lambda () (setq-local tab-width 4)))
+  (add-hook 'go-ts-mode-hook
+            (lambda () (setq-local tab-width 4)))
+  (setq go-ts-mode-indent-offset 4)
   (setq-default eglot-workspace-configuration
     '((:gopls .
         ((staticcheck . t)
@@ -481,12 +507,17 @@
                             ("rust-analyzer" :initializationOptions
                              (:check (:command "clippy")
                               :detachedFiles
-                              ,(vector (file-local-name (file-truename buffer-file-name)))))))
+                              ,(vector (file-local-name
+                                        (file-truename buffer-file-name)))))))
   (add-hook 'go-ts-mode-hook (lambda ()
-                               (add-hook 'before-save-hook #'eglot-format-buffer -10 t)
                                (add-hook 'before-save-hook
+                                         #'eglot-format-buffer -10 t))
+            nil t)
+  (add-hook 'go-ts-mode-hook (lambda ()
+                                 (add-hook 'before-save-hook
                                          (lambda ()
-                                           (call-interactively 'eglot-code-action-organize-imports))
+                                           (call-interactively
+                                            'eglot-code-action-organize-imports))
                                          nil t))))
 
 (load "~/.emacs.d/comp" nil t)
