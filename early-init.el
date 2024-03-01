@@ -20,6 +20,15 @@
                     gc-cons-percentage 0.1
                     file-name-handler-alist my/saved-file-name-handler-alist)))
 
+;; src: skangas
+(when (>= emacs-major-version 27)
+  (defun gc-on-last-frame-out-of-focus ()
+    "GC if all frames are inactive."
+    (if (seq-every-p #'null (mapcar #'frame-focus-state (frame-list)))
+        (garbage-collect)))
+  (add-function :after after-focus-change-function
+                #'gc-on-last-frame-out-of-focus))
+
 (add-hook 'minibuffer-setup-hook
           #'(lambda ()
               (setq gc-cons-threshold most-positive-fixnum)))
@@ -44,8 +53,8 @@
               '((menu-bar-lines . 0)
                 (tool-bar-lines . 0)
                 (vertical-scroll-bars)
-                (left-fringe . 20)
-                (right-fringe . 20)
+                (left-fringe . 15)
+                (right-fringe . 15)
                 (internal-border-width . 10)
                 (fullscreen . fullboth)
                 (font . "VictorMono Nerd Font Mono-16"))

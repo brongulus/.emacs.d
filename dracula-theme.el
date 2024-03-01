@@ -60,17 +60,17 @@ The theme has to be reloaded after changing anything in this group."
   :type 'boolean
   :group 'dracula)
 
-(defun dired-vc-left()
-  (interactive)
-  (let ((dir (if (eq (vc-root-dir) nil)
-                 (dired-noselect default-directory)
-               (dired-noselect (vc-root-dir)))))
-    (display-buffer-in-side-window
-     dir `((side . left)
-           (slot . 0)
-           (window-width . 0.2)
-           (window-parameters . ((mode-line-format . (" %b"))))))
-    (windmove-left)))
+;; (defun dired-vc-left()
+;;   (interactive)
+;;   (let ((dir (if (eq (vc-root-dir) nil)
+;;                  (dired-noselect default-directory)
+;;                (dired-noselect (vc-root-dir)))))
+;;     (display-buffer-in-side-window
+;;      dir `((side . left)
+;;            (slot . 0)
+;;            (window-width . 0.2)
+;;            (window-parameters . ((mode-line-format . (" %b"))))))
+;;     (windmove-left)))
 
 (defvar dracula-use-24-bit-colors-on-256-colors-terms nil
   "Use true colors even on terminals announcing less capabilities.
@@ -232,9 +232,9 @@ read it before opening a new issue about your will.")
                (corfu-default :inherit tooltip :background ,bg-alt)
                (corfu-current :background ,bg3 :foreground ,dracula-fg)
                ;; diff-hl
-               (diff-hl-change :foreground ,dracula-orange :background ,dracula-orange)
-               (diff-hl-delete :foreground ,dracula-red :background ,dracula-red)
-               (diff-hl-insert :foreground ,dracula-green :background ,dracula-green)
+               (diff-hl-change :foreground ,dracula-cyan)
+               (diff-hl-delete :foreground ,dracula-red)
+               (diff-hl-insert :foreground ,dracula-green)
                ;; dired
                (dired-directory :foreground ,dracula-green :weight normal)
                (dired-flagged :foreground ,dracula-pink)
@@ -397,7 +397,7 @@ read it before opening a new issue about your will.")
                ;; markdown
                (markdown-blockquote-face :foreground ,dracula-yellow
                                          :slant italic)
-               (markdown-code-face :foreground ,dracula-orange)
+               ;; (markdown-code-face :foreground ,dracula-orange)
                (markdown-footnote-face :foreground ,other-blue)
                (markdown-header-face :weight normal)
                (markdown-header-face-1
@@ -512,6 +512,10 @@ read it before opening a new issue about your will.")
                (outline-4 :foreground ,dracula-yellow)
                (outline-5 :foreground ,dracula-cyan)
                (outline-6 :foreground ,dracula-orange)
+               ;; pabbrev
+               (pabbrev-suggestions-face :foreground ,dracula-comment :underline t)
+               (pabbrev-single-suggestion-face :foreground ,dracula-comment :slant italic)
+               (pabbrev-suggestions-label-face :underline t :weight bold)
                ;; perspective
                (persp-selected-face :weight bold :foreground ,dracula-pink)
                ;; rainbow-delimiters
@@ -667,17 +671,16 @@ read it before opening a new issue about your will.")
                ,(funcall get-func (alist-get 'dracula-fg colors))])))))
 
 ;; mode-line
-(with-eval-after-load 'flymake
-  (setq-default flymake-mode-line-counter-format
-                '(flymake-mode-line-error-counter
-                  flymake-mode-line-warning-counter
-                  flymake-mode-line-note-counter)
-                flymake-mode-line-format
-                '(flymake-mode-line-exception
-                  flymake-mode-line-counters)))
+(setq-default flymake-mode-line-counter-format
+              '("" flymake-mode-line-error-counter
+                flymake-mode-line-warning-counter
+                flymake-mode-line-note-counter "")
+              flymake-mode-line-format
+                '("" flymake-mode-line-exception
+                  flymake-mode-line-counters))
 (setq-default global-mode-string nil
               mode-line-end-spaces
-              '("" mode-line-misc-info "Ln %l (" mode-name vc-mode ")"))
+              '("" mode-line-misc-info "Ln %l (" mode-name vc-mode ")")) ;; vc-display-status 'no-backend
 (defun my/ml-padding ()
   "Adding padding to the modeline so that spme elements can be right aligned."
     (let ((r-length (length (format-mode-line mode-line-end-spaces))))
@@ -688,6 +691,8 @@ read it before opening a new issue about your will.")
               '((:eval (when (mode-line-window-selected-p)
                          (meow-indicator)))
                 "%e"
+                (:eval (file-remote-p default-directory 'host))
+                " "
                 (:eval (if (buffer-modified-p)
                            (propertize " %b " 'face '(:slant italic :inverse-video t)
                                        'help-echo (buffer-file-name))
