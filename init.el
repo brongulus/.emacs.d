@@ -8,7 +8,7 @@
   :ensure nil
   :defines global-auto-revert-non-file-buffers auto-revert-verbose xref-search-program
   xref-show-definitions-function xref-show-xrefs-function ediff-split-window-function
-  ediff-keep-variants xref-auto-jump-to-first-xref ediff-window-setup-function
+  ediff-keep-variants xref-auto-jump-to-first-xref ediff-window-setup-function Info-use-header-line
   :bind ("C-h '" . describe-face)
   :config
   (setq-default line-spacing 3
@@ -30,7 +30,8 @@
         create-lockfiles nil
         uniquify-buffer-name-style 'forward
         global-auto-revert-non-file-buffers t
-        auto-revert-verbose nil)
+        auto-revert-verbose nil
+        Info-use-header-line nil)
 
   (add-hook 'prog-mode-hook (electric-pair-mode t))
   (add-hook 'prog-mode-hook (show-paren-mode t))
@@ -40,7 +41,6 @@
                                           (let ((current-prefix-arg t))
                                             (call-interactively 'untabify)))))
             nil t)
-  (fset 'display-startup-echo-area-message'ignore)
   (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
   (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
 
@@ -88,6 +88,7 @@
   (setq package-native-compile t
         package-install-upgrade-built-in t
         package-check-signature nil
+        use-package-compute-statistics t ;; use-package-report
         use-package-always-ensure t
         use-package-always-defer t
         use-package-enable-imenu-support t
@@ -120,7 +121,8 @@
               ("C-," . embark-act))
   :hook (icomplete-minibuffer-setup . (lambda ()
                                         (setq-local completion-styles '(orderless basic)
-                                                    truncate-lines t)))
+                                                    truncate-lines t
+                                                    line-spacing nil)))
   :functions completing-read-in-region
   :defines completion
   :config ;; src: https://github.com/JasZhe/vimilla-emacs
@@ -146,11 +148,11 @@
   (setq completion-in-region-function #'completing-read-in-region
         tab-always-indent 'complete
         icomplete-in-buffer t
-        icomplete-scroll t
+        icomplete-scroll t ;nil
         completions-group t))
 
 (use-package vc
-  :defer t
+  :defer nil
   :ensure nil
   :defines project-vc-merge-submodules vc-annotate-background-mode
   :functions vc-git-push eshell-return-to-prompt eshell-send-input
@@ -159,6 +161,7 @@
          ("C-x v e" . vc-ediff)
          ("C-x v R" . vc-interactive-rebase))
   :config
+  (remove-hook 'find-file-hook 'vc-find-file-hook)
   (defun vc-interactive-rebase ()
     (interactive)
     (with-current-buffer (eshell)
@@ -244,6 +247,7 @@
          "-o ControlPath=\~/.ssh/control/ssh-%%r@%%h:%%p "
          "-o ControlMaster=auto -o ControlPersist=yes")
         tramp-default-method "ssh"
+        remote-file-name-inhibit-auto-save-visited t
         remote-file-name-inhibit-cache nil
         remote-file-name-inhibit-locks t
         tramp-verbose 1)
@@ -253,7 +257,7 @@
 ;;; ---------------------------------------------------------------------------------
 (use-package popper
   :bind (("C-`"   . popper-toggle)
-         ("M-`"   . popper-cycle)
+         ("`"   . popper-cycle)
          ("C-M-`" . popper-toggle-type))
   :hook ((after-init . popper-mode)
          (after-init . popper-echo-mode))
@@ -288,7 +292,7 @@
 (use-package marginalia
   :defines marginalia-annotator-registry
   :functions marginalia-mode
-  :init (marginalia-mode)
+  :hook (minibuffer-mode . marginalia-mode)
   :config
   (setq marginalia-annotator-registry
       (assq-delete-all 'file marginalia-annotator-registry)))
@@ -474,13 +478,13 @@
 
 (push '("\\.rs\\'" . rust-ts-mode) auto-mode-alist)
 (push '("\\.go\\'" . go-ts-mode) auto-mode-alist)
-(with-eval-after-load 'project
-  (defun project-find-go-module (dir)
-    (when-let ((root (locate-dominating-file dir "go.mod")))
-      (cons 'go-module root)))
-  (cl-defmethod project-root ((project (head go-module)))
-    (cdr project))
-  (add-hook 'project-find-functions #'project-find-go-module))
+;; (with-eval-after-load 'project
+;;   (defun project-find-go-module (dir)
+;;     (when-let ((root (locate-dominating-file dir "go.mod")))
+;;       (cons 'go-module root)))
+;;   (cl-defmethod project-root ((project (head go-module)))
+;;     (cdr project))
+;;   (add-hook 'project-find-functions #'project-find-go-module))
 
 (push '("\\.ts\\'" . typescript-ts-mode) auto-mode-alist)
 (push '("\\.bin\\'" . hexl-mode) auto-mode-alist)
@@ -520,7 +524,8 @@
                                             'eglot-code-action-organize-imports))
                                          nil t))))
 
-(load "~/.emacs.d/comp" nil t)
+(with-eval-after-load 'prog-mode
+  (load "~/.emacs.d/comp" nil t))
 
 (use-package foxy
   :ensure nil
@@ -550,7 +555,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(markdown-mode eldoc-box eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(esup markdown-mode eldoc-box eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
