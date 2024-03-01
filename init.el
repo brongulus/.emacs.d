@@ -1,13 +1,13 @@
 ;; -*- coding: utf-8; lexical-binding: t -*-
 ;;; --------------------------
-;;; Defaults? Better? Maybe...
+;;; Code: Emacs config.
 ;;; --------------------------
 ;; (when (member "VictorMono Nerd Font Mono" (font-family-list))
 ;;   (set-frame-font "VictorMono Nerd Font Mono 16" nil t))
 (use-package emacs
   :ensure nil
-  :defines global-auto-revert-non-file-buffers auto-revert-verbose xref-search-program
-  xref-show-definitions-function xref-show-xrefs-function ediff-split-window-function
+  :defines global-auto-revert-non-file-buffers auto-revert-verbose xref-search-program outline-minor-mode-cycle
+  xref-show-definitions-function xref-show-xrefs-function ediff-split-window-function tabify-regexp
   ediff-keep-variants xref-auto-jump-to-first-xref ediff-window-setup-function Info-use-header-line
   :bind ("C-h '" . describe-face)
   :config
@@ -31,8 +31,11 @@
         uniquify-buffer-name-style 'forward
         global-auto-revert-non-file-buffers t
         auto-revert-verbose nil
-        Info-use-header-line nil)
+        Info-use-header-line nil
+        outline-minor-mode-cycle t
+        tabify-regexp "^\t* [ \t]+")
 
+  (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
   (add-hook 'prog-mode-hook (electric-pair-mode t))
   (add-hook 'prog-mode-hook (show-paren-mode t))
   (add-hook 'prog-mode-hook (lambda ()
@@ -52,6 +55,7 @@
 
   (with-eval-after-load 'minibuffer
     (save-place-mode 1)
+    (context-menu-mode 1)
     (savehist-mode)
     (global-auto-revert-mode t)
     (blink-cursor-mode -1))
@@ -116,9 +120,11 @@
               ("C-<return>" . icomplete-fido-exit)
               ("<backspace>" . icomplete-fido-backward-updir)
               ("TAB" . icomplete-forward-completions)
-              ("<backtab>" . icomplete-backward-completions))
-  :bind (:map icomplete-minibuffer-map
-              ("C-," . embark-act))
+              ("<backtab>" . icomplete-backward-completions)
+         :map icomplete-minibuffer-map
+              ("C-," . embark-act)
+         :map minibuffer-local-map
+              ("S-<return>" . newline))
   :hook (icomplete-minibuffer-setup . (lambda ()
                                         (setq-local completion-styles '(orderless basic)
                                                     truncate-lines t
@@ -127,28 +133,30 @@
   :defines completion
   :config ;; src: https://github.com/JasZhe/vimilla-emacs
   (defun completing-read-in-region (start end collection &optional predicate)
-  "Prompt for completion of region in the minibuffer if non-unique.
+    "Prompt for completion of region in the minibuffer if non-unique.
       Use as a value for `completion-in-region-function'."
-  (let* ((initial (buffer-substring-no-properties start end))
-         (limit (car (completion-boundaries initial collection predicate "")))
-         (all (completion-all-completions initial collection predicate (length initial)))
-         (completion (cond
-                      ((atom all) nil)
-                      ((and (consp all) (atom (cdr all)))
-                       (concat (substring initial 0 limit) (car all)))
-                      (t
-                       (setq completion
-                             (catch 'done
-                               (atomic-change-group
-                                 (let ((completion
-                                        (completing-read "Completion: " collection predicate nil initial)))
-                                   (throw 'done completion)))))))))
-  (cond (completion (completion--replace start end completion) t)
-        (t (message "No completion") nil))))
+    (let* ((initial (buffer-substring-no-properties start end))
+           (limit (car (completion-boundaries initial collection predicate "")))
+           (all (completion-all-completions initial collection predicate (length initial)))
+           (completion (cond
+                        ((atom all) nil)
+                        ((and (consp all) (atom (cdr all)))
+                         (concat (substring initial 0 limit) (car all)))
+                        (t
+                         (setq completion
+                               (catch 'done
+                                 (atomic-change-group
+                                   (let ((completion
+                                          (completing-read "Completion: " collection predicate nil initial)))
+                                     (throw 'done completion)))))))))
+      (cond (completion (completion--replace start end completion) t)
+            (t (message "No completion") nil))))
+  
   (setq completion-in-region-function #'completing-read-in-region
         tab-always-indent 'complete
         icomplete-in-buffer t
         icomplete-scroll t ;nil
+        icomplete-delay-completions-threshold 4000
         completions-group t))
 
 (use-package vc
@@ -168,7 +176,9 @@
       (eshell-return-to-prompt)
       (insert "git rebase -i")
       (eshell-send-input)))
-  
+
+  (push "bldr" vc-directory-exclusion-list)
+  (push "external" vc-directory-exclusion-list)
   (setq vc-handled-backends '(Git)
         vc-follow-symlinks t
         project-vc-merge-submodules nil
@@ -198,7 +208,8 @@
   (defun silent-repeat-mode ()
     (let ((inhibit-message t)
           (message-log-max nil))
-      (repeat-mode))))
+      (repeat-mode)))
+  (setq repeat-exit-key "RET"))
 
 (use-package isearch
   :ensure nil
@@ -227,9 +238,7 @@
     ;; Show flymake diagnostics first.
     (setq eldoc-documentation-functions
           (cons #'flymake-eldoc-function
-                (remove #'flymake-eldoc-function eldoc-documentation-functions)))
-    ;; Show all eldoc feedback.
-    (setq eldoc-documentation-strategy #'eldoc-documentation-compose)))
+                (remove #'flymake-eldoc-function eldoc-documentation-functions)))))
 
 (use-package recentf
   :ensure nil
@@ -271,6 +280,7 @@
           "magit:.\*"
           "\\*pabbrev suggestions\\*"
           "\\*eat\\*"
+          "\\*eldoc\\*"
           "vc-git :.\*"
           "\\*Warnings\\*"
           "\\*Backtrace\\*"
@@ -340,7 +350,13 @@
   (pabbrev-idle-timer-verbose nil)
   (pabbrev-overlay-decorators nil))
 
-(defun my-jk () ;; src: wasamasa
+(use-package meow
+  :demand t
+  :defines meow-keypad-leader-dispatch meow-cheatsheet-layout-qwerty meow-digit-argument meow-mode-state-list meow-normal-state-keymap
+  meow-digit-argument meow-expand-hint-counts meow-use-cursor-position-hack meow-cheatsheet-layout meow-insert-state-keymap
+  :functions meow-global-mode meow-motion-overwrite-define-key meow-normal-define-key meow-setup meow-insert-exit
+  :preface
+  (defun my-jk () ;; src: wasamasa
   (interactive)
   (let* ((initial-key ?j)
          (final-key ?k)
@@ -351,107 +367,128 @@
             (meow-insert-exit)
           (insert initial-key)
           (push event unread-command-events))
-      ;; timeout exceeded
       (insert initial-key))))
+  
+  (defvar insert-pair-map ;; src: oantolin
+    (let ((map (make-sparse-keymap)))
+      (define-key map [t] #'insert-pair)
+      map))
+  (defvar delete-pair-map
+    (let ((map (make-sparse-keymap)))
+      (define-key map [t] #'delete-pair)
+      map))
 
-(use-package meow
-  :demand t
-  :defines meow-keypad-leader-dispatch meow-cheatsheet-layout-qwerty meow-digit-argument meow-mode-state-list
-  meow-digit-argument meow-expand-hint-counts meow-use-cursor-position-hack meow-cheatsheet-layout meow-insert-state-keymap
-  :functions meow-global-mode meow-motion-overwrite-define-key meow-normal-define-key meow-setup
+  (defun substitute-regexp (substitution) ;; src: Juri Linkov
+    "Use s/old/new/g regexp syntax for ‘query-replace’."
+    (interactive
+     (list
+      (read-from-minibuffer "Substitute regexp: " '("s/" . 3) nil nil
+                            'query-replace-history nil t)))
+    (if (string-match "\\`s/\\(.*\\)/\\(.*\\)/\\([gi]*\\)" substitution)
+        (let* ((sregex (match-string 1 substitution))
+               (ssubst (match-string 2 substitution))
+               (sflags (match-string 3 substitution))
+               (case-fold-search (string-match "i" sflags)))
+          (perform-replace
+           sregex ssubst (not (string-match "g" sflags))
+           t nil nil nil
+           (if (and transient-mark-mode mark-active) (region-beginning) (goto-char (point-min)))
+           (if (and transient-mark-mode mark-active) (region-end) (goto-char (point-max)))))
+      (error "Invalid syntax")))
+  
   :init (meow-global-mode 1)
   :config
-  (defun meow-setup()
-    (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
-          meow-keypad-leader-dispatch ctl-x-map
-          meow-use-cursor-position-hack t)
-    (dolist (item '(word line block find till))
-      (push `(,item . 0) meow-expand-hint-counts))
-    (define-key meow-insert-state-keymap (kbd "j") #'my-jk)
-    (dolist (imode '(eat-mode eshell-mode log-edit-mode))
-      (push `(,imode . insert) meow-mode-state-list))
-    (meow-motion-overwrite-define-key
-     '("j" . meow-next)
-     '("k" . meow-prev)
-     '("<escape>" . ignore))
-    (meow-normal-define-key
-     '("0" . meow-digit-argument)
-     '("9" . meow-digit-argument)
-     '("8" . meow-digit-argument)
-     '("7" . meow-digit-argument)
-     '("6" . meow-digit-argument)
-     '("5" . meow-digit-argument)
-     '("4" . meow-digit-argument)
-     '("3" . meow-digit-argument)
-     '("2" . meow-digit-argument)
-     '("1" . meow-digit-argument)
-     '("-" . negative-argument)
-     '("C-;" . meow-reverse)
-     '(";" . meow-cancel-selection)
-     '("," . meow-inner-of-thing)
-     '("." . meow-bounds-of-thing)
-     '("[" . meow-beginning-of-thing)
-     '("]" . meow-end-of-thing)
-     '("{" . flymake-goto-prev-error)
-     '("}" . flymake-goto-next-error)
-     '("a" . meow-append)
-     '("A" . meow-open-below)
-     '("b" . meow-back-word)
-     '("B" . meow-back-symbol)
-     '("c" . meow-change)
-     '("C" . meow-comment)
-     '("d" . meow-kill)
-     '("D" . meow-page-down)
-     '("e" . meow-next-word)
-     '("E" . meow-next-symbol)
-     '("f" . meow-find)
-     '("g" . avy-goto-char-timer)
-     '("G" . meow-grab)
-     '("h" . meow-left)
-     '("H" . meow-left-expand)
-     '("i" . meow-insert)
-     '("I" . meow-open-above)
-     '("j" . meow-next)
-     '("J" . meow-next-expand)
-     '("k" . meow-prev)
-     '("K" . meow-prev-expand)
-     '("l" . meow-right)
-     '("L" . meow-right-expand)
-     '("m" . meow-join)
-     '("n" . meow-search)
-     '("o" . meow-block)
-     '("O" . meow-to-block)
-     '("p" . meow-yank)
-     '("P" . meow-yank-pop)
-     '("q" . meow-quit)
-     '("Q" . kill-this-buffer)
-     '("r" . replace-regexp)
-     '("R" . kmacro-call-macro)
-     '("s" . kmacro-start-macro)
-     '("S" . kmacro-end-macro)
-     '("t" . meow-till)
-     '("u" . undo-fu-only-undo)
-     '("U" . meow-page-up)
-     '("v" . meow-line)
-     '("w" . meow-mark-word)
-     '("W" . meow-mark-symbol)
-     '("x" . meow-delete)
-     '("X" . meow-goto-line)
-     '("y" . meow-save)
-     '("Y" . meow-sync-grab)
-     '("z" . meow-pop-selection)
-     '("Z" . undo-fu-only-redo)
-     '("+" . meow-block)
-     '("-" . negative-argument)
-     '("\\" . dired-jump)
-     '("*" . isearch-forward-thing-at-point)
-     '("%" . mark-whole-buffer)
-     '("/" . isearch-forward)
-     '(">" . indent-rigidly-right)
-     '("<" . indent-rigidly-left)
-     '("'" . repeat)
-     '("<escape>" . ignore)))
-  (meow-setup))
+  (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
+        meow-keypad-leader-dispatch ctl-x-map
+        meow-use-cursor-position-hack t)
+  (dolist (item '(word line block find till))
+    (push `(,item . 0) meow-expand-hint-counts))
+  (define-key meow-insert-state-keymap (kbd "j") #'my-jk)
+  (define-key meow-normal-state-keymap (kbd "S") insert-pair-map)
+  (define-key meow-normal-state-keymap (kbd "D") delete-pair-map)
+  (dolist (imode '(eat-mode eshell-mode log-edit-mode))
+    (push `(,imode . insert) meow-mode-state-list))
+  (meow-motion-overwrite-define-key
+   '("j" . meow-next)
+   '("k" . meow-prev)
+   '("<escape>" . ignore))
+  (meow-normal-define-key
+   '("0" . meow-digit-argument)
+   '("9" . meow-digit-argument)
+   '("8" . meow-digit-argument)
+   '("7" . meow-digit-argument)
+   '("6" . meow-digit-argument)
+   '("5" . meow-digit-argument)
+   '("4" . meow-digit-argument)
+   '("3" . meow-digit-argument)
+   '("2" . meow-digit-argument)
+   '("1" . meow-digit-argument)
+   '("-" . negative-argument)
+   '("C-;" . meow-reverse)
+   '(";" . meow-cancel-selection)
+   '("," . meow-inner-of-thing)
+   '("." . meow-bounds-of-thing)
+   '("[" . meow-beginning-of-thing)
+   '("]" . meow-end-of-thing)
+   '("{" . flymake-goto-prev-error)
+   '("}" . flymake-goto-next-error)
+   '("a" . meow-append)
+   '("A" . meow-open-below)
+   '("b" . meow-back-word)
+   '("B" . meow-back-symbol)
+   '("c" . meow-change)
+   '("C" . meow-comment)
+   '("d" . meow-kill)
+   '("e" . meow-next-word)
+   '("E" . meow-next-symbol)
+   '("f" . meow-find)
+   '("g" . avy-goto-char-timer)
+   '("G" . meow-grab)
+   '("h" . meow-left)
+   '("H" . meow-left-expand)
+   '("i" . meow-insert)
+   '("I" . meow-open-above)
+   '("j" . meow-next)
+   '("J" . meow-next-expand)
+   '("k" . meow-prev)
+   '("K" . meow-prev-expand)
+   '("l" . meow-right)
+   '("L" . meow-right-expand)
+   '("m" . meow-join)
+   '("n" . meow-search)
+   '("o" . meow-block)
+   '("O" . meow-to-block)
+   '("p" . meow-yank)
+   '("P" . meow-yank-pop)
+   '("q" . meow-quit)
+   '("Q" . kill-this-buffer)
+   '("r" . replace-regexp)
+   '("R" . kmacro-end-or-call-macro)
+   '("s" . kmacro-start-macro)
+   '("t" . meow-till)
+   '("u" . undo-fu-only-undo)
+   '("U" . meow-page-up)
+   '("v" . meow-line)
+   '("V" . meow-page-down)
+   '("w" . meow-mark-word)
+   '("W" . meow-mark-symbol)
+   '("x" . meow-delete)
+   '("X" . meow-goto-line)
+   '("y" . meow-save)
+   '("Y" . meow-sync-grab)
+   '("z" . meow-pop-selection)
+   '("Z" . undo-fu-only-redo)
+   '("+" . meow-block)
+   '("-" . negative-argument)
+   '(":" . substitute-regexp)
+   '("\\" . dired-jump)
+   '("*" . isearch-forward-thing-at-point)
+   '("%" . mark-whole-buffer)
+   '("/" . isearch-forward)
+   '(">" . indent-rigidly-right)
+   '("<" . indent-rigidly-left)
+   '("'" . repeat)
+   '("<escape>" . ignore)))
 
 ;;; -------------------------------------------------
 ;;; Competitive programming setup (snippets and foxy)
@@ -490,7 +527,10 @@
 (push '("\\.bin\\'" . hexl-mode) auto-mode-alist)
 
 (use-package eglot
-  :hook (((rust-ts-mode go-ts-mode) . eglot-ensure))
+  :hook (((rust-ts-mode go-ts-mode) . eglot-ensure)
+         (eglot-managed-mode . (lambda ()
+                                 (setq eldoc-documentation-strategy
+                                       'eldoc-documentation-compose-eagerly))))
   :functions eglot-format-buffer jsonrpc--log-event
   :defines go-ts-mode-indent-offset
   :config
@@ -513,16 +553,18 @@
                               :detachedFiles
                               ,(vector (file-local-name
                                         (file-truename buffer-file-name)))))))
-  (add-hook 'go-ts-mode-hook (lambda ()
-                               (add-hook 'before-save-hook
-                                         #'eglot-format-buffer -10 t))
+  (add-hook 'go-ts-mode-hook
+            (lambda ()
+              (add-hook 'before-save-hook
+                        #'eglot-format-buffer -10 t))
             nil t)
-  (add-hook 'go-ts-mode-hook (lambda ()
-                                 (add-hook 'before-save-hook
-                                         (lambda ()
-                                           (call-interactively
-                                            'eglot-code-action-organize-imports))
-                                         nil t))))
+  (add-hook 'go-ts-mode-hook
+            (lambda ()
+              (add-hook 'before-save-hook
+                        (lambda ()
+                          (call-interactively
+                           'eglot-code-action-organize-imports))
+                        nil t))))
 
 (with-eval-after-load 'prog-mode
   (load "~/.emacs.d/comp" nil t))
