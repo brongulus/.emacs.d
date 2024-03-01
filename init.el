@@ -32,7 +32,7 @@
         global-auto-revert-non-file-buffers t
         auto-revert-verbose nil
         Info-use-header-line nil
-        outline-minor-mode-cycle t
+        outline-minor-mode-cycle nil ;; messes up completion
         tabify-regexp "^\t* [ \t]+")
 
   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
@@ -67,9 +67,6 @@
   (defadvice load-theme (before theme-dont-propagate activate)
     (mapc #'disable-theme custom-enabled-themes))
 
-  (global-set-key (kbd "C--") #'(lambda () (interactive) (dired "/data/data/com.termux/files/home/")))
-  (global-set-key (kbd "C-'") #'(lambda () (interactive)
-                                  (term "/data/data/com.termux/files/usr/bin/fish")))
   (with-eval-after-load 'ediff
     (setq ediff-split-window-function 'split-window-horizontally
           ediff-window-setup-function 'ediff-setup-windows-plain
@@ -100,7 +97,7 @@
 
 (use-package dired
   :ensure nil
-  :hook (dired-mode . dired-hide-details-mode)
+  :hook (dired-mode . dired-hide-details-mode) ;; dired-hide-dotfiles-mode
   :bind (:map dired-mode-map
               ("\\" . dired-up-directory)
               ("E" . wdired-change-to-wdired-mode))
@@ -185,18 +182,6 @@
         vc-annotate-background-mode t)
   
   (if (string= (car custom-enabled-themes) "dracula")
-      ;; (advice-add 'vc-annotate-lines :after
-      ;;             (lambda (&rest args)
-      ;;               (let ((limit (car args)))
-      ;;                 ;; TODO: move point back
-      ;;                 (forward-line (- limit))
-      ;;                 (while (< (point) limit)
-      ;;                   (let* ((start (point))
-      ;;                         (end (progn (forward-line 1) (point)))
-      ;;                         (tmp-face (get-text-property (point) 'face)))
-      ;;                     (put-text-property start end 'face tmp-face)
-      ;;                     )))
-      ;;               nil))))
       (add-hook 'vc-annotate-mode-hook
                 (lambda ()
                   (face-remap-add-relative 'default :foreground "black")))))
@@ -228,7 +213,8 @@
   :hook (prog-mode . flymake-mode)
   :functions flymake-eldoc-function
   :config
-  (setq flymake-suppress-zero-counters t)
+  (setq flymake-suppress-zero-counters t
+        flymake-fringe-indicator-position nil)
   (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake)
   (with-eval-after-load 'eldoc
     (setq eldoc-echo-area-prefer-doc-buffer t
@@ -350,9 +336,20 @@
   (pabbrev-idle-timer-verbose nil)
   (pabbrev-overlay-decorators nil))
 
+(use-package diff-hl
+  :defines diff-hl-fringe-bmp-function
+  :hook ((prog-mode . turn-on-diff-hl-mode)
+         (prog-mode . diff-hl-show-hunk-mouse-mode))
+  :config
+  (let* ((width 3)
+         (bitmap (vector (1- (expt 2 width)))))
+    (define-fringe-bitmap 'my:diff-hl-bitmap bitmap 1 width '(top t)))
+  (setq diff-hl-fringe-bmp-function (lambda (type pos) 'my:diff-hl-bitmap)))
+
 (use-package meow
   :demand t
-  :defines meow-keypad-leader-dispatch meow-cheatsheet-layout-qwerty meow-digit-argument meow-mode-state-list meow-normal-state-keymap
+  :defines meow-keypad-leader-dispatch meow-cheatsheet-layout-qwerty meow-digit-argument meow-mode-state-list
+  meow-normal-state-keymap meow-replace-state-name-list meow-esc-delay
   meow-digit-argument meow-expand-hint-counts meow-use-cursor-position-hack meow-cheatsheet-layout meow-insert-state-keymap
   :functions meow-global-mode meow-motion-overwrite-define-key meow-normal-define-key meow-setup meow-insert-exit
   :preface
@@ -396,11 +393,17 @@
            (if (and transient-mark-mode mark-active) (region-end) (goto-char (point-max)))))
       (error "Invalid syntax")))
   
-  :init (meow-global-mode 1)
+  :hook (after-init . meow-global-mode)
   :config
   (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
         meow-keypad-leader-dispatch ctl-x-map
-        meow-use-cursor-position-hack t)
+        meow-use-cursor-position-hack t
+        meow-esc-delay 0.01
+        meow-replace-state-name-list '((normal . "N")
+                                      (motion . "M")
+                                      (keypad . "K")
+                                      (insert . "I")
+                                      (beacon . "B")))
   (dolist (item '(word line block find till))
     (push `(,item . 0) meow-expand-hint-counts))
   (define-key meow-insert-state-keymap (kbd "j") #'my-jk)
@@ -456,7 +459,7 @@
    '("L" . meow-right-expand)
    '("m" . meow-join)
    '("n" . meow-search)
-   '("o" . meow-block)
+   '("o" . occur)
    '("O" . meow-to-block)
    '("p" . meow-yank)
    '("P" . meow-yank-pop)
@@ -485,8 +488,8 @@
    '("*" . isearch-forward-thing-at-point)
    '("%" . mark-whole-buffer)
    '("/" . isearch-forward)
-   '(">" . indent-rigidly-right)
-   '("<" . indent-rigidly-left)
+   ;; '(">" . indent-rigidly-right)
+   ;; '("<" . indent-rigidly-left)
    '("'" . repeat)
    '("<escape>" . ignore)))
 
@@ -566,7 +569,9 @@
                            'eglot-code-action-organize-imports))
                         nil t))))
 
-(with-eval-after-load 'prog-mode
+(eval-after-load 'rust-ts-mode
+  (load "~/.emacs.d/comp" nil t))
+(eval-after-load 'c++-mode
   (load "~/.emacs.d/comp" nil t))
 
 (use-package foxy
@@ -597,7 +602,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(esup markdown-mode eldoc-box eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(diff-hl markdown-mode eldoc-box eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
