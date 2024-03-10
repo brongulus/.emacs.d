@@ -12,6 +12,7 @@
 (setq gc-cons-threshold most-positive-fixnum
       gc-cons-percentage 0.6
       file-name-handler-alist nil
+      load-prefer-newer noninteractive
       garbage-collection-messages nil)
 
 (add-hook 'emacs-startup-hook ; hook run after loading init files
@@ -59,7 +60,6 @@
                 (fullscreen . fullboth)
                 (font . "VictorMono Nerd Font Mono-16"))
               cursor-in-non-selected-windows nil
-              frame-inhibit-implied-resize nil
               bidi-display-reordering 'left-to-right
               bidi-inhibit-bpa t
               bidi-paragraph-direction 'left-to-right)
@@ -72,7 +72,13 @@
 (setq package-enable-at-startup nil
       redisplay-skip-fontification-on-input t
       window-combination-resize t
+      frame-inhibit-implied-resize t
       frame-resize-pixelwise t)
+
+(unless (eq system-type 'darwin)
+  (setq command-line-ns-option-alist nil))
+(unless (eq system-type 'gnu/linux)
+  (setq command-line-x-option-alist nil))
 
 (provide 'early-init)
 ;;; early-init.el ends here

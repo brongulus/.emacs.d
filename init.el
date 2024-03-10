@@ -25,7 +25,6 @@
                 warning-minimum-level :error)
   (setq read-process-output-max (* 2 1024 1024)
         inhibit-startup-screen t
-        load-prefer-newer t
         make-backup-files nil
         create-lockfiles nil
         uniquify-buffer-name-style 'forward
@@ -33,7 +32,8 @@
         auto-revert-verbose nil
         Info-use-header-line nil
         outline-minor-mode-cycle nil ;; messes up completion
-        tabify-regexp "^\t* [ \t]+")
+        tabify-regexp "^\t* [ \t]+"
+        electric-pair-skip-self t)
 
   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
   (add-hook 'prog-mode-hook (electric-pair-mode t))
@@ -83,7 +83,7 @@
   :ensure nil
   :init (package-initialize)
   :config
-  ;; (push '("melpa" . "https://melpa.org/packages/") package-archives)
+  ;; (push '("melpa . "https://melpa.org/packages/") package-archives)
   (unless package-archive-contents
     (package-refresh-contents))
   (setq package-native-compile t
@@ -118,9 +118,9 @@
               ("<backspace>" . icomplete-fido-backward-updir)
               ("TAB" . icomplete-forward-completions)
               ("<backtab>" . icomplete-backward-completions)
-         :map icomplete-minibuffer-map
+              :map icomplete-minibuffer-map
               ("C-," . embark-act)
-         :map minibuffer-local-map
+              :map minibuffer-local-map
               ("S-<return>" . newline))
   :hook (icomplete-minibuffer-setup . (lambda ()
                                         (setq-local completion-styles '(orderless basic)
@@ -167,11 +167,11 @@
          ("C-x v R" . vc-interactive-rebase))
   :config
   (remove-hook 'find-file-hook 'vc-find-file-hook)
-  (defun vc-interactive-rebase ()
-    (interactive)
+  (defun vc-interactive-rebase (branch)
+    (interactive "sRebase target branch: ")
     (with-current-buffer (eshell)
       (eshell-return-to-prompt)
-      (insert "git rebase -i")
+      (insert "git rebase -i " branch)
       (eshell-send-input)))
 
   (push "bldr" vc-directory-exclusion-list)
@@ -228,10 +228,15 @@
 
 (use-package recentf
   :ensure nil
+  :defer 1
   :bind ("C-x f" . #'recentf-open)
   :custom
   (recentf-max-menu-items 25)
   (recentf-auto-cleanup 'never))
+
+(use-package bookmark ;; for my/switch-to-thing
+  :ensure nil
+  :defer 1)
 
 (use-package tramp
   :defer 2
@@ -252,8 +257,10 @@
 ;;; ---------------------------------------------------------------------------------
 (use-package popper
   :bind (("C-`"   . popper-toggle)
-         ("`"   . popper-cycle)
-         ("C-M-`" . popper-toggle-type))
+         ("M-`"   . popper-cycle)
+         ("C-M-`" . popper-toggle-type)
+         :repeat-map popper-repeat-map
+         ("`"     . popper-cycle))
   :hook ((after-init . popper-mode)
          (after-init . popper-echo-mode))
   :defines popper-reference-buffers popper-mode-line popper-window-height
@@ -283,6 +290,7 @@
   (completion-styles '(orderless basic)))
 
 (use-package avy
+  :bind ("C-j" . avy-goto-char-timer)
   :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer))
 
 (use-package marginalia
@@ -291,7 +299,7 @@
   :hook (minibuffer-mode . marginalia-mode)
   :config
   (setq marginalia-annotator-registry
-      (assq-delete-all 'file marginalia-annotator-registry)))
+        (assq-delete-all 'file marginalia-annotator-registry)))
 
 (use-package embark
   :after minibuffer
@@ -320,7 +328,8 @@
 (use-package eat
   :functions eat
   :bind ("C-." . (lambda () (interactive)
-                   (eat "fish")))
+                   (let ((current-prefix-arg "fish"))
+                     (call-interactively 'eat))))
   :custom
   (eat-kill-buffer-on-exit t))
 
@@ -339,8 +348,10 @@
 (use-package diff-hl
   :defines diff-hl-fringe-bmp-function
   :hook ((prog-mode . turn-on-diff-hl-mode)
-         (prog-mode . diff-hl-show-hunk-mouse-mode))
+         (prog-mode . diff-hl-show-hunk-mouse-mode)
+         (dired-mode . diff-hl-dired-mode))
   :config
+  (diff-hl-flydiff-mode t)
   (let* ((width 3)
          (bitmap (vector (1- (expt 2 width)))))
     (define-fringe-bitmap 'my:diff-hl-bitmap bitmap 1 width '(top t)))
@@ -354,17 +365,17 @@
   :functions meow-global-mode meow-motion-overwrite-define-key meow-normal-define-key meow-setup meow-insert-exit
   :preface
   (defun my-jk () ;; src: wasamasa
-  (interactive)
-  (let* ((initial-key ?j)
-         (final-key ?k)
-         (timeout 0.5)
-         (event (read-event nil nil timeout)))
-    (if event ;; timeout met
-        (if (and (characterp event) (= event final-key))
-            (meow-insert-exit)
-          (insert initial-key)
-          (push event unread-command-events))
-      (insert initial-key))))
+    (interactive)
+    (let* ((initial-key ?j)
+           (final-key ?k)
+           (timeout 0.5)
+           (event (read-event nil nil timeout)))
+      (if event ;; timeout met
+          (if (and (characterp event) (= event final-key))
+              (meow-insert-exit)
+            (insert initial-key)
+            (push event unread-command-events))
+        (insert initial-key))))
   
   (defvar insert-pair-map ;; src: oantolin
     (let ((map (make-sparse-keymap)))
@@ -392,23 +403,41 @@
            (if (and transient-mark-mode mark-active) (region-beginning) (goto-char (point-min)))
            (if (and transient-mark-mode mark-active) (region-end) (goto-char (point-max)))))
       (error "Invalid syntax")))
+
+  (defun my/switch-to-thing () ;; src:James dyer
+    "Switch to a buffer, open a recent file, jump to a bookmark, or change the theme from a unified interface."
+    (interactive)
+    (let* ((buffers (mapcar #'buffer-name (buffer-list)))
+           (recent-files recentf-list)
+           (bookmarks (bookmark-all-names))
+           (themes (custom-available-themes))
+           (all-options (append buffers recent-files bookmarks
+                                (mapcar (lambda (theme) (concat "Theme: " (symbol-name theme))) themes)))
+           (selection (completing-read "Switch to: "
+                                       (lambda (str pred action)
+                                         (if (eq action 'metadata)
+                                             '(metadata . ((category . file)))
+                                           (complete-with-action action all-options str pred)))
+                                       nil t nil 'file-name-history)))
+      (pcase selection
+        ((pred (lambda (sel) (member sel buffers))) (switch-to-buffer selection))
+        ((pred (lambda (sel) (member sel bookmarks))) (bookmark-jump selection))
+        ((pred (lambda (sel) (string-prefix-p "Theme: " sel)))
+         (load-theme (intern (substring selection (length "Theme: "))) t))
+        (_ (find-file selection)))))
   
   :hook (after-init . meow-global-mode)
   :config
   (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
-        meow-keypad-leader-dispatch ctl-x-map
+        meow-keypad-leader-dispatch "C-x" ;ctl-x-map
         meow-use-cursor-position-hack t
-        meow-esc-delay 0.01
-        meow-replace-state-name-list '((normal . "N")
-                                      (motion . "M")
-                                      (keypad . "K")
-                                      (insert . "I")
-                                      (beacon . "B")))
+        meow-esc-delay 0.01)
   (dolist (item '(word line block find till))
     (push `(,item . 0) meow-expand-hint-counts))
   (define-key meow-insert-state-keymap (kbd "j") #'my-jk)
   (define-key meow-normal-state-keymap (kbd "S") insert-pair-map)
   (define-key meow-normal-state-keymap (kbd "D") delete-pair-map)
+  (global-set-key (kbd "C-x SPC") 'meow-M-x)
   (dolist (imode '(eat-mode eshell-mode log-edit-mode))
     (push `(,imode . insert) meow-mode-state-list))
   (meow-motion-overwrite-define-key
@@ -445,18 +474,25 @@
    '("e" . meow-next-word)
    '("E" . meow-next-symbol)
    '("f" . meow-find)
-   '("g" . avy-goto-char-timer)
+   '("gg" . avy-goto-char-timer)
+   '("gi" . imenu)
+   '("gx" . flymake-show-buffer-diagnostics)
+   '("gj" . my/switch-to-thing)
+   '("gd" . xref-find-definitions)
+   '("gb" . xref-go-back)
    '("G" . meow-grab)
    '("h" . meow-left)
-   '("H" . meow-left-expand)
    '("i" . meow-insert)
    '("I" . meow-open-above)
    '("j" . meow-next)
-   '("J" . meow-next-expand)
+   '("J" . (lambda () (interactive)
+             (meow-next 1)
+             (meow-join 1)
+             (meow-kill)))
    '("k" . meow-prev)
-   '("K" . meow-prev-expand)
+   '("K" . eldoc-box-help-at-point)
    '("l" . meow-right)
-   '("L" . meow-right-expand)
+   '("L" . meow-swap-grab)
    '("m" . meow-join)
    '("n" . meow-search)
    '("o" . occur)
@@ -486,11 +522,21 @@
    '(":" . substitute-regexp)
    '("\\" . dired-jump)
    '("*" . isearch-forward-thing-at-point)
+   '("&" . align-regexp)
    '("%" . mark-whole-buffer)
    '("/" . isearch-forward)
-   ;; '(">" . indent-rigidly-right)
-   ;; '("<" . indent-rigidly-left)
-   '("'" . repeat)
+   '("<" . beginning-of-buffer)
+   '(">" . end-of-buffer)
+   '("\"" . repeat)
+   '("'" . (lambda () (interactive)
+             (if (region-active-p)
+                 (thread-first
+                   (meow--make-selection '(expand . char) (mark) (point))
+                   (meow--select))
+               (thread-first
+                 (meow--make-selection '(expand . char) (point) (point))
+                 (meow--select)))
+             (message "Visual selection mode enabled")))
    '("<escape>" . ignore)))
 
 ;;; -------------------------------------------------
@@ -503,7 +549,6 @@
 
 (use-package eldoc-box
   :ensure nil
-  :bind ("C-l" . eldoc-box-help-at-point)
   :defines eldoc-box-max-pixel-height eldoc-box-max-pixel-width eldoc-box-only-multi-line
   :config
   (setq eldoc-box-max-pixel-width 600
@@ -518,24 +563,21 @@
 
 (push '("\\.rs\\'" . rust-ts-mode) auto-mode-alist)
 (push '("\\.go\\'" . go-ts-mode) auto-mode-alist)
-;; (with-eval-after-load 'project
-;;   (defun project-find-go-module (dir)
-;;     (when-let ((root (locate-dominating-file dir "go.mod")))
-;;       (cons 'go-module root)))
-;;   (cl-defmethod project-root ((project (head go-module)))
-;;     (cdr project))
-;;   (add-hook 'project-find-functions #'project-find-go-module))
-
 (push '("\\.ts\\'" . typescript-ts-mode) auto-mode-alist)
 (push '("\\.bin\\'" . hexl-mode) auto-mode-alist)
 
 (use-package eglot
+  :bind (:map meow-normal-state-keymap
+              ("ga" . eglot-code-actions)
+              ("gr" . eglot-rename)
+              ("gf" . eglot-format))
   :hook (((rust-ts-mode go-ts-mode) . eglot-ensure)
          (eglot-managed-mode . (lambda ()
                                  (setq eldoc-documentation-strategy
                                        'eldoc-documentation-compose-eagerly))))
   :functions eglot-format-buffer jsonrpc--log-event
   :defines go-ts-mode-indent-offset
+  :init (setq eglot-stay-out-of '(flymake))
   :config
   (fset #'jsonrpc--log-event #'ignore)
   (setq eglot-events-buffer-size 0
@@ -545,17 +587,18 @@
   (add-hook 'go-ts-mode-hook
             (lambda () (setq-local tab-width 4)))
   (setq go-ts-mode-indent-offset 4)
+  (setq eglot-ignored-server-capabilities '(:inlayHintProvider))
   (setq-default eglot-workspace-configuration
-    '((:gopls .
-        ((staticcheck . t)
-         (matcher . "CaseSensitive")))))
+                '((:gopls .
+                          ((staticcheck . t)
+                           (matcher . "CaseSensitive")))))
   (add-to-list 'eglot-server-programs ;; standalone r-a support (from rustic)
-             `(rust-ts-mode .
-                            ("rust-analyzer" :initializationOptions
-                             (:check (:command "clippy")
-                              :detachedFiles
-                              ,(vector (file-local-name
-                                        (file-truename buffer-file-name)))))))
+               `(rust-ts-mode .
+                              ("rust-analyzer" :initializationOptions
+                               (:check (:command "clippy")
+                                       :detachedFiles
+                                       ,(vector (file-local-name
+                                                 (file-truename buffer-file-name)))))))
   (add-hook 'go-ts-mode-hook
             (lambda ()
               (add-hook 'before-save-hook
@@ -591,9 +634,64 @@
   (add-hook 'go-ts-mode-hook
             (lambda ()
               (setq-local foxy-compile-command "go build -o a.out "))))
-  
+
 (setq delete-active-region t)
 
+(defun my-project-find-file (&optional pattern)
+  "Prompt the user to filter, scroll and select a file from a list of all
+project files matching PATTERN."
+  (interactive)
+  (let ((comp-cand '()))
+    (let* ((default-directory (vc-root-dir))
+           (make-process-fn (if (file-remote-p default-directory)
+                                'tramp-handle-make-process
+                              'make-process))
+           (process-name "my-project-find-file")
+           (candidates '()))
+      (funcall
+       make-process-fn
+       :name process-name
+       :filter (lambda (_process-buffer output-batch)
+                 ;; (when (boundp 'candidates)
+                 (let ((candidate-batch (split-string output-batch "\n" t)))
+                   (setq candidates (append candidates candidate-batch))
+                   (setq comp-cand (seq-filter pattern candidates))));)
+       :command (list "git" "ls-files")
+       ;; :sentinel (lambda (process event)
+       ;;             (completing-read "File: "
+       ;;                              candidates
+       ;;                              nil
+       ;;                              t
+       ;;                              pattern))
+       :connection-type 'pipe)
+      (completing-read "FileOut: "
+                       comp-cand)
+      ))
+  ;; oantolin gawd
+  (setq completing-read-function #'async-completing-read)
+  (completing-read "File: " (acr-lines-from-process "git" "ls-files"))
+  ;; oantolin gawd
+  (let ((output-buffer (get-buffer-create "*test*"))
+        (update-timer (run-with-timer 1 1
+                                      (lambda ()
+                                        (insert "@")     ; fake a change
+                                        (backward-delete-char 1)
+                                        (icomplete-exhibit)))))
+    (tramp-handle-start-file-process "test" output-buffer "git" "ls-files")
+    (unwind-protect
+        (completing-read
+         "Choose file: "
+         (lambda (string pred action)
+           (complete-with-action
+            action
+            (split-string
+             (with-current-buffer output-buffer
+               (buffer-string))
+             "\n")
+            string
+            pred)))
+      (cancel-timer update-timer)))
+  )
 (provide 'init)
 ;;; init.el ends here
 (custom-set-variables
@@ -602,7 +700,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(diff-hl markdown-mode eldoc-box eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(esup consult diff-hl markdown-mode eldoc-box eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
