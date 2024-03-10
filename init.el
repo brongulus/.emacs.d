@@ -63,7 +63,7 @@
   (let ((hour (substring (current-time-string) 11 13)))
     (if (and (string-lessp hour "17") (string-greaterp hour "08"))
         (setq load-theme-light t)))
-  (load-theme 'dracula :no-confirm)
+  (load-theme 'languid :no-confirm)
   (defadvice load-theme (before theme-dont-propagate activate)
     (mapc #'disable-theme custom-enabled-themes))
 
@@ -181,7 +181,7 @@
         project-vc-merge-submodules nil
         vc-annotate-background-mode t)
   
-  (if (string= (car custom-enabled-themes) "dracula")
+  (if (string= (car custom-enabled-themes) "languid")
       (add-hook 'vc-annotate-mode-hook
                 (lambda ()
                   (face-remap-add-relative 'default :foreground "black")))))
@@ -474,6 +474,7 @@
    '("e" . meow-next-word)
    '("E" . meow-next-symbol)
    '("f" . meow-find)
+   '("F" . recentf-open)
    '("gg" . avy-goto-char-timer)
    '("gi" . imenu)
    '("gx" . flymake-show-buffer-diagnostics)
