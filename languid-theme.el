@@ -695,9 +695,8 @@ read it before opening a new issue about your will.")
                                        'face `(,indicator-face
                                                :inverse-video t
                                                :box (:style flat-button))))))
-                "%e"
+                "%e "
                 (:eval (file-remote-p default-directory 'host))
-                " "
                 (:eval (propertize " %b " 'help-echo (buffer-file-name)))
                 "("
                 (:eval mode-name)

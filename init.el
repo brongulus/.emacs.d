@@ -349,8 +349,10 @@
   :defines diff-hl-fringe-bmp-function
   :hook ((prog-mode . turn-on-diff-hl-mode)
          (prog-mode . diff-hl-show-hunk-mouse-mode)
-         (dired-mode . diff-hl-dired-mode))
+         (dired-mode . (unless diff-hl-disable-on-remote
+                         diff-hl-dired-mode)))
   :config
+  (setq diff-hl-disable-on-remote t)
   (diff-hl-flydiff-mode t)
   (let* ((width 3)
          (bitmap (vector (1- (expt 2 width)))))
