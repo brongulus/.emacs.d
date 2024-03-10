@@ -42,10 +42,9 @@
 
    ;; Frame
    '(fringe ((t (:background "grey99"))))
-   '(mode-line ((t (:background "#e8e8e8" :foreground "black"))))
+   '(mode-line ((t (:background "#e8e8e8" :foreground "black" :box (:line-width 4 :style flat-button)))))
    '(mode-line-highlight ((t (:box (:line-width 2 :color "#9599B0")))))
-   '(mode-line-inactive
-     ((t (:inherit mode-line :background "#f5f5f5" :foreground "grey20"))))
+   '(mode-line-inactive ((t (:background "#e8e8e8" :foreground "grey20" :box (:line-width 4 :style flat-button)))))
 
    ;; Parens
    `(show-paren-match ((t (:background ,passive-color))))
@@ -59,8 +58,8 @@
    `(isearch ((t (:background ,highlight-color))))
    `(lazy-highlight ((t (:background ,secondary-color))))
    `(primary-selection ((t (:background ,selection-color))))
-   `(region ((t (:background ,selection-color))))
-   `(secondary-selection ((t (:background ,secondary-color))))
+   `(region ((t (:background ,selection-color :extend nil))))
+   `(secondary-selection ((t (:background ,secondary-color :extend nil))))
    `(shadow ((t (:foreground "grey50" :background ,subtle-color))))
    `(text-cursor ((t (:background "black" :foreground ,passive-color))))
    `(zmacs-region ((t (:background ,selection-color))))
@@ -110,44 +109,59 @@
    '(line-number ((t (:foreground "grey50"))))
    '(line-number-current-line ((t (:foreground "black"))))
    '(vertical-border ((t (:foreground "grey"))))
-   '(meow-beacon-indicator ((t (:background "medium spring green"))))
-   `(meow-normal-indicator ((t (:background ,selection-color))))
-   `(meow-insert-indicator ((t (:background ,highlight-color))))
+   '(meow-beacon-indicator ((t (:background "black" :foreground "medium spring green" :inverse-video t))))
+   `(meow-normal-indicator ((t (:background "black" :foreground ,selection-color :inverse-video t))))
+   `(meow-motion-indicator ((t (:background "black" :foreground ,selection-color :inverse-video t))))
+   `(meow-keypad-indicator ((t (:background "black" :foreground ,selection-color :inverse-video t))))
+   `(meow-insert-indicator ((t (:background "black" :foreground ,highlight-color :inverse-video t))))
    `(tab-bar ((t (:background "#E8E8E8"))))
    `(tab-bar-tab ((t (:background "grey99" :foreground "black"))))
    `(tab-bar-tab-inactive ((t (:background "#E8E8E8" :foreground "grey20" :box ,`(:line-width (1 . -1) :color "#E8E8E8")))))
    ))
 
 ;; mode-line
-(with-eval-after-load 'flymake
-  (setq-default flymake-mode-line-counter-format
-                '(flymake-mode-line-error-counter
-                  flymake-mode-line-warning-counter
-                  flymake-mode-line-note-counter)
-                flymake-mode-line-format
-                '(flymake-mode-line-exception
-                  flymake-mode-line-counters)))
+(setq-default flymake-mode-line-counter-format
+              '("" flymake-mode-line-error-counter
+                flymake-mode-line-warning-counter
+                flymake-mode-line-note-counter "")
+              flymake-mode-line-format
+                '("" flymake-mode-line-exception
+                  flymake-mode-line-counters))
 (setq-default global-mode-string nil
               mode-line-end-spaces
-              '("" mode-line-misc-info "Ln %l (" mode-name vc-mode ")"))
+              '("" mode-line-misc-info
+                flymake-mode-line-format " Ln %l"))
 (defun my/ml-padding ()
+  "Adding padding to the modeline so that spme elements can be right aligned."
     (let ((r-length (length (format-mode-line mode-line-end-spaces))))
       (propertize " "
                   'display `(space :align-to (- right ,r-length)))))
 
 (setq-default mode-line-format
-              '((:eval (when (mode-line-window-selected-p)
-                         (meow-indicator)))
-                "%e"
-                (:eval (if (buffer-modified-p)
-                           (propertize " %b " 'face '(:slant italic
-                                                      :foreground "#AAAAAA"
-                                                      :inverse-video t)
-                                       'help-echo (buffer-file-name))
-                         (propertize " %b " 'help-echo (buffer-file-name))))
-                (:eval (when (and (bound-and-true-p flymake-mode)
+              '(;; (:eval (when (mode-line-window-selected-p)
+                ;;          (meow-indicator)))
+                (:eval (when (and (bound-and-true-p meow-global-mode)
                                   (mode-line-window-selected-p))
-                         flymake-mode-line-format))
+                         (let* ((state (meow--current-state))
+                               (indicator-face (alist-get state meow-indicator-face-alist))
+                               (buffer-state (cond (buffer-read-only
+                                                    " RO ")
+                                                   ((buffer-modified-p)
+                                                    " ** ")
+                                                   (t
+                                                    " RW "))))
+                           (propertize buffer-state
+                                       'face `(,indicator-face
+                                               :inverse-video t
+                                               :box (:style flat-button))))))
+                "%e"
+                (:eval (file-remote-p default-directory 'host))
+                " "
+                (:eval (propertize " %b " 'help-echo (buffer-file-name)))
+                "("
+                (:eval mode-name)
+                (:eval vc-mode) ;; vc-display-status 'no-backend
+                ")"
                 (:eval (if (string> emacs-version "29.2")
                            mode-line-format-right-align
                          (my/ml-padding)))
@@ -191,5 +205,4 @@
                (file-name-as-directory (file-name-directory load-file-name))))
 
 (provide-theme 'alabaster)
-
-;;; espresso-theme.el ends here
+;;; alabaster-theme.el ends here
