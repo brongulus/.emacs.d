@@ -62,8 +62,8 @@
   ;; Load theme based on the time of the day
   (let ((hour (substring (current-time-string) 11 13)))
     (if (and (string-lessp hour "17") (string-greaterp hour "08"))
-        (load-theme 'alabaster :no-confirm)
-      (load-theme 'dracula :no-confirm)))
+        (setq load-theme-light t)))
+  (load-theme 'dracula :no-confirm)
   (defadvice load-theme (before theme-dont-propagate activate)
     (mapc #'disable-theme custom-enabled-themes))
 
