@@ -711,11 +711,7 @@ read it before opening a new issue about your will.")
 (add-hook 'prog-mode-hook
           (lambda ()
             (hi-lock-face-phrase-buffer "todo:" 'hi-green)
-            (hi-lock-face-phrase-buffer "fixme:" 'hi-salmon)
-            ;; (setq-local display-line-numbers 'relative)
-            (font-lock-add-keywords
-             nil
-             '((";" . 'shadow)))))
+            (hi-lock-face-phrase-buffer "fixme:" 'hi-salmon)))
 
 
 ;;;###autoload
@@ -762,7 +758,7 @@ read it before opening a new issue about your will.")
 ;; tab-bar-tab-name-truncated-max 12))
 
 ;;;###autoload
-(defun toggle-theme ()
+(defun languid-toggle-theme ()
   "Toggle between dark and light mode."
   (interactive)
   (if load-theme-light

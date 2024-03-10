@@ -2,6 +2,7 @@
 ;;; --------------------------
 ;;; Code: Emacs config.
 ;;; --------------------------
+(copy-face 'default 'fixed-pitch)
 ;; (when (member "VictorMono Nerd Font Mono" (font-family-list))
 ;;   (set-frame-font "VictorMono Nerd Font Mono 16" nil t))
 (use-package emacs
@@ -327,11 +328,15 @@
 
 (use-package eat
   :functions eat
-  :bind ("C-." . (lambda () (interactive)
-                   (let ((current-prefix-arg "fish"))
+  :bind (("C-." . (lambda () (interactive)
+                   (let ((current-prefix-arg t))
                      (call-interactively 'eat))))
-  :custom
-  (eat-kill-buffer-on-exit t))
+         (:map eat-semi-char-mode-map
+               ("C-u" . eat-self-input)))
+  :config
+  (setq explicit-shell-file-name "fish"
+        eat-kill-buffer-on-exit t
+        eat-term-name "xterm-256color"))
 
 (use-package with-editor
   :hook ((eshell-mode . with-editor-export-git-editor)
@@ -527,7 +532,7 @@
    '("*" . isearch-forward-thing-at-point)
    '("&" . align-regexp)
    '("%" . mark-whole-buffer)
-   '("/" . isearch-forward)
+   '("/" . meow-visit)
    '("<" . beginning-of-buffer)
    '(">" . end-of-buffer)
    '("\"" . repeat)
