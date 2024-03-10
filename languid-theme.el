@@ -65,19 +65,6 @@ The theme has to be reloaded after changing anything in this group."
   :type 'boolean
   :group 'languid)
 
-
-;; (defun dired-vc-left()
-;;   (interactive)
-;;   (let ((dir (if (eq (vc-root-dir) nil)
-;;                  (dired-noselect default-directory)
-;;                (dired-noselect (vc-root-dir)))))
-;;     (display-buffer-in-side-window
-;;      dir `((side . left)
-;;            (slot . 0)
-;;            (window-width . 0.2)
-;;            (window-parameters . ((mode-line-format . (" %b"))))))
-;;     (windmove-left)))
-
 (defvar languid-use-24-bit-colors-on-256-colors-terms nil
   "Use true colors even on terminals announcing less capabilities.
 
@@ -263,8 +250,8 @@ read it before opening a new issue about your will.")
      `(lazy-highlight ((t (:foreground ,fg2 :background ,bg2))))
      `(link ((t (:foreground ,links :underline t))))
      `(linum ((t (:slant italic :foreground ,bg4 :background ,languid-bg))))
-     `(line-number ((t (:foreground ,languid-comment :background ,languid-bg))))
-     `(line-number-current-line ((t (:foreground ,languid-yellow :background ,languid-bg))))
+     `(line-number ((t (:foreground ,languid-comment :background,languid-bg))))
+     `(line-number-current-line ((t (:inherit hl-line :foreground ,languid-yellow))))
      `(match ((t (:background ,languid-hl :foreground ,languid-bg))))
      `(menu ((t (:background ,languid-current :inverse-video nil :foreground ,languid-fg))))
      `(minibuffer-prompt ((t (:weight bold :foreground ,languid-yellow))))
@@ -475,8 +462,8 @@ read it before opening a new issue about your will.")
      `(message-cited-text-3 ((t (:foreground ,languid-comment))))
      `(message-cited-text-4 ((t (:foreground ,fg2))))
      `(message-mml ((t (:foreground ,languid-green :weight normal))))
-     `(mode-line ((t (:background "#13181f" :box (:line-width 4 :style flat-button) :foreground ,languid-fg)))) ;:overline ,languid-comment
-     `(mode-line-inactive ((t (:background "#13181f" :box (:line-width 4 :style flat-button) :foreground ,languid-comment)))) ;:overline ,bg3
+     `(mode-line ((t (:background "#141922" :box (:line-width 4 :style flat-button) :foreground ,languid-fg)))) ;:overline ,languid-comment
+     `(mode-line-inactive ((t (:background "#141922" :box (:line-width 4 :style flat-button) :foreground ,languid-comment)))) ;:overline ,bg3
      `(mini-modeline-mode-line ((t (:inherit mode-line :height 0.1 :box nil))))
      `(org-agenda-date ((t (:foreground ,languid-cyan :underline nil))))
      `(org-agenda-dimmed-todo-face ((t (:foreground ,languid-comment))))
@@ -551,10 +538,18 @@ read it before opening a new issue about your will.")
      `(show-paren-match-expression ((t (:inherit match))))
      `(show-paren-mismatch ((t (:inherit font-lock-warning-face))))
      `(slime-repl-inputed-output-face ((t (:foreground ,languid-purple))))
+     `(solaire-default-face ((t (:inherit default :background "#171d26"))))
+     `(solaire-fringe-face ((t (:inherit fringe :background "#171d26"))))
+     `(solaire-line-number-face ((t (:inherit line-number))))
+     `(solaire-hl-line-face ((t (:inherit hl-line))))
+     `(solaire-org-hide-face ((t (:inherit org-hide org-indent))))
+     `(solaire-mode-line-face ((t (:inherit mode-line))))
+     `(solaire-mode-line-inactive-face((t (:inherit mode-line-inactive))))
+     `(solaire-header-line-face ((t (:inherit header-line))))
      `(spam ((t (:inherit gnus-summary-normal-read :foreground ,languid-orange :strike-through t :slant oblique))))
-     `(tab-bar ((t (:foreground ,languid-yellow :background "#13181f"))))
+     `(tab-bar ((t (:foreground ,languid-yellow :background "#141922"))))
      `(tab-bar-tab ((t (:foreground ,languid-yellow :background ,languid-bg))))
-     `(tab-bar-tab-inactive ((t (:foreground ,languid-comment :background "#13181f" :box ,``(:line-width `(1 . -1) :color "black")))))
+     `(tab-bar-tab-inactive ((t (:foreground ,languid-comment :background "#141922" :box ,``(:line-width `(1 . -1) :color "black")))))
      `(term ((t (:foreground ,languid-fg :background ,languid-bg))))
      `(term-color-black ((t (:foreground ,languid-bg :background ,languid-comment))))
      `(term-color-blue ((t (:foreground ,languid-purple :background ,languid-purple))))
@@ -661,13 +656,14 @@ read it before opening a new issue about your will.")
 ;;              ,(funcall get-func (alist-get 'languid-fg colors))])))))
 
 ;; mode-line
-(setq-default flymake-mode-line-counter-format
-              '("" flymake-mode-line-error-counter
-                flymake-mode-line-warning-counter
-                flymake-mode-line-note-counter "")
-              flymake-mode-line-format
-              '("" flymake-mode-line-exception
-                flymake-mode-line-counters))
+(with-eval-after-load 'flymake
+  (setq-default flymake-mode-line-counter-format
+                '("" flymake-mode-line-error-counter
+                  flymake-mode-line-warning-counter
+                  flymake-mode-line-note-counter "")
+                flymake-mode-line-format
+                '("" flymake-mode-line-exception
+                  flymake-mode-line-counters)))
 (setq-default global-mode-string nil
               mode-line-end-spaces
               '("" mode-line-misc-info
@@ -744,7 +740,7 @@ read it before opening a new issue about your will.")
                                             :box ,`(:line-width (0 . ,(/ (line-pixel-height) 8))
                                                                 :color "#1b222d")))
           (propertize (concat padstr name padstr)
-                      'face `(:background "#13181f" :foreground "#6272a4"
+                      'face `(:background "#141922" :foreground "#6272a4"
                                           :box ,`(:line-width (2 . -1) :color "black")))))))
 
   (advice-add 'tab-bar-tab-name-format-default :override #'clean-tab-name)

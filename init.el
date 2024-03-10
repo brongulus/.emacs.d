@@ -84,7 +84,7 @@
   :ensure nil
   :init (package-initialize)
   :config
-  ;; (push '("melpa . "https://melpa.org/packages/") package-archives)
+  ;; (push '("melpa" . "https://melpa.org/packages/") package-archives)
   (unless package-archive-contents
     (package-refresh-contents))
   (setq package-native-compile t
@@ -99,10 +99,23 @@
 (use-package dired
   :ensure nil
   :hook (dired-mode . dired-hide-details-mode) ;; dired-hide-dotfiles-mode
-  :bind (:map dired-mode-map
+  :bind (("C-c b" . dired-vc-left)
+         :map dired-mode-map
               ("\\" . dired-up-directory)
               ("E" . wdired-change-to-wdired-mode))
   :config
+  (defun dired-vc-left()
+    (interactive)
+    (let ((dir (if (eq (vc-root-dir) nil)
+                   (dired-noselect default-directory)
+                 (dired-noselect (vc-root-dir)))))
+      (display-buffer-in-side-window
+       dir `((side . left)
+             (slot . 0)
+             (window-width . 0.2)
+             (window-parameters . ((mode-line-format . (" %b"))))))
+      (windmove-left)))
+
   (setq-default dired-dwim-target t
                 dired-auto-revert-buffer t
                 dired-mouse-drag-files t
@@ -163,7 +176,7 @@
   :defines project-vc-merge-submodules vc-annotate-background-mode
   :functions vc-git-push eshell-return-to-prompt eshell-send-input
   :bind (("C-x v f" . (lambda () (interactive)
-                        (vc-git-push t)))
+                        (vc-git--pushpull "push" nil '("--force-with-lease"))))
          ("C-x v e" . vc-ediff)
          ("C-x v R" . vc-interactive-rebase))
   :config
@@ -340,7 +353,7 @@
 
 (use-package with-editor
   :hook ((eshell-mode . with-editor-export-git-editor)
-         (eshell-mode . with-editor-export-editor)))
+         ((eat-mode eshell-mode) . with-editor-export-editor)))
 
 (use-package pabbrev ;; completion-preview-mode if emacs>30
   :ensure nil
@@ -363,6 +376,10 @@
          (bitmap (vector (1- (expt 2 width)))))
     (define-fringe-bitmap 'my:diff-hl-bitmap bitmap 1 width '(top t)))
   (setq diff-hl-fringe-bmp-function (lambda (type pos) 'my:diff-hl-bitmap)))
+
+(use-package solaire-mode
+  :hook (after-init . solaire-global-mode)
+  :hook (minibuffer-mode . turn-on-solaire-mode))
 
 (use-package meow
   :demand t
@@ -488,6 +505,8 @@
    '("gj" . my/switch-to-thing)
    '("gd" . xref-find-definitions)
    '("gb" . xref-go-back)
+   '("gt" . tab-bar-switch-to-next-tab)
+   '("gT" . tab-bar-switch-to-prev-tab)
    '("G" . meow-grab)
    '("h" . meow-left)
    '("i" . meow-insert)
@@ -708,7 +727,7 @@ project files matching PATTERN."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(esup consult diff-hl markdown-mode eldoc-box eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(solaire-mode esup consult diff-hl markdown-mode eldoc-box eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

@@ -56,7 +56,7 @@
                 (vertical-scroll-bars)
                 (left-fringe . 15)
                 (right-fringe . 15)
-                (internal-border-width . 10)
+                (internal-border-width . 00)
                 (fullscreen . fullboth)
                 (font . "VictorMono Nerd Font Mono-16"))
               cursor-in-non-selected-windows nil
