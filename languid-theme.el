@@ -296,10 +296,10 @@ read it before opening a new issue about your will.")
      `(ansi-color-bright-white ((t (:foreground "white" :background "white"))))
      `(ansi-color-yellow ((t (:foreground ,languid-yellow :background ,languid-yellow))))
      `(ansi-color-bright-yellow ((t (:foreground ,languid-yellow :background ,languid-yellow :weight bold))))
-     `(avy-lead-face ((t (:inherit secondary-selection :weight bold))))
-     `(avy-lead-face-0 ((t (:inherit secondary-selection :weight bold))))
-     `(avy-lead-face-1 ((t (:inherit secondary-selection :weight bold))))
-     `(avy-lead-face-2 ((t (:inherit secondary-selection :weight bold))))
+     `(avy-lead-face ((t (:background ,languid-yellow :foreground ,"black" :weight bold))))
+     `(avy-lead-face-0 ((t (:background ,languid-yellow :foreground ,"black" :weight bold))))
+     `(avy-lead-face-1 ((t (:background ,languid-yellow :foreground ,"black" :weight bold))))
+     `(avy-lead-face-2 ((t (:background ,languid-yellow :foreground ,"black" :weight bold))))
      `(completions-annotations ((t (:inherit font-lock-comment-face))))
      `(completions-common-part ((t (:foreground ,languid-yellow))))
      `(completions-first-difference ((t (:foreground ,languid-cyan :weight bold))))
@@ -540,12 +540,12 @@ read it before opening a new issue about your will.")
      `(slime-repl-inputed-output-face ((t (:foreground ,languid-purple))))
      `(solaire-default-face ((t (:inherit default :background "#171d26"))))
      `(solaire-fringe-face ((t (:inherit fringe :background "#171d26"))))
-     `(solaire-line-number-face ((t (:inherit line-number))))
-     `(solaire-hl-line-face ((t (:inherit hl-line))))
-     `(solaire-org-hide-face ((t (:inherit org-hide org-indent))))
-     `(solaire-mode-line-face ((t (:inherit mode-line))))
-     `(solaire-mode-line-inactive-face((t (:inherit mode-line-inactive))))
-     `(solaire-header-line-face ((t (:inherit header-line))))
+     ;; `(solaire-line-number-face ((t (:inherit line-number))))
+     ;; `(solaire-hl-line-face ((t (:inherit hl-line))))
+     ;; `(solaire-org-hide-face ((t (:inherit org-hide org-indent))))
+     ;; `(solaire-mode-line-face ((t (:inherit mode-line))))
+     ;; `(solaire-mode-line-inactive-face((t (:inherit mode-line-inactive))))
+     ;; `(solaire-header-line-face ((t (:inherit header-line))))
      `(spam ((t (:inherit gnus-summary-normal-read :foreground ,languid-orange :strike-through t :slant oblique))))
      `(tab-bar ((t (:foreground ,languid-yellow :background "#141922"))))
      `(tab-bar-tab ((t (:foreground ,languid-yellow :background ,languid-bg))))
@@ -656,18 +656,12 @@ read it before opening a new issue about your will.")
 ;;              ,(funcall get-func (alist-get 'languid-fg colors))])))))
 
 ;; mode-line
-(with-eval-after-load 'flymake
-  (setq-default flymake-mode-line-counter-format
-                '("" flymake-mode-line-error-counter
-                  flymake-mode-line-warning-counter
-                  flymake-mode-line-note-counter "")
-                flymake-mode-line-format
-                '("" flymake-mode-line-exception
-                  flymake-mode-line-counters)))
-(setq-default global-mode-string nil
+(setq global-mode-string nil
               mode-line-end-spaces
-              '("" mode-line-misc-info
-                flymake-mode-line-format " Ln %l"))
+              `("%n " mode-line-misc-info
+                (:eval (when (bound-and-true-p flymake-mode)
+                         (flymake--mode-line-counters)))
+                " Ln %l"))
 (defun my/ml-padding ()
   "Adding padding to the modeline so that spme elements can be right aligned."
   (let ((r-length (length (format-mode-line mode-line-end-spaces))))
@@ -675,9 +669,7 @@ read it before opening a new issue about your will.")
                 'display `(space :align-to (- right ,r-length)))))
 
 (setq-default mode-line-format
-              '(;; (:eval (when (mode-line-window-selected-p)
-                ;;          (meow-indicator)))
-                (:eval (when (and (bound-and-true-p meow-global-mode)
+              '((:eval (when (and (bound-and-true-p meow-global-mode)
                                   (mode-line-window-selected-p))
                          (let* ((state (meow--current-state))
                                 (indicator-face (alist-get state meow-indicator-face-alist))
@@ -691,7 +683,7 @@ read it before opening a new issue about your will.")
                                        'face `(,indicator-face
                                                :inverse-video t
                                                :box (:style flat-button))))))
-                "%e "
+                "%e"
                 (:eval (file-remote-p default-directory 'host))
                 (:eval (propertize " %b " 'help-echo (buffer-file-name)))
                 "("

@@ -234,7 +234,7 @@
   :hook (prog-mode . flymake-mode)
   :functions flymake-eldoc-function
   :config
-  (setq flymake-suppress-zero-counters t
+  (setq flymake-suppress-zero-counters nil
         flymake-fringe-indicator-position nil)
   (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake)
   (with-eval-after-load 'eldoc
