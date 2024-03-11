@@ -10,7 +10,8 @@
   :defines global-auto-revert-non-file-buffers auto-revert-verbose xref-search-program outline-minor-mode-cycle
   xref-show-definitions-function xref-show-xrefs-function ediff-split-window-function tabify-regexp
   ediff-keep-variants xref-auto-jump-to-first-xref ediff-window-setup-function Info-use-header-line
-  :bind ("C-h '" . describe-face)
+  :bind (("C-h '" . describe-face)
+         ("C-x l" . revert-buffer-quick))
   :config
   (setq-default line-spacing 3
                 cursor-type 'bar
@@ -101,9 +102,15 @@
   :hook (dired-mode . dired-hide-details-mode) ;; dired-hide-dotfiles-mode
   :bind (("C-c b" . dired-vc-left)
          :map dired-mode-map
-              ("\\" . dired-up-directory)
-              ("E" . wdired-change-to-wdired-mode))
+         ("q" . kill-this-buffer)
+         ("RET" . dired-find-alternate-file)
+         ("TAB" . dired-insert-subdir)
+         ("<backtab>" . dired-kill-subdir)
+         ("\\" . dired-up-directory)
+         ("E" . wdired-change-to-wdired-mode))
   :config
+  (put 'dired-find-alternate-file 'disabled nil)
+  
   (defun dired-vc-left()
     (interactive)
     (let ((dir (if (eq (vc-root-dir) nil)
@@ -273,6 +280,8 @@
   :bind (("C-`"   . popper-toggle)
          ("M-`"   . popper-cycle)
          ("C-M-`" . popper-toggle-type)
+         :map meow-motion-state-keymap
+         ("`" . popper-cycle)
          :repeat-map popper-repeat-map
          ("`"     . popper-cycle))
   :hook ((after-init . popper-mode)
@@ -286,7 +295,7 @@
           help-mode
           "magit:.\*"
           "\\*pabbrev suggestions\\*"
-          "\\*eat\\*"
+          "eat:.\*"
           "\\*eldoc\\*"
           "vc-git :.\*"
           "\\*Warnings\\*"
@@ -342,7 +351,9 @@
 (use-package eat
   :functions eat
   :bind (("C-." . (lambda () (interactive)
-                   (let ((current-prefix-arg t))
+                    (defvar eat-buffer-name)
+                    (let ((current-prefix-arg t)
+                          (eat-buffer-name (concat "eat: "default-directory)))
                      (call-interactively 'eat))))
          (:map eat-semi-char-mode-map
                ("C-u" . eat-self-input)))
@@ -501,6 +512,7 @@
    '("F" . recentf-open)
    '("gg" . avy-goto-char-timer)
    '("gi" . imenu)
+   '("gf" . ffap)
    '("gx" . flymake-show-buffer-diagnostics)
    '("gj" . my/switch-to-thing)
    '("gd" . xref-find-definitions)
@@ -597,7 +609,7 @@
   :bind (:map meow-normal-state-keymap
               ("ga" . eglot-code-actions)
               ("gr" . eglot-rename)
-              ("gf" . eglot-format))
+              ("gF" . eglot-format))
   :hook (((rust-ts-mode go-ts-mode) . eglot-ensure)
          (eglot-managed-mode . (lambda ()
                                  (setq eldoc-documentation-strategy
@@ -727,7 +739,7 @@ project files matching PATTERN."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(solaire-mode esup consult diff-hl markdown-mode eldoc-box eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(solaire-mode esup diff-hl markdown-mode eldoc-box eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
