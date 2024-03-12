@@ -52,6 +52,19 @@
           xref-show-definitions-function 'xref-show-definitions-completing-read
           xref-show-xrefs-function 'xref-show-definitions-completing-read))
 
+  ;; highlight area when yanking/killing
+  (defun my/yank-pulse-advice (orig-fn &rest args)
+    (let (begin end)
+      (setq begin (point))
+      (apply orig-fn args)
+      (setq end (point))
+      (pulse-momentary-highlight-region begin end)))
+  (advice-add 'yank :around #'my/yank-pulse-advice)
+  (defun my/kill-pulse-advice (orig-fn beg end &rest args)
+    (pulse-momentary-highlight-region beg end)
+    (apply orig-fn beg end args))
+  (advice-add 'kill-ring-save :around #'my/kill-pulse-advice)
+  
   (with-eval-after-load 'minibuffer
     (save-place-mode 1)
     (context-menu-mode 1)
@@ -185,7 +198,11 @@
   :bind (("C-x v f" . (lambda () (interactive)
                         (vc-git--pushpull "push" nil '("--force-with-lease"))))
          ("C-x v e" . vc-ediff)
-         ("C-x v R" . vc-interactive-rebase))
+         ("C-x v R" . vc-interactive-rebase)
+         :map vc-annotate-mode-map
+         ("q" . (lambda () (interactive)
+                  (kill-this-buffer)
+                  (tab-bar-close-tab))))
   :config
   (remove-hook 'find-file-hook 'vc-find-file-hook)
   (defun vc-interactive-rebase (branch)
@@ -200,10 +217,19 @@
   (setq vc-handled-backends '(Git)
         vc-find-revision-no-save t
         vc-follow-symlinks t
-        project-vc-merge-submodules nil)
-  
-  (if load-theme-light
-      (setq vc-annotate-background-mode t)))
+        project-vc-merge-submodules nil
+        vc-annotate-background-mode t)
+  ;; fixing vc-annotate
+  (add-to-list 'display-buffer-alist
+               '("^\\*Annotate.*\\*$"
+                 (display-buffer-in-new-tab)))
+  (defun vc-annotate-readable (&rest _)
+    (dolist (anno-face (seq-filter
+                        (lambda (face)
+                          (string-prefix-p "vc-annotate-face-" (symbol-name face)))
+                        (face-list)))
+      (face-remap-add-relative anno-face :foreground "black")))
+  (advice-add 'vc-annotate :after #'vc-annotate-readable))
       
       
 (use-package repeat
@@ -255,10 +281,6 @@
   :custom
   (recentf-max-menu-items 25)
   (recentf-auto-cleanup 'never))
-
-(use-package bookmark ;; for my/switch-to-thing
-  :ensure nil
-  :defer 1)
 
 (use-package tramp
   :defer 2
@@ -327,7 +349,9 @@
   :after minibuffer
   :bind ("C-," . embark-act)
   :config
-  (setq embark-prompter 'embark-completing-read-prompter
+  (setq prefix-help-command #'embark-prefix-help-command
+        embark-prompter 'embark-completing-read-prompter
+        embark-keymap-prompter-key "'"
         embark-indicators (delete 'embark-mixed-indicator embark-indicators)))
 
 (use-package undo-fu
@@ -439,28 +463,6 @@
            (if (and transient-mark-mode mark-active) (region-end) (goto-char (point-max)))))
       (error "Invalid syntax")))
 
-  (defun my/switch-to-thing () ;; src:James dyer
-    "Switch to a buffer, open a recent file, jump to a bookmark, or change the theme from a unified interface."
-    (interactive)
-    (let* ((buffers (mapcar #'buffer-name (buffer-list)))
-           (recent-files recentf-list)
-           (bookmarks (bookmark-all-names))
-           (themes (custom-available-themes))
-           (all-options (append buffers recent-files bookmarks
-                                (mapcar (lambda (theme) (concat "Theme: " (symbol-name theme))) themes)))
-           (selection (completing-read "Switch to: "
-                                       (lambda (str pred action)
-                                         (if (eq action 'metadata)
-                                             '(metadata . ((category . file)))
-                                           (complete-with-action action all-options str pred)))
-                                       nil t nil 'file-name-history)))
-      (pcase selection
-        ((pred (lambda (sel) (member sel buffers))) (switch-to-buffer selection))
-        ((pred (lambda (sel) (member sel bookmarks))) (bookmark-jump selection))
-        ((pred (lambda (sel) (string-prefix-p "Theme: " sel)))
-         (load-theme (intern (substring selection (length "Theme: "))) t))
-        (_ (find-file selection)))))
-  
   :hook (after-init . meow-global-mode)
   :config
   (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
@@ -499,7 +501,7 @@
    '("]" . meow-end-of-thing)
    '("{" . flymake-goto-prev-error)
    '("}" . flymake-goto-next-error)
-   '("a" . meow-append)
+   '("a" . embark-act)
    '("A" . meow-open-below)
    '("b" . meow-back-word)
    '("B" . meow-back-symbol)
@@ -513,9 +515,8 @@
    '("gg" . avy-goto-char-timer)
    '("gh" . diff-hl-show-hunk)
    '("gi" . imenu)
-   '("gf" . ffap)
+   '("gf" . embark-dwim) ;; ffap
    '("gx" . flymake-show-buffer-diagnostics)
-   '("gj" . my/switch-to-thing)
    '("gd" . xref-find-definitions)
    '("gb" . xref-go-back)
    '("gt" . tab-bar-switch-to-next-tab)

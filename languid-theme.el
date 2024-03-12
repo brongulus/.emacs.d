@@ -472,6 +472,8 @@ read it before opening a new issue about your will.")
      `(mode-line ((t (:background "#141922" :box (:line-width 4 :style flat-button) :foreground ,languid-fg)))) ;:overline ,languid-comment
      `(mode-line-inactive ((t (:background "#141922" :box (:line-width 4 :style flat-button) :foreground ,languid-comment)))) ;:overline ,bg3
      `(mini-modeline-mode-line ((t (:inherit mode-line :height 0.1 :box nil))))
+     `(pulse-highlight-start-face ((t (:background ,languid-yellow))))
+     `(pulse-highlight-face ((t (:background ,languid-yellow :extend t))))
      `(org-agenda-date ((t (:foreground ,languid-cyan :underline nil))))
      `(org-agenda-dimmed-todo-face ((t (:foreground ,languid-comment))))
      `(org-agenda-done ((t (:foreground ,languid-green))))
