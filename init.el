@@ -7,7 +7,12 @@
 (use-package emacs
   :ensure nil
   :bind (("C-h '" . describe-face)
-         ("C-x l" . revert-buffer-quick))
+         ("C-x l" . revert-buffer-quick)
+         ("<f5>" . (lambda () (interactive)
+                     (setq-default display-line-numbers-type 'relative)
+                     (hl-line-mode 'toggle)
+                     (display-line-numbers-mode 'toggle)))
+         ("<f6>" . languid-toggle-theme))
   :config
   (setq-default line-spacing 3
                 cursor-type 'bar
@@ -131,6 +136,7 @@
              (slot . 0)
              (window-width . 0.2)
              (window-parameters . ((mode-line-format . (" %b"))))))
+      (setq-local dired-free-space nil)
       (windmove-left)))
 
   (setq dired-dwim-target t
@@ -215,23 +221,26 @@
         vc-follow-symlinks t
         project-vc-merge-submodules nil
         vc-annotate-background-mode t)
-  ;; fixing vc-annotate
-  (with-eval-after-load 'vc-annotate
-    (define-key vc-annotate-mode-map
-                "q" (lambda () (interactive)
-                      (kill-this-buffer)
-                      (tab-bar-close-tab))))
-
-  (add-to-list 'display-buffer-alist
-               '("^\\*Annotate.*\\*$"
-                 (display-buffer-in-new-tab)))
+  ;; fixing vc-annotate : vc-annotate-background-mode doesn't play
+  ;; well with white fg, so we tweak the faces to have black fg
   (defun vc-annotate-readable (&rest _)
     (dolist (anno-face (seq-filter
                         (lambda (face)
                           (string-prefix-p "vc-annotate-face-" (symbol-name face)))
                         (face-list)))
       (face-remap-add-relative anno-face :foreground "black")))
-  (advice-add 'vc-annotate-lines :after #'vc-annotate-readable))
+  
+  (with-eval-after-load 'vc-annotate
+    (if vc-annotate-background-mode
+        (advice-add 'vc-annotate-lines :after #'vc-annotate-readable))
+    (define-key vc-annotate-mode-map
+                "q" (lambda () (interactive)
+                      (kill-this-buffer)
+                      (tab-bar-close-tab))))
+  ;; vc-annotate messes up the window-arrangement, give it a dedicated tab
+  (add-to-list 'display-buffer-alist
+               '("^\\*Annotate.*\\*$"
+                 (display-buffer-in-new-tab))))
       
 (use-package repeat
   :ensure nil
@@ -384,6 +393,16 @@
          (:map eat-semi-char-mode-map
                ("C-u" . eat-self-input)))
   :config
+  (setq eat-message-handler-alist
+        ;; once eat fish-intergration is merged
+        '(("emsg" . (lambda (x)
+                      (message x)))
+          ("ff" . (lambda (file)
+                    (find-file file)))
+          ;; FIXME: doesnt work over tramp with large name
+          ("ediff" . (lambda (file1 file2)
+                       (ediff file1 file2)))))
+  
   (setq explicit-shell-file-name "fish"
         eat-kill-buffer-on-exit t
         eat-term-name "xterm-256color"))
@@ -669,61 +688,49 @@
 
 (setq delete-active-region t)
 
-(defun my-project-find-file (&optional pattern)
+(with-eval-after-load 'project
+  (add-to-list 'project-switch-commands '(project-dired "Dired" ?D)))
+(defun async-project-find-file (&optional pattern)
   "Prompt the user to filter, scroll and select a file from a list of all
 project files matching PATTERN."
   (interactive)
-  (let ((comp-cand '()))
-    (let* ((default-directory (vc-root-dir))
-           (make-process-fn (if (file-remote-p default-directory)
-                                'tramp-handle-make-process
-                              'make-process))
-           (process-name "my-project-find-file")
-           (candidates '()))
-      (funcall
-       make-process-fn
-       :name process-name
-       :filter (lambda (_process-buffer output-batch)
-                 ;; (when (boundp 'candidates)
-                 (let ((candidate-batch (split-string output-batch "\n" t)))
-                   (setq candidates (append candidates candidate-batch))
-                   (setq comp-cand (seq-filter pattern candidates))));)
-       :command (list "git" "ls-files")
-       ;; :sentinel (lambda (process event)
-       ;;             (completing-read "File: "
-       ;;                              candidates
-       ;;                              nil
-       ;;                              t
-       ;;                              pattern))
-       :connection-type 'pipe)
-      (completing-read "FileOut: "
-                       comp-cand)
-      ))
   ;; oantolin gawd
-  (setq completing-read-function #'async-completing-read)
-  (completing-read "File: " (acr-lines-from-process "git" "ls-files"))
-  ;; oantolin gawd
-  (let ((output-buffer (get-buffer-create "*test*"))
-        (update-timer (run-with-timer 1 1
-                                      (lambda ()
-                                        (insert "@")     ; fake a change
-                                        (backward-delete-char 1)
-                                        (icomplete-exhibit)))))
-    (tramp-handle-start-file-process "test" output-buffer "git" "ls-files")
+  (let ((output-buffer (get-buffer-create "*async-completing-read*"))
+        (default-directory (vc-root-dir))
+        (make-process-fn (if (file-remote-p default-directory)
+                             'tramp-handle-make-process
+                           'make-process))
+        (update-timer (run-with-timer 0.2 0.2
+                                      (lambda () ;; Refresh icomplete by faking change
+                                        (when-let ((mini (active-minibuffer-window)))
+                                          (with-selected-window mini
+                                            (icomplete-exhibit)))))))
+    (funcall
+     make-process-fn
+     :name "project-files"
+     :buffer output-buffer
+     :sentinel #'ignore
+     :noquery t
+     :command (list "git" "ls-files")
+     :connection-type 'pipe)
     (unwind-protect
         (completing-read
-         "Choose file: "
-         (lambda (string pred action)
-           (complete-with-action
-            action
-            (split-string
-             (with-current-buffer output-buffer
-               (buffer-string))
-             "\n")
-            string
-            pred)))
-      (cancel-timer update-timer)))
-  )
+         "Choose: " (lambda (string pred action)
+                      (complete-with-action
+                       action
+                       (split-string
+                        (with-current-buffer output-buffer (buffer-string))
+                        "\n" 'omit-nulls)
+                       string pred)))
+      (cancel-timer update-timer)
+      (kill-buffer output-buffer))))
+
+(defun fff (filename)
+  (interactive
+   (list (async-project-find-file)))
+  (let ((default-directory (vc-root-dir)))
+    (find-file filename)))
+
 (provide 'init)
 ;;; init.el ends here
 (custom-set-variables

@@ -177,11 +177,12 @@ read it before opening a new issue about your will.")
        '(avy-lead-face-0 ((t (:inherit secondary-selection :weight bold))))
        '(avy-lead-face-1 ((t (:inherit secondary-selection :weight bold))))
        '(avy-lead-face-2 ((t (:inherit secondary-selection :weight bold))))
+       '(completions-highlight ((t (:inherit highlight :extend t))))
        '(diff-hl-insert ((t (:foreground "lime green"))))
        '(diff-hl-delete ((t (:foreground "orange red"))))
        '(diff-hl-change ((t (:foreground "deep sky blue"))))
        '(line-number ((t (:foreground "grey50"))))
-       '(line-number-current-line ((t (:foreground "black"))))
+       '(line-number-current-line ((t (:inherit hl-line :foreground "black"))))
        '(vertical-border ((t (:foreground "grey"))))
        `(solaire-default-face ((t (:inherit default :background ,subtle-color))))
        '(meow-beacon-indicator
@@ -309,15 +310,16 @@ read it before opening a new issue about your will.")
      `(avy-lead-face-2 ((t (:background ,languid-yellow :foreground ,"black" :weight bold))))
      `(completions-annotations ((t (:inherit font-lock-comment-face))))
      `(completions-common-part ((t (:foreground ,languid-yellow))))
+     `(completions-highlight ((t (:inherit highlight :extend t))))
      `(completions-first-difference ((t (:foreground ,languid-cyan :weight bold))))
      `(corfu-default ((t (:inherit tooltip :background ,bg-alt))))
      `(corfu-current ((t (:background ,bg3 :foreground ,languid-fg))))
      `(diff-hl-change ((t (:foreground ,languid-cyan))))
      `(diff-hl-delete ((t (:foreground ,languid-red))))
      `(diff-hl-insert ((t (:foreground ,languid-green))))
-     `(dired-directory ((t (:foreground ,languid-cyan :weight normal))))
+     `(dired-directory ((t (:foreground ,languid-green :weight normal))))
      `(dired-flagged ((t (:foreground ,languid-pink))))
-     `(dired-header ((t (:foreground ,fg3 :background ,languid-bg))))
+     `(dired-header ((t (:foreground ,languid-yellow :weight bold))))
      `(dired-ignored ((t (:inherit shadow))))
      `(dired-mark ((t (:foreground ,languid-fg :weight bold))))
      `(dired-marked ((t (:foreground ,languid-orange :weight bold))))
@@ -554,7 +556,7 @@ read it before opening a new issue about your will.")
      ;; `(solaire-org-hide-face ((t (:inherit org-hide org-indent))))
      ;; `(solaire-mode-line-face ((t (:inherit mode-line))))
      ;; `(solaire-mode-line-inactive-face((t (:inherit mode-line-inactive))))
-     ;; `(solaire-header-line-face ((t (:inherit header-line))))
+     `(solaire-header-line-face ((t (:inherit header-line :background "#171d26"))))
      `(spam ((t (:inherit gnus-summary-normal-read :foreground ,languid-orange :strike-through t :slant oblique))))
      `(tab-bar ((t (:foreground ,languid-yellow :background "#141922"))))
      `(tab-bar-tab ((t (:foreground ,languid-yellow :background ,languid-bg))))
@@ -707,8 +709,10 @@ read it before opening a new issue about your will.")
 
 (add-hook 'prog-mode-hook
           (lambda ()
-            (hi-lock-face-phrase-buffer "todo:" 'hi-green)
-            (hi-lock-face-phrase-buffer "fixme:" 'hi-salmon)))
+            (font-lock-add-keywords
+             nil
+             '(("\\<\\(FIXME\\|HACK\\|TODO\\|BUG\\|DONE\\)"
+                1 font-lock-warning-face t)))))
 
 
 ;;;###autoload
@@ -732,17 +736,17 @@ read it before opening a new issue about your will.")
       (if load-theme-light
           (if (eq (car tab) 'current-tab)
               (propertize (concat "│" padstr name padstr)
-                          'face `(:background "grey99" :foreground "black" :slant italic :box ,`(:line-width ,(/ (line-pixel-height) 8) :color "grey99")))
+                          'face `(:background "grey99" :foreground "black" :slant italic :box ,`(:line-width (2 . 2) :color "grey99")))
             (propertize (concat padstr name padstr)
-                        'face `(:background "#E8E8E8" :foreground "grey20" :box ,`(:line-width ,(/ (line-pixel-height) 8) :color "#E8E8E8"))))
+                        'face `(:background "#E8E8E8" :foreground "grey20" :box ,`(:line-width (2 . 2) :color "#E8E8E8"))))
         (if (eq (car tab) 'current-tab)
             (propertize (concat "│" padstr name padstr)
                         'face `(:background "#1b222d" :slant italic :foreground "#ffd484"
-                                            :box ,`(:line-width (0 . ,(/ (line-pixel-height) 8))
+                                            :box ,`(:line-width (2 . 2)
                                                                 :color "#1b222d")))
           (propertize (concat padstr name padstr)
                       'face `(:background "#141922" :foreground "#6272a4"
-                                          :box ,`(:line-width (2 . -1) :color "black")))))))
+                                          :box ,`(:line-width (2 . 2) :color "black")))))))
 
   (advice-add 'tab-bar-tab-name-format-default :override #'clean-tab-name)
 
