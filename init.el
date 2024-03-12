@@ -198,11 +198,7 @@
   :bind (("C-x v f" . (lambda () (interactive)
                         (vc-git--pushpull "push" nil '("--force-with-lease"))))
          ("C-x v e" . vc-ediff)
-         ("C-x v R" . vc-interactive-rebase)
-         :map vc-annotate-mode-map
-         ("q" . (lambda () (interactive)
-                  (kill-this-buffer)
-                  (tab-bar-close-tab))))
+         ("C-x v R" . vc-interactive-rebase))
   :config
   (remove-hook 'find-file-hook 'vc-find-file-hook)
   (defun vc-interactive-rebase (branch)
@@ -220,6 +216,12 @@
         project-vc-merge-submodules nil
         vc-annotate-background-mode t)
   ;; fixing vc-annotate
+  (with-eval-after-load 'vc-annotate
+    (define-key vc-annotate-mode-map
+                "q" (lambda () (interactive)
+                      (kill-this-buffer)
+                      (tab-bar-close-tab))))
+
   (add-to-list 'display-buffer-alist
                '("^\\*Annotate.*\\*$"
                  (display-buffer-in-new-tab)))
@@ -229,8 +231,7 @@
                           (string-prefix-p "vc-annotate-face-" (symbol-name face)))
                         (face-list)))
       (face-remap-add-relative anno-face :foreground "black")))
-  (advice-add 'vc-annotate :after #'vc-annotate-readable))
-      
+  (advice-add 'vc-annotate-lines :after #'vc-annotate-readable))
       
 (use-package repeat
   :ensure nil
@@ -420,6 +421,9 @@
   :config
   (setq markdown-fontify-code-blocks-natively t))
 
+(use-package which-key
+  :hook (minibuffer-mode . which-key-mode))
+
 (use-package meow
   :demand t
   :preface
@@ -478,6 +482,7 @@
   (dolist (imode '(eat-mode eshell-mode log-edit-mode))
     (push `(,imode . insert) meow-mode-state-list))
   (meow-motion-overwrite-define-key
+   '("Q" . kill-this-buffer)
    '("j" . meow-next)
    '("k" . meow-prev)
    '("<escape>" . ignore))
@@ -727,7 +732,7 @@ project files matching PATTERN."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(solaire-mode esup diff-hl markdown-mode eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(which-key solaire-mode esup diff-hl markdown-mode eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
