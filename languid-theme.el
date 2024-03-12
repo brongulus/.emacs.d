@@ -40,17 +40,17 @@ The theme has to be reloaded after changing anything in this group."
   :type 'number
   :group 'languid)
 
-(defcustom languid-height-title-2 1.1
+(defcustom languid-height-title-2 1.0;1
   "Font size 110%."
   :type 'number
   :group 'languid)
 
-(defcustom languid-height-title-3 1.3
+(defcustom languid-height-title-3 1.0;3
   "Font size 130%."
   :type 'number
   :group 'languid)
 
-(defcustom languid-height-doc-title 1.44
+(defcustom languid-height-doc-title 1.0;44
   "Font size 144%."
   :type 'number
   :group 'languid)
@@ -92,7 +92,7 @@ read it before opening a new issue about your will.")
           (secondary-color "#FBE9AD")
           (active-color "#EEEEEE")
           (passive-color "#AAAAAA")
-          (subtle-color "#EEEEEE")
+          (subtle-color "white smoke")
           (error-color "#F93232")
           (border-color "#a5a5a5"))
       (custom-theme-set-faces
@@ -178,19 +178,26 @@ read it before opening a new issue about your will.")
        '(avy-lead-face-1 ((t (:inherit secondary-selection :weight bold))))
        '(avy-lead-face-2 ((t (:inherit secondary-selection :weight bold))))
        '(diff-hl-insert ((t (:foreground "lime green"))))
-       '(diff-hl-delete ((t (:foreground "red"))))
-       '(diff-hl-change ((t (:foreground "blue"))))
+       '(diff-hl-delete ((t (:foreground "orange red"))))
+       '(diff-hl-change ((t (:foreground "deep sky blue"))))
        '(line-number ((t (:foreground "grey50"))))
        '(line-number-current-line ((t (:foreground "black"))))
        '(vertical-border ((t (:foreground "grey"))))
-       '(meow-beacon-indicator ((t (:background "black" :foreground "medium spring green" :inverse-video t))))
-       `(meow-normal-indicator ((t (:background "black" :foreground ,selection-color :inverse-video t))))
-       `(meow-motion-indicator ((t (:background "black" :foreground ,selection-color :inverse-video t))))
-       `(meow-keypad-indicator ((t (:background "black" :foreground ,selection-color :inverse-video t))))
-       `(meow-insert-indicator ((t (:background "black" :foreground ,highlight-color :inverse-video t))))
+       `(solaire-default-face ((t (:inherit default :background ,subtle-color))))
+       '(meow-beacon-indicator
+         ((t (:background "black" :foreground "medium spring green" :inverse-video t))))
+       `(meow-normal-indicator
+         ((t (:background "black" :foreground ,selection-color :inverse-video t))))
+       `(meow-motion-indicator
+         ((t (:background "black" :foreground ,selection-color :inverse-video t))))
+       `(meow-keypad-indicator
+         ((t (:background "black" :foreground ,selection-color :inverse-video t))))
+       `(meow-insert-indicator
+         ((t (:background "black" :foreground ,highlight-color :inverse-video t))))
        `(tab-bar ((t (:background "#E8E8E8"))))
        `(tab-bar-tab ((t (:background "grey99" :foreground "black"))))
-       `(tab-bar-tab-inactive ((t (:background "#E8E8E8" :foreground "grey20" :box ,`(:line-width (1 . -1) :color "#E8E8E8")))))
+       `(tab-bar-tab-inactive
+         ((t (:background "#E8E8E8" :foreground "grey20" :box ,`(:line-width (1 . -1) :color "#E8E8E8")))))
        ))
   ;;; dark
   (let ((languid-bg      "#1b222d"); "#1b222d" "#181818")  ;; 1B212D

@@ -1,15 +1,11 @@
 ;; -*- coding: utf-8; lexical-binding: t -*-
 ;;; --------------------------
-;;; Code: Emacs config.
+;;; Commentary: Emacs config.
 ;;; --------------------------
-(copy-face 'default 'fixed-pitch)
 ;; (when (member "VictorMono Nerd Font Mono" (font-family-list))
 ;;   (set-frame-font "VictorMono Nerd Font Mono 16" nil t))
 (use-package emacs
   :ensure nil
-  :defines global-auto-revert-non-file-buffers auto-revert-verbose xref-search-program outline-minor-mode-cycle
-  xref-show-definitions-function xref-show-xrefs-function ediff-split-window-function tabify-regexp
-  ediff-keep-variants xref-auto-jump-to-first-xref ediff-window-setup-function Info-use-header-line
   :bind (("C-h '" . describe-face)
          ("C-x l" . revert-buffer-quick))
   :config
@@ -24,7 +20,8 @@
                 use-short-answers t
                 initial-major-mode 'fundamental-mode
                 debug-on-error t
-                warning-minimum-level :error)
+                warning-minimum-level :error
+                delete-pair-blink-delay 0)
   (setq read-process-output-max (* 2 1024 1024)
         inhibit-startup-screen t
         make-backup-files nil
@@ -38,14 +35,14 @@
         electric-pair-skip-self t)
 
   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
+  (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
+  (add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
   (add-hook 'prog-mode-hook (electric-pair-mode t))
   (add-hook 'prog-mode-hook (show-paren-mode t))
-  (add-hook 'prog-mode-hook (lambda ()
-                              (add-hook 'before-save-hook
-                                        (lambda ()
-                                          (let ((current-prefix-arg t))
-                                            (call-interactively 'untabify)))))
-            nil t)
+  
+  (copy-face 'default 'fixed-pitch)
+  (set-register ?f `(file . ,(locate-user-emacs-file "init.el")))
+  (set-register ?c `(file . "~/problems/"))
   (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
   (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
 
@@ -100,7 +97,7 @@
 (use-package dired
   :ensure nil
   :hook (dired-mode . dired-hide-details-mode) ;; dired-hide-dotfiles-mode
-  :bind (("C-c b" . dired-vc-left)
+  :bind (("C-x d" . dired-vc-left)
          :map dired-mode-map
          ("q" . kill-this-buffer)
          ("RET" . dired-find-alternate-file)
@@ -123,13 +120,14 @@
              (window-parameters . ((mode-line-format . (" %b"))))))
       (windmove-left)))
 
-  (setq-default dired-dwim-target t
-                dired-auto-revert-buffer t
-                dired-mouse-drag-files t
-                mouse-drag-and-drop-region-cross-program t
-                dired-kill-when-opening-new-dired-buffer t
-                dired-recursive-deletes 'always
-                dired-recursive-copies 'always))
+  (setq dired-dwim-target t
+        dired-auto-revert-buffer t
+        dired-mouse-drag-files t
+        dired-use-ls-dired nil
+        mouse-drag-and-drop-region-cross-program t
+        dired-kill-when-opening-new-dired-buffer t
+        dired-recursive-deletes 'always
+        dired-recursive-copies 'always))
 
 (use-package icomplete
   :init
@@ -147,8 +145,6 @@
                                         (setq-local completion-styles '(orderless basic)
                                                     truncate-lines t
                                                     line-spacing nil)))
-  :functions completing-read-in-region
-  :defines completion
   :config ;; src: https://github.com/JasZhe/vimilla-emacs
   (defun completing-read-in-region (start end collection &optional predicate)
     "Prompt for completion of region in the minibuffer if non-unique.
@@ -177,11 +173,15 @@
         icomplete-delay-completions-threshold 4000
         completions-group t))
 
+(use-package windmove
+    :defer 2
+    :config
+    (windmove-default-keybindings 'meta)
+    (windmove-swap-states-default-keybindings 'shift))
+
 (use-package vc
   :defer nil
   :ensure nil
-  :defines project-vc-merge-submodules vc-annotate-background-mode
-  :functions vc-git-push eshell-return-to-prompt eshell-send-input
   :bind (("C-x v f" . (lambda () (interactive)
                         (vc-git--pushpull "push" nil '("--force-with-lease"))))
          ("C-x v e" . vc-ediff)
@@ -198,15 +198,14 @@
   (push "bldr" vc-directory-exclusion-list)
   (push "external" vc-directory-exclusion-list)
   (setq vc-handled-backends '(Git)
+        vc-find-revision-no-save t
         vc-follow-symlinks t
-        project-vc-merge-submodules nil
-        vc-annotate-background-mode t)
+        project-vc-merge-submodules nil)
   
-  (if (string= (car custom-enabled-themes) "languid")
-      (add-hook 'vc-annotate-mode-hook
-                (lambda ()
-                  (face-remap-add-relative 'default :foreground "black")))))
-
+  (if load-theme-light
+      (setq vc-annotate-background-mode t)))
+      
+      
 (use-package repeat
   :ensure nil
   :hook (after-init . silent-repeat-mode)
@@ -232,8 +231,10 @@
 (use-package flymake
   :ensure nil
   :hook (prog-mode . flymake-mode)
-  :functions flymake-eldoc-function
   :config
+  (setopt flymake-cc-command
+          '("gcc" "-fsyntax-only" "-Wall" "-Wextra" "-D_GLIBCXX_NO_ASSERT"
+            "-I/Users/admin/problems/include" "-x" "c" "-"))
   (setq flymake-suppress-zero-counters nil
         flymake-fringe-indicator-position nil)
   (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake)
@@ -261,7 +262,6 @@
 
 (use-package tramp
   :defer 2
-  :defines tramp-default-method tramp-ssh-controlmaster-options tramp-verbose tramp-remote-path
   :config
   (setq tramp-ssh-controlmaster-options
         (concat
@@ -286,7 +286,6 @@
          ("`"     . popper-cycle))
   :hook ((after-init . popper-mode)
          (after-init . popper-echo-mode))
-  :defines popper-reference-buffers popper-mode-line popper-window-height
   :init
   (setq popper-reference-buffers
         '("\\*Messages\\*"
@@ -295,7 +294,7 @@
           help-mode
           "magit:.\*"
           "\\*pabbrev suggestions\\*"
-          "eat:.\*"
+          ".*-eat\\*"
           "\\*eldoc\\*"
           "vc-git :.\*"
           "\\*Warnings\\*"
@@ -314,11 +313,11 @@
 
 (use-package avy
   :bind ("C-j" . avy-goto-char-timer)
-  :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer))
+  :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer)
+  :custom
+  (avy-single-candidate-jump nil))
 
 (use-package marginalia
-  :defines marginalia-annotator-registry
-  :functions marginalia-mode
   :hook (minibuffer-mode . marginalia-mode)
   :config
   (setq marginalia-annotator-registry
@@ -327,7 +326,6 @@
 (use-package embark
   :after minibuffer
   :bind ("C-," . embark-act)
-  :defines embark-indicators embark-prompter
   :config
   (setq embark-prompter 'embark-completing-read-prompter
         embark-indicators (delete 'embark-mixed-indicator embark-indicators)))
@@ -343,17 +341,20 @@
 
 (use-package undo-fu-session
   :demand t
-  :functions undo-fu-session-global-mode
   :init
   (unless (string-equal system-type "android")
     (undo-fu-session-global-mode)))
 
 (use-package eat
-  :functions eat
+  :commands eat-project
+  :init (with-eval-after-load 'project
+          (add-to-list 'project-switch-commands '(eat-project "Eat" ?t)))
   :bind (("C-." . (lambda () (interactive)
                     (defvar eat-buffer-name)
                     (let ((current-prefix-arg t)
-                          (eat-buffer-name (concat "eat: "default-directory)))
+                          (eat-buffer-name (concat
+                                            "*" default-directory
+                                            "-eat*")))
                      (call-interactively 'eat))))
          (:map eat-semi-char-mode-map
                ("C-u" . eat-self-input)))
@@ -364,7 +365,7 @@
 
 (use-package with-editor
   :hook ((eshell-mode . with-editor-export-git-editor)
-         ((eat-mode eshell-mode) . with-editor-export-editor)))
+         (eshell-mode . with-editor-export-editor)))
 
 (use-package pabbrev ;; completion-preview-mode if emacs>30
   :ensure nil
@@ -375,7 +376,6 @@
   (pabbrev-overlay-decorators nil))
 
 (use-package diff-hl
-  :defines diff-hl-fringe-bmp-function
   :hook ((prog-mode . turn-on-diff-hl-mode)
          (prog-mode . diff-hl-show-hunk-mouse-mode)
          (dired-mode . (unless diff-hl-disable-on-remote
@@ -392,12 +392,12 @@
   :hook (after-init . solaire-global-mode)
   :hook (minibuffer-mode . turn-on-solaire-mode))
 
+(use-package markdown-mode
+  :config
+  (setq markdown-fontify-code-blocks-natively t))
+
 (use-package meow
   :demand t
-  :defines meow-keypad-leader-dispatch meow-cheatsheet-layout-qwerty meow-digit-argument meow-mode-state-list
-  meow-normal-state-keymap meow-replace-state-name-list meow-esc-delay
-  meow-digit-argument meow-expand-hint-counts meow-use-cursor-position-hack meow-cheatsheet-layout meow-insert-state-keymap
-  :functions meow-global-mode meow-motion-overwrite-define-key meow-normal-define-key meow-setup meow-insert-exit
   :preface
   (defun my-jk () ;; src: wasamasa
     (interactive)
@@ -511,6 +511,7 @@
    '("f" . meow-find)
    '("F" . recentf-open)
    '("gg" . avy-goto-char-timer)
+   '("gh" . diff-hl-show-hunk)
    '("gi" . imenu)
    '("gf" . ffap)
    '("gx" . flymake-show-buffer-diagnostics)
@@ -526,10 +527,12 @@
    '("j" . meow-next)
    '("J" . (lambda () (interactive)
              (meow-next 1)
-             (meow-join 1)
-             (meow-kill)))
+             (join-line)))
    '("k" . meow-prev)
-   '("K" . eldoc-box-help-at-point)
+   '("K" . (lambda () (interactive)
+             (if (derived-mode-p 'emacs-lisp-mode)
+                 (describe-symbol (symbol-at-point))
+               (eldoc-doc-buffer t))))
    '("l" . meow-right)
    '("L" . meow-swap-grab)
    '("m" . meow-join)
@@ -581,19 +584,6 @@
 ;;; -------------------------------------------------
 ;;; Competitive programming setup (snippets and foxy)
 ;;; -------------------------------------------------
-(use-package markdown-mode
-  :defines markdown-fontify-code-blocks-natively
-  :config
-  (setq markdown-fontify-code-blocks-natively t))
-
-(use-package eldoc-box
-  :ensure nil
-  :defines eldoc-box-max-pixel-height eldoc-box-max-pixel-width eldoc-box-only-multi-line
-  :config
-  (setq eldoc-box-max-pixel-width 600
-        eldoc-box-max-pixel-height 700
-        eldoc-box-only-multi-line t))
-
 (setq treesit-language-source-alist ;; treesit-install-language-grammar
       '((go "https://github.com/tree-sitter/tree-sitter-go")
         (rust "https://github.com/tree-sitter/tree-sitter-rust")
@@ -614,8 +604,6 @@
          (eglot-managed-mode . (lambda ()
                                  (setq eldoc-documentation-strategy
                                        'eldoc-documentation-compose-eagerly))))
-  :functions eglot-format-buffer jsonrpc--log-event
-  :defines go-ts-mode-indent-offset
   :init (setq eglot-stay-out-of '(flymake))
   :config
   (fset #'jsonrpc--log-event #'ignore)
@@ -651,10 +639,9 @@
                            'eglot-code-action-organize-imports))
                         nil t))))
 
-(eval-after-load 'rust-ts-mode
-  (load "~/.emacs.d/comp" nil t))
-(eval-after-load 'c++-mode
-  (load "~/.emacs.d/comp" nil t))
+(add-hook 'minibuffer-mode-hook
+          (lambda ()
+            (load "~/.emacs.d/comp" nil t)))
 
 (use-package foxy
   :ensure nil
@@ -739,7 +726,7 @@ project files matching PATTERN."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(solaire-mode esup diff-hl markdown-mode eldoc-box eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(solaire-mode esup diff-hl markdown-mode eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
