@@ -24,7 +24,7 @@
                 ring-bell-function 'ignore
                 use-short-answers t
                 initial-major-mode 'fundamental-mode
-                debug-on-error t
+                ;; debug-on-error t
                 warning-minimum-level :error
                 delete-pair-blink-delay 0)
   (setq read-process-output-max (* 2 1024 1024)
@@ -44,6 +44,7 @@
   (add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
   (add-hook 'prog-mode-hook (electric-pair-mode t))
   (add-hook 'prog-mode-hook (show-paren-mode t))
+  (add-hook 'prog-mode-hook (which-function-mode))
   
   (copy-face 'default 'fixed-pitch)
   (set-register ?f `(file . ,(locate-user-emacs-file "init.el")))
@@ -83,12 +84,6 @@
   (load-theme 'languid :no-confirm)
   (defadvice load-theme (before theme-dont-propagate activate)
     (mapc #'disable-theme custom-enabled-themes))
-
-  (with-eval-after-load 'ediff
-    (setq ediff-split-window-function 'split-window-horizontally
-          ediff-window-setup-function 'ediff-setup-windows-plain
-          ediff-keep-variants nil)
-    (setq-local display-line-numbers nil))
   
   (defadvice term-handle-exit
       (after term-kill-buffer-on-exit activate)
@@ -100,7 +95,7 @@
   :ensure nil
   :init (package-initialize)
   :config
-  ;; (push '("melpa" . "https://melpa.org/packages/") package-archives)
+  (push '("melpa" . "https://melpa.org/packages/") package-archives)
   (unless package-archive-contents
     (package-refresh-contents))
   (setq package-native-compile t
@@ -128,9 +123,7 @@
   
   (defun dired-vc-left()
     (interactive)
-    (let ((dir (if (eq (vc-root-dir) nil)
-                   (dired-noselect default-directory)
-                 (dired-noselect (vc-root-dir)))))
+    (let ((dir (dired-noselect default-directory)))
       (display-buffer-in-side-window
        dir `((side . left)
              (slot . 0)
@@ -193,10 +186,64 @@
         completions-group t))
 
 (use-package windmove
-    :defer 2
-    :config
-    (windmove-default-keybindings 'meta)
-    (windmove-swap-states-default-keybindings 'shift))
+  :defer 2
+  :ensure nil
+  :config
+  (windmove-default-keybindings 'meta)
+  (windmove-swap-states-default-keybindings 'shift))
+
+(use-package ediff
+  :defer 1
+  :ensure nil
+  :hook ((ediff-before-setup . tab-bar-new-tab)
+         (ediff-quit . tab-bar-close-tab))
+  :config
+  (add-hook 'ediff-keymap-setup-hook
+            (lambda ()
+              (define-key ediff-mode-map "q"
+                          (lambda () (interactive)
+                            (ediff-really-quit t)))))
+  (setq ediff-split-window-function 'split-window-horizontally
+        ediff-window-setup-function 'ediff-setup-windows-plain
+        ediff-diff-options "-w"))
+
+(use-package hideshow
+  :ensure nil
+  :hook (prog-mode . hs-minor-mode)
+  :config
+  (defun hs-cycle (&optional level)
+    (interactive "p")
+    (let (message-log-max
+          (inhibit-message t))
+      (if (= level 1)
+          (pcase last-command
+            ('hs-cycle
+             (hs-hide-level 1)
+             (setq this-command 'hs-cycle-children))
+            ('hs-cycle-children
+             ;; TODO: Fix this case. `hs-show-block' needs to be
+             ;; called twice to open all folds of the parent
+             ;; block.
+             (save-excursion (hs-show-block))
+             (hs-show-block)
+             (setq this-command 'hs-cycle-subtree))
+            ('hs-cycle-subtree
+             (hs-hide-block))
+            (_
+             (if (not (hs-already-hidden-p))
+                 (hs-hide-block)
+               (hs-hide-level 1)
+               (setq this-command 'hs-cycle-children))))
+        (hs-hide-level level)
+        (setq this-command 'hs-hide-level))))
+
+  (defun hs-global-cycle ()
+    (interactive)
+    (pcase last-command
+      ('hs-global-cycle
+       (save-excursion (hs-show-all))
+       (setq this-command 'hs-global-show))
+      (_ (hs-hide-all)))))
 
 (use-package vc
   :defer nil
@@ -206,7 +253,6 @@
          ("C-x v e" . vc-ediff)
          ("C-x v R" . vc-interactive-rebase))
   :config
-  (remove-hook 'find-file-hook 'vc-find-file-hook)
   (defun vc-interactive-rebase (branch)
     (interactive "sRebase target branch: ")
     (with-current-buffer (eshell)
@@ -214,8 +260,6 @@
       (insert "git rebase -i " branch)
       (eshell-send-input)))
 
-  (push "bldr" vc-directory-exclusion-list)
-  (push "external" vc-directory-exclusion-list)
   (setq vc-handled-backends '(Git)
         vc-find-revision-no-save t
         vc-follow-symlinks t
@@ -240,7 +284,7 @@
   ;; vc-annotate messes up the window-arrangement, give it a dedicated tab
   (add-to-list 'display-buffer-alist
                '("^\\*Annotate.*\\*$"
-                 (display-buffer-in-new-tab))))
+                 (display-buffer-reuse-mode-window display-buffer-in-tab))))
       
 (use-package repeat
   :ensure nil
@@ -293,18 +337,19 @@
   (recentf-auto-cleanup 'never))
 
 (use-package tramp
-  :defer 2
+  :defer 1
   :config
   (setq tramp-ssh-controlmaster-options
         (concat
          "-o ControlPath=\~/.ssh/control/ssh-%%r@%%h:%%p "
          "-o ControlMaster=auto -o ControlPersist=yes")
         tramp-default-method "ssh"
+        tramp-default-remote-shell "/bin/zsh"
         remote-file-name-inhibit-auto-save-visited t
         remote-file-name-inhibit-cache nil
         remote-file-name-inhibit-locks t
-        tramp-verbose 1)
-  (add-to-list 'tramp-remote-path 'tramp-own-remote-path))
+        tramp-verbose 1
+        tramp-remote-path '(tramp-own-remote-path)))
 ;;; ---------------------------------------------------------------------------------
 ;;; ELPA packages (popper, orderless, marginalia, embark, meow, eat, undo-fu+session)
 ;;; ---------------------------------------------------------------------------------
@@ -329,6 +374,8 @@
           ".*-eat\\*"
           "\\*eldoc\\*"
           "vc-git :.\*"
+          "\\*vc-change-log\\*"
+          "\\*Flymake diagnostics.\*"
           "\\*Warnings\\*"
           "\\*Backtrace\\*"
           "\\*Occur\\*"
@@ -421,11 +468,8 @@
 
 (use-package diff-hl
   :hook ((prog-mode . turn-on-diff-hl-mode)
-         (prog-mode . diff-hl-show-hunk-mouse-mode)
-         (dired-mode . (unless diff-hl-disable-on-remote
-                         diff-hl-dired-mode)))
+         (prog-mode . diff-hl-show-hunk-mouse-mode))
   :config
-  (setq diff-hl-disable-on-remote t)
   (diff-hl-flydiff-mode t)
   (let* ((width 3)
          (bitmap (vector (1- (expt 2 width)))))
@@ -468,24 +512,6 @@
       (define-key map [t] #'delete-pair)
       map))
 
-  (defun substitute-regexp (substitution) ;; src: Juri Linkov
-    "Use s/old/new/g regexp syntax for ‘query-replace’."
-    (interactive
-     (list
-      (read-from-minibuffer "Substitute regexp: " '("s/" . 3) nil nil
-                            'query-replace-history nil t)))
-    (if (string-match "\\`s/\\(.*\\)/\\(.*\\)/\\([gi]*\\)" substitution)
-        (let* ((sregex (match-string 1 substitution))
-               (ssubst (match-string 2 substitution))
-               (sflags (match-string 3 substitution))
-               (case-fold-search (string-match "i" sflags)))
-          (perform-replace
-           sregex ssubst (not (string-match "g" sflags))
-           t nil nil nil
-           (if (and transient-mark-mode mark-active) (region-beginning) (goto-char (point-min)))
-           (if (and transient-mark-mode mark-active) (region-end) (goto-char (point-max)))))
-      (error "Invalid syntax")))
-
   :hook (after-init . meow-global-mode)
   :config
   (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
@@ -504,6 +530,7 @@
    '("Q" . kill-this-buffer)
    '("j" . meow-next)
    '("k" . meow-prev)
+   '("/" . meow-visit)
    '("<escape>" . ignore))
   (meow-normal-define-key
    '("0" . meow-digit-argument)
@@ -540,6 +567,7 @@
    '("gh" . diff-hl-show-hunk)
    '("gi" . imenu)
    '("gf" . embark-dwim) ;; ffap
+   '("gs" . scratch-buffer)
    '("gx" . flymake-show-buffer-diagnostics)
    '("gd" . xref-find-definitions)
    '("gb" . xref-go-back)
@@ -582,11 +610,13 @@
    '("X" . meow-goto-line)
    '("y" . meow-save)
    '("Y" . meow-sync-grab)
-   '("z" . meow-pop-selection)
+   '("zz" . meow-pop-selection)
+   '("za" . hs-global-cycle)
+   '("zf" . hs-cycle)
    '("Z" . undo-fu-only-redo)
    '("+" . meow-block)
    '("-" . negative-argument)
-   '(":" . substitute-regexp)
+   '(":" . meow-reverse)
    '("\\" . dired-jump)
    '("*" . isearch-forward-thing-at-point)
    '("&" . align-regexp)
@@ -690,7 +720,8 @@
 
 (with-eval-after-load 'project
   (add-to-list 'project-switch-commands '(project-dired "Dired" ?D)))
-(defun async-project-find-file (&optional pattern)
+
+(defun async-project-find-file (program &rest args)
   "Prompt the user to filter, scroll and select a file from a list of all
 project files matching PATTERN."
   (interactive)
@@ -700,7 +731,7 @@ project files matching PATTERN."
         (make-process-fn (if (file-remote-p default-directory)
                              'tramp-handle-make-process
                            'make-process))
-        (update-timer (run-with-timer 0.2 0.2
+        (update-timer (run-with-timer 0.3 0.3
                                       (lambda () ;; Refresh icomplete by faking change
                                         (when-let ((mini (active-minibuffer-window)))
                                           (with-selected-window mini
@@ -711,7 +742,7 @@ project files matching PATTERN."
      :buffer output-buffer
      :sentinel #'ignore
      :noquery t
-     :command (list "git" "ls-files")
+     :command (cons program args);(list "git" "ls-tree" "-rtd" "--format=%(path)" "HEAD")
      :connection-type 'pipe)
     (unwind-protect
         (completing-read
@@ -727,7 +758,7 @@ project files matching PATTERN."
 
 (defun fff (filename)
   (interactive
-   (list (async-project-find-file)))
+   (list (async-project-find-file "git" "ls-files")))
   (let ((default-directory (vc-root-dir)))
     (find-file filename)))
 
@@ -739,10 +770,14 @@ project files matching PATTERN."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(which-key solaire-mode esup diff-hl markdown-mode eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(org-modern which-key solaire-mode esup diff-hl markdown-mode eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
+
+;; Local Variables:
+;; byte-compile-warnings: (not free-vars)
+;; End:
