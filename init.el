@@ -32,12 +32,12 @@
         make-backup-files nil
         create-lockfiles nil
         uniquify-buffer-name-style 'forward
-        global-auto-revert-non-file-buffers t
         auto-revert-verbose nil
         Info-use-header-line nil
         outline-minor-mode-cycle nil ;; messes up completion
         tabify-regexp "^\t* [ \t]+"
-        electric-pair-skip-self t)
+        electric-pair-skip-self t
+        compilation-scroll-output 'first-error)
 
   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
   (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
@@ -75,7 +75,6 @@
     (save-place-mode 1)
     (context-menu-mode 1)
     (savehist-mode)
-    (global-auto-revert-mode t)
     (blink-cursor-mode -1))
   ;; Load theme based on the time of the day
   (let ((hour (substring (current-time-string) 11 13)))
@@ -149,6 +148,8 @@
               ("<backspace>" . icomplete-fido-backward-updir)
               ("TAB" . icomplete-forward-completions)
               ("<backtab>" . icomplete-backward-completions)
+              ("<left>" . backward-char)
+              ("<right>" . forward-char)
               :map icomplete-minibuffer-map
               ("C-," . embark-act)
               :map minibuffer-local-map
@@ -486,6 +487,22 @@
 
 (use-package which-key
   :hook (minibuffer-mode . which-key-mode))
+
+(use-package howm
+  :hook (after-init . howm-set-keymap)
+  :init
+  (setq howm-prefix "\C-x,")
+  :bind (:map howm-view-summary-mode-map
+              ("<backtab>" . howm-view-summary-previous-section))
+  :config ;; src: lejon
+  (define-key howm-menu-mode-map "\C-h" nil)
+  (define-key riffle-summary-mode-map "\C-h" nil)
+  (define-key howm-view-contents-mode-map "\C-h" nil)
+  (setq howm-file-name-format "%Y/%m/%Y-%m-%d-%H%M%S.org"
+        howm-view-title-header "*"
+        howm-template "* %title%cursor\n%date %file\n\n"
+        howm-view-title-regexp "^\\(\\*+\\|#\\+title:\\)\\( +\\(.*\\)\\|\\)$"
+        howm-view-title-regexp-grep  "^\\(\\*+\\|#\\+title:\\) +"))
 
 (use-package meow
   :demand t

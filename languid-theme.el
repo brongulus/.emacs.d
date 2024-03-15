@@ -212,7 +212,7 @@ read it before opening a new issue about your will.")
         (languid-purple  "#A986C5"); "#af87ff" "brightmagenta")
         (languid-red     "#FB7385"); "#ff8787" "red")
         (languid-yellow  "#ffd484"); "#ffd484" "brightyellow")
-        (languid-hl      "#98a8c5"); "#98a8c5" "grey")
+        (languid-hl      "#74829b"); "#98a8c5" "grey")
         ;; Other colors
         (links           "#80cbc4"); "#87d7ff" "brightblue")
         (bg-alt          "#1E2738"); "#1e1e1e" "brightblack")
@@ -260,12 +260,12 @@ read it before opening a new issue about your will.")
      `(linum ((t (:slant italic :foreground ,bg4 :background ,languid-bg))))
      `(line-number ((t (:foreground ,languid-comment :background,languid-bg))))
      `(line-number-current-line ((t (:inherit hl-line :foreground ,languid-yellow))))
-     `(match ((t (:background ,languid-hl :foreground ,languid-bg))))
+     `(match ((t (:background "#283243"))))
      `(menu ((t (:background ,languid-current :inverse-video nil :foreground ,languid-fg))))
      `(minibuffer-prompt ((t (:weight bold :foreground ,languid-yellow))))
      `(read-multiple-choice-face ((t (:inherit completions-first-difference))))
      `(region ((t (:inherit match :extend nil))))
-     `(secondary-selection ((t (:background "SkyBlue4" :extend nil))))
+     `(secondary-selection ((t (:background ,bg3 :extend nil))))
      `(shadow ((t (:foreground ,languid-comment))))
      `(success ((t (:foreground ,languid-green))))
      `(tooltip ((t (:foreground ,languid-fg :background ,bg-alt))))
@@ -316,7 +316,7 @@ read it before opening a new issue about your will.")
      `(corfu-current ((t (:background ,bg3 :foreground ,languid-fg))))
      `(diff-hl-change ((t (:foreground ,languid-cyan))))
      `(diff-hl-delete ((t (:foreground ,languid-red))))
-     `(diff-hl-insert ((t (:foreground ,languid-green))))
+     `(diff-hl-insert ((t (:foreground "medium spring green"))))
      `(dired-directory ((t (:foreground ,languid-green :weight normal))))
      `(dired-flagged ((t (:foreground ,languid-pink))))
      `(dired-header ((t (:foreground ,languid-yellow :weight bold))))
@@ -403,6 +403,14 @@ read it before opening a new issue about your will.")
      `(haskell-operator-face ((t (:foreground ,languid-pink))))
      `(haskell-constructor-face ((t (:foreground ,languid-purple))))
      `(highlight-indentation-face ((t (:background ,bg2))))
+     ;;; howm
+     `(action-lock-face ((t (:inherit help-key-binding))))
+     `(howm-mode-keyword-face ((t (:background ,languid-cyan :foreground ,languid-bg))))
+     `(howm-mode-ref-face ((t (:inherit org-link))))
+     `(howm-reminder-today-face ((t (:background ,languid-orange :foreground ,languid-bg))))
+     `(howm-view-empty-face ((t (:background ,languid-bg :foreground ,languid-bg))))
+     `(howm-view-hilit-face ((t (:inherit match))))
+     `(howm-view-name-face ((t (:background ,languid-cyan :foreground ,languid-bg))))
      `(icompletep-determined ((t (:foreground ,languid-orange))))
      `(ido-first-match ((t (:weight 'bold :foreground languid-pink))))
      `(ido-only-match ((t (:foreground ,languid-orange))))
@@ -625,47 +633,6 @@ read it before opening a new issue about your will.")
      
      )))
 
-;; (apply #'custom-theme-set-faces
-;;        'languid
-;;        (let ((expand-with-func
-;;               (lambda (func spec)
-;;                 (let (reduced-color-list)
-;;                   (dolist (col colors reduced-color-list)
-;;                     (push (list (car col) (funcall func col))
-;;                           reduced-color-list))
-;;                   (eval `(let ,reduced-color-list
-;;                            (backquote ,spec))))))
-;;              whole-theme)
-;;          (pcase-dolist (`(,face . ,spec) faces)
-;;            (push `(,face
-;;                    ((((min-colors 16777216)) ; fully graphical envs
-;;                      ,(funcall expand-with-func 'cadr spec))
-;;                     (((min-colors 256))      ; terminal withs 256 colors
-;;                      ,(if languid-use-24-bit-colors-on-256-colors-terms
-;;                           (funcall expand-with-func 'cadr spec)
-;;                         (funcall expand-with-func 'caddr spec)))
-;;                     (t                       ; should be only tty-like envs
-;;                      ,(funcall expand-with-func 'cadddr spec))))
-;;                  whole-theme))
-;;          whole-theme))
-
-;; (apply #'custom-theme-set-variables
-;;        'languid
-;;        (let ((get-func
-;;               (pcase (display-color-cells)
-;;                 ((pred (<= 16777216)) 'car) ; fully graphical envs
-;;                 ((pred (<= 256)) 'cadr)     ; terminal withs 256 colors
-;;                 (_ 'caddr))))               ; should be only tty-like envs
-;;          `((ansi-color-names-vector
-;;             [,(funcall get-func (alist-get 'languid-bg colors))
-;;              ,(funcall get-func (alist-get 'languid-red colors))
-;;              ,(funcall get-func (alist-get 'languid-green colors))
-;;              ,(funcall get-func (alist-get 'languid-yellow colors))
-;;              ,(funcall get-func (alist-get 'languid-comment colors))
-;;              ,(funcall get-func (alist-get 'languid-purple colors))
-;;              ,(funcall get-func (alist-get 'languid-cyan colors))
-;;              ,(funcall get-func (alist-get 'languid-fg colors))])))))
-
 ;; mode-line
 (setq global-mode-string nil
               mode-line-end-spaces
@@ -688,14 +655,19 @@ read it before opening a new issue about your will.")
                                                      " RO ")
                                                     ((buffer-modified-p)
                                                      " ** ")
+                                                    ((file-remote-p default-directory)
+                                                     (concat " "
+                                                             (file-remote-p
+                                                              default-directory 'host)
+                                                             " "))
                                                     (t
-                                                     " RW "))))
+                                                     " %p "))))
                            (propertize buffer-state
                                        'face `(,indicator-face
                                                :inverse-video t
                                                :box (:style flat-button))))))
                 "%e"
-                (:eval (file-remote-p default-directory 'host))
+                ;; (:eval (file-remote-p default-directory 'host))
                 (:eval (propertize " %b " 'help-echo (buffer-file-name)))
                 "("
                 (:eval mode-name)
@@ -742,11 +714,10 @@ read it before opening a new issue about your will.")
         (if (eq (car tab) 'current-tab)
             (propertize (concat "│" padstr name padstr)
                         'face `(:background "#1b222d" :slant italic :foreground "#ffd484"
-                                            :box ,`(:line-width (2 . 2)
-                                                                :color "#1b222d")))
+                                            :box ,`(:line-width 2 :style flat-button)))
           (propertize (concat padstr name padstr)
                       'face `(:background "#141922" :foreground "#6272a4"
-                                          :box ,`(:line-width (2 . 2) :color "black")))))))
+                                          :box ,`(:line-width (-4 . 0) :color "white")))))))
 
   (advice-add 'tab-bar-tab-name-format-default :override #'clean-tab-name)
 

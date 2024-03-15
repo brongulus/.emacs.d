@@ -17,7 +17,7 @@
 
 (add-hook 'emacs-startup-hook ; hook run after loading init files
           #'(lambda ()
-              (setq gc-cons-threshold (* 60 1024 1024)
+              (setq gc-cons-threshold (* 100 1024 1024)
                     gc-cons-percentage 0.1
                     file-name-handler-alist my/saved-file-name-handler-alist)))
 
