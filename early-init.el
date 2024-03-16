@@ -47,9 +47,6 @@
   (setq overriding-text-conversion-style nil)
   (set-frame-font "monospace 16" nil t))
 
-;; (set-face-attribute
-;;  'variable-pitch nil :family "Roboto" :height 180)
-
 (setq-default default-frame-alist
               '((menu-bar-lines . 0)
                 (tool-bar-lines . 0)
@@ -69,11 +66,17 @@
 (setf (cdr (assq 'continuation fringe-indicator-alist))
       '(nil right-curly-arrow))
 
+(when (file-exists-p (locate-user-emacs-file "package-quickstart.el"))
+  (defvar package-quickstart)
+  (setq package-quickstart t))
+
 (setq package-enable-at-startup nil
       redisplay-skip-fontification-on-input t
       window-combination-resize t
       frame-inhibit-implied-resize t
-      frame-resize-pixelwise t)
+      frame-resize-pixelwise t
+      initial-major-mode 'fundamental-mode
+      initial-scratch-message nil)
 
 (unless (eq system-type 'darwin)
   (setq command-line-ns-option-alist nil))

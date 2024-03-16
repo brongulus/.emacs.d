@@ -2,8 +2,12 @@
 ;;; --------------------------
 ;;; Commentary: Emacs config.
 ;;; --------------------------
-;; (when (member "VictorMono Nerd Font Mono" (font-family-list))
-;;   (set-frame-font "VictorMono Nerd Font Mono 16" nil t))
+(setq use-package-compute-statistics t ;; use-package-report
+      use-package-always-ensure t
+      use-package-always-defer t
+      use-package-enable-imenu-support t
+      use-package-expand-minimally t)
+
 (use-package emacs
   :ensure nil
   :bind (("C-h '" . describe-face)
@@ -23,8 +27,7 @@
                 custom-safe-themes t
                 ring-bell-function 'ignore
                 use-short-answers t
-                initial-major-mode 'fundamental-mode
-                ;; debug-on-error t
+                debug-on-error t
                 warning-minimum-level :error
                 delete-pair-blink-delay 0)
   (setq read-process-output-max (* 2 1024 1024)
@@ -92,19 +95,17 @@
 ;;; -------------------------------------------------------------
 (use-package package
   :ensure nil
-  :init (package-initialize)
+  ;; :init (package-initialize t)
+  :init
+  (if package-quickstart
+      (let ((load-source-file-function nil))
+        (package-activate-all))
+    (package-initialize))
   :config
   (push '("melpa" . "https://melpa.org/packages/") package-archives)
-  (unless package-archive-contents
-    (package-refresh-contents))
   (setq package-native-compile t
         package-install-upgrade-built-in t
-        package-check-signature nil
-        use-package-compute-statistics t ;; use-package-report
-        use-package-always-ensure t
-        use-package-always-defer t
-        use-package-enable-imenu-support t
-        use-package-expand-minimally t))
+        package-check-signature nil))
 
 (use-package dired
   :ensure nil
@@ -190,8 +191,9 @@
   :defer 2
   :ensure nil
   :config
-  (windmove-default-keybindings 'meta)
-  (windmove-swap-states-default-keybindings 'shift))
+  (setq windmove-wrap-around t)
+  (windmove-default-keybindings 'shift)
+  (windmove-swap-states-default-keybindings 'meta))
 
 (use-package ediff
   :defer 1
@@ -251,16 +253,8 @@
   :ensure nil
   :bind (("C-x v f" . (lambda () (interactive)
                         (vc-git--pushpull "push" nil '("--force-with-lease"))))
-         ("C-x v e" . vc-ediff)
-         ("C-x v R" . vc-interactive-rebase))
+         ("C-x v e" . vc-ediff))
   :config
-  (defun vc-interactive-rebase (branch)
-    (interactive "sRebase target branch: ")
-    (with-current-buffer (eshell)
-      (eshell-return-to-prompt)
-      (insert "git rebase -i " branch)
-      (eshell-send-input)))
-
   (setq vc-handled-backends '(Git)
         vc-find-revision-no-save t
         vc-follow-symlinks t
@@ -313,10 +307,11 @@
   :ensure nil
   :hook (prog-mode . flymake-mode)
   :config
-  (setopt flymake-cc-command
-          '("gcc" "-fsyntax-only" "-Wall" "-Wextra" "-D_GLIBCXX_NO_ASSERT"
+  (setq flymake-cc-command
+          '("gcc" "-fsyntax-only" "-Wall" "-Wextra"
             "-I/Users/admin/problems/include" "-x" "c" "-"))
   (setq flymake-suppress-zero-counters nil
+        flymake-no-changes-timeout nil
         flymake-fringe-indicator-position nil)
   (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake)
   (with-eval-after-load 'eldoc
@@ -331,14 +326,13 @@
 
 (use-package recentf
   :ensure nil
-  :defer 1
   :bind ("C-x f" . #'recentf-open)
   :custom
   (recentf-max-menu-items 25)
   (recentf-auto-cleanup 'never))
 
 (use-package tramp
-  :defer 1
+  :hook (minibuffer-mode . tramp-cleanup-all-connections)
   :config
   (setq tramp-ssh-controlmaster-options
         (concat
@@ -403,6 +397,12 @@
   (setq marginalia-annotator-registry
         (assq-delete-all 'file marginalia-annotator-registry)))
 
+(use-package nerd-icons ;; nerd-icons-install-fonts
+  :after minibuffer)
+(use-package nerd-icons-completion
+  :hook ((minibuffer-mode . nerd-icons-completion-mode)
+         (marginalia-mode . nerd-icons-completion-marginalia-setup)))
+
 (use-package embark
   :after minibuffer
   :bind ("C-," . embark-act)
@@ -413,24 +413,31 @@
         embark-indicators (delete 'embark-mixed-indicator embark-indicators)))
 
 (use-package undo-fu
-  :demand t
-  :bind (("C-x u" . undo-fu-only-undo)
-         ("C-z" . undo-fu-only-redo))
+  :hook (after-init . undo-fu-mode)
   :config
   (setq undo-limit 67108864
         undo-strong-limit 100663296
-        undo-outer-limit 1006632960))
+        undo-outer-limit 1006632960)
+  (define-minor-mode undo-fu-mode ;; doom
+    "Enables `undo-fu' for the current session."
+    :keymap (let ((map (make-sparse-keymap)))
+              (define-key map [remap undo] #'undo-fu-only-undo)
+              (define-key map [remap redo] #'undo-fu-only-redo)
+              (define-key map (kbd "C-z")   #'undo-fu-only-redo)
+              (define-key map (kbd "C-M-_")  #'undo-fu-only-redo-all)
+              (define-key map (kbd "C-x r u") #'undo-fu-session-save)
+              (define-key map (kbd "C-x r U") #'undo-fu-session-recover)
+              map)
+    :init-value nil
+    :global t))
 
 (use-package undo-fu-session
-  :demand t
-  :init
-  (unless (string-equal system-type "android")
-    (undo-fu-session-global-mode)))
+  :hook (undo-fu-mode . undo-fu-session-global-mode)
+  :config
+  (setq undo-fu-session-compression nil))
 
 (use-package eat
   :commands eat-project
-  :init (with-eval-after-load 'project
-          (add-to-list 'project-switch-commands '(eat-project "Eat" ?t)))
   :bind (("C-." . (lambda () (interactive)
                     (defvar eat-buffer-name)
                     (let ((current-prefix-arg t)
@@ -441,6 +448,8 @@
          (:map eat-semi-char-mode-map
                ("C-u" . eat-self-input)))
   :config
+  (with-eval-after-load 'project
+     (add-to-list 'project-switch-commands '(eat-project "Eat" ?t)))
   (setq eat-message-handler-alist
         ;; once eat fish-intergration is merged
         '(("emsg" . (lambda (x)
@@ -455,14 +464,12 @@
         eat-kill-buffer-on-exit t
         eat-term-name "xterm-256color"))
 
-(use-package with-editor
-  :hook ((eshell-mode . with-editor-export-git-editor)
-         (eshell-mode . with-editor-export-editor)))
-
 (use-package pabbrev ;; completion-preview-mode if emacs>30
   :ensure nil
   :load-path "~/.emacs.d/pabbrev"
   :hook ((prog-mode text-mode) . global-pabbrev-mode)
+  :config
+  (add-to-list 'completion-at-point-functions #'pabbrev-capf)
   :custom
   (pabbrev-idle-timer-verbose nil)
   (pabbrev-overlay-decorators nil))
@@ -505,7 +512,9 @@
         howm-view-title-regexp-grep  "^\\(\\*+\\|#\\+title:\\) +"))
 
 (use-package meow
-  :demand t
+  :hook (after-init . (lambda ()
+                        (require 'meow)
+                        (meow-global-mode)))
   :preface
   (defun my-jk () ;; src: wasamasa
     (interactive)
@@ -529,18 +538,17 @@
       (define-key map [t] #'delete-pair)
       map))
 
-  :hook (after-init . meow-global-mode)
   :config
   (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
         meow-keypad-leader-dispatch "C-x" ;ctl-x-map
         meow-use-cursor-position-hack t
+        meow-use-clipboard t
         meow-esc-delay 0.01)
   (dolist (item '(word line block find till))
     (push `(,item . 0) meow-expand-hint-counts))
   (define-key meow-insert-state-keymap (kbd "j") #'my-jk)
   (define-key meow-normal-state-keymap (kbd "S") insert-pair-map)
   (define-key meow-normal-state-keymap (kbd "D") delete-pair-map)
-  (global-set-key (kbd "C-x SPC") 'meow-M-x)
   (dolist (imode '(eat-mode eshell-mode log-edit-mode))
     (push `(,imode . insert) meow-mode-state-list))
   (meow-motion-overwrite-define-key
@@ -569,11 +577,14 @@
    '("]" . meow-end-of-thing)
    '("{" . flymake-goto-prev-error)
    '("}" . flymake-goto-next-error)
-   '("a" . embark-act)
+   '("a" . meow-append)
    '("A" . meow-open-below)
    '("b" . meow-back-word)
    '("B" . meow-back-symbol)
-   '("c" . meow-change)
+   '("c" . (lambda () (interactive)
+             (if (region-active-p)
+                 (call-interactively 'string-rectangle)
+               (meow-change))))
    '("C" . meow-comment)
    '("d" . meow-kill)
    '("e" . meow-next-word)
@@ -682,7 +693,7 @@
   (setq eglot-events-buffer-size 0
         eglot-autoshutdown t
         eglot-inlay-hints-mode nil)
-  (add-hook 'rust-ts-mode-hook (lambda () (setq-local tab-width 4)))
+  (add-hook 'rust-ts-mode-hook (lambda () (setq-local tab-width 2)))
   (add-hook 'go-ts-mode-hook
             (lambda () (setq-local tab-width 4)))
   (setq go-ts-mode-indent-offset 4)
@@ -787,14 +798,13 @@ project files matching PATTERN."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(org-modern which-key solaire-mode esup diff-hl markdown-mode eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(nerd-icons-completion nerd-icons org-modern which-key solaire-mode esup diff-hl markdown-mode eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
-
 ;; Local Variables:
 ;; byte-compile-warnings: (not free-vars)
 ;; End:
