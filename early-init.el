@@ -5,7 +5,8 @@
                      (format "%.2f seconds"
                              (float-time
                               (time-subtract after-init-time before-init-time)))
-                     gcs-done)))
+                     gcs-done)
+            (find-file user-init-file)))
 
 (defvar my/saved-file-name-handler-alist file-name-handler-alist)
 
@@ -56,6 +57,8 @@
                 (internal-border-width . 00)
                 (fullscreen . fullboth)
                 (font . "VictorMono Nerd Font Mono-16"))
+              fringe-indicator-alist
+              (assq-delete-all 'truncation fringe-indicator-alist)
               cursor-in-non-selected-windows nil
               bidi-display-reordering 'left-to-right
               bidi-inhibit-bpa t

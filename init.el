@@ -2,14 +2,17 @@
 ;;; --------------------------
 ;;; Commentary: Emacs config.
 ;;; --------------------------
-(setq use-package-compute-statistics t ;; use-package-report
-      use-package-always-ensure t
-      use-package-always-defer t
-      use-package-enable-imenu-support t
-      use-package-expand-minimally t)
-
+(use-package use-package
+  :no-require
+  :config
+  (setq use-package-compute-statistics t ;; use-package-report
+        use-package-always-ensure t
+        use-package-always-defer t
+        use-package-enable-imenu-support t
+        use-package-expand-minimally t))
+  
 (use-package emacs
-  :ensure nil
+  :no-require
   :bind (("C-h '" . describe-face)
          ("C-x l" . revert-buffer-quick)
          ("<f5>" . (lambda () (interactive)
@@ -52,29 +55,27 @@
   (copy-face 'default 'fixed-pitch)
   (set-register ?f `(file . ,(locate-user-emacs-file "init.el")))
   (set-register ?c `(file . "~/problems/"))
-  (set-display-table-slot standard-display-table 'truncation 32) ;; hides $
-  (set-display-table-slot standard-display-table 'wrap 32) ;; hides \
 
   (with-eval-after-load 'xref
     (setq xref-search-program 'ripgrep
           xref-auto-jump-to-first-xref nil ; 'move
           xref-show-definitions-function 'xref-show-definitions-completing-read
           xref-show-xrefs-function 'xref-show-definitions-completing-read))
-
-  ;; highlight area when yanking/killing
-  (defun my/yank-pulse-advice (orig-fn &rest args)
-    (let (begin end)
-      (setq begin (point))
-      (apply orig-fn args)
-      (setq end (point))
-      (pulse-momentary-highlight-region begin end)))
-  (advice-add 'yank :around #'my/yank-pulse-advice)
-  (defun my/kill-pulse-advice (orig-fn beg end &rest args)
-    (pulse-momentary-highlight-region beg end)
-    (apply orig-fn beg end args))
-  (advice-add 'kill-ring-save :around #'my/kill-pulse-advice)
   
   (with-eval-after-load 'minibuffer
+    ;; highlight area when yanking/killing
+    (defun my/yank-pulse-advice (orig-fn &rest args)
+      (let (begin end)
+        (setq begin (point))
+        (apply orig-fn args)
+        (setq end (point))
+        (pulse-momentary-highlight-region begin end)))
+    (advice-add 'yank :around #'my/yank-pulse-advice)
+    (defun my/kill-pulse-advice (orig-fn beg end &rest args)
+      (pulse-momentary-highlight-region beg end)
+      (apply orig-fn beg end args))
+    (advice-add 'kill-ring-save :around #'my/kill-pulse-advice)
+    ;; enable some useful modes
     (save-place-mode 1)
     (context-menu-mode 1)
     (savehist-mode)
@@ -82,7 +83,7 @@
   ;; Load theme based on the time of the day
   (let ((hour (substring (current-time-string) 11 13)))
     (if (and (string-lessp hour "17") (string-greaterp hour "08"))
-        (setq load-theme-light t)))
+        (setq load-theme-light t))) ;; load-theme-light is a languid-theme var
   (load-theme 'languid :no-confirm)
   (defadvice load-theme (before theme-dont-propagate activate)
     (mapc #'disable-theme custom-enabled-themes))
@@ -95,7 +96,6 @@
 ;;; -------------------------------------------------------------
 (use-package package
   :ensure nil
-  ;; :init (package-initialize t)
   :init
   (if package-quickstart
       (let ((load-source-file-function nil))
@@ -157,31 +157,34 @@
               ("S-<return>" . newline))
   :hook (icomplete-minibuffer-setup . (lambda ()
                                         (setq-local completion-styles '(orderless basic)
+                                                    completion-auto-help nil
                                                     truncate-lines t
                                                     line-spacing nil)))
-  :config ;; src: https://github.com/JasZhe/vimilla-emacs
-  (defun completing-read-in-region (start end collection &optional predicate)
-    "Prompt for completion of region in the minibuffer if non-unique.
-      Use as a value for `completion-in-region-function'."
-    (let* ((initial (buffer-substring-no-properties start end))
-           (limit (car (completion-boundaries initial collection predicate "")))
-           (all (completion-all-completions initial collection predicate (length initial)))
-           (completion (cond
-                        ((atom all) nil)
-                        ((and (consp all) (atom (cdr all)))
-                         (concat (substring initial 0 limit) (car all)))
-                        (t
-                         (setq completion
-                               (catch 'done
-                                 (atomic-change-group
-                                   (let ((completion
-                                          (completing-read "Completion: " collection predicate nil initial)))
-                                     (throw 'done completion)))))))))
-      (cond (completion (completion--replace start end completion) t)
-            (t (message "No completion") nil))))
+  :config
+  ;; testing completions buffer
+  (add-to-list 'display-buffer-alist
+               '("\\*Completions\\*"
+                 (display-buffer-reuse-window display-buffer-at-bottom)
+                 (window-parameters (mode-line-format . none))))
+  (setq completion-auto-help 'always
+        completion-auto-select 'second-tab
+        completion-auto-wrap t
+        completion-show-help nil
+        completions-max-height 15
+        ;; completions-header-format nil
+        completions-format 'one-column)
+
+  (defun file-capf () ;; src: eshelyaron
+    "File completion at point function."
+    (pcase (bounds-of-thing-at-point 'filename)
+      (`(,beg . ,end)
+       (list beg end #'completion-file-name-table
+             :annotation-function (lambda (_) " File")
+             :exclusive 'no))))
+
+  (add-hook 'completion-at-point-functions #'file-capf)
   
-  (setq completion-in-region-function #'completing-read-in-region
-        tab-always-indent 'complete
+  (setq tab-always-indent 'complete
         icomplete-in-buffer t
         icomplete-scroll t ;nil
         icomplete-delay-completions-threshold 4000
@@ -201,11 +204,8 @@
   :hook ((ediff-before-setup . tab-bar-new-tab)
          (ediff-quit . tab-bar-close-tab))
   :config
-  (add-hook 'ediff-keymap-setup-hook
-            (lambda ()
-              (define-key ediff-mode-map "q"
-                          (lambda () (interactive)
-                            (ediff-really-quit t)))))
+  (advice-add 'ediff-quit :around (lambda (&rest args)
+                                    (ediff-really-quit args)))
   (setq ediff-split-window-function 'split-window-horizontally
         ediff-window-setup-function 'ediff-setup-windows-plain
         ediff-diff-options "-w"))
@@ -251,7 +251,11 @@
 (use-package vc
   :defer nil
   :ensure nil
-  :bind (("C-x v f" . (lambda () (interactive)
+  :bind (("C-x v c" . (lambda (command) (interactive "P")
+                        (unless server-mode (server-force-delete) (server-mode))
+                        (let ((command (if command command (read-string "Command: git "))))
+                          (compile (concat "GIT_EDITOR=\"emacsclient\" bash -c \"git " command "\"")))))
+         ("C-x v f" . (lambda () (interactive)
                         (vc-git--pushpull "push" nil '("--force-with-lease"))))
          ("C-x v e" . vc-ediff))
   :config
@@ -309,7 +313,8 @@
   :config
   (setq flymake-cc-command
           '("gcc" "-fsyntax-only" "-Wall" "-Wextra"
-            "-I/Users/admin/problems/include" "-x" "c" "-"))
+            "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/x86_64-apple-darwin23"
+            "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/" "-x" "c++" "-"))
   (setq flymake-suppress-zero-counters nil
         flymake-no-changes-timeout nil
         flymake-fringe-indicator-position nil)
@@ -468,8 +473,8 @@
   :ensure nil
   :load-path "~/.emacs.d/pabbrev"
   :hook ((prog-mode text-mode) . global-pabbrev-mode)
-  :config
-  (add-to-list 'completion-at-point-functions #'pabbrev-capf)
+  ;; :config
+  ;; (add-to-list 'completion-at-point-functions #'pabbrev-capf)
   :custom
   (pabbrev-idle-timer-verbose nil)
   (pabbrev-overlay-decorators nil))
@@ -587,10 +592,13 @@
                (meow-change))))
    '("C" . meow-comment)
    '("d" . meow-kill)
-   '("e" . meow-next-word)
+   '("e" . (lambda (n) (interactive "p")
+             (let ((meow--selection (push '(expand . word) meow--selection)))
+               (meow-next-word n))))
+     ;; meow-next-word)
    '("E" . meow-next-symbol)
    '("f" . meow-find)
-   '("F" . recentf-open)
+   '("F" . fff)
    '("gg" . avy-goto-char-timer)
    '("gh" . diff-hl-show-hunk)
    '("gi" . imenu)
@@ -687,7 +695,7 @@
          (eglot-managed-mode . (lambda ()
                                  (setq eldoc-documentation-strategy
                                        'eldoc-documentation-compose-eagerly))))
-  :init (setq eglot-stay-out-of '(flymake))
+  ;; :init (setq eglot-stay-out-of '(flymake))
   :config
   (fset #'jsonrpc--log-event #'ignore)
   (setq eglot-events-buffer-size 0
@@ -696,6 +704,8 @@
   (add-hook 'rust-ts-mode-hook (lambda () (setq-local tab-width 2)))
   (add-hook 'go-ts-mode-hook
             (lambda () (setq-local tab-width 4)))
+  (add-hook 'eglot-managed-mode-hook
+            (lambda () (setq-local flymake-cc-command nil)))
   (setq go-ts-mode-indent-offset 4)
   (setq eglot-ignored-server-capabilities '(:inlayHintProvider))
   (setq-default eglot-workspace-configuration
@@ -806,5 +816,5 @@ project files matching PATTERN."
  ;; If there is more than one, they won't work right.
  )
 ;; Local Variables:
-;; byte-compile-warnings: (not free-vars)
+;; byte-compile-warnings: (not free-vars unresolved)
 ;; End:

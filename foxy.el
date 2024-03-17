@@ -58,22 +58,29 @@
     "Port of the server.")
 
 (defvar foxy-listen-host "127.0.0.1"
-    "Host of the server.")
+  "Host of the server.")
+
+(defvar foxy-currently-listening nil)
 
 (defun foxy-listen-start nil
     "Start the competitive-companion tcp client listener."
     (interactive)
-    (message "Started listening for competitive-companion")
-    (make-network-process :name "Fetch Contest" :buffer "*fetch*" :family nil
-                          :server t :host foxy-listen-host :service foxy-listen-port
-                          :sentinel 'foxy-listen-sentinel :filter 'foxy-listen-filter))
+    (if foxy-currently-listening
+        (foxy-listen-stop)
+      (progn
+        (setq foxy-currently-listening t))
+      (message "Started listening for competitive-companion")
+      (make-network-process :name "Fetch Contest" :buffer "*fetch*" :family nil
+                            :server t :host foxy-listen-host :service foxy-listen-port
+                            :sentinel 'foxy-listen-sentinel :filter 'foxy-listen-filter)))
 
 (defun foxy-listen-stop nil
   "Stop the competitive-companion tcp listener."
   (interactive)
   (delete-process "Fetch Contest")
   (kill-buffer "*fetch*")
-  (message "Stopped listening to competitive-companion"))
+  (message "Stopped listening to competitive-companion")
+  (setq foxy-currently-listening nil))
 
 (defun foxy-listen-filter (proc string)
   "Parses the incoming JSON data (STRING) from competitive-companion
@@ -112,10 +119,10 @@ and populates the testcase files."
     (message (format "Client %s has quit" proc))))
 
 (defun foxy-start-server-with-timer nil
-  "Start the server that listens to competitive-companion for 2 minutes."
+  "Start the server that listens to competitive-companion for 1 minute."
   (interactive)
   (foxy-listen-start)
-  (run-at-time 120 nil #'foxy-listen-stop))
+  (run-at-time 60 nil #'foxy-listen-stop))
 
 (defun foxy-read-file (filename)
   "Return the contents of FILENAME."
