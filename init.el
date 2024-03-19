@@ -504,42 +504,6 @@
 
 (use-package deadgrep)
 
-(use-package howm
-  :hook (after-init . howm-set-keymap)
-  :init
-  (setq howm-prefix "\C-x,"
-        howm-view-summary-sep "│"
-        howm-menu-reminder-format "> %s │ %s")
-  :bind (:map howm-menu-mode-local-map
-         ("<backtab>" . action-lock-goto-previous-link)
-         :map howm-view-summary-mode-map
-         ("<backtab>" . howm-view-summary-previous-section))
-  :hook (((howm-menu howm-view-summary-mode) . meow-motion-mode)
-         (howm-view-contents-mode . (lambda nil (interactive)
-                                      (setq-local mode-line-format nil))))
-  
-  :config
-  (advice-add 'howm-menu-copy-skel
-              :around (lambda (orig-fn arg)
-                        (funcall orig-fn
-                                 (replace-regexp-in-string
-                                  "-*\\-$"
-                                  "─────────────────────────────────────────────────"
-                                  arg))))
-  (setq howm-menu-list-format
-        (let* ((path (format-time-string howm-file-name-format))
-               (width (length (file-name-sans-extension
-                               (file-name-nondirectory path)))))
-          (concat "> %-" (format "%s" width) "s │ %s")))
-  (define-key howm-menu-mode-map "\C-h" nil)
-  (define-key riffle-summary-mode-map "\C-h" nil)
-  (define-key howm-view-contents-mode-map "\C-h" nil)
-  (setq howm-file-name-format "%Y/%m/%Y-%m-%d-%H%M%S.org" ;; src: lejon
-        howm-view-title-header "*"
-        howm-template "* %title%cursor\n%date %file\n\n"
-        howm-view-title-regexp "^\\(\\*+\\|#\\+title:\\)\\( +\\(.*\\)\\|\\)$"
-        howm-view-title-regexp-grep  "^\\(\\*+\\|#\\+title:\\) +"))
-
 (use-package meow
   :hook (after-init . (lambda ()
                         (require 'meow)
@@ -756,35 +720,6 @@
                            'eglot-code-action-organize-imports))
                         nil t))))
 
-(use-package citre ;; universal-ctags
-  :init
-  (require 'citre-config)
-  :bind (("C-x c j" . citre-jump)
-         ("C-x c J" . citre-jump-back)
-         ("C-x c p" . citre-ace-peek)
-         ("C-x c u" . citre-update-this-tags-file))
-  :config
-  (setq citre-project-root-function #'vc-root-dir
-        citre-use-project-root-when-creating-tags t
-        citre-prompt-language-for-ctags-command t
-        citre-default-create-tags-file-location 'project-cache
-        citre-tags-file-per-project-cache-dir "./"
-        citre-auto-enable-citre-mode-modes '(prog-mode))
-  ;; citre fallback for xref
-  (define-advice xref--create-fetcher (:around (-fn &rest -args) fallback)
-  (let ((fetcher (apply -fn -args))
-        (citre-fetcher
-         (let ((xref-backend-functions '(citre-xref-backend t)))
-           (apply -fn -args))))
-    (lambda ()
-      (or (with-demoted-errors "%s, fallback to citre"
-            (funcall fetcher))
-          (funcall citre-fetcher)))))
-  (defun enable-citre-capf-backend ()
-    "Enable the Citre capf backend in current buffer."
-    (add-hook 'completion-at-point-functions #'citre-completion-at-point nil t))
-  (add-hook 'citre-mode-hook #'enable-citre-capf-backend))
-  
 (add-hook 'minibuffer-mode-hook
           (lambda ()
             (load "~/.emacs.d/comp" nil t)))
@@ -861,7 +796,7 @@ project files matching PATTERN."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(rainbow-mode citre deadgrep nerd-icons-completion nerd-icons org-modern which-key solaire-mode esup diff-hl markdown-mode eat with-editor avy howm undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(deadgrep nerd-icons-completion nerd-icons org-modern which-key solaire-mode esup diff-hl markdown-mode eat with-editor avy undo-fu undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
