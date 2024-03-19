@@ -1,13 +1,4 @@
 ;;; early-init.el -*- lexical-binding: t; -*-
-(add-hook 'emacs-startup-hook
-          (lambda ()
-            (message "Emacs ready in %s with %d garbage collections."
-                     (format "%.2f seconds"
-                             (float-time
-                              (time-subtract after-init-time before-init-time)))
-                     gcs-done)
-            (find-file user-init-file)))
-
 (defvar my/saved-file-name-handler-alist file-name-handler-alist)
 
 (setq gc-cons-threshold most-positive-fixnum
@@ -18,7 +9,7 @@
 
 (add-hook 'emacs-startup-hook ; hook run after loading init files
           #'(lambda ()
-              (setq gc-cons-threshold (* 100 1024 1024)
+              (setq gc-cons-threshold (* 50 1024 1024)
                     gc-cons-percentage 0.1
                     file-name-handler-alist my/saved-file-name-handler-alist)))
 
@@ -80,6 +71,42 @@
       frame-resize-pixelwise t
       initial-major-mode 'fundamental-mode
       initial-scratch-message nil)
+
+(defun ar/show-welcome-buffer () ;; xendoium (centering issues...)
+  "Show *Welcome* buffer."
+  (with-current-buffer (get-buffer-create "*Welcome*")
+    (setq truncate-lines t)
+    (let* ((buffer-read-only)
+           (image-path (fancy-splash-image-file))
+           (image (create-image image-path))
+           (size (image-size image))
+           (height (cdr size))
+           (width (and image (car size)))
+           (top-margin (floor (/ (- (window-height) height) 2)))
+           (left-margin (floor (/ (- (max (window-width) 195) width) 2)))
+           (prompt-title (format "%d packages loaded in %s"
+                                 (length package-activated-list)
+                                 (format "%.2f seconds"
+                                         (float-time
+                                          (time-subtract after-init-time before-init-time))))))
+      (erase-buffer)
+      (setq mode-line-format nil)
+      (goto-char (point-min))
+      (insert (make-string top-margin ?\n ))
+      (insert (make-string left-margin ?\ ))
+      (insert-image image)
+      (insert "\n\n\n")
+      (insert (make-string (floor (/ (- (max (window-width) 195) (string-width prompt-title)) 2)) ?\ ))
+      (insert prompt-title))
+    (setq-local cursor-type nil)
+    (read-only-mode +1)
+    (switch-to-buffer (current-buffer))
+    (local-set-key (kbd "q") 'kill-this-buffer)))
+
+(when (< (length command-line-args) 2)
+  (add-hook 'emacs-startup-hook (lambda ()
+                                  (when (display-graphic-p)
+                                    (ar/show-welcome-buffer)))))
 
 (unless (eq system-type 'darwin)
   (setq command-line-ns-option-alist nil))
