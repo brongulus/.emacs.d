@@ -91,9 +91,9 @@
   (defadvice term-handle-exit
       (after term-kill-buffer-on-exit activate)
     (kill-buffer)))
-;;; -------------------------------------------------------------
-;;; Built-in packages (icomplete, project, recentf, dired, ediff)
-;;; -------------------------------------------------------------
+;;; ------------------
+;;; Built-in packages
+;;; ------------------
 (use-package package
   :ensure nil
   :init
@@ -352,9 +352,50 @@
         remote-file-name-inhibit-locks t
         tramp-verbose 0
         tramp-remote-path '(tramp-own-remote-path)))
-;;; ---------------------------------------------------------------------------------
-;;; ELPA packages (popper, orderless, marginalia, embark, meow, eat, undo-fu+session)
-;;; ---------------------------------------------------------------------------------
+
+(use-package org
+  :ensure nil
+  :config
+  (setq org-directory "~/.emacs.d/org"
+        org-agenda-files (list org-directory)
+        org-agenda-start-with-log-mode t
+        org-log-done t
+        org-log-into-drawer t
+        org-agenda-skip-scheduled-if-done t
+        org-agenda-skip-deadline-if-done t
+        org-agenda-include-deadlines t
+        org-export-with-sub-superscripts '{}
+        org-pretty-entities t
+        org-startup-indented t
+        org-adapt-indentation t
+        ;; org-startup-folded t
+        org-src-preserve-indentation t
+        org-src-fontify-natively t)
+  (with-eval-after-load 'org-agenda
+    (setf (alist-get 'agenda org-agenda-prefix-format
+                     nil nil #'equal)
+          "  %?-12t% s")))
+
+(use-package org-capture
+  :ensure nil
+  :hook (org-capture-mode . meow-insert)
+  :config
+  (add-hook 'org-capture-mode-hook
+            (lambda nil
+              (setq-local header-line-format nil)))
+  (setq org-capture-file
+        (concat org-directory "/inbox.org")
+        org-capture-templates
+        '(("t" "TODO" entry
+           (file+headline org-capture-file "TODOs")
+           "* TODO %?\n%<%d %b '%g %R>%i %a" :prepend t)
+          ("n" "Note" entry
+           (file+headline org-capture-file "Notes")
+           "* %u %?\n%i %a" :prepend t))))
+
+;;; --------------
+;;; ELPA packages
+;;; --------------
 (use-package popper
   :bind (("C-`"   . popper-toggle)
          ("M-`"   . popper-cycle)
@@ -378,6 +419,8 @@
           "vc-git :.\*"
           "\\*vc-change-log\\*"
           "\\*Flymake diagnostics.\*"
+          "\\*Org Select\\*"
+          "^CAPTURE.*"
           "\\*Warnings\\*"
           "\\*Backtrace\\*"
           "\\*Occur\\*"
@@ -504,6 +547,9 @@
 
 (use-package deadgrep)
 
+(use-package org-modern
+  :hook (org-mode . org-modern-mode))
+
 (use-package meow
   :hook (after-init . (lambda ()
                         (require 'meow)
@@ -587,18 +633,22 @@
    '("E" . meow-next-symbol)
    '("f" . meow-find)
    '("F" . fff)
+   '("ga" . (lambda nil (interactive)
+              (org-agenda nil "n")))
+   '("gb" . xref-go-back)
+   '("gc" . org-capture)
+   '("gd" . xref-find-definitions)
+   '("gf" . embark-dwim) ;; ffap
    '("gg" . avy-goto-char-timer)
    '("gh" . diff-hl-show-hunk)
    '("gi" . imenu)
-   '("gf" . embark-dwim) ;; ffap
    '("gs" . scratch-buffer)
-   '("gx" . flymake-show-buffer-diagnostics)
-   '("gd" . xref-find-definitions)
-   '("gb" . xref-go-back)
    '("gt" . tab-bar-switch-to-next-tab)
    '("gT" . tab-bar-switch-to-prev-tab)
+   '("gx" . flymake-show-buffer-diagnostics)
    '("G" . meow-grab)
    '("h" . meow-left)
+   '("H" . down-list)
    '("i" . meow-insert)
    '("I" . meow-open-above)
    '("j" . meow-next)
@@ -611,7 +661,8 @@
                  (describe-symbol (symbol-at-point))
                (eldoc-doc-buffer t))))
    '("l" . meow-right)
-   '("L" . meow-swap-grab)
+   '("L" . up-list)
+   ;; '("L" . meow-swap-grab)
    '("m" . meow-join)
    '("n" . meow-search)
    '("o" . occur)
@@ -660,9 +711,9 @@
              (message "Visual selection mode enabled")))
    '("<escape>" . ignore)))
 
-;;; -------------------------------------------------
-;;; Competitive programming setup (snippets and foxy)
-;;; -------------------------------------------------
+;;; ------------------
+;;; Programming setup
+;;; ------------------
 (setq treesit-language-source-alist ;; treesit-install-language-grammar
       '((go "https://github.com/tree-sitter/tree-sitter-go")
         (rust "https://github.com/tree-sitter/tree-sitter-rust")

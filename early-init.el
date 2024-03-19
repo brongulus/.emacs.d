@@ -101,7 +101,8 @@
     (setq-local cursor-type nil)
     (read-only-mode +1)
     (switch-to-buffer (current-buffer))
-    (local-set-key (kbd "q") 'kill-this-buffer)))
+    (local-set-key (kbd "q") 'kill-this-buffer)
+    (local-set-key (kbd "RET") 'kill-this-buffer)))
 
 (when (< (length command-line-args) 2)
   (add-hook 'emacs-startup-hook (lambda ()
