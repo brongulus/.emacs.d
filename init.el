@@ -14,6 +14,7 @@
 (use-package emacs
   :no-require
   :bind (("C-h '" . describe-face)
+         ("C-x z" . execute-extended-command)
          ("C-x l" . revert-buffer-quick)
          ("<f5>" . (lambda () (interactive)
                      (setq-default display-line-numbers-type 'relative)
@@ -143,30 +144,40 @@
 
 (use-package icomplete
   :init
+  (setq icomplete-in-buffer t
+        icomplete-prospects-height 10
+        icomplete-show-matches-on-no-input t
+        icomplete-scroll t)
   (fido-vertical-mode)
-  :bind (:map icomplete-fido-mode-map
-              ("C-<return>" . icomplete-fido-exit)
-              ("<backspace>" . icomplete-fido-backward-updir)
-              ("TAB" . icomplete-forward-completions)
-              ("<backtab>" . icomplete-backward-completions)
-              ("<left>" . backward-char)
-              ("<right>" . forward-char)
-              :map icomplete-minibuffer-map
-              ("C-," . embark-act)
-              :map minibuffer-local-map
-              ("S-<return>" . newline))
+  :bind (:map completion-in-region-mode-map ; icomp-in-buffer
+         ("TAB" . icomplete-forward-completions)
+         ("<backtab>" . icomplete-backward-completions)
+         ("<return>" . icomplete-force-complete-and-exit)
+         ("<escape>" . keyboard-quit)
+         :map icomplete-fido-mode-map
+         ("C-<return>" . icomplete-fido-exit)
+         ("<backspace>" . icomplete-fido-backward-updir)
+         ("TAB" . icomplete-forward-completions)
+         ("<backtab>" . icomplete-backward-completions)
+         ("<left>" . backward-char)
+         ("<right>" . forward-char)
+         :map icomplete-minibuffer-map
+         ("C-," . embark-act)
+         :map minibuffer-local-map
+         ("S-<return>" . newline))
   :hook (icomplete-minibuffer-setup . (lambda ()
                                         (setq-local completion-styles '(orderless basic)
                                                     completion-auto-help nil
                                                     truncate-lines t
                                                     line-spacing nil)))
   :config
+  (advice-add 'completion-at-point :after #'minibuffer-hide-completions) ;; fix icom-in-buffer
   ;; testing completions buffer
   (add-to-list 'display-buffer-alist
                '("\\*Completions\\*"
                  (display-buffer-reuse-window display-buffer-at-bottom)
                  (window-parameters (mode-line-format . none))))
-  (setq completion-auto-help 'always
+  (setq completion-auto-help 'lazy ;always
         completion-auto-select 'second-tab
         completion-auto-wrap t
         completion-show-help nil
@@ -186,8 +197,6 @@
   (add-hook 'completion-at-point-functions #'file-capf)
   
   (setq tab-always-indent 'complete
-        icomplete-in-buffer t
-        icomplete-scroll t ;nil
         icomplete-delay-completions-threshold 4000
         completions-group t))
 
@@ -357,25 +366,35 @@
   :ensure nil
   :config
   (setq org-directory "~/.emacs.d/org"
-        org-agenda-files (list org-directory)
-        org-agenda-start-with-log-mode t
-        org-log-done t
-        org-log-into-drawer t
-        org-agenda-skip-scheduled-if-done t
-        org-agenda-skip-deadline-if-done t
-        org-agenda-include-deadlines t
         org-export-with-sub-superscripts '{}
         org-pretty-entities t
         org-startup-indented t
         org-adapt-indentation t
         ;; org-startup-folded t
         org-src-preserve-indentation t
-        org-src-fontify-natively t)
-  (with-eval-after-load 'org-agenda
-    (setf (alist-get 'agenda org-agenda-prefix-format
-                     nil nil #'equal)
-          "  %?-12t% s")))
+        org-src-fontify-natively t))
 
+(use-package org-agenda
+  :ensure nil
+  :config
+  (add-to-list 'display-buffer-alist
+               '("\\*Calendar\\*"
+                 (display-buffer-reuse-window display-buffer-below-selected)
+                 (window-parameters (height . 0.33))))
+
+  (setq org-agenda-files (list org-directory)
+        org-agenda-start-with-log-mode t
+        org-log-done t
+        org-log-into-drawer t
+        org-agenda-skip-timestamp-if-done t
+        org-agenda-skip-scheduled-if-done t
+        org-agenda-skip-deadline-if-done t
+        org-agenda-include-deadlines t)
+
+  (setf (alist-get 'agenda org-agenda-prefix-format
+                   nil nil #'equal)
+        "  %?-12t% s"))
+  
 (use-package org-capture
   :ensure nil
   :hook (org-capture-mode . meow-insert)
@@ -444,6 +463,8 @@
 (use-package marginalia
   :hook (minibuffer-mode . marginalia-mode)
   :config
+  (advice-add 'completion-at-point :before (lambda nil
+                                             (marginalia-mode -1)))
   (setq marginalia-annotator-registry
         (assq-delete-all 'file marginalia-annotator-registry)))
 
@@ -513,16 +534,6 @@
   (setq explicit-shell-file-name "fish"
         eat-kill-buffer-on-exit t
         eat-term-name "xterm-256color"))
-
-(use-package pabbrev ;; completion-preview-mode if emacs>30
-  :ensure nil
-  :load-path "~/.emacs.d/pabbrev"
-  :hook ((prog-mode text-mode) . global-pabbrev-mode)
-  ;; :config
-  ;; (add-to-list 'completion-at-point-functions #'pabbrev-capf)
-  :custom
-  (pabbrev-idle-timer-verbose nil)
-  (pabbrev-overlay-decorators nil))
 
 (use-package diff-hl
   :hook ((prog-mode . turn-on-diff-hl-mode)
