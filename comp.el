@@ -1,5 +1,3 @@
-(setq save-abbrevs nil)
-
 ;;; --Rust------------------------------------------------------------------
 (define-skeleton rs-header "Base rust template for competitive programming." ""
   "use std::io::{self, prelude::*};\n\n"

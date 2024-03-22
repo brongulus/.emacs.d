@@ -109,7 +109,8 @@
                                   (when (display-graphic-p)
                                     (ar/show-welcome-buffer)))))
 
-(unless (eq system-type 'darwin)
+(if (eq system-type 'darwin)
+    (setq mac-option-modifier 'meta)
   (setq command-line-ns-option-alist nil))
 (unless (eq system-type 'gnu/linux)
   (setq command-line-x-option-alist nil))

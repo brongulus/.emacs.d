@@ -14,13 +14,22 @@
 (use-package emacs
   :no-require
   :bind (("C-h '" . describe-face)
+         ("M-o" . project-switch-project)
+         ("M-k" . backward-kill-word)
+         ("C-d" . delete-forward-char)
+         ("C-a" . (lambda nil (interactive)
+                    (if (= (point) (progn (beginning-of-line-text) (point)))
+                        (beginning-of-line))))
          ("C-x z" . execute-extended-command)
+         ("C-x C-m" . execute-extended-command)
          ("C-x l" . revert-buffer-quick)
+         ("C-x \\" . align-regexp)
+         ("C-x C-z" . restart-emacs)
          ("<f5>" . (lambda () (interactive)
                      (setq-default display-line-numbers-type 'relative)
                      (hl-line-mode 'toggle)
                      (display-line-numbers-mode 'toggle)))
-         ("<f6>" . languid-toggle-theme))
+         ("<f6>" . alabaster-toggle-theme))
   :config
   (setq-default line-spacing 3
                 cursor-type 'bar
@@ -33,35 +42,36 @@
                 use-short-answers t
                 debug-on-error t
                 warning-minimum-level :error
+                display-line-numbers-width 3
                 delete-pair-blink-delay 0)
+  
   (setq read-process-output-max (* 2 1024 1024)
+        undo-limit 67108864
+        undo-strong-limit 100663296
+        undo-outer-limit 1006632960
+        save-abbrevs nil
         inhibit-startup-screen t
         make-backup-files nil
         create-lockfiles nil
         uniquify-buffer-name-style 'forward
         auto-revert-verbose nil
+        sentence-end-double-space nil
         Info-use-header-line nil
         outline-minor-mode-cycle nil ;; messes up completion
         tabify-regexp "^\t* [ \t]+"
         electric-pair-skip-self t
         compilation-scroll-output 'first-error)
-
+ 
   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
   (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
   (add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
   (add-hook 'prog-mode-hook (electric-pair-mode t))
   (add-hook 'prog-mode-hook (show-paren-mode t))
   (add-hook 'prog-mode-hook (which-function-mode))
-  
+
   (copy-face 'default 'fixed-pitch)
   (set-register ?f `(file . ,(locate-user-emacs-file "init.el")))
   (set-register ?c `(file . "~/problems/"))
-
-  (with-eval-after-load 'xref
-    (setq xref-search-program 'ripgrep
-          xref-auto-jump-to-first-xref nil ; 'move
-          xref-show-definitions-function 'xref-show-definitions-completing-read
-          xref-show-xrefs-function 'xref-show-definitions-completing-read))
   
   (with-eval-after-load 'minibuffer
     ;; highlight area when yanking/killing
@@ -78,6 +88,9 @@
     (advice-add 'kill-ring-save :around #'my/kill-pulse-advice)
     ;; enable some useful modes
     (save-place-mode 1)
+    (setq savehist-additional-variables '(kill-ring))
+    (setq save-interprogram-paste-before-kill t)
+    (subword-mode 1)
     (context-menu-mode 1)
     (savehist-mode)
     (blink-cursor-mode -1))
@@ -85,7 +98,7 @@
   (let ((hour (substring (current-time-string) 11 13)))
     (if (and (string-lessp hour "17") (string-greaterp hour "08"))
         (setq load-theme-light t))) ;; load-theme-light is a languid-theme var
-  (load-theme 'languid :no-confirm)
+  (load-theme 'alabaster :no-confirm)
   (defadvice load-theme (before theme-dont-propagate activate)
     (mapc #'disable-theme custom-enabled-themes))
   
@@ -111,18 +124,22 @@
 (use-package dired
   :ensure nil
   :hook (dired-mode . dired-hide-details-mode) ;; dired-hide-dotfiles-mode
-  :bind (("C-x d" . dired-vc-left)
+  :bind (("C-x d" . dired-left)
          :map dired-mode-map
          ("q" . kill-this-buffer)
          ("RET" . dired-find-alternate-file)
-         ("TAB" . dired-insert-subdir)
-         ("<backtab>" . dired-kill-subdir)
+         ("TAB" . (lambda nil (interactive) ;; fixme
+                    (call-interactively 'set-mark-command)
+                    (dired-insert-subdir)))
+         ("<backtab>" . (lambda nil (interactive)
+                          (dired-kill-subdir)
+                          (pop-global-mark)))
          ("\\" . dired-up-directory)
          ("E" . wdired-change-to-wdired-mode))
   :config
   (put 'dired-find-alternate-file 'disabled nil)
   
-  (defun dired-vc-left()
+  (defun dired-left()
     (interactive)
     (let ((dir (dired-noselect default-directory)))
       (display-buffer-in-side-window
@@ -130,17 +147,34 @@
              (slot . 0)
              (window-width . 0.2)
              (window-parameters . ((mode-line-format . (" %b"))))))
-      (setq-local dired-free-space nil)
-      (windmove-left)))
+      (windmove-left)
+      (hl-line-mode +1)))
 
   (setq dired-dwim-target t
         dired-auto-revert-buffer t
         dired-mouse-drag-files t
         dired-use-ls-dired nil
+        dired-free-space nil
         mouse-drag-and-drop-region-cross-program t
         dired-kill-when-opening-new-dired-buffer t
         dired-recursive-deletes 'always
-        dired-recursive-copies 'always))
+        dired-recursive-copies 'always)
+
+  (with-eval-after-load 'cc-mode
+  (defun c-indent-then-complete ()
+    (interactive)
+    (if (= 0 (c-indent-line-or-region))
+    (completion-at-point)))
+  (dolist (map (list c-mode-map c++-mode-map))
+    (define-key map (kbd "<tab>") #'c-indent-then-complete))))
+
+(use-package xref
+  :ensure nil
+  :config
+  (setq xref-search-program 'ripgrep
+        xref-auto-jump-to-first-xref nil ; 'move
+        xref-show-definitions-function 'xref-show-definitions-completing-read
+        xref-show-xrefs-function 'xref-show-definitions-completing-read))
 
 (use-package icomplete
   :init
@@ -165,9 +199,8 @@
          ("C-," . embark-act)
          :map minibuffer-local-map
          ("S-<return>" . newline))
-  :hook (icomplete-minibuffer-setup . (lambda ()
-                                        (setq-local completion-styles '(orderless basic)
-                                                    completion-auto-help nil
+  :hook (icomplete-minibuffer-setup . (lambda nil
+                                        (setq-local completion-auto-help nil
                                                     truncate-lines t
                                                     line-spacing nil)))
   :config
@@ -177,7 +210,7 @@
                '("\\*Completions\\*"
                  (display-buffer-reuse-window display-buffer-at-bottom)
                  (window-parameters (mode-line-format . none))))
-  (setq completion-auto-help 'lazy ;always
+  (setq completion-auto-help 'always ;lazy ;always
         completion-auto-select 'second-tab
         completion-auto-wrap t
         completion-show-help nil
@@ -195,8 +228,13 @@
              :exclusive 'no))))
 
   (add-hook 'completion-at-point-functions #'file-capf)
-  
+
+  ;; (require 'dabbrev)
+  ;; (advice-add #'dabbrev-capf :before #'dabbrev--reset-global-variables)
+  ;; (add-hook 'completion-at-point-functions #'dabbrev-capf 100)
+
   (setq tab-always-indent 'complete
+        tab-first-completion 'word-or-paren
         icomplete-delay-completions-threshold 4000
         completions-group t))
 
@@ -321,12 +359,16 @@
 (use-package flymake
   :ensure nil
   :hook (prog-mode . flymake-mode)
+  :hook (cc-mode . check-cc-tramp)
   :config
-  (setq flymake-cc-command
-          '("gcc" "-fsyntax-only" "-Wall" "-Wextra"
-            "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/x86_64-apple-darwin23"
-            "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/" "-x" "c++" "-"))
-  (setq flymake-suppress-zero-counters nil
+  (defun check-cc-tramp nil
+    (if (file-remote-p default-directory)
+        (setq-local flymake-cc-command nil)
+      (setq flymake-cc-command
+            '("gcc" "-fsyntax-only" "-Wall" "-Wextra"
+              "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/x86_64-apple-darwin23"
+              "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/" "-x" "c++" "-"))))
+  (setq flymake-suppress-zero-counters t
         flymake-no-changes-timeout nil
         flymake-fringe-indicator-position nil)
   (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake)
@@ -365,6 +407,22 @@
 (use-package org
   :ensure nil
   :config
+  (require 'org-tempo) ; <s
+  (add-hook 'org-mode-hook (lambda ()
+           (setq-local electric-pair-inhibit-predicate
+                   `(lambda (c)
+                      (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
+
+  ;; right-aligned tags
+  (add-to-list 'font-lock-extra-managed-props 'display)
+  (font-lock-add-keywords
+   'org-mode
+   `(("^.*?\\( \\)\\(:[[:alnum:]_@#%:]+:\\)$"
+      (1 `(face nil
+                display (space :align-to (- right ,(org-string-width (match-string 2)) 3)))
+         prepend)))
+   t)
+
   (setq org-directory "~/.emacs.d/org"
         org-export-with-sub-superscripts '{}
         org-pretty-entities t
@@ -383,7 +441,10 @@
                  (window-parameters (height . 0.33))))
 
   (setq org-agenda-files (list org-directory)
+        org-agenda-window-setup 'current-window
+        org-agenda-restore-windows-after-quit t
         org-agenda-start-with-log-mode t
+        org-agenda-show-all-dates nil
         org-log-done t
         org-log-into-drawer t
         org-agenda-skip-timestamp-if-done t
@@ -410,17 +471,16 @@
            "* TODO %?\n%<%d %b '%g %R>%i %a" :prepend t)
           ("n" "Note" entry
            (file+headline org-capture-file "Notes")
-           "* %u %?\n%i %a" :prepend t))))
+           "* %?\n%i %a" :prepend t))))
 
 ;;; --------------
 ;;; ELPA packages
 ;;; --------------
 (use-package popper
   :bind (("C-`"   . popper-toggle)
+         ("M-j"   . popper-toggle)
          ("M-`"   . popper-cycle)
          ("C-M-`" . popper-toggle-type)
-         :map meow-motion-state-keymap
-         ("`" . popper-cycle)
          :repeat-map popper-repeat-map
          ("`"     . popper-cycle))
   :hook ((after-init . popper-mode)
@@ -451,6 +511,10 @@
 
 (use-package orderless
   :after minibuffer
+  :hook (completion-in-region-mode . (lambda nil
+                                       (setq-local orderless-component-separator "[ -]")))
+  :hook (icomplete-minibuffer-setup . (lambda nil
+                                        (setq-local completion-styles '(orderless basic))))
   :custom
   (completion-styles '(orderless basic)))
 
@@ -468,12 +532,6 @@
   (setq marginalia-annotator-registry
         (assq-delete-all 'file marginalia-annotator-registry)))
 
-(use-package nerd-icons ;; nerd-icons-install-fonts
-  :after minibuffer)
-(use-package nerd-icons-completion
-  :hook ((minibuffer-mode . nerd-icons-completion-mode)
-         (marginalia-mode . nerd-icons-completion-marginalia-setup)))
-
 (use-package embark
   :after minibuffer
   :bind ("C-," . embark-act)
@@ -483,27 +541,8 @@
         embark-keymap-prompter-key "'"
         embark-indicators (delete 'embark-mixed-indicator embark-indicators)))
 
-(use-package undo-fu
-  :hook (after-init . undo-fu-mode)
-  :config
-  (setq undo-limit 67108864
-        undo-strong-limit 100663296
-        undo-outer-limit 1006632960)
-  (define-minor-mode undo-fu-mode ;; doom
-    "Enables `undo-fu' for the current session."
-    :keymap (let ((map (make-sparse-keymap)))
-              (define-key map [remap undo] #'undo-fu-only-undo)
-              (define-key map [remap redo] #'undo-fu-only-redo)
-              (define-key map (kbd "C-z")   #'undo-fu-only-redo)
-              (define-key map (kbd "C-M-_")  #'undo-fu-only-redo-all)
-              (define-key map (kbd "C-x r u") #'undo-fu-session-save)
-              (define-key map (kbd "C-x r U") #'undo-fu-session-recover)
-              map)
-    :init-value nil
-    :global t))
-
 (use-package undo-fu-session
-  :hook (undo-fu-mode . undo-fu-session-global-mode)
+  :hook ((prog-mode conf-mode fundamental-mode text-mode tex-mode) . undo-fu-session-mode)
   :config
   (setq undo-fu-session-compression nil))
 
@@ -599,7 +638,7 @@
   (define-key meow-insert-state-keymap (kbd "j") #'my-jk)
   (define-key meow-normal-state-keymap (kbd "S") insert-pair-map)
   (define-key meow-normal-state-keymap (kbd "D") delete-pair-map)
-  (dolist (imode '(eat-mode org-mode eshell-mode log-edit-mode))
+  (dolist (imode '(eat-mode eshell-mode log-edit-mode))
     (push `(,imode . insert) meow-mode-state-list))
   (meow-motion-overwrite-define-key
    '("Q" . kill-this-buffer)
@@ -637,10 +676,7 @@
                (meow-change))))
    '("C" . meow-comment)
    '("d" . meow-kill)
-   '("e" . (lambda (n) (interactive "p")
-             (let ((meow--selection (push '(expand . word) meow--selection)))
-               (meow-next-word n))))
-     ;; meow-next-word)
+   '("e" . meow-next-word)
    '("E" . meow-next-symbol)
    '("f" . meow-find)
    '("F" . fff)
@@ -686,7 +722,7 @@
    '("R" . kmacro-end-or-call-macro)
    '("s" . kmacro-start-macro)
    '("t" . meow-till)
-   '("u" . undo-fu-only-undo)
+   '("u" . undo-only)
    '("U" . meow-page-up)
    '("v" . meow-line)
    '("V" . meow-page-down)
@@ -696,10 +732,12 @@
    '("X" . meow-goto-line)
    '("y" . meow-save)
    '("Y" . meow-sync-grab)
-   '("zz" . meow-pop-selection)
+   '("zz" . (lambda nil (interactive)
+              (setq current-prefix-arg '(4))
+              (call-interactively 'set-mark-command)))
    '("za" . hs-global-cycle)
    '("zf" . hs-cycle)
-   '("Z" . undo-fu-only-redo)
+   '("Z" . undo-redo)
    '("+" . meow-block)
    '("-" . negative-argument)
    '(":" . meow-reverse)
@@ -725,12 +763,20 @@
 ;;; ------------------
 ;;; Programming setup
 ;;; ------------------
-(setq treesit-language-source-alist ;; treesit-install-language-grammar
-      '((go "https://github.com/tree-sitter/tree-sitter-go")
-        (rust "https://github.com/tree-sitter/tree-sitter-rust")
-        (typescript "https://github.com/tree-sitter/tree-sitter-typescript"
-                    "master" "typescript/src")))
-
+(use-package treesit
+  :ensure nil
+  :config
+  (setq treesit-language-source-alist ;; treesit-install-language-grammar
+        '((cpp "https://github.com/tree-sitter/tree-sitter-cpp")
+          (c "https://github.com/tree-sitter/tree-sitter-c")
+          (go "https://github.com/tree-sitter/tree-sitter-go")
+          (rust "https://github.com/tree-sitter/tree-sitter-rust")
+          (typescript "https://github.com/tree-sitter/tree-sitter-typescript"
+                      "master" "typescript/src"))
+        treesit-font-lock-level 4)
+  (setq major-mode-remap-alist '((c++-mode . c++-ts-mode)
+                                 (c-mode . c-ts-mode))))
+  
 (push '("\\.rs\\'" . rust-ts-mode) auto-mode-alist)
 (push '("\\.go\\'" . go-ts-mode) auto-mode-alist)
 (push '("\\.ts\\'" . typescript-ts-mode) auto-mode-alist)
@@ -810,8 +856,8 @@
   (add-to-list 'project-switch-commands '(project-dired "Dired" ?D)))
 
 (defun async-project-find-file (program &rest args)
-  "Prompt the user to filter, scroll and select a file from a list of all
-project files matching PATTERN."
+  "Prompt the user to filter & select a file from a list of all files.
+The files are returned by calling PROGRAM with ARGS."
   (interactive)
   ;; oantolin gawd
   (let ((output-buffer (get-buffer-create "*async-completing-read*"))
@@ -845,9 +891,12 @@ project files matching PATTERN."
       (kill-buffer output-buffer))))
 
 (defun fff (filename)
+  "Call `find-file' and search for FILENAME asynchronously."
   (interactive
    (list (async-project-find-file "git" "ls-files")))
-  (let ((default-directory (vc-root-dir)))
+  (let ((default-directory (if (vc-root-dir)
+                               (vc-root-dir)
+                             default-directory)))
     (find-file filename)))
 
 (provide 'init)
@@ -858,7 +907,7 @@ project files matching PATTERN."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(deadgrep nerd-icons-completion nerd-icons org-modern which-key solaire-mode esup diff-hl markdown-mode eat with-editor avy undo-fu undo-fu-session embark marginalia meow orderless popper)))
+   '(rainbow-mode olivetti deadgrep org-modern which-key solaire-mode esup diff-hl markdown-mode eat with-editor avy undo-fu-session embark marginalia meow orderless popper)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

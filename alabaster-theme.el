@@ -123,12 +123,12 @@
    `(font-lock-warning-face ((t (:foreground ,red-color))))
 
    ;; Diff Mode
+   `(diff-header ((t (:inherit secondary-selection))))
    `(diff-file-header ((t (:bold t :inherit diff-header))))
-   `(diff-header ((t (:background "#DDDDFF" :foreground "grey20"))))
-   `(diff-added ((t (:background "#DDFFDD"))))
-   `(diff-removed ((t (:background "#FFDDDD"))))
-   `(diff-changed ((t (:background "#FFFFDD"))))
-   `(diff-refine-change ((t (:background "#DDDDFF"))))
+   ;; `(diff-added ((t (:background "#DDFFDD"))))
+   ;; `(diff-removed ((t (:background "#FFDDDD"))))
+   ;; `(diff-changed ((t (:background "#FFFFDD"))))
+   ;; `(diff-refine-change ((t (:background "#DDDDFF"))))
 
    ;; Ediff
    `(ediff-odd-diff-A ((t (:inherit secondary-selection :extend t))))
