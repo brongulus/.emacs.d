@@ -72,6 +72,11 @@
   (copy-face 'default 'fixed-pitch)
   (set-register ?f `(file . ,(locate-user-emacs-file "init.el")))
   (set-register ?c `(file . "~/problems/"))
+  (unless (display-graphic-p)
+    (set-display-table-slot standard-display-table
+                            'vertical-border
+                            (make-glyph-code ?│))
+    (xterm-mouse-mode))
   
   (with-eval-after-load 'minibuffer
     ;; highlight area when yanking/killing
@@ -137,6 +142,9 @@
          ("\\" . dired-up-directory)
          ("E" . wdired-change-to-wdired-mode))
   :config
+  (with-eval-after-load 'project
+    (add-to-list 'project-switch-commands '(project-dired "Dired" ?D)))
+
   (put 'dired-find-alternate-file 'disabled nil)
   
   (defun dired-left()
@@ -145,7 +153,7 @@
       (display-buffer-in-side-window
        dir `((side . left)
              (slot . 0)
-             (window-width . 0.2)
+             (window-width . 0.18)
              (window-parameters . ((mode-line-format . (" %b"))))))
       (windmove-left)
       (hl-line-mode +1)))
@@ -401,6 +409,7 @@
         remote-file-name-inhibit-auto-save-visited t
         remote-file-name-inhibit-cache nil
         remote-file-name-inhibit-locks t
+        auto-save-default nil
         tramp-verbose 0
         tramp-remote-path '(tramp-own-remote-path)))
 
@@ -554,7 +563,11 @@
                     (defvar eat-buffer-name)
                     (let ((current-prefix-arg t)
                           (eat-buffer-name (concat
-                                            "*" default-directory
+                                            "*" (file-name-nondirectory
+                                                 (directory-file-name
+                                                  (if (vc-root-dir)
+                                                      (vc-root-dir)
+                                                    default-directory)))
                                             "-eat*")))
                      (call-interactively 'eat))))
          (:map eat-semi-char-mode-map
@@ -576,9 +589,15 @@
 
 (use-package diff-hl
   :hook ((prog-mode . turn-on-diff-hl-mode)
+         (prog-mode . (lambda nil
+                        (unless (display-graphic-p)
+                          (diff-hl-margin-mode))))
          (prog-mode . diff-hl-show-hunk-mouse-mode))
   :config
   (diff-hl-flydiff-mode t)
+  (setq diff-hl-margin-symbols-alist nil)
+  (dolist (diff '(insert delete change))
+    (push `(,diff . "│") diff-hl-margin-symbols-alist))
   (let* ((width 3)
          (bitmap (vector (1- (expt 2 width)))))
     (define-fringe-bitmap 'my:diff-hl-bitmap bitmap 1 width '(top t)))
@@ -773,9 +792,10 @@
           (rust "https://github.com/tree-sitter/tree-sitter-rust")
           (typescript "https://github.com/tree-sitter/tree-sitter-typescript"
                       "master" "typescript/src"))
-        treesit-font-lock-level 4)
-  (setq major-mode-remap-alist '((c++-mode . c++-ts-mode)
-                                 (c-mode . c-ts-mode))))
+        treesit-font-lock-level 4))
+
+(setq major-mode-remap-alist '((c++-mode . c++-ts-mode)
+                               (c-mode . c-ts-mode)))
   
 (push '("\\.rs\\'" . rust-ts-mode) auto-mode-alist)
 (push '("\\.go\\'" . go-ts-mode) auto-mode-alist)
@@ -851,9 +871,6 @@
               (setq-local foxy-compile-command "go build -o a.out "))))
 
 (setq delete-active-region t)
-
-(with-eval-after-load 'project
-  (add-to-list 'project-switch-commands '(project-dired "Dired" ?D)))
 
 (defun async-project-find-file (program &rest args)
   "Prompt the user to filter & select a file from a list of all files.

@@ -185,6 +185,7 @@ read it before opening a new issue about your will.")
        '(diff-hl-insert ((t (:foreground "lime green"))))
        '(diff-hl-delete ((t (:foreground "orange red"))))
        '(diff-hl-change ((t (:foreground "deep sky blue"))))
+       '(fixed-pitch ((t (:inherit default))))
        '(icomplete-selected-match ((t (:inherit highlight :extend t))))
        '(line-number ((t (:foreground "grey50"))))
        '(line-number-current-line ((t (:inherit hl-line :foreground "black"))))
@@ -200,11 +201,17 @@ read it before opening a new issue about your will.")
          ((t (:background "black" :foreground ,selection-color :inverse-video t))))
        `(meow-insert-indicator
          ((t (:background "black" :foreground ,highlight-color :inverse-video t))))
-       `(tab-bar ((t (:background "#E8E8E8"))))
-       `(tab-bar-tab ((t (:background "grey99" :foreground "black"))))
+       '(org-agenda-date ((t (:foreground "steel blue"))))
+       '(org-agenda-structure ((t (:foreground "steel blue"))))
+       '(org-time-grid ((t (:foreground "grey"))))
+       '(org-agenda-current-time ((t (:foreground "black"))))
+       '(org-imminent-deadline ((t (:foreground "orange red" :weight bold))))
+       `(tab-bar ((t (:background "#E8E8E8" :box "grey20"))))
+       `(tab-bar-tab ((t (:background "grey99" :foreground "black"
+                                      :underline ,`(:color "grey99" :position -1)))))
        `(tab-bar-tab-inactive
-         ((t (:background "#E8E8E8" :foreground "grey20" :box ,`(:line-width (1 . -1) :color "#E8E8E8")))))
-       ))
+         ((t (:background "#E8E8E8" :foreground "grey20"
+                          :underline ,`(:color "grey20" :position -1)))))))
   ;;; dark
   (let ((languid-bg      "#1b222d"); "#1b222d" "#181818")  ;; 1B212D
         (languid-fg      "#f8f8f2"); "#ffffff" "brightwhite")
@@ -240,6 +247,7 @@ read it before opening a new issue about your will.")
      `(ffap ((t (:foreground ,fg4))))
      `(fringe ((t (:background ,languid-bg :foreground ,fg4))))
      `(header-line ((t (:background ,languid-bg))))
+     ;; `(header-line ((t (:box (:line-width 2 :style flat-button) :underline (:color "white" :style line :position t)))))
      `(highlight ((t (:foreground ,fg2 :background ,bg3))))
      `(hl-line ((t (:inherit secondary-selection :extend t))))
      `(info-quoted-name ((t (:foreground ,languid-orange))))
@@ -580,9 +588,9 @@ read it before opening a new issue about your will.")
      ;; `(solaire-mode-line-inactive-face((t (:inherit mode-line-inactive))))
      `(solaire-header-line-face ((t (:inherit header-line :background ,languid-solaire))))
      `(spam ((t (:inherit gnus-summary-normal-read :foreground ,languid-orange :strike-through t :slant oblique))))
-     `(tab-bar ((t (:foreground ,languid-yellow :background "#141922"))))
-     `(tab-bar-tab ((t (:foreground ,languid-yellow :background ,languid-bg))))
-     `(tab-bar-tab-inactive ((t (:foreground ,languid-comment :background "#141922" :box ,``(:line-width `(1 . -1) :color "black")))))
+     `(tab-bar ((t (:foreground ,languid-yellow :background ,languid-bg))))
+     `(tab-bar-tab ((t (:foreground ,languid-yellow :background ,languid-bg :overline t))))
+     `(tab-bar-tab-inactive ((t (:foreground ,languid-comment :background ,languid-bg :overline t :underline ,`(:color ,languid-yellow :position -1)))))
      `(term ((t (:foreground ,languid-fg :background ,languid-bg))))
      `(term-color-black ((t (:foreground ,languid-bg :background ,languid-comment))))
      `(term-color-blue ((t (:foreground ,languid-purple :background ,languid-purple))))
@@ -655,7 +663,11 @@ read it before opening a new issue about your will.")
               mode-line-end-spaces
               `("%n " mode-line-misc-info
                 (:eval (when (bound-and-true-p flymake-mode)
-                         (flymake--mode-line-counters)))
+                         (let ((flymake-mode-line-counter-format
+                                '(""flymake-mode-line-error-counter
+                                  flymake-mode-line-warning-counter
+                                  flymake-mode-line-note-counter "")))
+                           (flymake--mode-line-counters))))
                 " Ln %l"))
 (defun my/ml-padding ()
   "Adding padding to the modeline so that spme elements can be right aligned."
@@ -683,8 +695,8 @@ read it before opening a new issue about your will.")
                                        'face `(,indicator-face
                                                :inverse-video t
                                                :box (:style flat-button))))))
-                "%e "
-                (:eval (nerd-icons-icon-for-buffer))
+                "%e"
+                ;; (:eval (nerd-icons-icon-for-buffer))
                 (:eval (propertize " %b " 'help-echo (buffer-file-name)))
                 "("
                 (:eval mode-name)
@@ -702,14 +714,6 @@ read it before opening a new issue about your will.")
              nil
              '(("\\<\\(FIXME\\|HACK\\|TODO\\|BUG\\|DONE\\)"
                 1 font-lock-warning-face t)))))
-
-
-;;;###autoload
-(when load-file-name
-  (add-to-list 'custom-theme-load-path
-               (file-name-as-directory (file-name-directory load-file-name))))
-
-(provide-theme 'languid)
 
 ;; tabs
 (with-eval-after-load 'tab-bar
@@ -736,13 +740,57 @@ read it before opening a new issue about your will.")
                       'face `(:background "#141922" :foreground "#6272a4"
                                           :box ,`(:line-width (-4 . 0) :color "white")))))))
 
-  (advice-add 'tab-bar-tab-name-format-default :override #'clean-tab-name)
+  (defun tab-name-nano (tab i)
+    (let* ((buffer-p (bufferp tab))
+           (selected-p (if buffer-p
+                           (eq tab (window-buffer))
+                         (cdr (assq 'selected tab))))
+           (name (alist-get 'name tab))
+           (name (concat " " name " "))
+           (face (if (eq (car tab) 'current-tab)
+                     'tab-bar-tab
+                   'tab-bar-tab-inactive)))
+      (concat (if (display-graphic-p)
+                  (propertize " " 'face `(:background ,(face-foreground face nil t))
+                              'display '(space :width (1))))
+            (apply 'propertize
+                   (concat
+                    (propertize (string-replace "%" "%%" name) ;; (bug#57848)
+                               'help-echo (if selected-p "Current tab"
+                                           "Click to select tab")
+                               'follow-link 'ignore
+                               )
+                   (or (and ;(or buffer-p (assq 'buffer tab) (assq 'close tab))
+                            tab-bar-close-button-show
+                            (not (eq tab-bar-close-button-show
+                                     (if selected-p 'non-selected 'selected)))
+                            tab-bar-close-button)
+                       ""))
+           `(tab ,tab
+             ,@(if selected-p '(selected t))
+             face ,face
+             display (raise .2)))
+            (if (display-graphic-p)
+                (propertize " " 'face `(:background ,(face-foreground face nil t))
+                            'display '(space :width (1)))))))
+  
+  ;; (advice-add 'tab-bar-tab-name-format-default :override #'clean-tab-name)
+  (advice-add 'tab-bar-tab-name-format-default :override #'tab-name-nano)
 
-  (setq tab-bar-close-button-show nil
-        tab-bar-auto-width nil
+  (setq tab-bar-separator nil
+        tab-bar-tab-name-truncated-max 16
+        tab-bar-tab-name-function #'tab-bar-tab-name-truncated
+        tab-bar-tab-name-ellipsis "…"
+        tab-bar-close-button " x"
         tab-bar-new-button-show nil
-        tab-bar-show 1
-        tab-bar-separator ""))
+        tab-bar-close-button-show 'selected)
+
+  ;; (setq tab-bar-close-button-show nil
+  ;;       tab-bar-auto-width nil
+  ;;       tab-bar-new-button-show nil
+  ;;       tab-bar-show 1
+  ;;       tab-bar-separator "")
+  )
 ;; tab-bar-tab-name-function 'tab-bar-tab-name-truncated
 ;; tab-bar-tab-name-truncated-max 12))
 

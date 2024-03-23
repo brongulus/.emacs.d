@@ -27,8 +27,9 @@
       (secondary-color (if load-theme-light
                            "#e0e3ed" ;"#FBE9AD"
                          "#38404e"))
-      (active-color "#EEEEEE")
-      (passive-color "#AAAAAA")
+      (inactive-color (if load-theme-light
+                          "#5e636e"
+                        "#848993"))
       (border-color (if load-theme-light
                         "grey"
                       "#474856"))
@@ -67,7 +68,7 @@
    'alabaster
    ;; Basics
    `(cursor ((t (:background ,blue-color))))
-   `(default ((t (:background ,background-color :foreground ,foreground-color :weight semi-bold))))
+   `(default ((t (:background ,background-color :foreground ,foreground-color))))
    `(blue ((t (:foreground "blue"))))
    `(bold ((t (:bold t))))
    `(bold-italic ((t (:italic t :bold t))))
@@ -87,7 +88,7 @@
    `(fringe ((t (:background ,background-color))))
    `(mode-line ((t (:background ,modeline-color :foreground ,foreground-color :box (:line-width 4 :style flat-button)))))
    `(mode-line-highlight ((t (:box (:line-width 2 :color "#9599B0")))))
-   `(mode-line-inactive ((t (:background ,modeline-color :foreground ,foreground-color :box (:line-width 4 :style flat-button)))))
+   `(mode-line-inactive ((t (:background ,modeline-color :foreground ,inactive-color :box (:line-width 4 :style flat-button)))))
 
    ;; Parens
    `(show-paren-match ((t (:background ,selection-color))))
@@ -103,8 +104,9 @@
    `(primary-selection ((t (:background ,selection-color))))
    `(region ((t (:background ,selection-color :extend nil))))
    `(secondary-selection ((t (:background ,secondary-color :extend nil))))
+   `(match ((t (:inherit highlight))))
    `(rectangle-preview ((t (:inherit region))))
-   `(shadow ((t (:foreground "grey50" :background ,subtle-color))))
+   `(shadow ((t (:foreground "grey50"))))
 
    ;; Font-lock
    `(font-lock-builtin-face ((t (:foreground ,blue-color))))
@@ -168,19 +170,21 @@
    `(compilation-info ((t (:foreground ,green-color))))
    `(compilation-warning ((t (:foreground ,yellow-color))))
    `(compilation-error ((t (:foreground ,red-color))))
+   `(success ((t (:foreground ,green-color))))
    `(warning ((t (:foreground ,yellow-color))))
    `(error ((t (:foreground ,red-color))))
    `(flymake-note ((t (:underline ,`(style line :position -1 :color ,green-color)))))
    `(flymake-warning ((t (:underline ,`(style line :position -1 :color ,yellow-color)))))
    `(flymake-error ((t (:underline ,`(style line :position -1 :color ,red-color)))))
    `(diff-hl-insert ((t (:foreground ,green-color))))
-   `(diff-hl-delete ((t (:foreground ,red-color))))
    `(diff-hl-change ((t (:foreground ,blue-color))))
+   `(diff-hl-delete ((t (:foreground ,red-color))))
    
    `(completions-highlight ((t (:inherit highlight :extend t))))
    `(dired-directory ((t (:foreground ,yellow-color))))
    `(dired-header ((t (:foreground ,green-color))))
    `(fixed-pitch ((t (:inherit default))))
+   `(info-menu-star ((t (:foreground ,red-color))))
    `(icomplete-selected-match ((t (:inherit highlight :extend t))))
    `(link ((t (:foreground ,cyan-color))))
    `(line-number ((t (:foreground "grey50"))))
@@ -211,7 +215,7 @@
    `(tab-bar-tab ((t (:background ,background-color :foreground ,foreground-color
                                   :underline ,`(:color ,background-color :position -1)))))
    `(tab-bar-tab-inactive
-     ((t (:background ,subtle-color :foreground "#5e636e"
+     ((t (:background ,subtle-color :foreground ,inactive-color
                       :underline ,`(:color ,border-color :position -1)))))
    `(which-func ((t (:foreground ,blue-color))))))
 
@@ -272,49 +276,61 @@
 
 ;; tabs
 (with-eval-after-load 'tab-bar
-    (defun tab-name-nano (tab i) ;; FIXME
+  (defun tab-name-nano (tab i) ;; FIXME
     (let* ((buffer-p (bufferp tab))
-           (selected-p (if buffer-p
-                           (eq tab (window-buffer))
-                         (cdr (assq 'selected tab))))
+           (selected-p (if (eq (car tab) 'current-tab)
+                           t
+                         nil))
            (name (alist-get 'name tab))
            (name (concat " " name " "))
-           (face (if (eq (car tab) 'current-tab)
+           (face (if selected-p
                      'tab-bar-tab
                    'tab-bar-tab-inactive)))
       (concat (if (display-graphic-p)
                   (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
                               'display '(space :width (1))))
-            (apply 'propertize
-                   (concat
-                    (propertize (string-replace "%" "%%" name) ;; (bug#57848)
-                               'help-echo (if selected-p "Current tab"
-                                           "Click to select tab")
-                               'follow-link 'ignore
-                               )
-                   (or (and ;(or buffer-p (assq 'buffer tab) (assq 'close tab))
-                            tab-bar-close-button-show
-                            (not (eq tab-bar-close-button-show
-                                     (if selected-p 'non-selected 'selected)))
-                            tab-bar-close-button)
-                       ""))
-           `(tab ,tab
-             ,@(if selected-p '(selected t))
-             face ,face
-             display (raise .2)))
-            (if (display-graphic-p)
-                (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
-                            'display '(space :width (1)))))))
-  
-  (advice-add 'tab-bar-tab-name-format-default :override #'tab-name-nano)
+              (apply 'propertize
+                     (concat
+                      (if (and selected-p (buffer-modified-p))
+                          (propertize " ⏺" 'face '(:foreground "royal blue")))
+                      (propertize (string-replace "%" "%%" name) ;; (bug#57848)
+                                  'help-echo (if selected-p "Current tab"
+                                               "Click to select tab")
+                                  'follow-link 'ignore)
+                      (if (and selected-p tab-bar-close-button-show)
+                          tab-bar-close-button)
+                          "")
+                     `(tab ,tab
+                           ,@(if selected-p '(selected t))
+                           face ,face
+                           display (raise .2)))
+              (if (display-graphic-p)
+                  (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
+                              'display '(space :width (1)))))))
 
+  (setq tab-bar-tab-name-format-function #'tab-name-nano)
+  
+  (add-hook 'tab-bar-mode-hook #'tab-bar-history-mode)
+    
+  (add-to-list 'tab-bar-format #'tab-bar-format-align-right 'append)
+  (add-to-list 'tab-bar-format #'tab-bar-format-menu-bar 'append)
+    
   (setq tab-bar-separator nil
         tab-bar-tab-name-truncated-max 16
         tab-bar-tab-name-function #'tab-bar-tab-name-truncated
         tab-bar-tab-name-ellipsis "…"
-        tab-bar-close-button " x"
         tab-bar-new-button-show nil
-        tab-bar-close-button-show 'selected))
+        tab-bar-close-button-show 'selected
+        tab-bar-close-last-tab-choice 'tab-bar-mode-disable
+        tab-bar-close-button
+        (propertize "✕ " 'close-tab t)
+        tab-bar-menu-bar-button
+        (propertize " ≡ " 'display '((raise 0.1)
+                                     (height 1.3)))
+        tab-bar-forward-button
+        (propertize " > " 'display '(raise 0.1))
+        tab-bar-back-button
+        (propertize " < " 'display '(raise 0.1))))
 
 ;;;###autoload
 (defun alabaster-toggle-theme ()

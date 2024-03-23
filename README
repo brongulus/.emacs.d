@@ -1,4 +1,8 @@
-# -*- mode: org; org-html-head-include-scripts: nil; org-html-head-include-default-style: nil; -*-
+# -*- mode: org -*-
 * Emacs Config
 =foxy.el=: competitive programming package for emacs that I'm working on.
 Two themes: one personal fork of dracula based off of (vscode night shift theme) and alabaster theme.
+The themes have being ported to a zed one theme equivalent. Here are the results:
+
+[[./screenshots/dark.png]]
+[[./screenshots/light.png]]
