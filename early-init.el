@@ -47,7 +47,8 @@
                 (right-fringe . 15)
                 (internal-border-width . 00)
                 (fullscreen . fullboth)
-                (font . "VictorMono Nerd Font Mono-16"))
+                ;; (font . "VictorMono Nerd Font Mono-16"))
+                (font . "Zed Mono-17"))
               fringe-indicator-alist
               (assq-delete-all 'truncation fringe-indicator-alist)
               cursor-in-non-selected-windows nil

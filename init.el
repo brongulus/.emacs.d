@@ -1,7 +1,7 @@
 ;; -*- coding: utf-8; lexical-binding: t -*-
-;;; --------------------------
 ;;; Commentary: Emacs config.
-;;; --------------------------
+;;; Code:
+
 (use-package use-package
   :no-require
   :config
@@ -22,6 +22,7 @@
                         (beginning-of-line))))
          ("C-x z" . execute-extended-command)
          ("C-x C-m" . execute-extended-command)
+         ("C-x C-j" . delete-indentation)
          ("C-x l" . revert-buffer-quick)
          ("C-x \\" . align-regexp)
          ("C-x C-z" . restart-emacs)
@@ -29,7 +30,7 @@
                      (setq-default display-line-numbers-type 'relative)
                      (hl-line-mode 'toggle)
                      (display-line-numbers-mode 'toggle)))
-         ("<f6>" . alabaster-toggle-theme))
+         ("<f6>" . zed-toggle-theme))
   :config
   (setq-default line-spacing 3
                 cursor-type 'bar
@@ -103,7 +104,7 @@
   (let ((hour (substring (current-time-string) 11 13)))
     (if (and (string-lessp hour "17") (string-greaterp hour "08"))
         (setq load-theme-light t))) ;; load-theme-light is a languid-theme var
-  (load-theme 'alabaster :no-confirm)
+  (load-theme 'zed :no-confirm)
   (defadvice load-theme (before theme-dont-propagate activate)
     (mapc #'disable-theme custom-enabled-themes))
   
@@ -133,12 +134,10 @@
          :map dired-mode-map
          ("q" . kill-this-buffer)
          ("RET" . dired-find-alternate-file)
-         ("TAB" . (lambda nil (interactive) ;; fixme
-                    (call-interactively 'set-mark-command)
-                    (dired-insert-subdir)))
+         ("TAB" . dired-maybe-insert-subdir)
          ("<backtab>" . (lambda nil (interactive)
                           (dired-kill-subdir)
-                          (pop-global-mark)))
+                          (set-mark-command '(4))))
          ("\\" . dired-up-directory)
          ("E" . wdired-change-to-wdired-mode))
   :config
@@ -690,7 +689,8 @@
    '("b" . meow-back-word)
    '("B" . meow-back-symbol)
    '("c" . (lambda () (interactive)
-             (if (region-active-p)
+             (if (and (region-active-p)
+                      (bound-and-true-p rectangle-mark-mode))
                  (call-interactively 'string-rectangle)
                (meow-change))))
    '("C" . meow-comment)
@@ -720,7 +720,7 @@
    '("j" . meow-next)
    '("J" . (lambda () (interactive)
              (meow-next 1)
-             (join-line)))
+             (delete-indentation)))
    '("k" . meow-prev)
    '("K" . (lambda () (interactive)
              (if (derived-mode-p 'emacs-lisp-mode)
@@ -752,8 +752,7 @@
    '("y" . meow-save)
    '("Y" . meow-sync-grab)
    '("zz" . (lambda nil (interactive)
-              (setq current-prefix-arg '(4))
-              (call-interactively 'set-mark-command)))
+              (set-mark-command '(4))))
    '("za" . hs-global-cycle)
    '("zf" . hs-cycle)
    '("Z" . undo-redo)
