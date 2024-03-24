@@ -86,16 +86,22 @@
    ;; Frame
    `(fringe ((t (:background ,background-color))))
    `(header-line ((t (:background ,background-color))))
-   `(mode-line ((t (:background ,modeline-color :foreground ,foreground-color :box (:line-width 4 :style flat-button)))))
+   `(mode-line ((t (:background ,modeline-color :foreground ,foreground-color
+                                :underline ,`(:color ,border-color :position -2)
+                                :overline ,border-color
+                                :box (:line-width 4 :style flat-button)))))
    `(mode-line-highlight ((t (:box (:line-width 2 :color ,inactive-color)))))
-   `(mode-line-inactive ((t (:background ,modeline-color :foreground ,inactive-color :box (:line-width 4 :style flat-button)))))
+   `(mode-line-inactive ((t (:background ,modeline-color :foreground ,inactive-color
+                                         :underline ,`(:color ,border-color :position -2)
+                                         :overline ,border-color
+                                         :box (:line-width 4 :style flat-button)))))
 
    ;; Parens
    `(show-paren-match ((t (:background ,selection-color))))
    `(show-paren-mismatch ((t (:foreground "#F9F2CE" :background ,red-color))))
 
    ;; Highlighting
-   `(hl-line ((t (:background ,subtle-color))))
+   `(hl-line ((t (:background ,modeline-color))))
    `(highline-face ((t (:background ,subtle-color))))
    `(highlight ((t (:background ,highlight-color))))
    `(highlight-symbol-face ((t (:background ,secondary-color))))
@@ -173,9 +179,9 @@
    `(success ((t (:foreground ,green-color))))
    `(warning ((t (:foreground ,yellow-color))))
    `(error ((t (:foreground ,red-color))))
-   `(flymake-note ((t (:underline ,`(style line :position -1 :color ,green-color)))))
-   `(flymake-warning ((t (:underline ,`(style line :position -1 :color ,yellow-color)))))
-   `(flymake-error ((t (:underline ,`(style line :position -1 :color ,red-color)))))
+   `(flymake-note ((t (:underline ,`(:style line :position -1 :color ,green-color)))))
+   `(flymake-warning ((t (:underline ,`(:style line :position -1 :color ,yellow-color)))))
+   `(flymake-error ((t (:underline ,`(:style line :position -1 :color ,red-color)))))
    `(diff-hl-insert ((t (:foreground ,green-color))))
    `(diff-hl-change ((t (:foreground ,blue-color))))
    `(diff-hl-delete ((t (:foreground ,red-color))))
@@ -187,11 +193,24 @@
    `(info-menu-star ((t (:foreground ,red-color))))
    `(icomplete-selected-match ((t (:inherit highlight :extend t))))
    `(link ((t (:foreground ,cyan-color))))
+   `(link-visited ((t (:foreground ,blue-color))))
    `(line-number ((t (:foreground "grey50"))))
    `(line-number-current-line ((t (:inherit hl-line :foreground ,foreground-color))))
    `(popper-echo-area ((t (:inherit mode-line))))
    `(vertical-border ((t (:foreground ,border-color))))
+
+   `(erc-notice-face ((t (:inherit font-lock-comment-face :weight bold))))
+   `(erc-current-nick-face ((t (:foreground ,yellow-color :weight bold))))
+   `(erc-button ((t (:inherit link))))
+   `(erc-input-face ((t (:inherit default))))
+   `(erc-nick-default-face ((t (:foreground ,blue-color :weight bold))))
+   `(erc-error-face ((t (:foreground ,red-color))))
+   `(erc-timestamp-face ((t (:inherit font-lock-comment-face :weight bold))))
+   `(erc-header-line ((t (:background ,modeline-color :foreground ,green-color))))
+   
    `(solaire-default-face ((t (:inherit default :background ,subtle-color))))
+   `(solaire-fringe-face ((t (:inherit fringe :background ,subtle-color))))
+   `(solaire-header-line-face ((t (:inherit header-line :background ,subtle-color))))
    
    `(meow-beacon-indicator
      ((t (:background ,background-color :foreground ,green-color :inverse-video t))))
@@ -205,11 +224,11 @@
      ((t (:background ,background-color :foreground ,yellow-color :inverse-video t))))
    `(minibuffer-prompt ((t (:foreground ,yellow-color))))
    
-   `(org-agenda-date ((t (:foreground "steel blue"))))
-   `(org-agenda-structure ((t (:foreground "steel blue"))))
-   `(org-time-grid ((t (:foreground "grey"))))
-   `(org-agenda-current-time ((t (:foreground "black"))))
-   `(org-imminent-deadline ((t (:foreground "orange red" :weight bold))))
+   `(org-agenda-date ((t (:foreground ,blue-color))))
+   `(org-agenda-structure ((t (:foreground ,blue-color))))
+   `(org-time-grid ((t (:inherit font-lock-comment-face))))
+   `(org-agenda-current-time ((t (:foreground ,foreground-color))))
+   `(org-imminent-deadline ((t (:foreground ,red-color :weight bold))))
    
    `(tab-bar ((t (:background ,subtle-color :box ,border-color))))
    `(tab-bar-tab ((t (:background ,background-color :foreground ,foreground-color
@@ -217,6 +236,15 @@
    `(tab-bar-tab-inactive
      ((t (:background ,subtle-color :foreground ,inactive-color
                       :underline ,`(:color ,border-color :position -1)))))
+   ;; TODO make it solaire-compatible
+   `(tab-line ((t (:background ,background-color :box ,border-color))))
+   `(tab-line-tab ((t (:background ,subtle-color :foreground ,foreground-color
+                                  :underline ,`(:color ,subtle-color :position -1)))))
+   `(tab-line-tab-inactive
+     ((t (:background ,background-color :foreground ,inactive-color
+                      :underline ,`(:color ,border-color :position -1)))))
+   `(tab-line-tab-current ((t (:inherit tab-line-tab))))
+  
    `(which-func ((t (:foreground ,blue-color))))))
 
 ;; Mode-line
@@ -229,7 +257,7 @@
                           flymake-mode-line-warning-counter
                           flymake-mode-line-note-counter "")))
                    (flymake--mode-line-counters))))
-        " Ln %l"))
+        " %l:%C"))
 (defun my/ml-padding ()
   "Adding padding to the modeline so that spme elements can be right aligned."
   (let ((r-length (length (format-mode-line mode-line-end-spaces))))
@@ -275,25 +303,26 @@
                 1 font-lock-warning-face t)))))
 
 ;; Tabs
+;; (with-eval-after-load 'tab-line
+;;   (setq tab-line-close-button
+;;         (propertize (concat " " (make-string 1 #x00D7) " ") 'close-tab t)))
+
 (with-eval-after-load 'tab-bar
   (defun zed-tab-name (tab i)
     "A cleaner tab name emulating atom one."
     (let* ((buffer-p (bufferp tab))
-           (selected-p (if (eq (car tab) 'current-tab)
-                           t
-                         nil))
+           (selected-p (eq (car tab) 'current-tab))
            (name (alist-get 'name tab))
            (name (concat " " name " "))
            (face (if selected-p
                      'tab-bar-tab
                    'tab-bar-tab-inactive)))
-      (concat (if (display-graphic-p)
-                  (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
-                              'display '(space :width (1))))
+      (concat (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
+                          'display '(space :width (1)))
               ;; show dot if buffer modified else " "
               (if (and selected-p (buffer-modified-p))
                   (propertize (concat " " (make-string 1 #x23fA))
-                              'face `(:inherit 'tab-bar-tab :foreground ,(face-background 'cursor nil t))
+                              'face `(:inherit tab-bar-tab :foreground ,(face-background 'cursor nil t))
                               'display '(raise 0.2))
                 (apply 'propertize " " `(tab ,tab ,@(if selected-p '(selected t))
                                              face ,face
@@ -302,8 +331,6 @@
               (apply 'propertize
                      (concat
                       (propertize (string-replace "%" "%%" name) ;; (bug#57848)
-                                  'help-echo (if selected-p "Current tab"
-                                               "Click to select tab")
                                   'follow-link 'ignore)
                       (if (and selected-p tab-bar-close-button-show)
                           tab-bar-close-button
@@ -314,9 +341,8 @@
                            face ,face
                            display (raise 0.2)))
               
-              (if (display-graphic-p)
-                  (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
-                              'display '(space :width (1)))))))
+              (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
+                          'display '(space :width (1))))))
 
   (defun tab-bar-format-menu-bar ()
     "Produce the Menu button for the tab bar that shows the menu bar."
