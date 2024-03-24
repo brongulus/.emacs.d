@@ -1,7 +1,6 @@
 ;; -*- coding: utf-8; lexical-binding: t -*-
 ;;; Commentary: Emacs config.
 ;;; Code:
-
 (use-package use-package
   :no-require
   :config
@@ -23,6 +22,8 @@
          ("C-x z" . execute-extended-command)
          ("C-x C-m" . execute-extended-command)
          ("C-x C-j" . delete-indentation)
+         ("C-h C-o" . describe-symbol)
+         ("C-x C-b" . ibuffer)
          ("C-x l" . revert-buffer-quick)
          ("C-x \\" . align-regexp)
          ("C-x C-z" . restart-emacs)
@@ -117,7 +118,7 @@
 (use-package package
   :ensure nil
   :init
-  (if package-quickstart
+  (if t;package-quickstart
       (let ((load-source-file-function nil))
         (package-activate-all))
     (package-initialize))
@@ -135,7 +136,7 @@
          ("q" . kill-this-buffer)
          ("RET" . dired-find-alternate-file)
          ("TAB" . dired-maybe-insert-subdir)
-         ("<backtab>" . (lambda nil (interactive)
+         ("<backspace>" . (lambda nil (interactive)
                           (dired-kill-subdir)
                           (set-mark-command '(4))))
          ("\\" . dired-up-directory)
@@ -154,8 +155,7 @@
              (slot . 0)
              (window-width . 0.18)
              (window-parameters . ((mode-line-format . (" %b"))))))
-      (windmove-left)
-      (hl-line-mode +1)))
+      (pop-to-buffer dir)))
 
   (setq dired-dwim-target t
         dired-auto-revert-buffer t
@@ -392,6 +392,10 @@
 (use-package recentf
   :ensure nil
   :bind ("C-x f" . #'recentf-open)
+  :config
+  (advice-add 'recentf-cleanup :around
+              (lambda (orig-fn &rest args)
+                (let ((inhibit-message t)) (apply orig-fn args))))
   :custom
   (recentf-max-menu-items 25)
   (recentf-auto-cleanup 'never))
@@ -481,18 +485,98 @@
            (file+headline org-capture-file "Notes")
            "* %?\n%i %a" :prepend t))))
 
+(use-package desktop ;; session-persistence
+  :ensure nil
+  :hook (after-init . desktop-save-mode)
+  :hook (after-init . desktop-read)
+  :config
+  (dolist (item
+           '(alpha background-color background-mode border-width
+                   bottom-divider-width cursor-color cursor-type display-type
+                   environment font fontsize foreground-color fullscreen
+                   fullscreen-restore horizontal-scroll-bars internal-border-width
+                   left-fringe line-spacing menu-bar-lines ns-appearance
+                   ns-transparent-titlebar powerline-cache right-divider-width
+                   right-fringe scroll-bar-height scroll-bar-width tool-bar-lines
+                   tool-bar-position vertical-scroll-bars zoom-window-buffers
+                   zoom-window-enabled))
+    (push `(,item . :never) frameset-filter-alist))
+  
+  (setq desktop-restore-forces-onscreen nil
+        desktop-auto-save-timeout 10)
+  (add-hook 'desktop-after-read-hook
+            (lambda ()
+              (frameset-restore
+               desktop-saved-frameset
+               :reuse-frames (eq desktop-restore-reuses-frames t)
+               :cleanup-frames (not (eq desktop-restore-reuses-frames 'keep))
+               :force-display desktop-restore-in-current-display
+               :force-onscreen desktop-restore-forces-onscreen))))
+
+(use-package erc
+  ;; auth: machine irc.libera.chat login "USER" password PASSWORD
+  :ensure nil
+  :commands my/irc
+  :hook (erc-join . hl-line-mode)
+  :hook (erc-quit . (lambda nil
+                      (erc-status-sidebar-kill)
+                      (tab-bar-close-tab)))
+  :custom
+  (erc-autojoin-channels-alist '(("libera.chat" "#emacs")))
+  (erc-default-server "irc.libera.chat")
+  (erc-nick "brongulus")
+  (erc-nickserv-get-password nil)
+  (erc-use-auth-source-for-nickserv-password t)
+  (erc-fill-column (min (- (window-width) 3) 90))
+  (erc-autojoin-timing 'ident)
+  (erc-fill-function 'erc-fill-static)
+  (erc-fill-static-center 14)
+  (erc-format-nick-function 'erc-format-@nick)
+  (erc-header-line-face-method t)
+  (erc-track-position-in-mode-line t)
+  (erc-track-shorten-function nil)
+  (erc-join-buffer 'bury) ; window
+  (erc-kill-server-buffer-on-quit t)
+  (erc-kill-buffer-on-part t)
+  (erc-hide-list '("JOIN" "PART" "QUIT" "NICK"))
+  (erc-lurker-hide-list '("JOIN" "PART" "QUIT" "NICK"))
+  (erc-track-exclude-types '("JOIN" "MODE" "NICK" "PART" "QUIT"
+                             "324" "329" "332" "333" "353" "477"))
+  :config
+  ;; (defun erc-format-nick-clean (&optional user _channel-data) ;; <nick|> lul
+  ;;   (when user
+  ;;     (let ((nick (erc-server-user-nickname user)))
+  ;;       (concat nick (propertize "│" 'font-lock-face 'font-lock-comment-face)))))
+  (defun my/irc nil
+    (interactive)
+    (if (get-buffer "Libera.Chat") ;; ERC already active?
+        (pop-to-buffer "Libera.Chat")
+      (progn
+        (tab-bar-new-tab)
+        (erc :server "irc.libera.chat" :port 6667 :nick "brongulus" :password nil)
+        (erc-track-switch-buffer 1)
+        (erc-status-sidebar-open))))
+  (erc-services-mode 1)
+  (erc-autojoin-mode)
+  (erc-track-mode t)
+  (erc-timestamp-mode -1)
+  (push 'keep-place erc-modules)
+  (erc-update-modules))
+
 ;;; --------------
 ;;; ELPA packages
 ;;; --------------
 (use-package popper
+  :ensure nil
+  :load-path "~/.emacs.d/popper"
   :bind (("C-`"   . popper-toggle)
          ("M-j"   . popper-toggle)
          ("M-`"   . popper-cycle)
          ("C-M-`" . popper-toggle-type)
          :repeat-map popper-repeat-map
          ("`"     . popper-cycle))
-  :hook ((after-init . popper-mode)
-         (after-init . popper-echo-mode))
+  :hook ((after-init . popper-mode))
+         ;; (after-init . popper-tab-line-mode))
   :init
   (setq popper-reference-buffers
         '("\\*Messages\\*"
@@ -516,6 +600,11 @@
           "^\\*term.*\\*$" term-mode)
         popper-mode-line nil
         popper-window-height 0.33))
+
+(use-package popper-echo
+  :ensure nil
+  :load-path "~/.emacs.d/popper"
+  :hook (after-init . popper-tab-line-mode))
 
 (use-package orderless
   :after minibuffer
@@ -615,9 +704,6 @@
 
 (use-package deadgrep)
 
-(use-package org-modern
-  :hook (org-mode . org-modern-mode))
-
 (use-package meow
   :hook (after-init . (lambda ()
                         (require 'meow)
@@ -656,7 +742,7 @@
   (define-key meow-insert-state-keymap (kbd "j") #'my-jk)
   (define-key meow-normal-state-keymap (kbd "S") insert-pair-map)
   (define-key meow-normal-state-keymap (kbd "D") delete-pair-map)
-  (dolist (imode '(eat-mode eshell-mode log-edit-mode))
+  (dolist (imode '(reb-mode eat-mode eshell-mode log-edit-mode))
     (push `(,imode . insert) meow-mode-state-list))
   (meow-motion-overwrite-define-key
    '("Q" . kill-this-buffer)
@@ -803,7 +889,7 @@
 
 (use-package eglot
   :bind (:map meow-normal-state-keymap
-              ("ga" . eglot-code-actions)
+              ;; ("ga" . eglot-code-actions)
               ("gr" . eglot-rename)
               ("gF" . eglot-format))
   :hook (((rust-ts-mode go-ts-mode) . eglot-ensure)
@@ -923,7 +1009,7 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(rainbow-mode olivetti deadgrep org-modern which-key solaire-mode esup diff-hl markdown-mode eat with-editor avy undo-fu-session embark marginalia meow orderless popper)))
+   '(deadgrep which-key solaire-mode esup diff-hl markdown-mode eat avy undo-fu-session embark marginalia meow orderless)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
