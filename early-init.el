@@ -105,10 +105,15 @@
     (local-set-key (kbd "q") 'kill-this-buffer)
     (local-set-key (kbd "RET") 'kill-this-buffer)))
 
-(when (< (length command-line-args) 2)
-  (add-hook 'emacs-startup-hook (lambda ()
-                                  (when (display-graphic-p)
-                                    (ar/show-welcome-buffer)))))
+(add-hook 'emacs-startup-hook (lambda ()
+                                (if (or (> (length command-line-args) 2)
+                                        (file-exists-p (locate-user-emacs-file ".emacs.desktop")))
+                                    (message (format "%d packages loaded in %s"
+                                                     (length package-activated-list)
+                                                     (format "%.2f seconds"
+                                                             (float-time
+                                                              (time-subtract after-init-time before-init-time)))))
+                                  (ar/show-welcome-buffer))))
 
 (if (eq system-type 'darwin)
     (setq mac-option-modifier 'meta)
