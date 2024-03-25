@@ -71,6 +71,12 @@
   (add-hook 'prog-mode-hook (show-paren-mode t))
   (add-hook 'prog-mode-hook (which-function-mode))
 
+  (defun silent-command (fn &rest args)
+    (let ((inhibit-message t)
+          (message-log-max nil)
+          (save-silently t))
+      (apply fn args)))
+
   (copy-face 'default 'fixed-pitch)
   (set-register ?f `(file . ,(locate-user-emacs-file "init.el")))
   (set-register ?c `(file . "~/problems/"))
@@ -343,12 +349,9 @@
       
 (use-package repeat
   :ensure nil
-  :hook (after-init . silent-repeat-mode)
+  :hook (after-init . repeat-mode)
   :config
-  (defun silent-repeat-mode ()
-    (let ((inhibit-message t)
-          (message-log-max nil))
-      (repeat-mode)))
+  (advice-add #'repeat-mode :around #'silent-command)
   (setq repeat-exit-key "RET"))
 
 (use-package isearch
@@ -391,14 +394,15 @@
 
 (use-package recentf
   :ensure nil
-  :bind ("C-x f" . #'recentf-open)
+  :bind ("C-x f" . recentf-open)
+  :hook (kill-emacs . recentf-cleanup)
   :config
-  (advice-add 'recentf-cleanup :around
-              (lambda (orig-fn &rest args)
-                (let ((inhibit-message t)) (apply orig-fn args))))
-  :custom
-  (recentf-max-menu-items 25)
-  (recentf-auto-cleanup 'never))
+  (add-to-list 'recentf-filename-handlers #'substring-no-properties) ;; doom
+  (advice-add #'recentf-load-list :around #'silent-command)
+  (advice-add #'recentf-cleanup :around #'silent-command)
+  (setq recentf-max-menu-items 25
+        recentf-max-saved-items 200
+        recentf-auto-cleanup 'never))
 
 (use-package tramp
   :hook (minibuffer-mode . tramp-cleanup-all-connections)
@@ -485,10 +489,11 @@
            (file+headline org-capture-file "Notes")
            "* %?\n%i %a" :prepend t))))
 
-(use-package desktop ;; session-persistence
+(use-package desktop
+  ;; session-persistence
   :ensure nil
   :hook (after-init . desktop-save-mode)
-  :hook (after-init . desktop-read)
+  ;; :hook (after-init . desktop-read)
   :config
   (dolist (item
            '(alpha background-color background-mode border-width
@@ -518,11 +523,11 @@
   :ensure nil
   :commands my/irc
   :hook (erc-join . hl-line-mode)
-  :hook (erc-quit . (lambda nil
+  :hook (erc-quit . (lambda (&optional arg)
                       (erc-status-sidebar-kill)
                       (tab-bar-close-tab)))
   :custom
-  (erc-autojoin-channels-alist '(("libera.chat" "#emacs")))
+  (erc-autojoin-channels-alist '(("libera.chat" "#emacs" "##rust")))
   (erc-default-server "irc.libera.chat")
   (erc-nick "brongulus")
   (erc-nickserv-get-password nil)
@@ -579,23 +584,16 @@
          ;; (after-init . popper-tab-line-mode))
   :init
   (setq popper-reference-buffers
-        '("\\*Messages\\*"
-          "Output\\*$"
+        '("\\*Messages\\*" "Output\\*$"
           "\\*Async Shell Command\\*"
-          help-mode
-          "magit:.\*"
-          "\\*pabbrev suggestions\\*"
-          ".*-eat\\*"
-          "\\*eldoc\\*"
-          "vc-git :.\*"
+          "magit:.\*" "\\*pabbrev suggestions\\*"
+          ".*-eat\\*" "\\*eldoc\\*" "vc-git :.\*"
           "\\*vc-change-log\\*"
           "\\*Flymake diagnostics.\*"
-          "\\*Org Select\\*"
-          "^CAPTURE.*"
-          "\\*Warnings\\*"
-          "\\*Backtrace\\*"
-          "\\*Occur\\*"
-          compilation-mode
+          "\\*Process List\\*" "\\*Org Select\\*"
+          "^CAPTURE.*" "\\*Warnings\\*"
+          "\\*Backtrace\\*" "\\*Occur\\*"
+          help-mode compilation-mode
           "^\\*eshell.*\\*$" eshell-mode
           "^\\*term.*\\*$" term-mode)
         popper-mode-line nil
@@ -604,7 +602,19 @@
 (use-package popper-echo
   :ensure nil
   :load-path "~/.emacs.d/popper"
-  :hook (after-init . popper-tab-line-mode))
+  :hook (after-init . popper-tab-line-mode)
+  :config
+  (defun popper-tab-line--format (tab tabs)
+    (let ((name (tab-line-tab-name-format-default tab tabs))
+          (idx (cl-position tab tabs)))
+      (concat
+       (propertize
+        (concat " " (number-to-string idx) ":")
+        'face (if (eq tab (current-buffer))
+                  (if (mode-line-window-selected-p)
+                      'tab-line-tab-current 'tab-line-tab)
+                'tab-line-tab-inactive))
+       name))))
 
 (use-package orderless
   :after minibuffer
@@ -659,7 +669,8 @@
                                             "-eat*")))
                      (call-interactively 'eat))))
          (:map eat-semi-char-mode-map
-               ("C-u" . eat-self-input)))
+               ("C-u" . eat-self-input)
+               ("M-j" . popper-toggle)))
   :config
   (setq eat-message-handler-alist
         ;; once eat fish-intergration is merged
@@ -669,8 +680,9 @@
                     (find-file file)))
           ;; FIXME: doesnt work over tramp with large name
           ("ediff" . (lambda (file1 file2)
+                       (tab-bar-new-tab)
                        (ediff file1 file2)))))
-  
+
   (setq explicit-shell-file-name "fish"
         eat-kill-buffer-on-exit t
         eat-term-name "xterm-256color"))

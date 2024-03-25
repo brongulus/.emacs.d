@@ -40,7 +40,7 @@
                         "#3c414c"))
       (background-color (if load-theme-light
                             "#fafafa"
-                          "#292c32"))
+                          "#282c33"))
       (foreground-color (if load-theme-light
                             "black"
                           "#c8ccd3"))
@@ -117,13 +117,13 @@
    ;; Font-lock
    `(font-lock-builtin-face ((t (:foreground ,blue-color))))
    `(font-lock-comment-face ((t (:foreground "#5e636e"))))
-   `(font-lock-constant-face ((t (:foreground ,yellow-color))))
+   `(font-lock-constant-face ((t (:foreground ,red-color))))
    `(font-lock-number-face ((t (:inherit font-lock-constant-face))))
    `(font-lock-doc-string-face ((t (:foreground "#1A93AE" :background "#F4F9FE"))))
    `(font-lock-function-name-face ((t (:foreground ,blue-color))))
    `(font-lock-keyword-face ((t (:foreground ,magenta-color))))
    `(font-lock-preprocessor-face ((t (:foreground ,magenta-color))))
-   `(font-lock-property-name-face ((t (:foreground ,red-color))))
+   `(font-lock-property-name-face ((t (:foreground ,yellow-color))))
    `(font-lock-reference-face ((t (:foreground "#4E279A" :background "#F3F2FF"))))
    `(font-lock-string-face ((t (:foreground ,green-color))))
    `(font-lock-type-face ((t (:foreground ,cyan-color))))
@@ -133,10 +133,6 @@
    ;; Diff Mode
    `(diff-header ((t (:inherit secondary-selection))))
    `(diff-file-header ((t (:bold t :inherit diff-header))))
-   ;; `(diff-added ((t (:background "#DDFFDD"))))
-   ;; `(diff-removed ((t (:background "#FFDDDD"))))
-   ;; `(diff-changed ((t (:background "#FFFFDD"))))
-   ;; `(diff-refine-change ((t (:background "#DDDDFF"))))
 
    ;; Ediff
    `(ediff-odd-diff-A ((t (:inherit secondary-selection :extend t))))
@@ -197,6 +193,8 @@
    `(line-number ((t (:foreground "grey50"))))
    `(line-number-current-line ((t (:inherit hl-line :foreground ,foreground-color))))
    `(popper-echo-area ((t (:inherit mode-line))))
+   `(pulse-highlight-start-face ((t (:background ,yellow-color))))
+   `(pulse-highlight-face ((t (:background ,yellow-color :extend t))))
    `(vertical-border ((t (:foreground ,border-color))))
 
    `(erc-notice-face ((t (:inherit font-lock-comment-face :weight bold))))
@@ -284,7 +282,7 @@
                                                :inverse-video t
                                                :box (:style flat-button))))))
                 "%e"
-                (:eval (propertize " %b " 'help-echo (buffer-file-name)))
+                (:eval (propertize " %b " 'face '(:weight bold) 'help-echo (buffer-file-name)))
                 "("
                 (:eval mode-name)
                 (:eval vc-mode) ;; vc-display-status 'no-backend
@@ -303,9 +301,9 @@
                 1 font-lock-warning-face t)))))
 
 ;; Tabs
-;; (with-eval-after-load 'tab-line
-;;   (setq tab-line-close-button
-;;         (propertize (concat " " (make-string 1 #x00D7) " ") 'close-tab t)))
+(with-eval-after-load 'tab-line
+  (setq tab-line-close-button
+        (propertize (concat " " (make-string 1 #x00D7) " ") 'close-tab t)))
 
 (with-eval-after-load 'tab-bar
   (defun zed-tab-name (tab i)
