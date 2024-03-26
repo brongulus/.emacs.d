@@ -1,4 +1,4 @@
-;;; zed-theme.el -- Zed theme for Emacs.
+;;; zed-theme.el -- Zed theme for Emacs.  -*- lexical-binding: t; -*-
 
 ;; Author: All credits go to atom/zed theme
 ;; Version: 1.0
@@ -62,7 +62,7 @@
       (yellow-color (if load-theme-light
                         "#986801"
                       "#d9c18c"))
-      (x-border-color "#a5a5a5"))
+      (_x-border-color "#a5a5a5"))
   (custom-theme-set-faces
    'zed
    ;; Basics
@@ -184,18 +184,28 @@
    
    `(completions-highlight ((t (:inherit highlight :extend t))))
    `(dired-directory ((t (:foreground ,yellow-color))))
-   `(dired-header ((t (:foreground ,green-color))))
+   `(dired-header ((t (:foreground ,green-color :height 1.2))))
    `(fixed-pitch ((t (:inherit default))))
    `(info-menu-star ((t (:foreground ,red-color))))
    `(icomplete-selected-match ((t (:inherit highlight :extend t))))
+   `(tty-menu-selected-face ((t (:inherit highlight))))
+   `(tty-menu-enabled-face ((t (:background ,modeline-color))))
+   `(tty-menu-disabled-face ((t (:background ,modeline-color :foreground ,inactive-color))))
    `(link ((t (:foreground ,cyan-color))))
    `(link-visited ((t (:foreground ,blue-color))))
    `(line-number ((t (:foreground "grey50"))))
    `(line-number-current-line ((t (:inherit hl-line :foreground ,foreground-color))))
+   `(orderless-match-face-0 ((t (:foreground ,blue-color :weight bold))))
+   `(orderless-match-face-1 ((t (:foreground ,magenta-color :weight bold))))
+   `(orderless-match-face-2 ((t (:foreground ,green-color :weight bold))))
+   `(orderless-match-face-3 ((t (:foreground ,yellow-color :weight bold))))
    `(popper-echo-area ((t (:inherit mode-line))))
    `(pulse-highlight-start-face ((t (:background ,yellow-color))))
    `(pulse-highlight-face ((t (:background ,yellow-color :extend t))))
    `(vertical-border ((t (:foreground ,border-color))))
+   `(whitespace-space ((t (:inherit font-lock-comment-face))))
+   `(whitespace-line ((t (:inherit font-lock-comment-face))))
+   `(whitespace-trailing ((t (:inherit font-lock-warning-face))))
 
    `(erc-notice-face ((t (:inherit font-lock-comment-face :weight bold))))
    `(erc-current-nick-face ((t (:foreground ,yellow-color :weight bold))))
@@ -205,6 +215,36 @@
    `(erc-error-face ((t (:foreground ,red-color))))
    `(erc-timestamp-face ((t (:inherit font-lock-comment-face :weight bold))))
    `(erc-header-line ((t (:background ,modeline-color :foreground ,green-color))))
+
+   `(variable-pitch-text ((t (:inherit variable-pitch))))
+   `(shr-text ((t (:inherit default))))
+   `(gnus-group-mail-1 ((t (:foreground ,red-color :weight bold))))
+   `(gnus-group-mail-2 ((t (:foreground ,red-color :weight bold))))
+   `(gnus-group-mail-3 ((t (:foreground ,red-color :weight bold))))
+   `(gnus-group-mail-low ((t (:foreground ,red-color :weight bold))))
+   `(gnus-group-mail-1-empty ((t (:foreground "#5e636e"))))
+   `(gnus-group-mail-2-empty ((t (:foreground "#5e636e"))))
+   `(gnus-group-mail-3-empty ((t (:foreground "#5e636e"))))
+   `(gnus-group-mail-low-empty ((t (:foreground "#5e636e"))))
+   `(gnus-group-news-1 ((t (:foreground ,red-color :weight bold))))
+   `(gnus-group-news-2 ((t (:foreground ,red-color :weight bold))))
+   `(gnus-group-news-3 ((t (:foreground ,red-color :weight bold))))
+   `(gnus-group-news-low ((t (:foreground ,red-color :weight bold))))
+   `(gnus-group-news-1-empty ((t (:foreground "#5e636e"))))
+   `(gnus-group-news-2-empty ((t (:foreground "#5e636e"))))
+   `(gnus-group-news-3-empty ((t (:foreground "#5e636e"))))
+   `(gnus-group-news-low-empty ((t (:foreground "#5e636e"))))
+   `(gnus-header ((t (:inherit default))))
+   `(gnus-header-content ((t (:foreground ,inactive-color))))
+   `(gnus-header-from ((t (:foreground ,inactive-color))))
+   `(gnus-header-subject ((t (:foreground ,inactive-color))))
+   `(gnus-header-name ((t (:foreground ,green-color :weight bold))))
+   `(gnus-header-newsgroups ((t (:foreground ,green-color :weight bold))))
+   `(gnus-summary-selected ((t (:background ,modeline-color))))
+   `(gnus-summary-normal-ticked ((t (:foreground ,yellow-color))))
+   `(gnus-summary-normal-unread ((t (:foreground ,blue-color :weight bold))))
+   `(gnus-summary-normal-read ((t (:foreground ,inactive-color))))
+   `(gnus-summary-normal-ancient ((t (:foreground ,inactive-color))))
    
    `(solaire-default-face ((t (:inherit default :background ,subtle-color))))
    `(solaire-fringe-face ((t (:inherit fringe :background ,subtle-color))))
@@ -235,63 +275,89 @@
      ((t (:background ,subtle-color :foreground ,inactive-color
                       :underline ,`(:color ,border-color :position -1)))))
    ;; TODO make it solaire-compatible
-   `(tab-line ((t (:background ,background-color :box ,border-color))))
-   `(tab-line-tab ((t (:background ,subtle-color :foreground ,foreground-color
+   `(tab-line ((t (:background ,background-color :box ,border-color :italic nil))))
+   `(tab-line-tab ((t (:background ,subtle-color :foreground ,foreground-color :italic nil
                                   :underline ,`(:color ,subtle-color :position -1)))))
    `(tab-line-tab-inactive
-     ((t (:background ,background-color :foreground ,inactive-color
+     ((t (:background ,background-color :foreground ,inactive-color :italic nil
                       :underline ,`(:color ,border-color :position -1)))))
    `(tab-line-tab-current ((t (:inherit tab-line-tab))))
+   `(tab-line-highlight ((t (:inherit tab-line-tab))))
   
-   `(which-func ((t (:foreground ,blue-color))))))
+   `(which-func ((t (:foreground ,inactive-color))))))
 
 ;; Mode-line
 (setq global-mode-string nil
+      ;; clean eglot
+      eglot-menu-string (char-to-string #x2699)
+      which-func-non-auto-modes '(erc-mode)
+      which-func-unknown ""
+      ;; which-func-modes '(text-mode prog-mode)
+      which-func-format
+      `(:propertize which-func-current face which-func)
+      ;; dont show which-func information in misc-info
+      mode-line-misc-info (delete
+                           '(which-function-mode
+                             (which-func-mode
+                              ("" which-func-format " ")))
+                           mode-line-misc-info)
+      ;; all the stuff that will be right-aligned
       mode-line-end-spaces
       `("%n " mode-line-misc-info
+        (:eval (propertize (format " %s" (upcase (if (stringp mode-name)
+                                                      mode-name
+                                                   (car mode-name))))
+                           'help-echo "Mouse-1: Show major-mode-menu"
+                           'local-map mode-line-major-mode-keymap))
+        (:eval (when (bound-and-true-p vc-mode)
+                 (propertize (concat " " vc-mode) 'face ;; vc-display-status 'no-backend
+                             '(:inherit success :weight bold))))
         (:eval (when (bound-and-true-p flymake-mode)
                  (let ((flymake-mode-line-counter-format
-                        '(""flymake-mode-line-error-counter
+                        '(" " flymake-mode-line-error-counter
                           flymake-mode-line-warning-counter
                           flymake-mode-line-note-counter "")))
                    (flymake--mode-line-counters))))
-        " %l:%C"))
+        (:eval (propertize " %l:%C" 'face 'which-func))))
+
 (defun my/ml-padding ()
   "Adding padding to the modeline so that spme elements can be right aligned."
   (let ((r-length (length (format-mode-line mode-line-end-spaces))))
     (propertize " "
                 'display `(space :align-to (- right ,r-length)))))
 
-(setq-default mode-line-format
-              '((:eval (when (and (bound-and-true-p meow-global-mode)
-                                  (mode-line-window-selected-p))
-                         (let* ((state (meow--current-state))
-                                (indicator-face (alist-get state meow-indicator-face-alist))
-                                (buffer-state (cond (buffer-read-only
-                                                     " RO ")
-                                                    ((buffer-modified-p)
-                                                     " ** ")
-                                                    ((file-remote-p default-directory)
-                                                     (concat " " (file-remote-p
-                                                                  default-directory 'host)
-                                                             " "))
-                                                    (t
-                                                     " %p "))))
-                           (propertize buffer-state
-                                       'face `(,indicator-face
-                                               :inverse-video t
-                                               :box (:style flat-button))))))
-                "%e"
-                (:eval (propertize " %b " 'face '(:weight bold) 'help-echo (buffer-file-name)))
-                "("
-                (:eval mode-name)
-                (:eval vc-mode) ;; vc-display-status 'no-backend
-                ")"
-                (:eval (if (string> emacs-version "29.2")
-                           mode-line-format-right-align
-                         (my/ml-padding)))
-                (:eval (when (mode-line-window-selected-p)
-                         mode-line-end-spaces))))
+(setq-default
+ mode-line-format
+ '((:eval (when (and (bound-and-true-p meow-global-mode)
+                     (mode-line-window-selected-p))
+            (let* ((state (meow--current-state))
+                   (indicator-face (alist-get state meow-indicator-face-alist))
+                   (buffer-state (cond (buffer-read-only
+                                        " RO ")
+                                       ((file-remote-p default-directory)
+                                        (concat " " (file-remote-p
+                                                     default-directory 'host)
+                                                " "))
+                                       (t
+                                        " %p "))))
+              (propertize buffer-state
+                          'face `(,indicator-face
+                                  :inverse-video t
+                                  :box (:style flat-button))))))
+   "%e"
+   (:eval (propertize " %b " 'face (if (and (buffer-modified-p)
+                                            (or (derived-mode-p 'prog-mode)
+                                                (derived-mode-p 'text-mode)))
+                                       '(:inherit font-lock-warning-face :weight bold)
+                                     '(:weight bold))
+                      'help-echo (buffer-file-name)))
+   (which-function-mode (which-func-mode
+                         ("" which-func-format " ")))
+   (:eval (if (string> emacs-version "29.4")
+              mode-line-format-right-align
+            (my/ml-padding)))
+   (:eval (when (mode-line-window-selected-p)
+            mode-line-end-spaces))))
 
 (add-hook 'prog-mode-hook
           (lambda ()
@@ -306,10 +372,9 @@
         (propertize (concat " " (make-string 1 #x00D7) " ") 'close-tab t)))
 
 (with-eval-after-load 'tab-bar
-  (defun zed-tab-name (tab i)
+  (defun zed-tab-name (tab _i)
     "A cleaner tab name emulating atom one."
-    (let* ((buffer-p (bufferp tab))
-           (selected-p (eq (car tab) 'current-tab))
+    (let* ((selected-p (eq (car tab) 'current-tab))
            (name (alist-get 'name tab))
            (name (concat " " name " "))
            (face (if selected-p
@@ -318,7 +383,9 @@
       (concat (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
                           'display '(space :width (1)))
               ;; show dot if buffer modified else " "
-              (if (and selected-p (buffer-modified-p))
+              (if (and selected-p (buffer-modified-p)
+                       (or (derived-mode-p 'prog-mode)
+                           (derived-mode-p 'text-mode)))
                   (propertize (concat " " (make-string 1 #x23fA))
                               'face `(:inherit tab-bar-tab :foreground ,(face-background 'cursor nil t))
                               'display '(raise 0.2))
