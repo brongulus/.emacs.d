@@ -1,5 +1,6 @@
-;; -*- coding: utf-8; lexical-binding: t -*-
-;;; Commentary: Emacs config.
+;;; init.el ---  -*- coding: utf-8; lexical-binding: t -*-
+;;; Commentary:
+;;; Ah shit, here we go again.
 ;;; Code:
 (use-package use-package
   :no-require
@@ -9,13 +10,14 @@
         use-package-always-defer t
         use-package-enable-imenu-support t
         use-package-expand-minimally t))
-  
+
 (use-package emacs
   :no-require
   :bind (("C-h '" . describe-face)
          ("M-o" . project-switch-project)
+         ("M-c" . quick-calc)
          ("M-k" . backward-kill-word)
-         ("C-d" . delete-forward-char)
+         ("C-d" . delete-backward-char)
          ("C-a" . (lambda nil (interactive)
                     (if (= (point) (progn (beginning-of-line-text) (point)))
                         (beginning-of-line))))
@@ -25,6 +27,8 @@
          ("C-h C-o" . describe-symbol)
          ("C-x C-b" . ibuffer)
          ("C-x l" . revert-buffer-quick)
+         ("C-x L" . desktop-read)
+         ("C-M-r" . raise-sexp)
          ("C-x \\" . align-regexp)
          ("C-x C-z" . restart-emacs)
          ("<f5>" . (lambda () (interactive)
@@ -47,7 +51,10 @@
                 display-line-numbers-width 3
                 delete-pair-blink-delay 0)
   
-  (setq read-process-output-max (* 2 1024 1024)
+  (setq read-process-output-max (* 16 1024)
+        process-adaptive-read-buffering nil
+        auto-mode-case-fold nil
+        idle-update-delay 1.0
         undo-limit 67108864
         undo-strong-limit 100663296
         undo-outer-limit 1006632960
@@ -61,12 +68,14 @@
         Info-use-header-line nil
         outline-minor-mode-cycle nil ;; messes up completion
         tabify-regexp "^\t* [ \t]+"
+        grep-command "grep --color=always -nHi -r --include=*.* -e \"pattern\" ."
         electric-pair-skip-self t
         compilation-scroll-output 'first-error)
- 
+  
   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
   (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
   (add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
+  ;; (push 'check-parens write-file-functions) ;; issue in org
   (add-hook 'prog-mode-hook (electric-pair-mode t))
   (add-hook 'prog-mode-hook (show-paren-mode t))
   (add-hook 'prog-mode-hook (which-function-mode))
@@ -106,7 +115,8 @@
     (subword-mode 1)
     (context-menu-mode 1)
     (savehist-mode)
-    (blink-cursor-mode -1))
+    (blink-cursor-mode -1)
+    (tooltip-mode -1))
   ;; Load theme based on the time of the day
   (let ((hour (substring (current-time-string) 11 13)))
     (if (and (string-lessp hour "17") (string-greaterp hour "08"))
@@ -129,7 +139,7 @@
         (package-activate-all))
     (package-initialize))
   :config
-  (push '("melpa" . "https://melpa.org/packages/") package-archives)
+  ;; (push '("melpa" . "https://melpa.org/packages/") package-archives)
   (setq package-native-compile t
         package-install-upgrade-built-in t
         package-check-signature nil))
@@ -143,8 +153,8 @@
          ("RET" . dired-find-alternate-file)
          ("TAB" . dired-maybe-insert-subdir)
          ("<backspace>" . (lambda nil (interactive)
-                          (dired-kill-subdir)
-                          (set-mark-command '(4))))
+                            (dired-kill-subdir)
+                            (set-mark-command '(4))))
          ("\\" . dired-up-directory)
          ("E" . wdired-change-to-wdired-mode))
   :config
@@ -174,12 +184,12 @@
         dired-recursive-copies 'always)
 
   (with-eval-after-load 'cc-mode
-  (defun c-indent-then-complete ()
-    (interactive)
-    (if (= 0 (c-indent-line-or-region))
-    (completion-at-point)))
-  (dolist (map (list c-mode-map c++-mode-map))
-    (define-key map (kbd "<tab>") #'c-indent-then-complete))))
+    (defun c-indent-then-complete ()
+      (interactive)
+      (if (= 0 (c-indent-line-or-region))
+          (completion-at-point)))
+    (dolist (map (list c-mode-map c++-mode-map))
+      (define-key map (kbd "<tab>") #'c-indent-then-complete))))
 
 (use-package xref
   :ensure nil
@@ -197,33 +207,35 @@
         icomplete-scroll t)
   (fido-vertical-mode)
   :bind (:map completion-in-region-mode-map ; icomp-in-buffer
-         ("TAB" . icomplete-forward-completions)
-         ("<backtab>" . icomplete-backward-completions)
-         ("<return>" . icomplete-force-complete-and-exit)
-         ("<escape>" . keyboard-quit)
-         :map icomplete-fido-mode-map
-         ("C-<return>" . icomplete-fido-exit)
-         ("<backspace>" . icomplete-fido-backward-updir)
-         ("TAB" . icomplete-forward-completions)
-         ("<backtab>" . icomplete-backward-completions)
-         ("<left>" . backward-char)
-         ("<right>" . forward-char)
-         :map icomplete-minibuffer-map
-         ("C-," . embark-act)
-         :map minibuffer-local-map
-         ("S-<return>" . newline))
+              ("TAB" . icomplete-forward-completions)
+              ("<backtab>" . icomplete-backward-completions)
+              ("<return>" . icomplete-force-complete-and-exit)
+              ("<escape>" . keyboard-quit)
+              :map icomplete-fido-mode-map
+              ("C-<return>" . icomplete-fido-exit)
+              ("<backspace>" . icomplete-fido-backward-updir)
+              ("TAB" . icomplete-forward-completions)
+              ("<backtab>" . icomplete-backward-completions)
+              ("<left>" . backward-char)
+              ("<right>" . forward-char)
+              :map icomplete-minibuffer-map
+              ("C-," . embark-act)
+              :map minibuffer-local-map
+              ("S-<return>" . newline))
   :hook (icomplete-minibuffer-setup . (lambda nil
                                         (setq-local completion-auto-help nil
                                                     truncate-lines t
                                                     line-spacing nil)))
+  :hook (eval-expression-minibuffer-setup . (lambda nil
+                                              (setq-local completion-auto-help 'always
+                                                          completion-auto-select t)))
   :config
-  (advice-add 'completion-at-point :after #'minibuffer-hide-completions) ;; fix icom-in-buffer
   ;; testing completions buffer
   (add-to-list 'display-buffer-alist
                '("\\*Completions\\*"
                  (display-buffer-reuse-window display-buffer-at-bottom)
                  (window-parameters (mode-line-format . none))))
-  (setq completion-auto-help 'always ;lazy ;always
+  (setq completion-auto-help 'lazy
         completion-auto-select 'second-tab
         completion-auto-wrap t
         completion-show-help nil
@@ -256,7 +268,7 @@
   :ensure nil
   :config
   (setq windmove-wrap-around t)
-  (windmove-default-keybindings 'shift)
+  (windmove-default-keybindings 'none)
   (windmove-swap-states-default-keybindings 'meta))
 
 (use-package ediff
@@ -346,7 +358,7 @@
   (add-to-list 'display-buffer-alist
                '("^\\*Annotate.*\\*$"
                  (display-buffer-reuse-mode-window display-buffer-in-tab))))
-      
+
 (use-package repeat
   :ensure nil
   :hook (after-init . repeat-mode)
@@ -407,6 +419,7 @@
 (use-package tramp
   :hook (minibuffer-mode . tramp-cleanup-all-connections)
   :config
+  ;; (setq tramp-process-connection-type nil)
   (setq tramp-ssh-controlmaster-options
         (concat
          "-o ControlPath=\~/.ssh/control/ssh-%%r@%%h:%%p "
@@ -422,29 +435,27 @@
 
 (use-package org
   :ensure nil
+  :hook (org-mode . (lambda nil
+                      (face-remap-add-relative 'default :height 1.05)))
   :config
-  (require 'org-tempo) ; <s
-  (add-hook 'org-mode-hook (lambda ()
-           (setq-local electric-pair-inhibit-predicate
-                   `(lambda (c)
-                      (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
-
-  ;; right-aligned tags
-  (add-to-list 'font-lock-extra-managed-props 'display)
-  (font-lock-add-keywords
-   'org-mode
-   `(("^.*?\\( \\)\\(:[[:alnum:]_@#%:]+:\\)$"
-      (1 `(face nil
-                display (space :align-to (- right ,(org-string-width (match-string 2)) 3)))
-         prepend)))
-   t)
-
+  (push 'org-habit org-modules)
+  ;; configure <s template for org-src-blocks
+  (require 'org-tempo)
+  (add-hook 'org-mode-hook
+            (lambda ()
+              (setq-local electric-pair-inhibit-predicate
+                          `(lambda (c)
+                             (if (char-equal c ?<)
+                                 t
+                               (,electric-pair-inhibit-predicate c))))))
   (setq org-directory "~/.emacs.d/org"
-        org-export-with-sub-superscripts '{}
+        org-use-sub-superscripts '{}
+        ;; org-export-with-sub-superscripts nil
         org-pretty-entities t
         org-startup-indented t
         org-adapt-indentation t
-        ;; org-startup-folded t
+        org-special-ctrl-a/e t
+        org-fold-catch-invisible-edits 'show-and-error
         org-src-preserve-indentation t
         org-src-fontify-natively t))
 
@@ -471,7 +482,22 @@
   (setf (alist-get 'agenda org-agenda-prefix-format
                    nil nil #'equal)
         "  %?-12t% s"))
-  
+
+(use-package org-habit
+  :after org-agenda
+  :ensure nil
+  :config
+  ;; (graph (make-string (1+ (- end start)) org-habit-missed-glyph)) ;; BRUH FIXME
+  ;; (advice-add 'org-habit-build-graph )
+
+  (setq org-habit-show-habits-only-for-today t
+        org-habit-show-done-always-green t
+        ;; org-habit-today-glyph ?○ ;; 9675
+        ;; org-habit-completed-glyph ?● ;; 9679
+        ;; org-habit-missed-glyph ?○ ;; 9675
+        org-habit-following-days 1
+        org-habit-preceding-days 21))
+
 (use-package org-capture
   :ensure nil
   :hook (org-capture-mode . meow-insert)
@@ -487,13 +513,16 @@
            "* TODO %?\n%<%d %b '%g %R>%i %a" :prepend t)
           ("n" "Note" entry
            (file+headline org-capture-file "Notes")
-           "* %?\n%i %a" :prepend t))))
+           "* %?\n%i %a" :prepend t)
+          ("h" "Habit" entry
+           (file+headline org-capture-file "Habits")
+           "* TODO %?\n:PROPERTIES:\n:STYLE: habit\n:LOGGING: TODO(!) DONE(!)\n:END:"
+           :prepend t))))
 
 (use-package desktop
   ;; session-persistence
   :ensure nil
-  :hook (after-init . desktop-save-mode)
-  ;; :hook (after-init . desktop-read)
+  ;; :hook (after-init . desktop-save-mode)
   :config
   (dolist (item
            '(alpha background-color background-mode border-width
@@ -523,36 +552,38 @@
   :ensure nil
   :commands my/irc
   :hook (erc-join . hl-line-mode)
-  :hook (erc-quit . (lambda (&optional arg)
-                      (erc-status-sidebar-kill)
-                      (tab-bar-close-tab)))
+  :hook (erc-join . (lambda nil
+                      (setq-local erc-fill-column (min (- (window-width) 3) 85))))
+  :hook (erc-kill-server . (lambda nil
+                              (erc-status-sidebar-kill)
+                              (tab-bar-close-tab)))
   :custom
-  (erc-autojoin-channels-alist '(("libera.chat" "#emacs" "##rust")))
+  (erc-autojoin-channels-alist '(("libera.chat" "#emacs"))); "##rust")))
   (erc-default-server "irc.libera.chat")
   (erc-nick "brongulus")
   (erc-nickserv-get-password nil)
   (erc-use-auth-source-for-nickserv-password t)
-  (erc-fill-column (min (- (window-width) 3) 90))
+  (erc-fill-column (min (- (window-width) 3) 85))
+  (erc-status-side-bar-width 12)
   (erc-autojoin-timing 'ident)
   (erc-fill-function 'erc-fill-static)
   (erc-fill-static-center 14)
   (erc-format-nick-function 'erc-format-@nick)
   (erc-header-line-face-method t)
   (erc-track-position-in-mode-line t)
+  (erc-track-showcount t)
   (erc-track-shorten-function nil)
+  (erc-track-exclude-server-buffer t)
   (erc-join-buffer 'bury) ; window
   (erc-kill-server-buffer-on-quit t)
   (erc-kill-buffer-on-part t)
-  (erc-hide-list '("JOIN" "PART" "QUIT" "NICK"))
+  (erc-hide-list '("JOIN" "PART" "QUIT" "353")) ;; 353 hide names
   (erc-lurker-hide-list '("JOIN" "PART" "QUIT" "NICK"))
   (erc-track-exclude-types '("JOIN" "MODE" "NICK" "PART" "QUIT"
                              "324" "329" "332" "333" "353" "477"))
   :config
-  ;; (defun erc-format-nick-clean (&optional user _channel-data) ;; <nick|> lul
-  ;;   (when user
-  ;;     (let ((nick (erc-server-user-nickname user)))
-  ;;       (concat nick (propertize "│" 'font-lock-face 'font-lock-comment-face)))))
   (defun my/irc nil
+    "Setup ERC and connect if not already."
     (interactive)
     (if (get-buffer "Libera.Chat") ;; ERC already active?
         (pop-to-buffer "Libera.Chat")
@@ -568,28 +599,166 @@
   (push 'keep-place erc-modules)
   (erc-update-modules))
 
+(use-package gnus
+  :ensure nil
+  :hook (gnus-exit-gnus . tab-bar-close-tab)
+  :hook (gnus-summary-mode . turn-on-gnus-mailing-list-mode)
+  :bind (:map gnus-article-mode-map
+              ("q" . kill-buffer-and-window)
+              ("RET" . gnus-summary-scroll-up)
+              :map gnus-summary-mode-map
+              ("R" . (lambda nil (interactive)
+                       (gnus-summary-mark-article nil ?R))))
+  :preface
+  (setq gnus-directory (concat user-emacs-directory "/gnus")
+        gnus-startup-file (concat user-emacs-directory "/.newsrc")
+        gnus-use-dribble-file nil
+        gnus-always-read-dribble-file nil)
+  :config
+  (advice-add 'gnus-splash :before #'tab-bar-new-tab)
+  (setq gnus-select-method '(nntp "news.gwene.org"))
+  (setq gnus-secondary-select-methods
+        '((nnimap "personal"
+                  (nnimap-address "imap.gmail.com")
+                  (nnimap-server-port "993")
+                  (nnimap-stream ssl)
+                  (nnir-search-engine imap)
+                  (nnmail-expiry-target "nnimap+personal:[Imap]/Trash")
+                  (nnmail-expiry-wait 'immediate)))
+        ;; opts
+        gnus-check-new-newsgroups nil ;; disable first time you use gnus
+        gnus-asynchronous t
+        gnus-use-cache t
+        gnus-cache-remove-articles nil
+        gnus-large-newsgroup 200
+        gnus-blocked-images nil
+        gnus-treat-hide-boring-headers t
+        mm-text-html-renderer 'shr ;; w3m
+        mm-inline-large-images 'resize
+        shr-use-colors nil
+        shr-max-width fill-column
+        shr-indentation 2
+        gnus-article-x-face-too-ugly ".*"
+        gnus-interactive-exit nil
+        gnus-novice-user nil
+        gnus-expert-user nil
+        gnus-auto-select-first nil
+        gnus-summary-display-arrow nil
+        gnus-thread-sort-functions
+        '(gnus-thread-sort-by-most-recent-date
+          (not gnus-thread-sort-by-number)))
+  ;; Better UI
+  (gnus-add-configuration
+   '(article
+     (horizontal 1.0
+                 (vertical 25
+                           (group 1.0))
+                 (vertical 1.0
+                           (summary 0.25 point)
+                           (article 1.0)))))
+  (gnus-add-configuration
+   '(summary
+     (horizontal 1.0
+                 (vertical 25
+                           (group 1.0))
+                 (vertical 1.0
+                           (summary 1.0 point)))))
+  (setq gnus-unread-mark #x2022 ;; dot
+        gnus-unseen-mark 32 ;; space
+        gnus-read-mark 32
+        gnus-del-mark ?\
+        gnus-ancient-mark 32
+        gnus-replied-mark 32
+        gnus-cached-mark 32
+        gnus-ticked-mark ?!
+        gnus-sum-thread-tree-false-root ""
+        gnus-sum-thread-tree-indent " "
+        gnus-sum-thread-tree-root ""
+        gnus-sum-thread-tree-single-indent ""
+        gnus-sum-thread-tree-vertical        "│"
+        gnus-sum-thread-tree-leaf-with-other "├─►"
+        gnus-sum-thread-tree-single-leaf     "╰─►"
+        gnus-user-date-format-alist '(((gnus-seconds-today) . " %H:%M")
+                                      (t . "%b %d"))
+        gnus-topic-line-format (concat "%(%{%n - %A%}%) %v\n")
+        gnus-group-uncollapsed-levels 2
+        gnus-group-line-format (concat "%S%2y: %(%-40,40c%)\n") ;; %E (gnus-group-icon-list)
+        ;;  06-Jan   Sender Name    Email Subject
+        gnus-summary-line-format (concat " %0{%U%R%}"
+                                         "%1{%&user-date;%}" "%3{ %}" " "
+                                         "%4{%-16,16f%}" " "
+                                         "%3{ %}" " "
+                                         "%1{%B%}" "%S\n"))
+  (setq gnus-message-archive-group '((format-time-string "sent.%Y"))))
+
+(use-package gnus-group
+  :ensure nil
+  :after gnus
+  :hook (gnus-group-mode . gnus-topic-mode)
+  :config
+  ;; mode-line unread indicator
+  (defun my/gnus-unread-count ()
+    (interactive)
+    (let ((uc (cdar gnus-topic-unreads)))
+      (if (or (not uc)
+              (eq uc 0))
+          ""
+        (propertize (format " Unread:%s " uc) ;; (char-to-string #x2709)
+                    'face 'which-func))))
+  (setq global-mode-string
+        (append global-mode-string
+                (list '(:eval (propertize
+                               (my/gnus-unread-count)
+                               'help-echo "Gnus - Unread")))))
+  (with-eval-after-load 'gnus-topic
+    (setq gnus-topic-topology '(("Unread" visible)
+                                (("📥 Personal" visible nil nil))
+                                (("📰 News" visible nil nil))))
+    (setq gnus-topic-alist '(("📥 Personal" ; the key of topic
+                              "nnimap+personal:INBOX"
+                              "nnimap+personal:[Gmail]/Sent Mail"
+                              "nnimap+personal:Sent"
+                              "nnimap+personal:sent.2023"
+                              "nnimap+personal:[Gmail]/Starred")
+                             ("📰 News"
+                              "gwene.com.blogspot.petr-mitrichev"
+                              "gmane.emacs.announce"
+                              "gmane.emacs.devel"
+                              "gmane.emacs.gnus.general"
+                              "gmane.emacs.gnus.user"
+                              "gmane.emacs.tramp"
+                              "gmane.emacs.bugs"
+                              "gwene.com.youtube.feeds.videos.xml.user.ethoslab"
+                              "gmane.comp.web.qutebrowser"
+                              "gmane.comp.web.elinks.user"
+                              "gwene.app.rsshub.leetcode.articles"
+                              "gwene.com.arcan-fe"
+                              "gwene.io.github.matklad"
+                              "gwene.net.lwn.headlines"
+                              "gwene.org.quantamagazine"
+                              "gwene.org.bitlbee.news.rss")
+                             ("Unread")))))
+
 ;;; --------------
 ;;; ELPA packages
 ;;; --------------
 (use-package popper
-  :ensure nil
-  :load-path "~/.emacs.d/popper"
   :bind (("C-`"   . popper-toggle)
          ("M-j"   . popper-toggle)
          ("M-`"   . popper-cycle)
          ("C-M-`" . popper-toggle-type)
          :repeat-map popper-repeat-map
          ("`"     . popper-cycle))
-  :hook ((after-init . popper-mode))
-         ;; (after-init . popper-tab-line-mode))
+  :hook ((after-init . popper-mode)
+         (after-init . popper-tab-line-mode))
   :init
   (setq popper-reference-buffers
         '("\\*Messages\\*" "Output\\*$"
           "\\*Async Shell Command\\*"
           "magit:.\*" "\\*pabbrev suggestions\\*"
           ".*-eat\\*" "\\*eldoc\\*" "vc-git :.\*"
-          "\\*vc-change-log\\*"
-          "\\*Flymake diagnostics.\*"
+          "\\*vc-change-log\\*" "\\*Deletions\\*"
+          "\\*Flymake diagnostics.\*" "\\*CDLaTex Help\\*"
           "\\*Process List\\*" "\\*Org Select\\*"
           "^CAPTURE.*" "\\*Warnings\\*"
           "\\*Backtrace\\*" "\\*Occur\\*"
@@ -598,23 +767,6 @@
           "^\\*term.*\\*$" term-mode)
         popper-mode-line nil
         popper-window-height 0.33))
-
-(use-package popper-echo
-  :ensure nil
-  :load-path "~/.emacs.d/popper"
-  :hook (after-init . popper-tab-line-mode)
-  :config
-  (defun popper-tab-line--format (tab tabs)
-    (let ((name (tab-line-tab-name-format-default tab tabs))
-          (idx (cl-position tab tabs)))
-      (concat
-       (propertize
-        (concat " " (number-to-string idx) ":")
-        'face (if (eq tab (current-buffer))
-                  (if (mode-line-window-selected-p)
-                      'tab-line-tab-current 'tab-line-tab)
-                'tab-line-tab-inactive))
-       name))))
 
 (use-package orderless
   :after minibuffer
@@ -631,20 +783,13 @@
   :custom
   (avy-single-candidate-jump nil))
 
-(use-package marginalia
-  :hook (minibuffer-mode . marginalia-mode)
-  :config
-  (advice-add 'completion-at-point :before (lambda nil
-                                             (marginalia-mode -1)))
-  (setq marginalia-annotator-registry
-        (assq-delete-all 'file marginalia-annotator-registry)))
-
 (use-package embark
   :after minibuffer
   :bind ("C-," . embark-act)
+  :init
+  (setq prefix-help-command #'embark-prefix-help-command)
   :config
-  (setq prefix-help-command #'embark-prefix-help-command
-        embark-prompter 'embark-completing-read-prompter
+  (setq embark-prompter 'embark-completing-read-prompter
         embark-keymap-prompter-key "'"
         embark-indicators (delete 'embark-mixed-indicator embark-indicators)))
 
@@ -667,10 +812,11 @@
                                                       (vc-root-dir)
                                                     default-directory)))
                                             "-eat*")))
-                     (call-interactively 'eat))))
+                      (call-interactively 'eat))))
          (:map eat-semi-char-mode-map
                ("C-u" . eat-self-input)
-               ("M-j" . popper-toggle)))
+               ("M-j" . popper-toggle)
+               ("M-w" . kill-ring-save)))
   :config
   (setq eat-message-handler-alist
         ;; once eat fish-intergration is merged
@@ -701,7 +847,7 @@
   (let* ((width 3)
          (bitmap (vector (1- (expt 2 width)))))
     (define-fringe-bitmap 'my:diff-hl-bitmap bitmap 1 width '(top t)))
-  (setq diff-hl-fringe-bmp-function (lambda (type pos) 'my:diff-hl-bitmap)))
+  (setq diff-hl-fringe-bmp-function (lambda (_type _pos) 'my:diff-hl-bitmap)))
 
 (use-package solaire-mode
   :hook (after-init . solaire-global-mode)
@@ -711,8 +857,18 @@
   :config
   (setq markdown-fontify-code-blocks-natively t))
 
+(use-package cdlatex
+  :hook (org-mode . turn-on-org-cdlatex))
+
 (use-package which-key
   :hook (minibuffer-mode . which-key-mode))
+
+(use-package ox-awesomecv
+  :ensure nil
+  :load-path "~/Documents/org-cv"
+  ;; :vc (:fetcher gitlab :repo "Titan-C/org-cv")
+  :after org
+  :init (require 'ox-awesomecv))
 
 (use-package deadgrep)
 
@@ -742,18 +898,20 @@
     (let ((map (make-sparse-keymap)))
       (define-key map [t] #'delete-pair)
       map))
-
+  
   :config
   (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
         meow-keypad-leader-dispatch "C-x" ;ctl-x-map
+        meow-keypad-describe-delay 1.0 ;; not interfere with which-key
         meow-use-cursor-position-hack t
         meow-use-clipboard t
         meow-esc-delay 0.01)
   (dolist (item '(word line block find till))
     (push `(,item . 0) meow-expand-hint-counts))
   (define-key meow-insert-state-keymap (kbd "j") #'my-jk)
-  (define-key meow-normal-state-keymap (kbd "S") insert-pair-map)
-  (define-key meow-normal-state-keymap (kbd "D") delete-pair-map)
+  (define-key meow-normal-state-keymap (kbd "m s") insert-pair-map)
+  (define-key meow-normal-state-keymap (kbd "m d") delete-pair-map)
+  
   (dolist (imode '(reb-mode eat-mode eshell-mode log-edit-mode))
     (push `(,imode . insert) meow-mode-state-list))
   (meow-motion-overwrite-define-key
@@ -776,6 +934,7 @@
    '("-" . negative-argument)
    '("C-;" . meow-reverse)
    '(";" . meow-cancel-selection)
+   '("'" . meow-cancel-selection)
    '("," . meow-inner-of-thing)
    '("." . meow-bounds-of-thing)
    '("[" . meow-beginning-of-thing)
@@ -791,8 +950,20 @@
                       (bound-and-true-p rectangle-mark-mode))
                  (call-interactively 'string-rectangle)
                (meow-change))))
-   '("C" . meow-comment)
-   '("d" . meow-kill)
+   '("M-C" . (lambda () (interactive)
+             (if (and (region-active-p)
+                      (bound-and-true-p rectangle-mark-mode))
+                 (meow-prev 1)
+               (rectangle-mark-mode 1))))
+   '("C" . (lambda () (interactive)
+             (if (and (region-active-p)
+                      (bound-and-true-p rectangle-mark-mode))
+                 (meow-next 1)
+               (rectangle-mark-mode 1))))
+   '("d" . (lambda () (interactive)
+             (if (region-active-p)
+                 (meow-kill)
+               (meow-delete))))
    '("e" . meow-next-word)
    '("E" . meow-next-symbol)
    '("f" . meow-find)
@@ -801,6 +972,7 @@
               (org-agenda nil "n")))
    '("gb" . xref-go-back)
    '("gc" . org-capture)
+   '("gC" . meow-comment)
    '("gd" . xref-find-definitions)
    '("gf" . embark-dwim) ;; ffap
    '("gg" . avy-goto-char-timer)
@@ -813,7 +985,11 @@
    '("G" . meow-grab)
    '("h" . meow-left)
    '("H" . down-list)
-   '("i" . meow-insert)
+   '("i" . (lambda nil (interactive)
+             (if (and (region-active-p)
+                      (bound-and-true-p rectangle-mark-mode))
+                 (call-interactively 'string-rectangle)
+               (meow-insert))))
    '("I" . meow-open-above)
    '("j" . meow-next)
    '("J" . (lambda () (interactive)
@@ -827,7 +1003,14 @@
    '("l" . meow-right)
    '("L" . up-list)
    ;; '("L" . meow-swap-grab)
-   '("m" . meow-join)
+   '("mm" . (lambda nil (interactive)
+              (if (nth 3 (syntax-ppss))
+                  (backward-up-list 1 t t)
+                (cond ((looking-at "\\s\(\\|\{") (forward-list 1) (backward-char 1))
+                      ((looking-at "\\s\)\\|\}") (forward-char 1) (backward-list 1))
+                      (t (backward-up-list 1 t t))))))
+   '("mi" . meow-inner-of-thing)
+   '("ma" . meow-bounds-of-thing)
    '("n" . meow-search)
    '("o" . occur)
    '("O" . meow-to-block)
@@ -835,17 +1018,29 @@
    '("P" . meow-yank-pop)
    '("q" . meow-quit)
    '("Q" . kill-this-buffer)
-   '("r" . replace-regexp)
-   '("R" . kmacro-end-or-call-macro)
+   '("r" . (lambda nil (interactive)
+             (delete-char 1)
+             (insert-char (read-char nil t))
+             (backward-char 1)))
+   '("R" . replace-regexp)
    '("s" . kmacro-start-macro)
+   '("S" . kmacro-end-or-call-macro)
    '("t" . meow-till)
    '("u" . undo-only)
    '("U" . meow-page-up)
-   '("v" . meow-line)
+   '("v" . (lambda () (interactive)
+             (if (region-active-p)
+                 (thread-first
+                   (meow--make-selection '(expand . char) (mark) (point) t)
+                   (meow--select))
+               (thread-first
+                 (meow--make-selection '(expand . char) (point) (point) t)
+                 (meow--select)))
+             (message "Visual selection mode enabled")))
    '("V" . meow-page-down)
    '("w" . meow-mark-word)
    '("W" . meow-mark-symbol)
-   '("x" . meow-delete)
+   '("x" . meow-line)
    '("X" . meow-goto-line)
    '("y" . meow-save)
    '("Y" . meow-sync-grab)
@@ -865,15 +1060,6 @@
    '("<" . beginning-of-buffer)
    '(">" . end-of-buffer)
    '("\"" . repeat)
-   '("'" . (lambda () (interactive)
-             (if (region-active-p)
-                 (thread-first
-                   (meow--make-selection '(expand . char) (mark) (point))
-                   (meow--select))
-               (thread-first
-                 (meow--make-selection '(expand . char) (point) (point))
-                 (meow--select)))
-             (message "Visual selection mode enabled")))
    '("<escape>" . ignore)))
 
 ;;; ------------------
@@ -893,11 +1079,12 @@
 
 (setq major-mode-remap-alist '((c++-mode . c++-ts-mode)
                                (c-mode . c-ts-mode)))
-  
+
 (push '("\\.rs\\'" . rust-ts-mode) auto-mode-alist)
 (push '("\\.go\\'" . go-ts-mode) auto-mode-alist)
 (push '("\\.ts\\'" . typescript-ts-mode) auto-mode-alist)
 (push '("\\.bin\\'" . hexl-mode) auto-mode-alist)
+(push '("\\.prototxt\\'" . js-json-mode) auto-mode-alist)
 
 (use-package eglot
   :bind (:map meow-normal-state-keymap
@@ -952,9 +1139,9 @@
 (use-package foxy
   :ensure nil
   :load-path "~/.emacs.d"
-  :bind (("C-M-l" . foxy-listen-start)
-         ("C-M-c" . foxy-cycle-files)
-         ("C-M-b" . foxy-run-all-tests))
+  :bind (("C-c C-l" . foxy-listen-start)
+         ("C-c C-c" . foxy-cycle-files)
+         ("C-C C-b" . foxy-run-all-tests))
   :init
   (add-hook 'c++-mode-hook
             (lambda ()
@@ -1013,6 +1200,8 @@ The files are returned by calling PROGRAM with ARGS."
                              default-directory)))
     (find-file filename)))
 
+(load "~/.emacs.d/pff")
+
 (provide 'init)
 ;;; init.el ends here
 (custom-set-variables
@@ -1021,7 +1210,7 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(deadgrep which-key solaire-mode esup diff-hl markdown-mode eat avy undo-fu-session embark marginalia meow orderless)))
+   '(consult cdlatex org-modern inf-ruby popper deadgrep which-key solaire-mode esup diff-hl markdown-mode eat avy undo-fu-session embark marginalia meow orderless)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
