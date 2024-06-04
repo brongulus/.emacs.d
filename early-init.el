@@ -9,7 +9,7 @@
 
 (add-hook 'emacs-startup-hook ; hook run after loading init files
           #'(lambda ()
-              (setq gc-cons-threshold (* 50 1024 1024)
+              (setq gc-cons-threshold (* 60 1024 1024)
                     gc-cons-percentage 0.1
                     file-name-handler-alist my/saved-file-name-handler-alist)))
 
@@ -47,8 +47,8 @@
                 (right-fringe . 15)
                 (internal-border-width . 00)
                 (fullscreen . fullboth)
-                ;; (font . "VictorMono Nerd Font Mono-16"))
-                (font . "Zed Mono-17"))
+                (font . "VictorMono Nerd Font Mono-16:weight=semi-bold"))
+                ;; (font . "Zed Mono-17"))
               fringe-indicator-alist
               (assq-delete-all 'truncation fringe-indicator-alist)
               cursor-in-non-selected-windows nil

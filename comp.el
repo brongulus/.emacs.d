@@ -63,9 +63,9 @@
   "#define debug(...) 42\n"
   "#endif\n"
   "\nint main () {\n"
-  "\tios::sync_with_stdio(0);\n"
-  "\tcin.tie(0);\n"
-  "\t" _ "\n"
+  "  ios::sync_with_stdio(0);\n"
+  "  cin.tie(0);\n"
+  "  " _ "\n"
   "}")
 
 (define-skeleton cpp-for-loop
@@ -93,5 +93,15 @@
   (define-abbrev c++-mode-abbrev-table "forl" "" 'cpp-for-loop)
   (define-abbrev c++-mode-abbrev-table "all" "" 'cpp-all)
   (define-abbrev c++-mode-abbrev-table "ttt" "" 'cpp-tests))
+(defun init-c++-ts-abbrevs ()
+  (define-abbrev c++-ts-mode-abbrev-table "gtc" "" 'cpp-header)
+  (define-abbrev c++-ts-mode-abbrev-table "forl" "" 'cpp-for-loop)
+  (define-abbrev c++-ts-mode-abbrev-table "all" "" 'cpp-all)
+  (define-abbrev c++-ts-mode-abbrev-table "ttt" "" 'cpp-tests))
 (add-hook 'c++-mode-hook 'abbrev-mode)
+(add-hook 'c++-ts-mode-hook 'abbrev-mode)
 (add-hook 'c++-mode-hook 'init-c++-abbrevs)
+(add-hook 'c++-ts-mode-hook 'init-c++-ts-abbrevs)
+
+(provide 'comp)
+;;; comp.el ends here

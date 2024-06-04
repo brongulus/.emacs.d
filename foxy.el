@@ -220,9 +220,9 @@ Given a step of 1 (the default), will go to the next file. -1 means previous fil
          (new-index (mod (+ arg index) (length dirs))))
    (find-file (concat (nth new-index dirs) "/main." file-ext))))
 
-(global-set-key (kbd "C-M-b") #'foxy-run-all-tests)
-(global-set-key (kbd "C-M-c") #'foxy-cycle-files)
-(global-set-key (kbd "C-M-l") #'foxy-start-server-with-timer)
+;; (global-set-key (kbd "C-M-b") #'foxy-run-all-tests)
+;; (global-set-key (kbd "C-M-c") #'foxy-cycle-files)
+;; (global-set-key (kbd "C-M-l") #'foxy-start-server-with-timer)
 
 ;;;; TODO: Widget
 

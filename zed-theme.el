@@ -68,20 +68,12 @@
    ;; Basics
    `(cursor ((t (:background ,blue-color))))
    `(default ((t (:background ,background-color :foreground ,foreground-color))))
-   `(blue ((t (:foreground "blue"))))
-   `(bold ((t (:bold t))))
-   `(bold-italic ((t (:italic t :bold t))))
    `(border-glyph ((t (nil))))
-   `(green ((t (:foreground "green"))))
    `(info-node ((t (:italic t :bold t))))
    `(info-xref ((t (:bold t))))
-   `(italic ((t (:italic t))))
    `(left-margin ((t (nil))))
-   `(pointer ((t (nil))))
-   `(red ((t (:foreground "red"))))
    `(right-margin ((t (nil))))
-   `(underline ((t (:underline t))))
-   `(yellow ((t (:foreground "yellow"))))
+   `(pointer ((t (nil))))
 
    ;; Frame
    `(fringe ((t (:background ,background-color))))
@@ -98,7 +90,7 @@
 
    ;; Parens
    `(show-paren-match ((t (:background ,selection-color))))
-   `(show-paren-mismatch ((t (:foreground "#F9F2CE" :background ,red-color))))
+   `(show-paren-mismatch ((t (:foreground ,foreground-color :background ,red-color))))
 
    ;; Highlighting
    `(hl-line ((t (:background ,modeline-color))))
@@ -142,7 +134,7 @@
    `(ediff-even-diff-B ((t (:inherit secondary-selection :extend t))))
    `(ediff-even-diff-C ((t (:inherit secondary-selection :extend t))))
    
-   ;; Magit
+   ;; Magit (Not using)
    `(magit-diff-file-header ((t (:bold t :inherit diff-header))))
    `(magit-diff-hunk-header ((t (:inherit diff-header))))
    `(magit-diff-add ((t (:inherit diff-added :foreground "grey20"))))
@@ -196,7 +188,7 @@
    `(line-number ((t (:foreground "grey50"))))
    `(line-number-current-line ((t (:inherit hl-line :foreground ,foreground-color))))
    `(orderless-match-face-0 ((t (:foreground ,blue-color :weight bold))))
-   `(orderless-match-face-1 ((t (:foreground ,magenta-color :weight bold))))
+   `(orderless-match-face-1 ((t (:foreground ,red-color :weight bold))))
    `(orderless-match-face-2 ((t (:foreground ,green-color :weight bold))))
    `(orderless-match-face-3 ((t (:foreground ,yellow-color :weight bold))))
    `(popper-echo-area ((t (:inherit mode-line))))
@@ -209,6 +201,7 @@
 
    `(erc-notice-face ((t (:inherit font-lock-comment-face :weight bold))))
    `(erc-current-nick-face ((t (:foreground ,yellow-color :weight bold))))
+   `(erc-my-nick-prefix-face ((t (:foreground ,yellow-color :weight bold))))
    `(erc-button ((t (:inherit link))))
    `(erc-input-face ((t (:inherit default))))
    `(erc-nick-default-face ((t (:foreground ,blue-color :weight bold))))
@@ -262,11 +255,33 @@
      ((t (:background ,background-color :foreground ,yellow-color :inverse-video t))))
    `(minibuffer-prompt ((t (:foreground ,yellow-color))))
    
-   `(org-agenda-date ((t (:foreground ,blue-color))))
-   `(org-agenda-structure ((t (:foreground ,blue-color))))
+   `(org-block ((t (:inherit default :background ,subtle-color :extend t))))
+   `(org-block-begin-line ((t (:inherit org-meta-line :background ,subtle-color :extend t))))
+   `(org-block-end-line ((t (:inherit org-meta-line :background ,subtle-color :extend t))))
+   `(org-document-title ((t (:height 1.5))))
+   `(org-document-info ((t (:height 1.3))))
+   `(org-drawer ((t (:inherit shadow))))
+   `(org-level-1 ((t (:weight bold :height 1.3))))
+   `(org-level-2 ((t (:height 1.24))))
+   `(org-level-3 ((t (:weight bold :height 1.2))))
+   `(org-agenda-structure ((t (:foreground ,magenta-color :height 1.2))))
+   `(org-agenda-date ((t (:foreground ,blue-color :height 1.1))))
    `(org-time-grid ((t (:inherit font-lock-comment-face))))
    `(org-agenda-current-time ((t (:foreground ,foreground-color))))
    `(org-imminent-deadline ((t (:foreground ,red-color :weight bold))))
+   `(org-todo ((t (:foreground ,yellow-color :weight bold))))
+   `(org-scheduled ((t (:foreground ,green-color))))
+   `(org-scheduled-today ((t (:inherit org-scheduled))))
+   `(org-date ((t (:inherit link))))
+   `(org-verbatim ((t (:foreground ,green-color))))
+   `(org-habit-clear-face ((t (:foreground ,background-color))))
+   `(org-habit-clear-future-face ((t (:foreground ,background-color))))
+   `(org-habit-alert-face ((t (:foreground ,yellow-color :inverse-video t))))
+   `(org-habit-alert-future-face ((t (:foreground ,yellow-color :inverse-video t))))
+   `(org-habit-overdue-face ((t (:foreground ,red-color :inverse-video t))))
+   `(org-habit-overdue-future-face ((t (:foreground ,red-color :inverse-video t))))
+   `(org-habit-ready-face ((t (:foreground ,green-color))))
+   `(org-habit-ready-future-face ((t (:foreground ,green-color))))
    
    `(tab-bar ((t (:background ,subtle-color :box ,border-color))))
    `(tab-bar-tab ((t (:background ,background-color :foreground ,foreground-color
@@ -277,13 +292,13 @@
    ;; TODO make it solaire-compatible
    `(tab-line ((t (:background ,background-color :box ,border-color :italic nil))))
    `(tab-line-tab ((t (:background ,subtle-color :foreground ,foreground-color :italic nil
-                                  :underline ,`(:color ,subtle-color :position -1)))))
+                                   :underline ,`(:color ,subtle-color :position -1)))))
    `(tab-line-tab-inactive
      ((t (:background ,background-color :foreground ,inactive-color :italic nil
                       :underline ,`(:color ,border-color :position -1)))))
    `(tab-line-tab-current ((t (:inherit tab-line-tab))))
    `(tab-line-highlight ((t (:inherit tab-line-tab))))
-  
+   
    `(which-func ((t (:foreground ,inactive-color))))))
 
 ;; Mode-line
@@ -305,7 +320,7 @@
       mode-line-end-spaces
       `("%n " mode-line-misc-info
         (:eval (propertize (format " %s" (upcase (if (stringp mode-name)
-                                                      mode-name
+                                                     mode-name
                                                    (car mode-name))))
                            'help-echo "Mouse-1: Show major-mode-menu"
                            'local-map mode-line-major-mode-keymap))
@@ -332,9 +347,7 @@
                      (mode-line-window-selected-p))
             (let* ((state (meow--current-state))
                    (indicator-face (alist-get state meow-indicator-face-alist))
-                   (buffer-state (cond (buffer-read-only
-                                        " RO ")
-                                       ((file-remote-p default-directory)
+                   (buffer-state (cond ((file-remote-p default-directory)
                                         (concat " " (file-remote-p
                                                      default-directory 'host)
                                                 " "))
@@ -412,7 +425,7 @@
   (defun tab-bar-format-menu-bar ()
     "Produce the Menu button for the tab bar that shows the menu bar."
     `((menu-bar menu-item ,(propertize " ≡ " 'display '((raise 0.1)
-                                                        (height 1.3)))
+                                                        (height 1.1)))
                 tab-bar-menu-bar :help "Menu Bar")))
 
   (defun tab-bar-format-history ()
