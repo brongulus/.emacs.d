@@ -76,6 +76,11 @@
   > (indent-according-to-mode)
   > (delete-char -1))
 
+(define-skeleton sortl "Sort with custom comparator." ""
+  > "std::sort(v.begin(), v.end(), [](auto &left, auto &right) {\n\t"
+  > "return " _ "left.second < right.second;\n"
+  > "});")
+
 (define-skeleton cpp-tests "Run multiple testcases." ""
   > "int tt = 0; cin >> tt;\n\t"
   > "while(tt--) {\n\t\t"

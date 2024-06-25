@@ -963,7 +963,7 @@
    '("d" . (lambda () (interactive)
              (if (region-active-p)
                  (meow-kill)
-               (meow-delete))))
+               (delete-forward-char 1))))
    '("e" . meow-next-word)
    '("E" . meow-next-symbol)
    '("f" . meow-find)

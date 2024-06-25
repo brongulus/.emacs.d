@@ -3,6 +3,7 @@
 auto-save-list/
 elpa/
 eshell/
+gnus/cache/
 org-persist/
 transient/
 tree-sitter/
@@ -10,6 +11,8 @@ undo-fu-session/
 url/
 history
 ido.last
+.newsrc.eld
+networks-security.data
 package-quickstart.el
 package-quickstart.elc
 places
