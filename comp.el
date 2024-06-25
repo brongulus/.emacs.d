@@ -53,6 +53,14 @@
                                "gtc" "" 'rs-header)))
 
 ;;; --C++------------------------------------------------------------------
+(setq templates-dir "~/problems/templates/")
+
+(defun insert-template nil
+  "Prompt for list of all template files to insert from."
+  (interactive)
+  (let* ((files (directory-files-recursively templates-dir ""))
+         (file (completing-read "Choose template file: " files nil t)))
+    (insert-file file)))
 
 (define-skeleton cpp-header "Base c++ template for competitive programming." ""
   "#include<bits/stdc++.h>\n"
