@@ -43,6 +43,8 @@
                 indent-tabs-mode nil
                 enable-recursive-minibuffers t
                 show-paren-delay 0
+                show-paren-context-when-offscreen t
+                show-paren-when-point-inside-paren t
                 custom-safe-themes t
                 ring-bell-function 'ignore
                 use-short-answers t
@@ -79,6 +81,10 @@
   (add-hook 'prog-mode-hook (electric-pair-mode t))
   (add-hook 'prog-mode-hook (show-paren-mode t))
   (add-hook 'prog-mode-hook (which-function-mode))
+  (add-to-list 'write-file-functions
+               '(lambda () (if (not indent-tabs-mode)
+                               (untabify (point-min) (point-max)))
+                  nil))
 
   (defun silent-command (fn &rest args)
     (let ((inhibit-message t)
@@ -112,7 +118,8 @@
     (save-place-mode 1)
     (setq savehist-additional-variables '(kill-ring))
     (setq save-interprogram-paste-before-kill t)
-    (subword-mode 1)
+    (global-subword-mode 1)
+    (delete-selection-mode)
     (context-menu-mode 1)
     (savehist-mode)
     (blink-cursor-mode -1)
@@ -139,7 +146,7 @@
         (package-activate-all))
     (package-initialize))
   :config
-  ;; (push '("melpa" . "https://melpa.org/packages/") package-archives)
+  (push '("melpa" . "https://melpa.org/packages/") package-archives)
   (setq package-native-compile t
         package-install-upgrade-built-in t
         package-check-signature nil))
@@ -699,11 +706,10 @@
   ;; mode-line unread indicator
   (defun my/gnus-unread-count ()
     (interactive)
-    (let ((uc (cdar gnus-topic-unreads)))
-      (if (or (not uc)
-              (eq uc 0))
+    (let ((unread-count (cdar gnus-topic-unreads)))
+      (if (or (not unread-count) (eq unread-count 0))
           ""
-        (propertize (format " Unread:%s " uc) ;; (char-to-string #x2709)
+        (propertize (format " Unread:%s " uc)
                     'face 'which-func))))
   (setq global-mode-string
         (append global-mode-string
@@ -722,20 +728,14 @@
                               "nnimap+personal:[Gmail]/Starred")
                              ("📰 News"
                               "gwene.com.blogspot.petr-mitrichev"
-                              "gmane.emacs.announce"
-                              "gmane.emacs.devel"
-                              "gmane.emacs.gnus.general"
-                              "gmane.emacs.gnus.user"
-                              "gmane.emacs.tramp"
-                              "gmane.emacs.bugs"
+                              "gmane.emacs.announce" "gmane.emacs.devel"
+                              "gmane.emacs.gnus.general" "gmane.emacs.gnus.user"
+                              "gmane.emacs.tramp" "gmane.emacs.bugs"
                               "gwene.com.youtube.feeds.videos.xml.user.ethoslab"
-                              "gmane.comp.web.qutebrowser"
-                              "gmane.comp.web.elinks.user"
+                              "gmane.comp.web.qutebrowser" "gmane.comp.web.elinks.user"
                               "gwene.app.rsshub.leetcode.articles"
-                              "gwene.com.arcan-fe"
-                              "gwene.io.github.matklad"
-                              "gwene.net.lwn.headlines"
-                              "gwene.org.quantamagazine"
+                              "gwene.com.arcan-fe" "gwene.io.github.matklad"
+                              "gwene.net.lwn.headlines" "gwene.org.quantamagazine"
                               "gwene.org.bitlbee.news.rss")
                              ("Unread")))))
 
@@ -782,16 +782,6 @@
   :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer)
   :custom
   (avy-single-candidate-jump nil))
-
-(use-package embark
-  :after minibuffer
-  :bind ("C-," . embark-act)
-  :init
-  (setq prefix-help-command #'embark-prefix-help-command)
-  :config
-  (setq embark-prompter 'embark-completing-read-prompter
-        embark-keymap-prompter-key "'"
-        embark-indicators (delete 'embark-mixed-indicator embark-indicators)))
 
 (use-package undo-fu-session
   :hook ((prog-mode conf-mode fundamental-mode text-mode tex-mode) . undo-fu-session-mode)
@@ -871,6 +861,16 @@
   :init (require 'ox-awesomecv))
 
 (use-package deadgrep)
+
+(use-package nov
+  :mode ("\\.epub\\'" . nov-mode)
+  :hook
+  (nov-mode . visual-line-mode)
+   ;; (nov-mode . visual-fill-column-mode))
+  :config
+  (setq nov-text-width 80
+        ;; visual-fill-column-center-text t
+        nov-header-line-format nil))
 
 (use-package meow
   :hook (after-init . (lambda ()
@@ -1077,8 +1077,8 @@
                       "master" "typescript/src"))
         treesit-font-lock-level 4))
 
-(setq major-mode-remap-alist '((c++-mode . c++-ts-mode)
-                               (c-mode . c-ts-mode)))
+;; (setq major-mode-remap-alist '((c++-mode . c++-ts-mode)
+;;                                (c-mode . c-ts-mode)))
 
 (push '("\\.rs\\'" . rust-ts-mode) auto-mode-alist)
 (push '("\\.go\\'" . go-ts-mode) auto-mode-alist)
@@ -1143,18 +1143,16 @@
          ("C-c C-c" . foxy-cycle-files)
          ("C-C C-b" . foxy-run-all-tests))
   :init
-  (add-hook 'c++-mode-hook
-            (lambda ()
-              (setq-local foxy-compile-command
-                          "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 ")))
-  (add-hook 'rust-ts-mode-hook
-            (lambda ()
-              (setq-local foxy-compile-command "rustc -o a.out ")))
-  (add-hook 'go-ts-mode-hook
-            (lambda ()
-              (setq-local foxy-compile-command "go build -o a.out "))))
-
-(setq delete-active-region t)
+  (defvar foxy-compile-commands
+    '((rust-ts-mode-hook . "rustc -o a.out ")
+      (c++-mode-hook . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 ")
+      (go-ts-mode-hook . "go build -o a.out ")))
+  (dolist (pair foxy-compile-commands)
+    (let ((mode (car pair))
+          (command (cdr pair)))
+      (add-hook mode
+                (lambda ()
+                  (setq-local foxy-compile-command command))))))
 
 (defun async-project-find-file (program &rest args)
   "Prompt the user to filter & select a file from a list of all files.
@@ -1200,8 +1198,6 @@ The files are returned by calling PROGRAM with ARGS."
                              default-directory)))
     (find-file filename)))
 
-(load "~/.emacs.d/pff")
-
 (provide 'init)
 ;;; init.el ends here
 (custom-set-variables
@@ -1210,7 +1206,7 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(consult cdlatex org-modern inf-ruby popper deadgrep which-key solaire-mode esup diff-hl markdown-mode eat avy undo-fu-session embark marginalia meow orderless)))
+   '(nov cdlatex org-modern inf-ruby popper deadgrep which-key esup diff-hl markdown-mode eat avy undo-fu-session marginalia meow orderless)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
