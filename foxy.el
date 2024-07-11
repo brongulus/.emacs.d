@@ -49,7 +49,8 @@
 
 ;;;; Competitive Companion
 ;; https://stackoverflow.com/a/6200347
-(defvar foxy-compile-command ;"g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL "
+(defvar foxy-compile-command
+  ;;"g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL "
   "The command used to compile the source file.")
 
 (make-variable-buffer-local 'foxy-compile-command)

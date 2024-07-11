@@ -62,6 +62,9 @@
       (yellow-color (if load-theme-light
                         "#986801"
                       "#d9c18c"))
+      (light-yellow-color (if load-theme-light
+                              "#ddc184"
+                            "#d9c18c"))
       (_x-border-color "#a5a5a5"))
   (custom-theme-set-faces
    'zed
@@ -79,13 +82,13 @@
    `(fringe ((t (:background ,background-color))))
    `(header-line ((t (:background ,background-color))))
    `(mode-line ((t (:background ,modeline-color :foreground ,foreground-color
-                                :underline ,`(:color ,border-color :position -2)
-                                :overline ,border-color
+                                ;; :underline ,`(:color ,border-color :position -2)
+                                ;; :overline ,border-color
                                 :box (:line-width 4 :style flat-button)))))
    `(mode-line-highlight ((t (:box (:line-width 2 :color ,inactive-color)))))
    `(mode-line-inactive ((t (:background ,modeline-color :foreground ,inactive-color
-                                         :underline ,`(:color ,border-color :position -2)
-                                         :overline ,border-color
+                                         ;; :underline ,`(:color ,border-color :position -2)
+                                         ;; :overline ,border-color
                                          :box (:line-width 4 :style flat-button)))))
 
    ;; Parens
@@ -113,7 +116,7 @@
    `(font-lock-number-face ((t (:inherit font-lock-constant-face))))
    `(font-lock-doc-string-face ((t (:foreground "#1A93AE" :background "#F4F9FE"))))
    `(font-lock-function-name-face ((t (:foreground ,blue-color))))
-   `(font-lock-keyword-face ((t (:foreground ,magenta-color))))
+   `(font-lock-keyword-face ((t (:foreground ,blue-color))))
    `(font-lock-preprocessor-face ((t (:foreground ,magenta-color))))
    `(font-lock-property-name-face ((t (:foreground ,yellow-color))))
    `(font-lock-reference-face ((t (:foreground "#4E279A" :background "#F3F2FF"))))
@@ -171,7 +174,7 @@
    `(flymake-warning ((t (:underline ,`(:style line :position -1 :color ,yellow-color)))))
    `(flymake-error ((t (:underline ,`(:style line :position -1 :color ,red-color)))))
    `(diff-hl-insert ((t (:foreground ,green-color))))
-   `(diff-hl-change ((t (:foreground ,blue-color))))
+   `(diff-hl-change ((t (:foreground ,light-yellow-color))))
    `(diff-hl-delete ((t (:foreground ,red-color))))
    
    `(completions-highlight ((t (:inherit highlight :extend t))))
@@ -185,18 +188,19 @@
    `(tty-menu-disabled-face ((t (:background ,modeline-color :foreground ,inactive-color))))
    `(link ((t (:foreground ,cyan-color))))
    `(link-visited ((t (:foreground ,blue-color))))
-   `(line-number ((t (:foreground "grey50"))))
+   `(line-number ((t (:inherit font-lock-comment-face))))
    `(line-number-current-line ((t (:inherit hl-line :foreground ,foreground-color))))
    `(orderless-match-face-0 ((t (:foreground ,blue-color :weight bold))))
    `(orderless-match-face-1 ((t (:foreground ,red-color :weight bold))))
    `(orderless-match-face-2 ((t (:foreground ,green-color :weight bold))))
    `(orderless-match-face-3 ((t (:foreground ,yellow-color :weight bold))))
    `(popper-echo-area ((t (:inherit mode-line))))
-   `(pulse-highlight-start-face ((t (:background ,yellow-color))))
-   `(pulse-highlight-face ((t (:background ,yellow-color :extend t))))
+   `(pulse-highlight-start-face ((t (:background ,light-yellow-color))))
+   `(pulse-highlight-face ((t (:background ,light-yellow-color :extend t))))
    `(vertical-border ((t (:foreground ,border-color))))
    `(whitespace-space ((t (:inherit font-lock-comment-face))))
    `(whitespace-line ((t (:inherit font-lock-comment-face))))
+   `(whitespace-newline ((t (:inherit font-lock-comment-face))))
    `(whitespace-trailing ((t (:inherit font-lock-warning-face))))
 
    `(erc-notice-face ((t (:inherit font-lock-comment-face :weight bold))))
@@ -258,12 +262,12 @@
    `(org-block ((t (:inherit default :background ,subtle-color :extend t))))
    `(org-block-begin-line ((t (:inherit org-meta-line :background ,subtle-color :extend t))))
    `(org-block-end-line ((t (:inherit org-meta-line :background ,subtle-color :extend t))))
-   `(org-document-title ((t (:height 1.5))))
-   `(org-document-info ((t (:height 1.3))))
+   `(org-document-title ((t (:height 1.26))))
+   `(org-document-info ((t (:height 1.26))))
    `(org-drawer ((t (:inherit shadow))))
-   `(org-level-1 ((t (:weight bold :height 1.3))))
-   `(org-level-2 ((t (:height 1.24))))
-   `(org-level-3 ((t (:weight bold :height 1.2))))
+   `(org-level-1 ((t (:weight bold :height 1.24))))
+   `(org-level-2 ((t (:height 1.2))))
+   `(org-level-3 ((t (:weight bold :height 1.16))))
    `(org-agenda-structure ((t (:foreground ,magenta-color :height 1.2))))
    `(org-agenda-date ((t (:foreground ,blue-color :height 1.1))))
    `(org-time-grid ((t (:inherit font-lock-comment-face))))
@@ -298,7 +302,8 @@
                       :underline ,`(:color ,border-color :position -1)))))
    `(tab-line-tab-current ((t (:inherit tab-line-tab))))
    `(tab-line-highlight ((t (:inherit tab-line-tab))))
-   
+
+   `(why-this-face ((t (:inherit font-lock-comment-face))))
    `(which-func ((t (:foreground ,inactive-color))))))
 
 ;; Mode-line
