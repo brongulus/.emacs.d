@@ -15,8 +15,9 @@
   :no-require
   :bind (("C-h '" . describe-face)
          ("M-o" . project-switch-project)
-         ("M-c" . quick-calc)
-         ("M-k" . backward-kill-word)
+         ("M-c" . quick-calc) ; 16#hex
+         ("M-k" . kill-word)
+         ("M-d" . backward-kill-word)
          ("C-d" . delete-backward-char)
          ("C-a" . (lambda nil (interactive)
                     (if (= (point) (progn (beginning-of-line-text) (point)))
@@ -50,9 +51,9 @@
                 use-short-answers t
                 debug-on-error t
                 warning-minimum-level :error
-                display-line-numbers-width 3
+                display-line-numbers-width 5
                 delete-pair-blink-delay 0)
-  
+
   (setq read-process-output-max (* 16 1024)
         process-adaptive-read-buffering nil
         auto-mode-case-fold nil
@@ -73,7 +74,7 @@
         grep-command "grep --color=always -nHi -r --include=*.* -e \"pattern\" ."
         electric-pair-skip-self t
         compilation-scroll-output 'first-error)
-  
+
   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
   (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
   (add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
@@ -95,12 +96,14 @@
   (copy-face 'default 'fixed-pitch)
   (set-register ?f `(file . ,(locate-user-emacs-file "init.el")))
   (set-register ?c `(file . "~/problems/"))
+  (with-eval-after-load 'whitespace
+    (add-to-list 'whitespace-display-mappings '(newline-mark ?\n [8626 ?\n]) t))
   (unless (display-graphic-p)
     (set-display-table-slot standard-display-table
                             'vertical-border
                             (make-glyph-code ?│))
     (xterm-mouse-mode))
-  
+
   (with-eval-after-load 'minibuffer
     ;; highlight area when yanking/killing
     (defun my/yank-pulse-advice (orig-fn &rest args)
@@ -131,17 +134,15 @@
   (load-theme 'zed :no-confirm)
   (defadvice load-theme (before theme-dont-propagate activate)
     (mapc #'disable-theme custom-enabled-themes))
-  
+
   (defadvice term-handle-exit
       (after term-kill-buffer-on-exit activate)
     (kill-buffer)))
-;;; ------------------
-;;; Built-in packages
-;;; ------------------
+
 (use-package package
   :ensure nil
   :init
-  (if t;package-quickstart
+  (if t ;package-quickstart
       (let ((load-source-file-function nil))
         (package-activate-all))
     (package-initialize))
@@ -151,6 +152,9 @@
         package-install-upgrade-built-in t
         package-check-signature nil))
 
+;;; ------------------
+;;; Built-in packages
+;;; ------------------
 (use-package dired
   :ensure nil
   :hook (dired-mode . dired-hide-details-mode) ;; dired-hide-dotfiles-mode
@@ -169,7 +173,7 @@
     (add-to-list 'project-switch-commands '(project-dired "Dired" ?D)))
 
   (put 'dired-find-alternate-file 'disabled nil)
-  
+
   (defun dired-left()
     (interactive)
     (let ((dir (dired-noselect default-directory)))
@@ -190,7 +194,7 @@
         dired-recursive-deletes 'always
         dired-recursive-copies 'always)
 
-  (with-eval-after-load 'cc-mode
+  (with-eval-after-load 'cc-mode ;; why is this in dired
     (defun c-indent-then-complete ()
       (interactive)
       (if (= 0 (c-indent-line-or-region))
@@ -226,7 +230,7 @@
               ("<left>" . backward-char)
               ("<right>" . forward-char)
               :map icomplete-minibuffer-map
-              ("C-," . embark-act)
+              ;; ("C-," . embark-act)
               :map minibuffer-local-map
               ("S-<return>" . newline))
   :hook (icomplete-minibuffer-setup . (lambda nil
@@ -353,7 +357,7 @@
                           (string-prefix-p "vc-annotate-face-" (symbol-name face)))
                         (face-list)))
       (face-remap-add-relative anno-face :foreground "black")))
-  
+
   (with-eval-after-load 'vc-annotate
     (if vc-annotate-background-mode
         (advice-add 'vc-annotate-lines :after #'vc-annotate-readable))
@@ -398,15 +402,21 @@
               "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/x86_64-apple-darwin23"
               "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/" "-x" "c++" "-"))))
   (setq flymake-suppress-zero-counters t
-        flymake-no-changes-timeout nil
-        flymake-fringe-indicator-position nil)
-  (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake)
-  (with-eval-after-load 'eldoc
-    (setq eldoc-echo-area-prefer-doc-buffer t
-          eldoc-idle-delay 0.1
-          eldoc-echo-area-use-multiline-p nil
-          eldoc-echo-area-display-truncation-message nil)
-    ;; Show flymake diagnostics first.
+        flymake-warning-bitmap '(filled-square compilation-warning)
+        flymake-error-bitmap '(filled-square compilation-error)
+        flymake-note-bitmap '(filled-square compilation-info)
+        flymake-fringe-indicator-position 'right-fringe)
+  (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake))
+
+(use-package eldoc
+  :ensure nil
+  :config
+  (setq eldoc-echo-area-prefer-doc-buffer t
+        eldoc-idle-delay 0.1
+        eldoc-echo-area-use-multiline-p nil
+        eldoc-echo-area-display-truncation-message nil)
+  ;; FIXME Show flymake diagnostics first.
+  (with-eval-after-load 'flymake
     (setq eldoc-documentation-functions
           (cons #'flymake-eldoc-function
                 (remove #'flymake-eldoc-function eldoc-documentation-functions)))))
@@ -542,7 +552,7 @@
                    tool-bar-position vertical-scroll-bars zoom-window-buffers
                    zoom-window-enabled))
     (push `(,item . :never) frameset-filter-alist))
-  
+
   (setq desktop-restore-forces-onscreen nil
         desktop-auto-save-timeout 10)
   (add-hook 'desktop-after-read-hook
@@ -553,58 +563,6 @@
                :cleanup-frames (not (eq desktop-restore-reuses-frames 'keep))
                :force-display desktop-restore-in-current-display
                :force-onscreen desktop-restore-forces-onscreen))))
-
-(use-package erc
-  ;; auth: machine irc.libera.chat login "USER" password PASSWORD
-  :ensure nil
-  :commands my/irc
-  :hook (erc-join . hl-line-mode)
-  :hook (erc-join . (lambda nil
-                      (setq-local erc-fill-column (min (- (window-width) 3) 85))))
-  :hook (erc-kill-server . (lambda nil
-                              (erc-status-sidebar-kill)
-                              (tab-bar-close-tab)))
-  :custom
-  (erc-autojoin-channels-alist '(("libera.chat" "#emacs"))); "##rust")))
-  (erc-default-server "irc.libera.chat")
-  (erc-nick "brongulus")
-  (erc-nickserv-get-password nil)
-  (erc-use-auth-source-for-nickserv-password t)
-  (erc-fill-column (min (- (window-width) 3) 85))
-  (erc-status-side-bar-width 12)
-  (erc-autojoin-timing 'ident)
-  (erc-fill-function 'erc-fill-static)
-  (erc-fill-static-center 14)
-  (erc-format-nick-function 'erc-format-@nick)
-  (erc-header-line-face-method t)
-  (erc-track-position-in-mode-line t)
-  (erc-track-showcount t)
-  (erc-track-shorten-function nil)
-  (erc-track-exclude-server-buffer t)
-  (erc-join-buffer 'bury) ; window
-  (erc-kill-server-buffer-on-quit t)
-  (erc-kill-buffer-on-part t)
-  (erc-hide-list '("JOIN" "PART" "QUIT" "353")) ;; 353 hide names
-  (erc-lurker-hide-list '("JOIN" "PART" "QUIT" "NICK"))
-  (erc-track-exclude-types '("JOIN" "MODE" "NICK" "PART" "QUIT"
-                             "324" "329" "332" "333" "353" "477"))
-  :config
-  (defun my/irc nil
-    "Setup ERC and connect if not already."
-    (interactive)
-    (if (get-buffer "Libera.Chat") ;; ERC already active?
-        (pop-to-buffer "Libera.Chat")
-      (progn
-        (tab-bar-new-tab)
-        (erc :server "irc.libera.chat" :port 6667 :nick "brongulus" :password nil)
-        (erc-track-switch-buffer 1)
-        (erc-status-sidebar-open))))
-  (erc-services-mode 1)
-  (erc-autojoin-mode)
-  (erc-track-mode t)
-  (erc-timestamp-mode -1)
-  (push 'keep-place erc-modules)
-  (erc-update-modules))
 
 (use-package gnus
   :ensure nil
@@ -774,6 +732,8 @@
                                        (setq-local orderless-component-separator "[ -]")))
   :hook (icomplete-minibuffer-setup . (lambda nil
                                         (setq-local completion-styles '(orderless basic))))
+  :config
+  (bind-key "<SPC>" #'self-insert-command minibuffer-local-completion-map)
   :custom
   (completion-styles '(orderless basic)))
 
@@ -825,19 +785,17 @@
 
 (use-package diff-hl
   :hook ((prog-mode . turn-on-diff-hl-mode)
-         (prog-mode . (lambda nil
-                        (unless (display-graphic-p)
-                          (diff-hl-margin-mode))))
-         (prog-mode . diff-hl-show-hunk-mouse-mode))
+         (prog-mode . diff-hl-margin-mode))
   :config
   (diff-hl-flydiff-mode t)
-  (setq diff-hl-margin-symbols-alist nil)
-  (dolist (diff '(insert delete change))
-    (push `(,diff . "│") diff-hl-margin-symbols-alist))
-  (let* ((width 3)
-         (bitmap (vector (1- (expt 2 width)))))
-    (define-fringe-bitmap 'my:diff-hl-bitmap bitmap 1 width '(top t)))
-  (setq diff-hl-fringe-bmp-function (lambda (_type _pos) 'my:diff-hl-bitmap)))
+  (setq vc-git-diff-switches '("--histogram")
+        diff-hl-flydiff-delay 0.5
+        diff-hl-update-async t
+        diff-hl-show-staged-changes nil
+        diff-hl-margin-symbols-alist '((insert . "█")
+                                       (delete . "█")
+                                       (change . "█"))
+        diff-hl-draw-borders nil))
 
 (use-package solaire-mode
   :hook (after-init . solaire-global-mode)
@@ -877,19 +835,17 @@
                         (require 'meow)
                         (meow-global-mode)))
   :preface
-  (defun my-jk () ;; src: wasamasa
+  (defun my-chord (initial-key final-key fn) ;; src: wasamasa
     (interactive)
-    (let* ((initial-key ?j)
-           (final-key ?k)
-           (timeout 0.5)
+    (let* ((timeout 0.5)
            (event (read-event nil nil timeout)))
       (if event ;; timeout met
           (if (and (characterp event) (= event final-key))
-              (meow-insert-exit)
+              (funcall fn)
             (insert initial-key)
             (push event unread-command-events))
         (insert initial-key))))
-  
+
   (defvar insert-pair-map ;; src: oantolin
     (let ((map (make-sparse-keymap)))
       (define-key map [t] #'insert-pair)
@@ -898,7 +854,7 @@
     (let ((map (make-sparse-keymap)))
       (define-key map [t] #'delete-pair)
       map))
-  
+
   :config
   (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
         meow-keypad-leader-dispatch "C-x" ;ctl-x-map
@@ -908,10 +864,11 @@
         meow-esc-delay 0.01)
   (dolist (item '(word line block find till))
     (push `(,item . 0) meow-expand-hint-counts))
-  (define-key meow-insert-state-keymap (kbd "j") #'my-jk)
+  (define-key meow-insert-state-keymap (kbd "j") (lambda nil (interactive)
+                                                   (my-chord ?j ?k 'meow-insert-exit)))
   (define-key meow-normal-state-keymap (kbd "m s") insert-pair-map)
   (define-key meow-normal-state-keymap (kbd "m d") delete-pair-map)
-  
+
   (dolist (imode '(reb-mode eat-mode eshell-mode log-edit-mode))
     (push `(,imode . insert) meow-mode-state-list))
   (meow-motion-overwrite-define-key
@@ -974,7 +931,7 @@
    '("gc" . org-capture)
    '("gC" . meow-comment)
    '("gd" . xref-find-definitions)
-   '("gf" . embark-dwim) ;; ffap
+   '("gf" . ffap) ;; embark-dwim
    '("gg" . avy-goto-char-timer)
    '("gh" . diff-hl-show-hunk)
    '("gi" . imenu)
@@ -1084,6 +1041,7 @@
 (push '("\\.go\\'" . go-ts-mode) auto-mode-alist)
 (push '("\\.ts\\'" . typescript-ts-mode) auto-mode-alist)
 (push '("\\.bin\\'" . hexl-mode) auto-mode-alist)
+(push '("\\.info\\'" . Info-mode) auto-mode-alist)
 (push '("\\.prototxt\\'" . js-json-mode) auto-mode-alist)
 
 (use-package eglot
@@ -1126,12 +1084,16 @@
             nil t)
   (add-hook 'go-ts-mode-hook
             (lambda ()
-              (add-hook 'before-save-hook
+              (add-hook 'after-save-hook
                         (lambda ()
                           (call-interactively
                            'eglot-code-action-organize-imports))
                         nil t))))
 
+(use-package zig-mode
+  :mode ("\\.zig\\'" . zig-mode))
+
+;; comp
 (add-hook 'minibuffer-mode-hook
           (lambda ()
             (load "~/.emacs.d/comp" nil t)))
@@ -1206,7 +1168,7 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(nov cdlatex org-modern inf-ruby popper deadgrep which-key esup diff-hl markdown-mode eat avy undo-fu-session marginalia meow orderless)))
+   '(zig-mode nov cdlatex org-modern inf-ruby solaire-mode popper deadgrep which-key esup diff-hl markdown-mode eat avy undo-fu-session marginalia meow orderless)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
