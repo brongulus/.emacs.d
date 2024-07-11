@@ -57,7 +57,7 @@
                      "#c56655"
                    "#c47779"))
       (magenta-color (if load-theme-light
-                         "#9950a6"
+                         "#5c3e99"
                        "#ab7bca"))
       (yellow-color (if load-theme-light
                         "#986801"
@@ -116,7 +116,7 @@
    `(font-lock-number-face ((t (:inherit font-lock-constant-face))))
    `(font-lock-doc-string-face ((t (:foreground "#1A93AE" :background "#F4F9FE"))))
    `(font-lock-function-name-face ((t (:foreground ,blue-color))))
-   `(font-lock-keyword-face ((t (:foreground ,blue-color))))
+   `(font-lock-keyword-face ((t (:foreground ,magenta-color))))
    `(font-lock-preprocessor-face ((t (:foreground ,magenta-color))))
    `(font-lock-property-name-face ((t (:foreground ,yellow-color))))
    `(font-lock-reference-face ((t (:foreground "#4E279A" :background "#F3F2FF"))))
@@ -300,9 +300,11 @@
    `(tab-line-tab-inactive
      ((t (:background ,background-color :foreground ,inactive-color :italic nil
                       :underline ,`(:color ,border-color :position -1)))))
+   `(tab-line-tab-special ((t (:italic nil))))
    `(tab-line-tab-current ((t (:inherit tab-line-tab))))
    `(tab-line-highlight ((t (:inherit tab-line-tab))))
 
+   `(deadgrep-filename-face ((t (:inherit bold :inverse-video t))))
    `(why-this-face ((t (:inherit font-lock-comment-face))))
    `(which-func ((t (:foreground ,inactive-color))))))
 

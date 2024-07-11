@@ -265,9 +265,9 @@
 
   (add-hook 'completion-at-point-functions #'file-capf)
 
-  ;; (require 'dabbrev)
-  ;; (advice-add #'dabbrev-capf :before #'dabbrev--reset-global-variables)
-  ;; (add-hook 'completion-at-point-functions #'dabbrev-capf 100)
+  (require 'dabbrev)
+  (advice-add #'dabbrev-capf :before #'dabbrev--reset-global-variables)
+  (add-hook 'completion-at-point-functions #'dabbrev-capf 100)
 
   (setq tab-always-indent 'complete
         tab-first-completion 'word-or-paren
@@ -539,7 +539,8 @@
 (use-package desktop
   ;; session-persistence
   :ensure nil
-  ;; :hook (after-init . desktop-save-mode)
+  :hook (after-init . desktop-save-mode)
+  :hook (after-init . desktop-read)
   :config
   (dolist (item
            '(alpha background-color background-mode border-width
@@ -701,9 +702,9 @@
 ;;; ELPA packages
 ;;; --------------
 (use-package popper
-  :bind (("C-`"   . popper-toggle)
+  :bind (;("C-`"   . popper-toggle)
          ("M-j"   . popper-toggle)
-         ("M-`"   . popper-cycle)
+         ("C-`"   . popper-cycle)
          ("C-M-`" . popper-toggle-type)
          :repeat-map popper-repeat-map
          ("`"     . popper-cycle))
@@ -725,6 +726,19 @@
           "^\\*term.*\\*$" term-mode)
         popper-mode-line nil
         popper-window-height 0.33))
+
+(use-package popper-echo
+  :after popper
+  :ensure nil
+  :config
+  (defun popper-tab-line--format (tab tabs)
+    (concat
+     (propertize " "
+                 'face (if (eq tab (current-buffer))
+                           (if (mode-line-window-selected-p)
+                               'tab-line-tab-current 'tab-line-tab)
+                         'tab-line-tab-inactive))
+     (tab-line-tab-name-format-default tab tabs))))
 
 (use-package orderless
   :after minibuffer
@@ -755,13 +769,13 @@
   :bind (("C-." . (lambda () (interactive)
                     (defvar eat-buffer-name)
                     (let ((current-prefix-arg t)
-                          (eat-buffer-name (concat
-                                            "*" (file-name-nondirectory
-                                                 (directory-file-name
-                                                  (if (vc-root-dir)
-                                                      (vc-root-dir)
-                                                    default-directory)))
-                                            "-eat*")))
+                          (eat-buffer-name
+                           (concat "*" (file-name-nondirectory
+                                        (directory-file-name
+                                         (if (vc-root-dir)
+                                             (vc-root-dir)
+                                           default-directory)))
+                                   "-eat*")))
                       (call-interactively 'eat))))
          (:map eat-semi-char-mode-map
                ("C-u" . eat-self-input)
@@ -818,7 +832,12 @@
   :after org
   :init (require 'ox-awesomecv))
 
-(use-package deadgrep)
+(use-package deadgrep
+  :preface
+  (defun deadgrep-current-dir (search-term)
+    "Grep for SEARCH-TERM in current directory."
+    (interactive "sTerm: ")
+    (deadgrep search-term default-directory)))
 
 (use-package nov
   :mode ("\\.epub\\'" . nov-mode)
@@ -1014,8 +1033,8 @@
    '("&" . align-regexp)
    '("%" . mark-whole-buffer)
    '("/" . meow-visit)
-   '("<" . beginning-of-buffer)
-   '(">" . end-of-buffer)
+   '("<" . indent-rigidly-left-to-tab-stop)
+   '(">" . indent-rigidly-right-to-tab-stop)
    '("\"" . repeat)
    '("<escape>" . ignore)))
 
@@ -1168,7 +1187,7 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(zig-mode nov cdlatex org-modern inf-ruby solaire-mode popper deadgrep which-key esup diff-hl markdown-mode eat avy undo-fu-session marginalia meow orderless)))
+   '(zig-mode which-key undo-fu-session solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex avy)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
