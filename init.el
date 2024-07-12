@@ -406,7 +406,8 @@
         flymake-error-bitmap '(filled-square compilation-error)
         flymake-note-bitmap '(filled-square compilation-info)
         flymake-fringe-indicator-position 'right-fringe)
-  (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake))
+  (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake)
+  (remove-hook 'flymake-diagnostic-functions 'elisp-flymake-byte-compile))
 
 (use-package eldoc
   :ensure nil
@@ -423,8 +424,25 @@
 
 (use-package recentf
   :ensure nil
-  :bind ("C-x f" . recentf-open)
+  :bind ("C-x f" . my/recentf-buffer)
   :hook (kill-emacs . recentf-cleanup)
+  :preface
+  (defun my/recentf-buffer () ;; src:James dyer
+    "Switch to a buffer or open a recent file from a unified interface."
+    (interactive)
+    (unless (recentf-mode (recentf-mode 1)))
+    (let* ((buffers (mapcar #'buffer-name (buffer-list)))
+           (recent-files recentf-list)
+           (all-options (append buffers recent-files))
+           (selection (completing-read "Switch to: "
+                                       (lambda (str pred action)
+                                         (if (eq action 'metadata)
+                                             '(metadata . ((category . file)))
+                                           (complete-with-action action all-options str pred)))
+                                       nil t nil 'file-name-history)))
+      (pcase selection
+        ((pred (lambda (sel) (member sel buffers))) (switch-to-buffer selection))
+        (_ (find-file selection)))))
   :config
   (add-to-list 'recentf-filename-handlers #'substring-no-properties) ;; doom
   (advice-add #'recentf-load-list :around #'silent-command)
@@ -539,8 +557,8 @@
 (use-package desktop
   ;; session-persistence
   :ensure nil
-  :hook (after-init . desktop-save-mode)
-  :hook (after-init . desktop-read)
+  ;; :hook (after-init . desktop-save-mode)
+  ;; :hook (after-init . desktop-read)
   :config
   (dolist (item
            '(alpha background-color background-mode border-width
@@ -668,7 +686,7 @@
     (let ((unread-count (cdar gnus-topic-unreads)))
       (if (or (not unread-count) (eq unread-count 0))
           ""
-        (propertize (format " Unread:%s " uc)
+        (propertize (format " Unread:%s " unread-count)
                     'face 'which-func))))
   (setq global-mode-string
         (append global-mode-string
@@ -733,12 +751,19 @@
   :config
   (defun popper-tab-line--format (tab tabs)
     (concat
+     (when (display-graphic-p)
+       (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
+                   'display '(space :width (1))))
      (propertize " "
                  'face (if (eq tab (current-buffer))
                            (if (mode-line-window-selected-p)
                                'tab-line-tab-current 'tab-line-tab)
                          'tab-line-tab-inactive))
-     (tab-line-tab-name-format-default tab tabs))))
+     (tab-line-tab-name-format-default tab tabs)
+
+     (when (display-graphic-p)
+       (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
+                   'display '(space :width (1)))))))
 
 (use-package orderless
   :after minibuffer
@@ -843,7 +868,7 @@
   :mode ("\\.epub\\'" . nov-mode)
   :hook
   (nov-mode . visual-line-mode)
-   ;; (nov-mode . visual-fill-column-mode))
+  ;; (nov-mode . visual-fill-column-mode))
   :config
   (setq nov-text-width 80
         ;; visual-fill-column-center-text t
@@ -927,10 +952,10 @@
                  (call-interactively 'string-rectangle)
                (meow-change))))
    '("M-C" . (lambda () (interactive)
-             (if (and (region-active-p)
-                      (bound-and-true-p rectangle-mark-mode))
-                 (meow-prev 1)
-               (rectangle-mark-mode 1))))
+               (if (and (region-active-p)
+                        (bound-and-true-p rectangle-mark-mode))
+                   (meow-prev 1)
+                 (rectangle-mark-mode 1))))
    '("C" . (lambda () (interactive)
              (if (and (region-active-p)
                       (bound-and-true-p rectangle-mark-mode))
