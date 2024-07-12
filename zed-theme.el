@@ -82,13 +82,17 @@
    `(fringe ((t (:background ,background-color))))
    `(header-line ((t (:background ,background-color))))
    `(mode-line ((t (:background ,modeline-color :foreground ,foreground-color
-                                ;; :underline ,`(:color ,border-color :position -2)
-                                ;; :overline ,border-color
+                                ,@(if (display-graphic-p)
+                                      (list :underline
+                                            (list :color border-color :position -2)
+                                            :overline border-color))
                                 :box (:line-width 4 :style flat-button)))))
    `(mode-line-highlight ((t (:box (:line-width 2 :color ,inactive-color)))))
    `(mode-line-inactive ((t (:background ,modeline-color :foreground ,inactive-color
-                                         ;; :underline ,`(:color ,border-color :position -2)
-                                         ;; :overline ,border-color
+                                         ,@(if (display-graphic-p)
+                                               (list :underline
+                                                     (list :color border-color :position -2)
+                                                     :overline border-color))
                                          :box (:line-width 4 :style flat-button)))))
 
    ;; Parens
@@ -289,17 +293,23 @@
    
    `(tab-bar ((t (:background ,subtle-color :box ,border-color))))
    `(tab-bar-tab ((t (:background ,background-color :foreground ,foreground-color
-                                  :underline ,`(:color ,background-color :position -1)))))
+                                  ,@(when (display-graphic-p)
+                                      (list :underline
+                                            (list :color background-color :position -1)))))))
    `(tab-bar-tab-inactive
      ((t (:background ,subtle-color :foreground ,inactive-color
-                      :underline ,`(:color ,border-color :position -1)))))
+                      ,@(when (display-graphic-p)
+                          (list :underline
+                                (list :color border-color :position -1)))))))
    ;; TODO make it solaire-compatible
    `(tab-line ((t (:background ,background-color :box ,border-color :italic nil))))
    `(tab-line-tab ((t (:background ,subtle-color :foreground ,foreground-color :italic nil
-                                   :underline ,`(:color ,subtle-color :position -1)))))
+                                   ,@(when (display-graphic-p)
+                                       (list :underline (list :color subtle-color :position -1)))))))
    `(tab-line-tab-inactive
      ((t (:background ,background-color :foreground ,inactive-color :italic nil
-                      :underline ,`(:color ,border-color :position -1)))))
+                      ,@(when (display-graphic-p)
+                          (list :underline (list :color border-color :position -1)))))))
    `(tab-line-tab-special ((t (:italic nil))))
    `(tab-line-tab-current ((t (:inherit tab-line-tab))))
    `(tab-line-highlight ((t (:inherit tab-line-tab))))
@@ -400,34 +410,37 @@
            (face (if selected-p
                      'tab-bar-tab
                    'tab-bar-tab-inactive)))
-      (concat (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
-                          'display '(space :width (1)))
-              ;; show dot if buffer modified else " "
-              (if (and selected-p (buffer-modified-p)
-                       (or (derived-mode-p 'prog-mode)
-                           (derived-mode-p 'text-mode)))
-                  (propertize (concat " " (make-string 1 #x23fA))
-                              'face `(:inherit tab-bar-tab :foreground ,(face-background 'cursor nil t))
-                              'display '(raise 0.2))
-                (apply 'propertize " " `(tab ,tab ,@(if selected-p '(selected t))
-                                             face ,face
-                                             display (raise 0.2))))
-              ;; apply face to buffer name
-              (apply 'propertize
-                     (concat
-                      (propertize (string-replace "%" "%%" name) ;; (bug#57848)
-                                  'follow-link 'ignore)
-                      (if (and selected-p tab-bar-close-button-show)
-                          tab-bar-close-button
-                        " ")
-                      "")
-                     `(tab ,tab
-                           ,@(if selected-p '(selected t))
-                           face ,face
-                           display (raise 0.2)))
-              
-              (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
-                          'display '(space :width (1))))))
+      (concat
+       (when (display-graphic-p)
+         (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
+                     'display '(space :width (1))))
+       ;; show dot if buffer modified else " "
+       (if (and selected-p (buffer-modified-p)
+                (or (derived-mode-p 'prog-mode)
+                    (derived-mode-p 'text-mode)))
+           (propertize (concat " " (make-string 1 #x23fA))
+                       'face `(:inherit tab-bar-tab :foreground ,(face-background 'cursor nil t))
+                       'display '(raise 0.2))
+         (apply 'propertize " " `(tab ,tab ,@(if selected-p '(selected t))
+                                      face ,face
+                                      display (raise 0.2))))
+       ;; apply face to buffer name
+       (apply 'propertize
+              (concat
+               (propertize (string-replace "%" "%%" name) ;; (bug#57848)
+                           'follow-link 'ignore)
+               (if (and selected-p tab-bar-close-button-show)
+                   tab-bar-close-button
+                 " ")
+               "")
+              `(tab ,tab
+                    ,@(if selected-p '(selected t))
+                    face ,face
+                    display (raise 0.2)))
+
+       (when (display-graphic-p)
+         (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
+                     'display '(space :width (1)))))))
 
   (defun tab-bar-format-menu-bar ()
     "Produce the Menu button for the tab bar that shows the menu bar."
