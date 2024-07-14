@@ -43,12 +43,12 @@
               '((menu-bar-lines . 0)
                 (tool-bar-lines . 0)
                 (vertical-scroll-bars)
-                (left-fringe . 15)
-                (right-fringe . 15)
-                (internal-border-width . 00)
+                ;; (left-fringe . 15)
+                ;; (right-fringe . 15)
+                ;; (internal-border-width . 00)
                 (fullscreen . fullboth)
                 (font . "VictorMono Nerd Font Mono-16:weight=semi-bold"))
-                ;; (font . "Zed Mono-17"))
+              ;; (font . "Zed Mono-17"))
               fringe-indicator-alist
               (assq-delete-all 'truncation fringe-indicator-alist)
               cursor-in-non-selected-windows nil
@@ -59,7 +59,7 @@
 (fset 'display-startup-echo-area-message 'ignore)
 
 (setf (cdr (assq 'continuation fringe-indicator-alist))
-      '(nil right-curly-arrow))
+      '(nil nil))
 
 (when (file-exists-p (locate-user-emacs-file "package-quickstart.el"))
   (defvar package-quickstart)
@@ -97,7 +97,10 @@
       (insert (make-string left-margin ?\ ))
       (insert-image image)
       (insert "\n\n\n")
-      (insert (make-string (floor (/ (- (max (window-width) 195) (string-width prompt-title)) 2)) ?\ ))
+      (insert (make-string (floor (/ (- (max (window-width) 195)
+                                        (string-width prompt-title))
+                                     2))
+                           ?\ ))
       (insert prompt-title))
     (setq-local cursor-type nil)
     (read-only-mode +1)
@@ -105,15 +108,17 @@
     (local-set-key (kbd "q") 'kill-this-buffer)
     (local-set-key (kbd "RET") 'kill-this-buffer)))
 
-(add-hook 'emacs-startup-hook (lambda ()
-                                (if (or (> (length command-line-args) 2)
-                                        (file-exists-p (locate-user-emacs-file ".emacs.desktop")))
-                                    (message (format "%d packages loaded in %s"
-                                                     (length package-activated-list)
-                                                     (format "%.2f seconds"
-                                                             (float-time
-                                                              (time-subtract after-init-time before-init-time)))))
-                                  (ar/show-welcome-buffer))))
+(add-hook 'window-setup-hook
+          (lambda ()
+            (if (or (> (length command-line-args) 2)
+                    (file-exists-p
+                     (locate-user-emacs-file ".emacs.desktop")))
+                (message (format "%d packages loaded in %s"
+                                 (length package-activated-list)
+                                 (format "%.2f seconds"
+                                         (float-time
+                                          (time-subtract after-init-time before-init-time)))))
+              (ar/show-welcome-buffer))))
 
 (if (eq system-type 'darwin)
     (setq mac-option-modifier 'meta)

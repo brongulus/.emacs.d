@@ -58,7 +58,7 @@
                    "#c47779"))
       (magenta-color (if load-theme-light
                          "#5c3e99"
-                       "#ab7bca"))
+                       "#c076d5"))
       (yellow-color (if load-theme-light
                         "#986801"
                       "#d9c18c"))
@@ -69,8 +69,8 @@
   (custom-theme-set-faces
    'zed
    ;; Basics
-   `(cursor ((t (:background ,blue-color))))
    `(default ((t (:background ,background-color :foreground ,foreground-color))))
+   `(cursor ((t (:background ,blue-color))))
    `(border-glyph ((t (nil))))
    `(info-node ((t (:italic t :bold t))))
    `(info-xref ((t (:bold t))))
@@ -79,20 +79,21 @@
    `(pointer ((t (nil))))
 
    ;; Frame
+   `(child-frame-border ((t (:background ,border-color :foreground ,border-color))))
    `(fringe ((t (:background ,background-color))))
    `(header-line ((t (:background ,background-color))))
    `(mode-line ((t (:background ,modeline-color :foreground ,foreground-color
-                                ,@(if (display-graphic-p)
-                                      (list :underline
-                                            (list :color border-color :position -2)
-                                            :overline border-color))
+                                ,@(when (display-graphic-p)
+                                    (list :underline
+                                          (list :color border-color :position -2)
+                                          :overline border-color))
                                 :box (:line-width 4 :style flat-button)))))
    `(mode-line-highlight ((t (:box (:line-width 2 :color ,inactive-color)))))
    `(mode-line-inactive ((t (:background ,modeline-color :foreground ,inactive-color
-                                         ,@(if (display-graphic-p)
-                                               (list :underline
-                                                     (list :color border-color :position -2)
-                                                     :overline border-color))
+                                         ,@(when (display-graphic-p)
+                                             (list :underline
+                                                   (list :color border-color :position -2)
+                                                   :overline border-color))
                                          :box (:line-width 4 :style flat-button)))))
 
    ;; Parens
@@ -100,7 +101,9 @@
    `(show-paren-mismatch ((t (:foreground ,foreground-color :background ,red-color))))
 
    ;; Highlighting
-   `(hl-line ((t (:background ,modeline-color))))
+   `(hl-line ((t (:background ,@(if load-theme-light
+                                    (list "#dcdcdd")
+                                  (list "#2D323B"))))))
    `(highline-face ((t (:background ,subtle-color))))
    `(highlight ((t (:background ,highlight-color))))
    `(highlight-symbol-face ((t (:background ,secondary-color))))
@@ -114,7 +117,7 @@
    `(shadow ((t (:foreground "grey50"))))
 
    ;; Font-lock
-   `(font-lock-builtin-face ((t (:foreground ,blue-color))))
+   `(font-lock-builtin-face ((t (:foreground ,blue-color :inherit italic))))
    `(font-lock-comment-face ((t (:foreground "#5e636e"))))
    `(font-lock-constant-face ((t (:foreground ,red-color))))
    `(font-lock-number-face ((t (:inherit font-lock-constant-face))))
@@ -126,7 +129,7 @@
    `(font-lock-reference-face ((t (:foreground "#4E279A" :background "#F3F2FF"))))
    `(font-lock-string-face ((t (:foreground ,green-color))))
    `(font-lock-type-face ((t (:foreground ,cyan-color))))
-   `(font-lock-variable-name-face ((t (:inherit default))))
+   `(font-lock-variable-name-face ((t (:foreground ,foreground-color))))
    `(font-lock-warning-face ((t (:foreground ,red-color :weight bold))))
 
    ;; Diff Mode
@@ -182,8 +185,12 @@
    `(diff-hl-delete ((t (:foreground ,red-color))))
    
    `(completions-highlight ((t (:inherit highlight :extend t))))
+   `(corfu-default ((t (:background ,modeline-color))))
+   `(corfu-current ((t (:background ,selection-color :foreground ,foreground-color))))
    `(dired-directory ((t (:foreground ,yellow-color))))
    `(dired-header ((t (:foreground ,green-color :height 1.2))))
+   `(dired-marked ((t (:foreground ,magenta-color))))
+   `(fill-column-indicator ((t (:inherit font-lock-comment-face :height 1.1))))
    `(fixed-pitch ((t (:inherit default))))
    `(info-menu-star ((t (:foreground ,red-color))))
    `(icomplete-selected-match ((t (:inherit highlight :extend t))))
@@ -217,8 +224,8 @@
    `(erc-timestamp-face ((t (:inherit font-lock-comment-face :weight bold))))
    `(erc-header-line ((t (:background ,modeline-color :foreground ,green-color))))
 
-   `(variable-pitch-text ((t (:inherit variable-pitch))))
-   `(shr-text ((t (:inherit default))))
+   ;; `(variable-pitch-text ((t (:inherit variable-pitch))))
+   `(shr-text ((t (:inherit default :weight regular))))
    `(gnus-group-mail-1 ((t (:foreground ,red-color :weight bold))))
    `(gnus-group-mail-2 ((t (:foreground ,red-color :weight bold))))
    `(gnus-group-mail-3 ((t (:foreground ,red-color :weight bold))))
@@ -263,15 +270,20 @@
      ((t (:background ,background-color :foreground ,yellow-color :inverse-video t))))
    `(minibuffer-prompt ((t (:foreground ,yellow-color))))
    
-   `(org-block ((t (:inherit default :background ,subtle-color :extend t))))
+   `(org-block ((t (:inherit default :background ,subtle-color :extend t :height 1.0))))
    `(org-block-begin-line ((t (:inherit org-meta-line :background ,subtle-color :extend t))))
    `(org-block-end-line ((t (:inherit org-meta-line :background ,subtle-color :extend t))))
-   `(org-document-title ((t (:height 1.26))))
-   `(org-document-info ((t (:height 1.26))))
+   `(org-document-title ((t (:height 1.1))))
+   `(org-document-info ((t (:height 1.1))))
    `(org-drawer ((t (:inherit shadow))))
-   `(org-level-1 ((t (:weight bold :height 1.24))))
-   `(org-level-2 ((t (:height 1.2))))
-   `(org-level-3 ((t (:weight bold :height 1.16))))
+   `(org-level-1 ((t (:height 1.1 :weight bold))))
+   `(org-level-2 ((t (:height 1.1 :weight bold))))
+   `(org-level-3 ((t (:height 1.1 :weight bold))))
+   `(org-level-4 ((t (:height 1.1 :weight bold))))
+   `(org-level-5 ((t (:height 1.1 :weight bold))))
+   `(org-level-6 ((t (:height 1.1 :weight bold))))
+   `(org-level-7 ((t (:height 1.1 :weight bold))))
+   `(org-level-8 ((t (:height 1.1 :weight bold))))
    `(org-agenda-structure ((t (:foreground ,magenta-color :height 1.2))))
    `(org-agenda-date ((t (:foreground ,blue-color :height 1.1))))
    `(org-time-grid ((t (:inherit font-lock-comment-face))))
@@ -292,22 +304,24 @@
    `(org-habit-ready-future-face ((t (:foreground ,green-color))))
    
    `(tab-bar ((t (:background ,subtle-color :box ,border-color))))
-   `(tab-bar-tab ((t (:background ,background-color :foreground ,foreground-color
-                                  ,@(when (display-graphic-p)
-                                      (list :underline
-                                            (list :color background-color :position -1)))))))
+   `(tab-bar-tab
+     ((t (:background ,background-color :foreground ,foreground-color
+                      ,@(when (display-graphic-p)
+                          (list :underline
+                                (list :color background-color :position -1)))))))
    `(tab-bar-tab-inactive
      ((t (:background ,subtle-color :foreground ,inactive-color
                       ,@(when (display-graphic-p)
                           (list :underline
                                 (list :color border-color :position -1)))))))
    ;; TODO make it solaire-compatible
-   `(tab-line ((t (:background ,background-color :box ,border-color :italic nil))))
-   `(tab-line-tab ((t (:background ,subtle-color :foreground ,foreground-color :italic nil
-                                   ,@(when (display-graphic-p)
-                                       (list :underline (list :color subtle-color :position -1)))))))
+   `(tab-line ((t (:background ,background-color :box ,border-color))))
+   `(tab-line-tab
+     ((t (:background ,subtle-color :foreground ,foreground-color
+                      ,@(when (display-graphic-p)
+                          (list :underline (list :color subtle-color :position -1)))))))
    `(tab-line-tab-inactive
-     ((t (:background ,background-color :foreground ,inactive-color :italic nil
+     ((t (:background ,background-color :foreground ,inactive-color
                       ,@(when (display-graphic-p)
                           (list :underline (list :color border-color :position -1)))))))
    `(tab-line-tab-special ((t (:italic nil))))
@@ -315,6 +329,7 @@
    `(tab-line-highlight ((t (:inherit tab-line-tab))))
 
    `(deadgrep-filename-face ((t (:inherit bold :inverse-video t))))
+   `(vertico-posframe-border ((t (:inherit child-frame-border))))
    `(why-this-face ((t (:inherit font-lock-comment-face))))
    `(which-func ((t (:foreground ,inactive-color))))))
 

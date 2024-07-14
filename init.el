@@ -41,6 +41,7 @@
   (setq-default line-spacing 3
                 cursor-type 'bar
                 tab-width 2
+                fill-column 80
                 indent-tabs-mode nil
                 enable-recursive-minibuffers t
                 show-paren-delay 0
@@ -56,6 +57,8 @@
 
   (setq read-process-output-max (* 16 1024)
         process-adaptive-read-buffering nil
+        switch-to-buffer-obey-display-actions t
+        kill-do-not-save-duplicates t
         auto-mode-case-fold nil
         idle-update-delay 1.0
         undo-limit 67108864
@@ -73,12 +76,16 @@
         tabify-regexp "^\t* [ \t]+"
         grep-command "grep --color=always -nHi -r --include=*.* -e \"pattern\" ."
         electric-pair-skip-self t
+        shell-command-prompt-show-cwd t
+        shell-kill-buffer-on-exit t
         compilation-scroll-output 'first-error)
 
+  (add-to-list 'load-path (expand-file-name "lisp/" user-emacs-directory))
   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
   (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
   (add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
-  ;; (push 'check-parens write-file-functions) ;; issue in org
+  (push 'check-parens write-file-functions) ;; issue in org
+  ;; (add-hook 'text-mode-hook visual-line-mode) ;; issue in org
   (add-hook 'prog-mode-hook (electric-pair-mode t))
   (add-hook 'prog-mode-hook (show-paren-mode t))
   (add-hook 'prog-mode-hook (which-function-mode))
@@ -210,70 +217,6 @@
         xref-show-definitions-function 'xref-show-definitions-completing-read
         xref-show-xrefs-function 'xref-show-definitions-completing-read))
 
-(use-package icomplete
-  :init
-  (setq icomplete-in-buffer t
-        icomplete-prospects-height 10
-        icomplete-show-matches-on-no-input t
-        icomplete-scroll t)
-  (fido-vertical-mode)
-  :bind (:map completion-in-region-mode-map ; icomp-in-buffer
-              ("TAB" . icomplete-forward-completions)
-              ("<backtab>" . icomplete-backward-completions)
-              ("<return>" . icomplete-force-complete-and-exit)
-              ("<escape>" . keyboard-quit)
-              :map icomplete-fido-mode-map
-              ("C-<return>" . icomplete-fido-exit)
-              ("<backspace>" . icomplete-fido-backward-updir)
-              ("TAB" . icomplete-forward-completions)
-              ("<backtab>" . icomplete-backward-completions)
-              ("<left>" . backward-char)
-              ("<right>" . forward-char)
-              :map icomplete-minibuffer-map
-              ;; ("C-," . embark-act)
-              :map minibuffer-local-map
-              ("S-<return>" . newline))
-  :hook (icomplete-minibuffer-setup . (lambda nil
-                                        (setq-local completion-auto-help nil
-                                                    truncate-lines t
-                                                    line-spacing nil)))
-  :hook (eval-expression-minibuffer-setup . (lambda nil
-                                              (setq-local completion-auto-help 'always
-                                                          completion-auto-select t)))
-  :config
-  ;; testing completions buffer
-  (add-to-list 'display-buffer-alist
-               '("\\*Completions\\*"
-                 (display-buffer-reuse-window display-buffer-at-bottom)
-                 (window-parameters (mode-line-format . none))))
-  (setq completion-auto-help 'lazy
-        completion-auto-select 'second-tab
-        completion-auto-wrap t
-        completion-show-help nil
-        completions-max-height 15
-        completions-detailed t
-        ;; completions-header-format nil
-        completions-format 'one-column)
-
-  (defun file-capf () ;; src: eshelyaron
-    "File completion at point function."
-    (pcase (bounds-of-thing-at-point 'filename)
-      (`(,beg . ,end)
-       (list beg end #'completion-file-name-table
-             :annotation-function (lambda (_) " File")
-             :exclusive 'no))))
-
-  (add-hook 'completion-at-point-functions #'file-capf)
-
-  (require 'dabbrev)
-  (advice-add #'dabbrev-capf :before #'dabbrev--reset-global-variables)
-  (add-hook 'completion-at-point-functions #'dabbrev-capf 100)
-
-  (setq tab-always-indent 'complete
-        tab-first-completion 'word-or-paren
-        icomplete-delay-completions-threshold 4000
-        completions-group t))
-
 (use-package windmove
   :defer 2
   :ensure nil
@@ -286,7 +229,9 @@
   :defer 1
   :ensure nil
   :hook ((ediff-before-setup . tab-bar-new-tab)
-         (ediff-quit . tab-bar-close-tab))
+         (ediff-quit . (lambda nil
+                         (tab-bar-close-tab)
+                         (kill-buffer ediff-registry-buffer))))
   :config
   (advice-add 'ediff-quit :around (lambda (&rest args)
                                     (ediff-really-quit args)))
@@ -405,6 +350,7 @@
         flymake-warning-bitmap '(filled-square compilation-warning)
         flymake-error-bitmap '(filled-square compilation-error)
         flymake-note-bitmap '(filled-square compilation-info)
+        ;; flymake-show-diagnostics-at-end-of-line t
         flymake-fringe-indicator-position 'right-fringe)
   (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake)
   (remove-hook 'flymake-diagnostic-functions 'elisp-flymake-byte-compile))
@@ -454,7 +400,7 @@
 (use-package tramp
   :hook (minibuffer-mode . tramp-cleanup-all-connections)
   :config
-  ;; (setq tramp-process-connection-type nil)
+  (setq tramp-process-connection-type nil)
   (setq tramp-ssh-controlmaster-options
         (concat
          "-o ControlPath=\~/.ssh/control/ssh-%%r@%%h:%%p "
@@ -471,8 +417,48 @@
 (use-package org
   :ensure nil
   :hook (org-mode . (lambda nil
-                      (face-remap-add-relative 'default :height 1.05)))
+                      (face-remap-add-relative 'default :height 1.05)
+                      (setq-local line-spacing 8)
+                      ;; fix for check-parens
+                      (modify-syntax-entry ?\) "." org-mode-syntax-table)
+                      (modify-syntax-entry ?\( "." org-mode-syntax-table)
+                      (modify-syntax-entry ?< "." org-mode-syntax-table)
+                      (modify-syntax-entry ?> "." org-mode-syntax-table)))
   :config
+  ;; Taken from rougier: org-outer-indent
+  (defun org-outer-indent--compute-prefixes ()
+    "Compute prefix strings for regular text and headlines."
+    (setq org-indent--heading-line-prefixes
+          (make-vector org-indent--deepest-level nil))
+    (setq org-indent--inlinetask-line-prefixes
+          (make-vector org-indent--deepest-level nil))
+    (setq org-indent--text-line-prefixes
+          (make-vector org-indent--deepest-level nil))
+    ;; Find the lowest headline level
+    (let* ((headline-levels (or (org-element-map
+                                    (org-element-parse-buffer) 'headline
+                                  #'(lambda (item)
+                                      (org-element-property :level item)))
+                                '()))
+           (max-level (seq-max headline-levels))
+           ;; We could also iterate over each evel to get maximum length
+           ;; Instead, we take the length of the deepest numbered level.
+           (line-indentation (+ 3 max-level))
+           (headline-indentation))
+      (dotimes (level org-indent--deepest-level)
+        (setq headline-indentation
+              (max 0 (- line-indentation (+ 1 level))))
+        (aset org-indent--inlinetask-line-prefixes level
+              (make-string line-indentation ?\s))
+        (aset org-indent--text-line-prefixes level
+              (make-string line-indentation ?\s))
+        (aset org-indent--heading-line-prefixes level
+              (make-string headline-indentation ?\s))))
+    (setq-local org-hide-leading-stars nil))
+
+  (advice-add 'org-indent--compute-prefixes :override
+              #'org-outer-indent--compute-prefixes)
+
   (push 'org-habit org-modules)
   ;; configure <s template for org-src-blocks
   (require 'org-tempo)
@@ -554,11 +540,10 @@
            "* TODO %?\n:PROPERTIES:\n:STYLE: habit\n:LOGGING: TODO(!) DONE(!)\n:END:"
            :prepend t))))
 
-(use-package desktop
-  ;; session-persistence
+(use-package desktop ;; session-persistence
   :ensure nil
-  ;; :hook (after-init . desktop-save-mode)
-  ;; :hook (after-init . desktop-read)
+  :hook (window-setup . desktop-save-mode)
+  :hook (window-setup . desktop-read)
   :config
   (dolist (item
            '(alpha background-color background-mode border-width
@@ -688,12 +673,12 @@
           ""
         (propertize (format " Unread:%s " unread-count)
                     'face 'which-func))))
-  (setq global-mode-string
-        (append global-mode-string
-                (list '(:eval (propertize
-                               (my/gnus-unread-count)
-                               'help-echo "Gnus - Unread")))))
   (with-eval-after-load 'gnus-topic
+    (setq global-mode-string
+          (append global-mode-string
+                  (list '(:eval (propertize
+                                 (my/gnus-unread-count)
+                                 'help-echo "Gnus - Unread")))))
     (setq gnus-topic-topology '(("Unread" visible)
                                 (("📥 Personal" visible nil nil))
                                 (("📰 News" visible nil nil))))
@@ -731,11 +716,11 @@
   :init
   (setq popper-reference-buffers
         '("\\*Messages\\*" "Output\\*$"
-          "\\*Async Shell Command\\*"
+          "\\*Async Shell Command\\*" "\\*shell.\*"
           "magit:.\*" "\\*pabbrev suggestions\\*"
           ".*-eat\\*" "\\*eldoc\\*" "vc-git :.\*"
           "\\*vc-change-log\\*" "\\*Deletions\\*"
-          "\\*Flymake diagnostics.\*" "\\*CDLaTex Help\\*"
+          "\\*Flymake .\*" "\\*CDLaTex Help\\*"
           "\\*Process List\\*" "\\*Org Select\\*"
           "^CAPTURE.*" "\\*Warnings\\*"
           "\\*Backtrace\\*" "\\*Occur\\*"
@@ -749,6 +734,10 @@
   :after popper
   :ensure nil
   :config
+  ;; cleaner tab-line
+  (advice-add 'tab-line-tab-name-buffer :around
+              (lambda (orig-fn &rest args)
+                (string-replace "*" "" (apply orig-fn args))))
   (defun popper-tab-line--format (tab tabs)
     (concat
      (when (display-graphic-p)
@@ -781,6 +770,73 @@
   :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer)
   :custom
   (avy-single-candidate-jump nil))
+
+(use-package vertico
+  :hook (after-init . vertico-mode)
+  :bind (:map vertico-map
+                ("<backspace>" . vertico-directory-delete-char)
+                ("RET" . vertico-directory-enter)
+                ("TAB" . vertico-next)
+                ("<backtab>" . vertico-previous)
+                ("S-TAB" . vertico-previous)
+                ("M-TAB" . vertico-previous)
+                ("C-j" . vertico-next)
+                ("C-k" . vertico-previous))
+  :config
+  (setq vertico-scroll-margin 0
+        vertico-resize nil
+        vertico-cycle t)
+
+  (defun file-capf () ;; src: eshelyaron
+    "File completion at point function."
+    (pcase (bounds-of-thing-at-point 'filename)
+      (`(,beg . ,end)
+       (list beg end #'completion-file-name-table
+             :annotation-function (lambda (_) " File")
+             :exclusive 'no))))
+
+  (require 'dabbrev)
+  (advice-add #'dabbrev-capf :before #'dabbrev--reset-global-variables)
+  
+  (add-hook 'completion-at-point-functions #'file-capf)
+  ;; (add-hook 'completion-at-point-functions #'dabbrev-capf 100) ; posframe/corfu issue
+
+  (setq tab-always-indent 'complete
+        tab-first-completion 'word-or-paren
+        completions-group t
+        completions-detailed t))
+
+(use-package vertico-posframe
+  :hook (vertico-mode . vertico-posframe-mode)
+  :config
+  (setq vertico-posframe-parameters
+        '((left-fringe . 8)
+          (right-fringe . 8))
+        vertico-posframe-width 80
+        vertico-posframe-poshandler 'posframe-poshandler-frame-top-center))
+
+(use-package corfu
+  :init (global-corfu-mode)
+  :hook ((corfu-mode . corfu-popupinfo-mode)
+         (meow-insert-exit . corfu-quit))
+  :bind (:map corfu-map
+              ("TAB" . corfu-next)
+              ([tab] . corfu-next)
+              ("M-TAB" . corfu-previous)
+              ("S-TAB" . corfu-previous)
+              ([backtab] . corfu-previous))
+  :config
+  (add-hook 'eshell-mode #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
+  (setq corfu-cycle t
+        corfu-auto t
+        corfu-auto-prefix 2
+        corfu-auto-delay 0
+        corfu-separator 32
+        corfu-quit-no-match t
+        corfu-quit-at-boundary 'separator
+        corfu-preview-current nil
+        corfu-popupinfo-delay '(0.2 . 0.1)
+        corfu-preselect-first nil))
 
 (use-package undo-fu-session
   :hook ((prog-mode conf-mode fundamental-mode text-mode tex-mode) . undo-fu-session-mode)
@@ -878,6 +934,9 @@
   :hook (after-init . (lambda ()
                         (require 'meow)
                         (meow-global-mode)))
+  :hook (meow-insert-mode . (lambda nil
+                              (blink-cursor-mode 'toggle)))
+  ;; :hook (special-mode . meow-normal-mode)
   :preface
   (defun my-chord (initial-key final-key fn) ;; src: wasamasa
     (interactive)
@@ -913,7 +972,7 @@
   (define-key meow-normal-state-keymap (kbd "m s") insert-pair-map)
   (define-key meow-normal-state-keymap (kbd "m d") delete-pair-map)
 
-  (dolist (imode '(reb-mode eat-mode eshell-mode log-edit-mode))
+  (dolist (imode '(reb-mode eat-mode shell-mode eshell-mode log-edit-mode))
     (push `(,imode . insert) meow-mode-state-list))
   (meow-motion-overwrite-define-key
    '("Q" . kill-this-buffer)
@@ -1074,12 +1133,15 @@
           (c "https://github.com/tree-sitter/tree-sitter-c")
           (go "https://github.com/tree-sitter/tree-sitter-go")
           (rust "https://github.com/tree-sitter/tree-sitter-rust")
+          (janet-simple "https://github.com/sogaiu/tree-sitter-janet-simple")
           (typescript "https://github.com/tree-sitter/tree-sitter-typescript"
                       "master" "typescript/src"))
         treesit-font-lock-level 4))
 
 ;; (setq major-mode-remap-alist '((c++-mode . c++-ts-mode)
 ;;                                (c-mode . c-ts-mode)))
+(setq python-indent-guess-indent-offset t
+      python-indent-guess-indent-offset-verbose nil)
 
 (push '("\\.rs\\'" . rust-ts-mode) auto-mode-alist)
 (push '("\\.go\\'" . go-ts-mode) auto-mode-alist)
@@ -1137,14 +1199,20 @@
 (use-package zig-mode
   :mode ("\\.zig\\'" . zig-mode))
 
+(use-package janet-ts-mode
+  :init
+  (unless (package-installed-p 'janet-ts-mode)
+    (package-vc-install "https://github.com/sogaiu/janet-ts-mode"))
+  :mode ("\\.janet\\'" . janet-ts-mode)
+  :config
+  (remove-hook 'janet-ts-mode-hook 'treesit-inspect-mode))
+
 ;; comp
 (add-hook 'minibuffer-mode-hook
-          (lambda ()
-            (load "~/.emacs.d/comp" nil t)))
+          (lambda nil (load "~/.emacs.d/lisp/comp" nil t)))
 
 (use-package foxy
   :ensure nil
-  :load-path "~/.emacs.d"
   :bind (("C-c C-l" . foxy-listen-start)
          ("C-c C-c" . foxy-cycle-files)
          ("C-C C-b" . foxy-run-all-tests))
@@ -1158,6 +1226,9 @@
           (command (cdr pair)))
       (add-hook mode
                 (lambda ()
+                  (setq-local compile-command (concat command
+                                                      buffer-file-name
+                                                      " && ./a.out"))
                   (setq-local foxy-compile-command command))))))
 
 (defun async-project-find-file (program &rest args)
@@ -1212,7 +1283,9 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(zig-mode which-key undo-fu-session solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex avy)))
+   '(corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex avy))
+ '(package-vc-selected-packages
+   '((janet-ts-mode :vc-backend Git :url "https://github.com/sogaiu/janet-ts-mode"))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
