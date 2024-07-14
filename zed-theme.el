@@ -276,6 +276,7 @@
    `(org-document-title ((t (:height 1.1))))
    `(org-document-info ((t (:height 1.1))))
    `(org-drawer ((t (:inherit shadow))))
+   `(org-ellipsis ((t (:inherit shadow))))
    `(org-level-1 ((t (:height 1.1 :weight bold))))
    `(org-level-2 ((t (:height 1.1 :weight bold))))
    `(org-level-3 ((t (:height 1.1 :weight bold))))
@@ -310,7 +311,7 @@
                           (list :underline
                                 (list :color background-color :position -1)))))))
    `(tab-bar-tab-inactive
-     ((t (:background ,subtle-color :foreground ,inactive-color
+     ((t (:background ,subtle-color :foreground ,inactive-color :weight regular
                       ,@(when (display-graphic-p)
                           (list :underline
                                 (list :color border-color :position -1)))))))
@@ -321,7 +322,7 @@
                       ,@(when (display-graphic-p)
                           (list :underline (list :color subtle-color :position -1)))))))
    `(tab-line-tab-inactive
-     ((t (:background ,background-color :foreground ,inactive-color
+     ((t (:background ,background-color :foreground ,inactive-color :weight regular
                       ,@(when (display-graphic-p)
                           (list :underline (list :color border-color :position -1)))))))
    `(tab-line-tab-special ((t (:italic nil))))

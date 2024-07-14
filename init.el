@@ -22,7 +22,7 @@
          ("C-a" . (lambda nil (interactive)
                     (if (= (point) (progn (beginning-of-line-text) (point)))
                         (beginning-of-line))))
-         ("C-x z" . execute-extended-command)
+         ("M-P" . execute-extended-command)
          ("C-x C-m" . execute-extended-command)
          ("C-x C-j" . delete-indentation)
          ("C-h C-o" . describe-symbol)
@@ -72,7 +72,7 @@
         auto-revert-verbose nil
         sentence-end-double-space nil
         Info-use-header-line nil
-        outline-minor-mode-cycle nil ;; messes up completion
+        outline-minor-mode-cycle t
         tabify-regexp "^\t* [ \t]+"
         grep-command "grep --color=always -nHi -r --include=*.* -e \"pattern\" ."
         electric-pair-skip-self t
@@ -84,8 +84,8 @@
   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
   (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
   (add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
-  (push 'check-parens write-file-functions) ;; issue in org
-  ;; (add-hook 'text-mode-hook visual-line-mode) ;; issue in org
+  (push 'check-parens write-file-functions) ;; issue in org - fixed below
+  (add-hook 'text-mode-hook (visual-line-mode t))
   (add-hook 'prog-mode-hook (electric-pair-mode t))
   (add-hook 'prog-mode-hook (show-paren-mode t))
   (add-hook 'prog-mode-hook (which-function-mode))
@@ -417,13 +417,13 @@
 (use-package org
   :ensure nil
   :hook (org-mode . (lambda nil
-                      (face-remap-add-relative 'default :height 1.05)
                       (setq-local line-spacing 8)
                       ;; fix for check-parens
                       (modify-syntax-entry ?\) "." org-mode-syntax-table)
                       (modify-syntax-entry ?\( "." org-mode-syntax-table)
                       (modify-syntax-entry ?< "." org-mode-syntax-table)
                       (modify-syntax-entry ?> "." org-mode-syntax-table)))
+  :hook (org-mode . visual-line-mode)
   :config
   ;; Taken from rougier: org-outer-indent
   (defun org-outer-indent--compute-prefixes ()
@@ -472,11 +472,13 @@
   (setq org-directory "~/.emacs.d/org"
         org-use-sub-superscripts '{}
         ;; org-export-with-sub-superscripts nil
+        org-ellipsis "…"
         org-pretty-entities t
         org-startup-indented t
         org-adapt-indentation t
         org-special-ctrl-a/e t
         org-fold-catch-invisible-edits 'show-and-error
+        org-edit-src-content-indentation 0
         org-src-preserve-indentation t
         org-src-fontify-natively t))
 
@@ -797,14 +799,27 @@
 
   (require 'dabbrev)
   (advice-add #'dabbrev-capf :before #'dabbrev--reset-global-variables)
-  
+
   (add-hook 'completion-at-point-functions #'file-capf)
   ;; (add-hook 'completion-at-point-functions #'dabbrev-capf 100) ; posframe/corfu issue
+
+  (add-to-list 'display-buffer-alist
+               '("\\*Completions\\*"
+                 (display-buffer-reuse-window display-buffer-at-bottom)
+                 (window-parameters (mode-line-format . none))))
 
   (setq tab-always-indent 'complete
         tab-first-completion 'word-or-paren
         completions-group t
-        completions-detailed t))
+        completions-detailed t
+        ;; completions-buffer (for eval-expr)
+        completion-auto-help 'always
+        completion-auto-select 'second-tab
+        completion-auto-wrap t
+        completion-show-help nil
+        completions-max-height 15
+        completions-detailed t
+        completions-format 'one-column))
 
 (use-package vertico-posframe
   :hook (vertico-mode . vertico-posframe-mode)
