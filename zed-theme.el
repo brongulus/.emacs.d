@@ -39,11 +39,11 @@
                           "#dcdcdd"
                         "#3c414c"))
       (background-color (if load-theme-light
-                            "#fafafa"
+                            "#f7f7f7"
                           "#282c33"))
       (foreground-color (if load-theme-light
-                            "black"
-                          "#c8ccd3"))
+                            "#1a1a1a"
+                          "#cccccc"))
       (green-color (if load-theme-light
                        "#50a14f"
                      "#a7bf87"))
@@ -61,7 +61,7 @@
                        "#c076d5"))
       (yellow-color (if load-theme-light
                         "#986801"
-                      "#d9c18c"))
+                      "#d6b000"))
       (light-yellow-color (if load-theme-light
                               "#ddc184"
                             "#d9c18c"))
@@ -70,7 +70,7 @@
    'zed
    ;; Basics
    `(default ((t (:background ,background-color :foreground ,foreground-color))))
-   `(cursor ((t (:background ,blue-color))))
+   `(cursor ((t (:background "#00c2ff"))))
    `(border-glyph ((t (nil))))
    `(info-node ((t (:italic t :bold t))))
    `(info-xref ((t (:bold t))))
@@ -294,7 +294,7 @@
    `(org-scheduled ((t (:foreground ,green-color))))
    `(org-scheduled-today ((t (:inherit org-scheduled))))
    `(org-date ((t (:inherit link))))
-   `(org-verbatim ((t (:foreground ,green-color))))
+   `(org-verbatim ((t (:foreground ,yellow-color))))
    `(org-habit-clear-face ((t (:foreground ,background-color))))
    `(org-habit-clear-future-face ((t (:foreground ,background-color))))
    `(org-habit-alert-face ((t (:foreground ,yellow-color :inverse-video t))))

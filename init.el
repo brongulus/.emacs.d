@@ -133,6 +133,7 @@
     (context-menu-mode 1)
     (savehist-mode)
     (blink-cursor-mode -1)
+    (setq blink-cursor-interval 0.7)
     (tooltip-mode -1))
   ;; Load theme based on the time of the day
   (let ((hour (substring (current-time-string) 11 13)))
@@ -979,7 +980,8 @@
         meow-keypad-describe-delay 1.0 ;; not interfere with which-key
         meow-use-cursor-position-hack t
         meow-use-clipboard t
-        meow-esc-delay 0.01)
+        meow-esc-delay 0.01
+        meow-cursor-type-insert '(bar . 3))
   (dolist (item '(word line block find till))
     (push `(,item . 0) meow-expand-hint-counts))
   (define-key meow-insert-state-keymap (kbd "j") (lambda nil (interactive)
