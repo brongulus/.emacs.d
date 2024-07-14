@@ -12,7 +12,8 @@ url/
 history
 ido.last
 .newsrc.eld
-networks-security.data
+network-security.data
+nov-places
 package-quickstart.el
 package-quickstart.elc
 places
