@@ -80,12 +80,10 @@
         shell-kill-buffer-on-exit t
         compilation-scroll-output 'first-error)
 
-  (add-to-list 'load-path (expand-file-name "lisp/" user-emacs-directory))
+  (push 'check-parens write-file-functions) ;; issue in org - fixed below
   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
   (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
   (add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
-  (push 'check-parens write-file-functions) ;; issue in org - fixed below
-  (add-hook 'text-mode-hook (visual-line-mode t))
   (add-hook 'prog-mode-hook (electric-pair-mode t))
   (add-hook 'prog-mode-hook (show-paren-mode t))
   (add-hook 'prog-mode-hook (which-function-mode))
@@ -95,12 +93,13 @@
                   nil))
 
   (defun silent-command (fn &rest args)
+    "Used to suppress output of FN."
     (let ((inhibit-message t)
           (message-log-max nil)
           (save-silently t))
       (apply fn args)))
 
-  (copy-face 'default 'fixed-pitch)
+  ;; (copy-face 'default 'fixed-pitch)
   (set-register ?f `(file . ,(locate-user-emacs-file "init.el")))
   (set-register ?c `(file . "~/problems/"))
   (with-eval-after-load 'whitespace
@@ -111,41 +110,46 @@
                             (make-glyph-code ?│))
     (xterm-mouse-mode))
 
-  (with-eval-after-load 'minibuffer
-    ;; highlight area when yanking/killing
-    (defun my/yank-pulse-advice (orig-fn &rest args)
-      (let (begin end)
-        (setq begin (point))
-        (apply orig-fn args)
-        (setq end (point))
-        (pulse-momentary-highlight-region begin end)))
-    (advice-add 'yank :around #'my/yank-pulse-advice)
-    (defun my/kill-pulse-advice (orig-fn beg end &rest args)
-      (pulse-momentary-highlight-region beg end)
-      (apply orig-fn beg end args))
-    (advice-add 'kill-ring-save :around #'my/kill-pulse-advice)
-    ;; enable some useful modes
-    (save-place-mode 1)
-    (setq savehist-additional-variables '(kill-ring))
-    (setq save-interprogram-paste-before-kill t)
-    (global-subword-mode 1)
-    (delete-selection-mode)
-    (context-menu-mode 1)
-    (savehist-mode)
-    (blink-cursor-mode -1)
-    (setq blink-cursor-interval 0.7)
-    (tooltip-mode -1))
-  ;; Load theme based on the time of the day
+  ;; load theme based on the time of the day
   (let ((hour (substring (current-time-string) 11 13)))
     (if (and (string-lessp hour "17") (string-greaterp hour "08"))
         (setq load-theme-light t))) ;; load-theme-light is a languid-theme var
   (load-theme 'zed :no-confirm)
   (defadvice load-theme (before theme-dont-propagate activate)
     (mapc #'disable-theme custom-enabled-themes))
-
+  ;; Quitly kill term buffers on exit
   (defadvice term-handle-exit
       (after term-kill-buffer-on-exit activate)
     (kill-buffer)))
+
+(use-package emacs
+  :ensure nil
+  :defer 2
+  :hook
+  (after-init . (lambda nil
+                  ;; highlight area when yanking/killing
+                  (defun my/yank-pulse-advice (orig-fn &rest args)
+                    (let (begin end)
+                      (setq begin (point))
+                      (apply orig-fn args)
+                      (setq end (point))
+                      (pulse-momentary-highlight-region begin end)))
+                  (advice-add 'yank :around #'my/yank-pulse-advice)
+                  (defun my/kill-pulse-advice (orig-fn beg end &rest args)
+                    (pulse-momentary-highlight-region beg end)
+                    (apply orig-fn beg end args))
+                  (advice-add 'kill-ring-save :around #'my/kill-pulse-advice)
+                  ;; enable some useful modes
+                  (save-place-mode 1)
+                  (setq savehist-additional-variables '(kill-ring))
+                  (setq save-interprogram-paste-before-kill t)
+                  (global-subword-mode 1)
+                  (delete-selection-mode)
+                  (context-menu-mode 1)
+                  (savehist-mode)
+                  (blink-cursor-mode -1)
+                  (setq blink-cursor-interval 0.7)
+                  (tooltip-mode -1))))
 
 (use-package package
   :ensure nil
@@ -177,11 +181,6 @@
          ("\\" . dired-up-directory)
          ("E" . wdired-change-to-wdired-mode))
   :config
-  (with-eval-after-load 'project
-    (add-to-list 'project-switch-commands '(project-dired "Dired" ?D)))
-
-  (put 'dired-find-alternate-file 'disabled nil)
-
   (defun dired-left()
     (interactive)
     (let ((dir (dired-noselect default-directory)))
@@ -192,6 +191,11 @@
              (window-parameters . ((mode-line-format . (" %b"))))))
       (pop-to-buffer dir)))
 
+  (with-eval-after-load 'project
+    (add-to-list 'project-switch-commands '(project-dired "Dired" ?D)))
+
+  (put 'dired-find-alternate-file 'disabled nil)
+  
   (setq dired-dwim-target t
         dired-auto-revert-buffer t
         dired-mouse-drag-files t
@@ -200,15 +204,7 @@
         mouse-drag-and-drop-region-cross-program t
         dired-kill-when-opening-new-dired-buffer t
         dired-recursive-deletes 'always
-        dired-recursive-copies 'always)
-
-  (with-eval-after-load 'cc-mode ;; why is this in dired
-    (defun c-indent-then-complete ()
-      (interactive)
-      (if (= 0 (c-indent-line-or-region))
-          (completion-at-point)))
-    (dolist (map (list c-mode-map c++-mode-map))
-      (define-key map (kbd "<tab>") #'c-indent-then-complete))))
+        dired-recursive-copies 'always))
 
 (use-package xref
   :ensure nil
@@ -219,7 +215,7 @@
         xref-show-xrefs-function 'xref-show-definitions-completing-read))
 
 (use-package windmove
-  :defer 2
+  :defer 1
   :ensure nil
   :config
   (setq windmove-wrap-around t)
@@ -399,6 +395,7 @@
         recentf-auto-cleanup 'never))
 
 (use-package tramp
+  :after minibuffer
   :hook (minibuffer-mode . tramp-cleanup-all-connections)
   :config
   (setq tramp-process-connection-type nil)
@@ -708,8 +705,7 @@
 ;;; ELPA packages
 ;;; --------------
 (use-package popper
-  :bind (;("C-`"   . popper-toggle)
-         ("M-j"   . popper-toggle)
+  :bind (("M-j"   . popper-toggle)
          ("C-`"   . popper-cycle)
          ("C-M-`" . popper-toggle-type)
          :repeat-map popper-repeat-map
@@ -832,7 +828,7 @@
         vertico-posframe-poshandler 'posframe-poshandler-frame-top-center))
 
 (use-package corfu
-  :init (global-corfu-mode)
+  :hook (after-init . global-corfu-mode)
   :hook ((corfu-mode . corfu-popupinfo-mode)
          (meow-insert-exit . corfu-quit))
   :bind (:map corfu-map
@@ -858,6 +854,21 @@
   :hook ((prog-mode conf-mode fundamental-mode text-mode tex-mode) . undo-fu-session-mode)
   :config
   (setq undo-fu-session-compression nil))
+
+(use-package writeroom-mode
+  :config
+  (setq writeroom-width 90
+         writeroom-global-effects nil
+         writeroom-maximize-window nil)
+  (add-hook 'writeroom-mode-hook
+            (lambda nil
+              (if writeroom-mode
+                  (progn
+                    (tab-bar-new-tab)
+                    (add-hook 'post-command-hook #'recenter nil t))
+                  (progn
+                    (tab-bar-close-tab)
+                    (remove-hook 'post-command-hook #'recenter t))))))
 
 (use-package eat
   :commands eat-project
@@ -926,8 +937,7 @@
   :ensure nil
   :load-path "~/Documents/org-cv"
   ;; :vc (:fetcher gitlab :repo "Titan-C/org-cv")
-  :after org
-  :init (require 'ox-awesomecv))
+  :after org)
 
 (use-package deadgrep
   :preface
@@ -1160,6 +1170,14 @@
 (setq python-indent-guess-indent-offset t
       python-indent-guess-indent-offset-verbose nil)
 
+(with-eval-after-load 'cc-mode ;; why is this in dired
+    (defun c-indent-then-complete ()
+      (interactive)
+      (if (= 0 (c-indent-line-or-region))
+          (completion-at-point)))
+    (dolist (map (list c-mode-map c++-mode-map))
+      (define-key map (kbd "<tab>") #'c-indent-then-complete)))
+
 (push '("\\.rs\\'" . rust-ts-mode) auto-mode-alist)
 (push '("\\.go\\'" . go-ts-mode) auto-mode-alist)
 (push '("\\.ts\\'" . typescript-ts-mode) auto-mode-alist)
@@ -1230,6 +1248,7 @@
 
 (use-package foxy
   :ensure nil
+  :load-path "~/.emacs.d/lisp"
   :bind (("C-c C-l" . foxy-listen-start)
          ("C-c C-c" . foxy-cycle-files)
          ("C-C C-b" . foxy-run-all-tests))
@@ -1300,7 +1319,8 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex avy))
+   '(avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode
+         solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
  '(package-vc-selected-packages
    '((janet-ts-mode :vc-backend Git :url "https://github.com/sogaiu/janet-ts-mode"))))
 (custom-set-faces

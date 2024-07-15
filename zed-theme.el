@@ -187,7 +187,7 @@
    `(completions-highlight ((t (:inherit highlight :extend t))))
    `(corfu-default ((t (:background ,modeline-color))))
    `(corfu-current ((t (:background ,selection-color :foreground ,foreground-color))))
-   `(dired-directory ((t (:foreground ,yellow-color))))
+   `(dired-directory ((t (:foreground ,light-yellow-color))))
    `(dired-header ((t (:foreground ,green-color :height 1.2))))
    `(dired-marked ((t (:foreground ,magenta-color))))
    `(fill-column-indicator ((t (:inherit font-lock-comment-face :height 1.1))))
@@ -304,14 +304,14 @@
    `(org-habit-ready-face ((t (:foreground ,green-color))))
    `(org-habit-ready-future-face ((t (:foreground ,green-color))))
    
-   `(tab-bar ((t (:background ,subtle-color :box ,border-color))))
+   `(tab-bar ((t (:background ,subtle-color :box ,border-color :height 1.0))))
    `(tab-bar-tab
-     ((t (:background ,background-color :foreground ,foreground-color
+     ((t (:background ,background-color :foreground ,foreground-color :height 1.0
                       ,@(when (display-graphic-p)
                           (list :underline
                                 (list :color background-color :position -1)))))))
    `(tab-bar-tab-inactive
-     ((t (:background ,subtle-color :foreground ,inactive-color :weight regular
+     ((t (:background ,subtle-color :foreground ,inactive-color :weight regular :height 1.0
                       ,@(when (display-graphic-p)
                           (list :underline
                                 (list :color border-color :position -1)))))))

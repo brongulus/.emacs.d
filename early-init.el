@@ -110,15 +110,14 @@
 
 (add-hook 'window-setup-hook
           (lambda ()
-            (if (or (> (length command-line-args) 2)
-                    (file-exists-p
-                     (locate-user-emacs-file ".emacs.desktop")))
+            (if (file-exists-p (locate-user-emacs-file ".emacs.desktop"))
                 (message (format "%d packages loaded in %s"
                                  (length package-activated-list)
                                  (format "%.2f seconds"
                                          (float-time
                                           (time-subtract after-init-time before-init-time)))))
-              (ar/show-welcome-buffer))))
+              (when (display-graphic-p)
+                (ar/show-welcome-buffer)))))
 
 (if (eq system-type 'darwin)
     (setq mac-option-modifier 'meta)
