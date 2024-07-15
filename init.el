@@ -76,6 +76,7 @@
         tabify-regexp "^\t* [ \t]+"
         grep-command "grep --color=always -nHi -r --include=*.* -e \"pattern\" ."
         electric-pair-skip-self t
+        electric-pair-preserve-balance nil
         shell-command-prompt-show-cwd t
         shell-kill-buffer-on-exit t
         compilation-scroll-output 'first-error)
@@ -772,6 +773,7 @@
 
 (use-package vertico
   :hook (after-init . vertico-mode)
+  :hook (rfn-eshadow-update-overlay . vertico-directory-tidy)
   :bind (:map vertico-map
                 ("<backspace>" . vertico-directory-delete-char)
                 ("RET" . vertico-directory-enter)
@@ -863,12 +865,8 @@
   (add-hook 'writeroom-mode-hook
             (lambda nil
               (if writeroom-mode
-                  (progn
-                    (tab-bar-new-tab)
-                    (add-hook 'post-command-hook #'recenter nil t))
-                  (progn
-                    (tab-bar-close-tab)
-                    (remove-hook 'post-command-hook #'recenter t))))))
+                    (add-hook 'post-command-hook #'recenter nil t)
+                (remove-hook 'post-command-hook #'recenter t)))))
 
 (use-package eat
   :commands eat-project
@@ -950,18 +948,17 @@
   :mode ("\\.epub\\'" . nov-mode)
   :hook
   (nov-mode . visual-line-mode)
-  ;; (nov-mode . visual-fill-column-mode))
+  (nov-mode . writeroom-mode)
   :config
   (setq nov-text-width 80
-        ;; visual-fill-column-center-text t
         nov-header-line-format nil))
 
 (use-package meow
   :hook (after-init . (lambda ()
                         (require 'meow)
                         (meow-global-mode)))
-  :hook (meow-insert-mode . (lambda nil
-                              (blink-cursor-mode 'toggle)))
+  :hook (meow-insert-enter . (lambda nil (blink-cursor-mode +1)))
+  :hook (meow-insert-exit . (lambda nil (blink-cursor-mode -1)))
   ;; :hook (special-mode . meow-normal-mode)
   :preface
   (defun my-chord (initial-key final-key fn) ;; src: wasamasa
@@ -1032,21 +1029,8 @@
    '("A" . meow-open-below)
    '("b" . meow-back-word)
    '("B" . meow-back-symbol)
-   '("c" . (lambda () (interactive)
-             (if (and (region-active-p)
-                      (bound-and-true-p rectangle-mark-mode))
-                 (call-interactively 'string-rectangle)
-               (meow-change))))
-   '("M-C" . (lambda () (interactive)
-               (if (and (region-active-p)
-                        (bound-and-true-p rectangle-mark-mode))
-                   (meow-prev 1)
-                 (rectangle-mark-mode 1))))
-   '("C" . (lambda () (interactive)
-             (if (and (region-active-p)
-                      (bound-and-true-p rectangle-mark-mode))
-                 (meow-next 1)
-               (rectangle-mark-mode 1))))
+   '("c" . meow-change)
+   '("C" . string-rectangle)
    '("d" . (lambda () (interactive)
              (if (region-active-p)
                  (meow-kill)
@@ -1061,7 +1045,7 @@
    '("gc" . org-capture)
    '("gC" . meow-comment)
    '("gd" . xref-find-definitions)
-   '("gf" . ffap) ;; embark-dwim
+   '("gf" . ffap)
    '("gg" . avy-goto-char-timer)
    '("gh" . diff-hl-show-hunk)
    '("gi" . imenu)
@@ -1072,11 +1056,7 @@
    '("G" . meow-grab)
    '("h" . meow-left)
    '("H" . down-list)
-   '("i" . (lambda nil (interactive)
-             (if (and (region-active-p)
-                      (bound-and-true-p rectangle-mark-mode))
-                 (call-interactively 'string-rectangle)
-               (meow-insert))))
+   '("i" . meow-insert)
    '("I" . meow-open-above)
    '("j" . meow-next)
    '("J" . (lambda () (interactive)
@@ -1098,7 +1078,12 @@
                       (t (backward-up-list 1 t t))))))
    '("mi" . meow-inner-of-thing)
    '("ma" . meow-bounds-of-thing)
-   '("n" . meow-search)
+   '("n" . (lambda nil (interactive)
+             (meow--direction-forward)
+             (call-interactively 'meow-search)))
+   '("N" . (lambda nil (interactive)
+             (meow--direction-backward)
+             (call-interactively 'meow-search)))
    '("o" . occur)
    '("O" . meow-to-block)
    '("p" . meow-yank)
@@ -1124,7 +1109,7 @@
                  (meow--make-selection '(expand . char) (point) (point) t)
                  (meow--select)))
              (message "Visual selection mode enabled")))
-   '("V" . meow-page-down)
+   '("V" . rectangle-mark-mode)
    '("w" . meow-mark-word)
    '("W" . meow-mark-symbol)
    '("x" . meow-line)
