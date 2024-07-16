@@ -53,6 +53,7 @@
                 debug-on-error t
                 warning-minimum-level :error
                 display-line-numbers-width 5
+                display-line-numbers-grow-only t
                 delete-pair-blink-delay 0)
 
   (setq read-process-output-max (* 16 1024)
@@ -125,10 +126,20 @@
     (kill-buffer)))
 
 (use-package emacs
-  :ensure nil
+  :no-require
+  :bind ("C-x w w" . my/toggle-full-window)
   :defer 2
   :hook
   (after-init . (lambda nil
+                  ;; random functions
+                  (defun my/toggle-full-window()
+                    "Toggle full view of selected window."
+                    (interactive)
+                    (unless (bound-and-true-p winner-mode)
+                      (winner-mode))
+                    (if (window-parent)
+                        (delete-other-windows)
+                      (winner-undo)))
                   ;; highlight area when yanking/killing
                   (defun my/yank-pulse-advice (orig-fn &rest args)
                     (let (begin end)
