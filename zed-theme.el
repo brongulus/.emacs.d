@@ -61,7 +61,7 @@
                        "#c076d5"))
       (yellow-color (if load-theme-light
                         "#986801"
-                      "#d6b000"))
+                      "#d9c18c"))
       (light-yellow-color (if load-theme-light
                               "#ddc184"
                             "#d9c18c"))
@@ -119,7 +119,7 @@
    ;; Font-lock
    `(font-lock-builtin-face ((t (:foreground ,blue-color :inherit italic))))
    `(font-lock-comment-face ((t (:foreground "#5e636e"))))
-   `(font-lock-constant-face ((t (:foreground ,red-color))))
+   `(font-lock-constant-face ((t (:foreground ,yellow-color))))
    `(font-lock-number-face ((t (:inherit font-lock-constant-face))))
    `(font-lock-doc-string-face ((t (:foreground "#1A93AE" :background "#F4F9FE"))))
    `(font-lock-function-name-face ((t (:foreground ,blue-color))))
@@ -187,7 +187,7 @@
    `(completions-highlight ((t (:inherit highlight :extend t))))
    `(corfu-default ((t (:background ,modeline-color))))
    `(corfu-current ((t (:background ,selection-color :foreground ,foreground-color))))
-   `(dired-directory ((t (:foreground ,light-yellow-color))))
+   `(dired-directory ((t (:foreground ,yellow-color))))
    `(dired-header ((t (:foreground ,green-color :height 1.2))))
    `(dired-marked ((t (:foreground ,magenta-color))))
    `(fill-column-indicator ((t (:inherit font-lock-comment-face :height 1.1))))
@@ -308,7 +308,8 @@
    `(tab-bar-tab
      ((t (:background ,background-color :foreground ,foreground-color :height 1.0
                       ,@(when (display-graphic-p)
-                          (list :underline
+                          (list :overline border-color
+                                :underline
                                 (list :color background-color :position -1)))))))
    `(tab-bar-tab-inactive
      ((t (:background ,subtle-color :foreground ,inactive-color :weight regular :height 1.0
@@ -330,6 +331,7 @@
    `(tab-line-highlight ((t (:inherit tab-line-tab))))
 
    `(deadgrep-filename-face ((t (:inherit bold :inverse-video t))))
+   ;; `(vertico-posframe ((t (:foreground ,foreground-color :background "#1a1a1a")))
    `(vertico-posframe-border ((t (:inherit child-frame-border))))
    `(why-this-face ((t (:inherit font-lock-comment-face))))
    `(which-func ((t (:foreground ,inactive-color))))))
@@ -390,7 +392,9 @@
                           'face `(,indicator-face
                                   :inverse-video t
                                   :box (:style flat-button))))))
-   "%e"
+   "%e "
+   (:eval (when (package-installed-p 'nerd-icons)
+            (nerd-icons-icon-for-buffer)))
    (:eval (propertize " %b " 'face (if (and (buffer-modified-p)
                                             (or (derived-mode-p 'prog-mode)
                                                 (derived-mode-p 'text-mode)))
@@ -415,7 +419,9 @@
 ;; Tabs
 (with-eval-after-load 'tab-line
   (setq tab-line-close-button
-        (propertize (concat " " (make-string 1 #x00D7) " ") 'close-tab t)))
+        (propertize (concat " " (make-string 1 #x00D7) " ") 'close-tab t)
+        tab-line-left-button zed-tab-back-button
+        tab-line-right-button zed-tab-forward-button))
 
 (with-eval-after-load 'tab-bar
   (defun zed-tab-name (tab _i)
@@ -430,25 +436,29 @@
        (when (display-graphic-p)
          (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
                      'display '(space :width (1))))
-       ;; show dot if buffer modified else " "
-       (if (and selected-p (buffer-modified-p)
-                (or (derived-mode-p 'prog-mode)
-                    (derived-mode-p 'text-mode)))
-           (propertize (concat " " (make-string 1 #x23fA))
-                       'face `(:inherit tab-bar-tab :foreground ,(face-background 'cursor nil t))
-                       'display '(raise 0.2))
-         (apply 'propertize " " `(tab ,tab ,@(if selected-p '(selected t))
-                                      face ,face
-                                      display (raise 0.2))))
        ;; apply face to buffer name
        (apply 'propertize
               (concat
+               " "
                (propertize (string-replace "%" "%%" name) ;; (bug#57848)
-                           'follow-link 'ignore)
-               (if (and selected-p tab-bar-close-button-show)
-                   tab-bar-close-button
-                 " ")
-               "")
+                           'follow-link 'ignore))
+              `(tab ,tab
+                    ,@(if selected-p '(selected t))
+                    face ,face
+                    display (raise 0.2)))
+       ;; show dot if selected buffer modified else close button
+       (when (and selected-p (buffer-modified-p)
+                  (or (derived-mode-p 'prog-mode)
+                      (derived-mode-p 'text-mode)))
+         (propertize (concat "" (make-string 1 #x23fA) "")
+                     'face `(:inherit tab-bar-tab
+                                      :foreground ,(face-background 'cursor nil t))
+                     'display '(raise 0.2)))
+       (apply 'propertize
+              (if (and selected-p tab-bar-close-button-show
+                       (not (buffer-modified-p)))
+                  tab-bar-close-button
+                " ")
               `(tab ,tab
                     ,@(if selected-p '(selected t))
                     face ,face
@@ -469,11 +479,11 @@
     (when tab-bar-history-mode
       `((sep-history-back menu-item ,(tab-bar-separator) ignore)
         (history-back
-         menu-item ,zed-tab-bar-back-button tab-bar-history-back
+         menu-item ,zed-tab-back-button tab-bar-history-back
          :help "Click to go back in tab history")
         (sep-history-forward menu-item ,(tab-bar-separator) ignore)
         (history-forward
-         menu-item ,zed-tab-bar-forward-button tab-bar-history-forward
+         menu-item ,zed-tab-forward-button tab-bar-history-forward
          :help "Click to go forward in tab history"))))
   
   (setq tab-bar-tab-name-format-function #'zed-tab-name
@@ -494,9 +504,9 @@
         tab-bar-close-last-tab-choice 'tab-bar-mode-disable
         tab-bar-close-button
         (propertize (concat (make-string 1 #x00D7) " ") 'close-tab t)
-        zed-tab-bar-forward-button
+        zed-tab-forward-button
         (propertize "⏵" 'display '(raise 0.2))
-        zed-tab-bar-back-button
+        zed-tab-back-button
         (propertize "⏴" 'display '(raise 0.2))))
 
 ;;;###autoload

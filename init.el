@@ -82,6 +82,7 @@
         compilation-scroll-output 'first-error)
 
   (push 'check-parens write-file-functions) ;; issue in org - fixed below
+  (add-hook 'debugger-mode-hook #'visual-line-mode)
   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
   (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
   (add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
@@ -182,13 +183,19 @@
          ("\\" . dired-up-directory)
          ("E" . wdired-change-to-wdired-mode))
   :config
+  (when (eq system-type 'darwin)
+    (require 'ls-lisp)
+    (setq ls-lisp-use-insert-directory-program nil
+          dired-listing-switches
+          "-l --almost-all --human-readable --sort=version --group-directories-first"))
+  
   (defun dired-left()
     (interactive)
     (let ((dir (dired-noselect default-directory)))
       (display-buffer-in-side-window
        dir `((side . left)
              (slot . 0)
-             (window-width . 0.18)
+             (window-width . 0.20)
              (window-parameters . ((mode-line-format . (" %b"))))))
       (pop-to-buffer dir)))
 
@@ -739,20 +746,23 @@
               (lambda (orig-fn &rest args)
                 (string-replace "*" "" (apply orig-fn args))))
   (defun popper-tab-line--format (tab tabs)
-    (concat
-     (when (display-graphic-p)
-       (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
-                   'display '(space :width (1))))
-     (propertize " "
-                 'face (if (eq tab (current-buffer))
+    (let ((tab-vbar (when (display-graphic-p)
+                      (propertize " "
+                                  'face `(:background ,(face-foreground 'vertical-border))
+                                  'display '(space :width (1)))))
+          (tab-face (if (eq tab (current-buffer))
                            (if (mode-line-window-selected-p)
                                'tab-line-tab-current 'tab-line-tab)
-                         'tab-line-tab-inactive))
-     (tab-line-tab-name-format-default tab tabs)
-
-     (when (display-graphic-p)
-       (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
-                   'display '(space :width (1)))))))
+                         'tab-line-tab-inactive)))
+      (concat
+       tab-vbar
+       (propertize " " 'face tab-face)
+       (when (package-installed-p 'nerd-icons)
+         (with-current-buffer tab
+         (propertize (format "%s " (nerd-icons-icon-for-buffer))
+                             'face tab-face)))
+       (tab-line-tab-name-format-default tab tabs)
+       tab-vbar))))
 
 (use-package orderless
   :after minibuffer
@@ -827,6 +837,7 @@
         '((left-fringe . 8)
           (right-fringe . 8))
         vertico-posframe-width 80
+        vertico-posframe-border-width 1
         vertico-posframe-poshandler 'posframe-poshandler-frame-top-center))
 
 (use-package corfu
@@ -844,13 +855,18 @@
   (setq corfu-cycle t
         corfu-auto t
         corfu-auto-prefix 2
-        corfu-auto-delay 0
+        corfu-auto-delay 0.1
         corfu-separator 32
+        corfu-max-width 80
+        corfu-preselect 'prompt
         corfu-quit-no-match t
         corfu-quit-at-boundary 'separator
         corfu-preview-current nil
-        corfu-popupinfo-delay '(0.2 . 0.1)
-        corfu-preselect-first nil))
+        corfu-popupinfo-delay '(0.5 . 0.1)
+        corfu-preselect-first nil)
+  (use-package corfu-terminal
+    :when (not (display-graphic-p))
+    :hook ((corfu-mode . corfu-terminal-mode))))
 
 (use-package undo-fu-session
   :hook ((prog-mode conf-mode fundamental-mode text-mode tex-mode) . undo-fu-session-mode)
@@ -867,6 +883,18 @@
               (if writeroom-mode
                     (add-hook 'post-command-hook #'recenter nil t)
                 (remove-hook 'post-command-hook #'recenter t)))))
+
+(use-package nerd-icons
+  :config
+  (when (not (find-font (font-spec :name nerd-icons-font-family)))
+    (nerd-icons-install-fonts t))
+  (push '(eat-mode nerd-icons-devicon "nf-dev-terminal") nerd-icons-mode-icon-alist)
+  (use-package nerd-icons-corfu
+    :init
+    (with-eval-after-load 'corfu
+      (push 'nerd-icons-corfu-formatter corfu-margin-formatters)))
+  (use-package nerd-icons-dired
+    :hook (dired-mode . nerd-icons-dired-mode)))
 
 (use-package eat
   :commands eat-project
@@ -1304,8 +1332,7 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode
-         solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
+   '(corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
  '(package-vc-selected-packages
    '((janet-ts-mode :vc-backend Git :url "https://github.com/sogaiu/janet-ts-mode"))))
 (custom-set-faces
