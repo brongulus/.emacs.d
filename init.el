@@ -136,7 +136,7 @@
                     "Toggle full view of selected window."
                     (interactive)
                     (unless (bound-and-true-p winner-mode)
-                      (winner-mode))
+                      (winner-mode +1))
                     (if (window-parent)
                         (delete-other-windows)
                       (winner-undo)))
@@ -198,7 +198,7 @@
     (require 'ls-lisp)
     (setq ls-lisp-use-insert-directory-program nil
           dired-listing-switches
-          "-l --almost-all --human-readable --sort=version --group-directories-first"))
+          "-l --almost-all --human-readable --group-directories-first"))
   
   (defun dired-left()
     (interactive)
@@ -363,8 +363,8 @@
               "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/x86_64-apple-darwin23"
               "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/" "-x" "c++" "-"))))
   (setq flymake-suppress-zero-counters t
-        flymake-warning-bitmap '(filled-square compilation-warning)
         flymake-error-bitmap '(filled-square compilation-error)
+        flymake-warning-bitmap '(filled-square compilation-warning)
         flymake-note-bitmap '(filled-square compilation-info)
         ;; flymake-show-diagnostics-at-end-of-line t
         flymake-fringe-indicator-position 'right-fringe)
@@ -453,9 +453,9 @@
           (make-vector org-indent--deepest-level nil))
     ;; Find the lowest headline level
     (let* ((headline-levels (or (org-element-map
-                                    (org-element-parse-buffer) 'headline
-                                  #'(lambda (item)
-                                      (org-element-property :level item)))
+                                 (org-element-parse-buffer) 'headline
+                                 #'(lambda (item)
+                                     (org-element-property :level item)))
                                 '()))
            (max-level (seq-max headline-levels))
            ;; We could also iterate over each evel to get maximum length
@@ -565,7 +565,7 @@
   :hook (window-setup . desktop-read)
   :config
   (dolist (item
-           '(alpha background-color background-mode border-width
+           '(alpha background-color background-mode border-width tab-bar
                    bottom-divider-width cursor-color cursor-type display-type
                    environment font fontsize foreground-color fullscreen
                    fullscreen-restore horizontal-scroll-bars internal-border-width
@@ -762,16 +762,18 @@
                                   'face `(:background ,(face-foreground 'vertical-border))
                                   'display '(space :width (1)))))
           (tab-face (if (eq tab (current-buffer))
-                           (if (mode-line-window-selected-p)
-                               'tab-line-tab-current 'tab-line-tab)
-                         'tab-line-tab-inactive)))
+                        (if (mode-line-window-selected-p)
+                            'tab-line-tab-current 'tab-line-tab)
+                      'tab-line-tab-inactive)))
       (concat
        tab-vbar
        (propertize " " 'face tab-face)
-       (when (package-installed-p 'nerd-icons)
-         (with-current-buffer tab
-         (propertize (format "%s " (nerd-icons-icon-for-buffer))
-                             'face tab-face)))
+       (when (and (package-installed-p 'nerd-icons)
+                  (featurep 'nerd-icons))
+         (with-eval-after-load 'nerd-icons
+           (with-current-buffer tab
+             (propertize (format "%s " (nerd-icons-icon-for-buffer))
+                         'face tab-face))))
        (tab-line-tab-name-format-default tab tabs)
        tab-vbar))))
 
@@ -796,14 +798,14 @@
   :hook (after-init . vertico-mode)
   :hook (rfn-eshadow-update-overlay . vertico-directory-tidy)
   :bind (:map vertico-map
-                ("<backspace>" . vertico-directory-delete-char)
-                ("RET" . vertico-directory-enter)
-                ("TAB" . vertico-next)
-                ("<backtab>" . vertico-previous)
-                ("S-TAB" . vertico-previous)
-                ("M-TAB" . vertico-previous)
-                ("C-j" . vertico-next)
-                ("C-k" . vertico-previous))
+              ("<backspace>" . vertico-directory-delete-char)
+              ("RET" . vertico-directory-enter)
+              ("TAB" . vertico-next)
+              ("<backtab>" . vertico-previous)
+              ("S-TAB" . vertico-previous)
+              ("M-TAB" . vertico-previous)
+              ("C-j" . vertico-next)
+              ("C-k" . vertico-previous))
   :config
   (setq vertico-scroll-margin 0
         vertico-resize nil
@@ -887,18 +889,26 @@
 (use-package writeroom-mode
   :config
   (setq writeroom-width 90
-         writeroom-global-effects nil
-         writeroom-maximize-window nil)
+        writeroom-global-effects nil
+        writeroom-maximize-window nil)
   (add-hook 'writeroom-mode-hook
             (lambda nil
               (if writeroom-mode
-                    (add-hook 'post-command-hook #'recenter nil t)
+                  (add-hook 'post-command-hook #'recenter nil t)
                 (remove-hook 'post-command-hook #'recenter t)))))
 
 (use-package nerd-icons
+  :defer 0.2
   :config
-  (when (not (find-font (font-spec :name nerd-icons-font-family)))
-    (nerd-icons-install-fonts t))
+  (eval-after-load 'nerd-icons
+    (when (not (find-font (font-spec :name nerd-icons-font-family)))
+      (nerd-icons-install-fonts t)))
+  (setq eglot-menu-string (nerd-icons-octicon "nf-oct-sync"))
+  (when (custom-theme-enabled-p 'zed)
+    (setq zed-tab-back-button
+          (nerd-icons-octicon "nf-oct-arrow_left" :v-adjust 0.2)
+          zed-tab-forward-button
+          (nerd-icons-octicon "nf-oct-arrow_right" :v-adjust 0.2)))
   (push '(eat-mode nerd-icons-devicon "nf-dev-terminal") nerd-icons-mode-icon-alist)
   (use-package nerd-icons-corfu
     :init
@@ -1195,12 +1205,12 @@
       python-indent-guess-indent-offset-verbose nil)
 
 (with-eval-after-load 'cc-mode ;; why is this in dired
-    (defun c-indent-then-complete ()
-      (interactive)
-      (if (= 0 (c-indent-line-or-region))
-          (completion-at-point)))
-    (dolist (map (list c-mode-map c++-mode-map))
-      (define-key map (kbd "<tab>") #'c-indent-then-complete)))
+  (defun c-indent-then-complete ()
+    (interactive)
+    (if (= 0 (c-indent-line-or-region))
+        (completion-at-point)))
+  (dolist (map (list c-mode-map c++-mode-map))
+    (define-key map (kbd "<tab>") #'c-indent-then-complete)))
 
 (push '("\\.rs\\'" . rust-ts-mode) auto-mode-alist)
 (push '("\\.go\\'" . go-ts-mode) auto-mode-alist)

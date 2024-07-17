@@ -17,6 +17,8 @@
   :type 'boolean
   :group 'zed)
 
+(setq zed-icons-p (package-installed-p 'nerd-icons))
+
 (let ((selection-color (if load-theme-light
                            "#C9D0D9"
                          "#3d4b5c"))
@@ -45,25 +47,26 @@
                             "#1a1a1a"
                           "#cccccc"))
       (green-color (if load-theme-light
-                       "#50a14f"
+                       "#5f8700"
                      "#a7bf87"))
       (blue-color (if load-theme-light
                       "#6079db"
-                    "#80ace3"))
+                    "#81a2be"))
       (cyan-color (if load-theme-light
                       "#6594bd"
                     "#7db2bd"))
       (red-color (if load-theme-light
                      "#c56655"
                    "#c47779"))
+      (orange-color "#f5871f")
       (magenta-color (if load-theme-light
-                         "#5c3e99"
-                       "#c076d5"))
+                         "#875faf"
+                       "#b294bb"))
       (yellow-color (if load-theme-light
-                        "#986801"
+                        "#bb9200"
                       "#d9c18c"))
       (light-yellow-color (if load-theme-light
-                              "#ddc184"
+                              "#eab700"
                             "#d9c18c"))
       (_x-border-color "#a5a5a5"))
   (custom-theme-set-faces
@@ -202,9 +205,9 @@
    `(line-number ((t (:inherit font-lock-comment-face))))
    `(line-number-current-line ((t (:inherit hl-line :foreground ,foreground-color))))
    `(orderless-match-face-0 ((t (:foreground ,blue-color :weight bold))))
-   `(orderless-match-face-1 ((t (:foreground ,red-color :weight bold))))
+   `(orderless-match-face-1 ((t (:foreground ,yellow-color :weight bold))))
    `(orderless-match-face-2 ((t (:foreground ,green-color :weight bold))))
-   `(orderless-match-face-3 ((t (:foreground ,yellow-color :weight bold))))
+   `(orderless-match-face-3 ((t (:foreground ,red-color :weight bold))))
    `(popper-echo-area ((t (:inherit mode-line))))
    `(pulse-highlight-start-face ((t (:background ,light-yellow-color))))
    `(pulse-highlight-face ((t (:background ,light-yellow-color :extend t))))
@@ -308,8 +311,7 @@
    `(tab-bar-tab
      ((t (:background ,background-color :foreground ,foreground-color :height 1.0
                       ,@(when (display-graphic-p)
-                          (list :overline border-color
-                                :underline
+                          (list :underline
                                 (list :color background-color :position -1)))))))
    `(tab-bar-tab-inactive
      ((t (:background ,subtle-color :foreground ,inactive-color :weight regular :height 1.0
@@ -360,15 +362,27 @@
                            'help-echo "Mouse-1: Show major-mode-menu"
                            'local-map mode-line-major-mode-keymap))
         (:eval (when (bound-and-true-p vc-mode)
-                 (propertize (concat " " vc-mode) 'face ;; vc-display-status 'no-backend
+                 (propertize (concat "" vc-mode) 'face ;; vc-display-status 'no-backend
                              '(:inherit success :weight bold))))
         (:eval (when (bound-and-true-p flymake-mode)
                  (let ((flymake-mode-line-counter-format
-                        '(" " flymake-mode-line-error-counter
-                          flymake-mode-line-warning-counter
-                          flymake-mode-line-note-counter "")))
+                        (if zed-icons-p
+                            (with-eval-after-load 'nerd-icons
+                              `(""
+                                ,(when (flymake--mode-line-counter :error nil)
+                                   (concat " " (nerd-icons-codicon "nf-cod-error" :face 'error :v-adjust 0.1) " "))
+                                flymake-mode-line-error-counter
+                                ,(when (flymake--mode-line-counter :warning nil)
+                                   (concat " " (nerd-icons-codicon "nf-cod-warning" :face 'warning :v-adjust 0.1) ""))
+                                flymake-mode-line-warning-counter
+                                ,(when (flymake--mode-line-counter :note nil)
+                                   (concat " " (nerd-icons-codicon "nf-cod-info" :face 'success :v-adjust 0.1) ""))
+                                flymake-mode-line-note-counter ""))
+                          '(" " flymake-mode-line-error-counter
+                            flymake-mode-line-warning-counter
+                            flymake-mode-line-note-counter ""))))
                    (flymake--mode-line-counters))))
-        (:eval (propertize " %l:%C" 'face 'which-func))))
+        (:eval (propertize " %l:%C " 'face 'which-func))))
 
 (defun my/ml-padding ()
   "Adding padding to the modeline so that spme elements can be right aligned."
@@ -393,8 +407,9 @@
                                   :inverse-video t
                                   :box (:style flat-button))))))
    "%e "
-   (:eval (when (package-installed-p 'nerd-icons)
-            (nerd-icons-icon-for-buffer)))
+   (:eval (when zed-icons-p
+            (with-eval-after-load 'nerd-icons
+              (nerd-icons-icon-for-buffer))))
    (:eval (propertize " %b " 'face (if (and (buffer-modified-p)
                                             (or (derived-mode-p 'prog-mode)
                                                 (derived-mode-p 'text-mode)))
@@ -414,7 +429,8 @@
             (font-lock-add-keywords
              nil
              '(("\\<\\(FIXME\\|HACK\\|TODO\\|BUG\\|DONE\\)"
-                1 font-lock-warning-face t)))))
+                1 font-lock-warning-face t)
+               (";" . 'font-lock-comment-face)))))
 
 ;; Tabs
 (with-eval-after-load 'tab-line
