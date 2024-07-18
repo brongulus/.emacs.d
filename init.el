@@ -14,7 +14,6 @@
 (use-package emacs
   :no-require
   :bind (("C-h '" . describe-face)
-         ("M-o" . project-switch-project)
          ("M-c" . quick-calc) ; 16#hex
          ("M-k" . kill-word)
          ("M-d" . backward-kill-word)
@@ -65,21 +64,25 @@
         undo-limit 67108864
         undo-strong-limit 100663296
         undo-outer-limit 1006632960
+        enable-local-variables :safe
+        scroll-conservatively 10
+        scroll-preserve-screen-position t
+        split-height-threshold nil
         save-abbrevs nil
-        inhibit-startup-screen t
         make-backup-files nil
         create-lockfiles nil
         uniquify-buffer-name-style 'forward
         auto-revert-verbose nil
         sentence-end-double-space nil
         Info-use-header-line nil
-        outline-minor-mode-cycle t
+        outline-minor-mode-cycle nil ;t
         tabify-regexp "^\t* [ \t]+"
         grep-command "grep --color=always -nHi -r --include=*.* -e \"pattern\" ."
         electric-pair-skip-self t
         electric-pair-preserve-balance nil
         shell-command-prompt-show-cwd t
         shell-kill-buffer-on-exit t
+        compilation-ask-about-save nil
         compilation-scroll-output 'first-error)
 
   (push 'check-parens write-file-functions) ;; issue in org - fixed below
@@ -227,11 +230,15 @@
 
 (use-package xref
   :ensure nil
+  :bind (:map xref--transient-buffer-mode-map
+              ("TAB" . xref-show-location-at-point))
   :config
-  (setq xref-search-program 'ripgrep
+  (setq xref-search-program (if (executable-find "rg")
+                                'ripgrep
+                              'grep)
         xref-auto-jump-to-first-xref nil ; 'move
-        xref-show-definitions-function 'xref-show-definitions-completing-read
-        xref-show-xrefs-function 'xref-show-definitions-completing-read))
+        xref-show-definitions-function 'xref-show-definitions-buffer-at-bottom
+        xref-show-xrefs-function 'xref-show-definitions-buffer-at-bottom))
 
 (use-package windmove
   :defer 1
@@ -368,8 +375,7 @@
         flymake-note-bitmap '(filled-square compilation-info)
         ;; flymake-show-diagnostics-at-end-of-line t
         flymake-fringe-indicator-position 'right-fringe)
-  (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake)
-  (remove-hook 'flymake-diagnostic-functions 'elisp-flymake-byte-compile))
+  (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake))
 
 (use-package eldoc
   :ensure nil
@@ -564,6 +570,14 @@
   :hook (window-setup . desktop-save-mode)
   :hook (window-setup . desktop-read)
   :config
+  (advice-add 'desktop-read :around
+              (lambda (orig &rest args)
+                (let ((start-time (current-time)))
+                  (prog1
+                      (apply orig args)
+                    (message "Desktop restored in %.2fs"
+                             (float-time
+                             (time-subtract (current-time) start-time)))))))
   (dolist (item
            '(alpha background-color background-mode border-width tab-bar
                    bottom-divider-width cursor-color cursor-type display-type
@@ -575,9 +589,14 @@
                    tool-bar-position vertical-scroll-bars zoom-window-buffers
                    zoom-window-enabled))
     (push `(,item . :never) frameset-filter-alist))
-
+  (push '(flymake-mode nil) desktop-minor-mode-table) ;; fix elisp-flymake-byte-compile
+  
   (setq desktop-restore-forces-onscreen nil
-        desktop-auto-save-timeout 10)
+        desktop-auto-save-timeout 10
+        desktop-files-not-to-save
+        (format "%s\\|%s"
+                desktop-files-not-to-save
+                ".*\\.el\\.gz"))
   (add-hook 'desktop-after-read-hook
             (lambda ()
               (frameset-restore
@@ -733,7 +752,7 @@
          (after-init . popper-tab-line-mode))
   :init
   (setq popper-reference-buffers
-        '("\\*Messages\\*" "Output\\*$"
+        '("\\*Messages\\*" "Output\\*$" "\\*xref\\*"
           "\\*Async Shell Command\\*" "\\*shell.\*"
           "magit:.\*" "\\*pabbrev suggestions\\*"
           ".*-eat\\*" "\\*eldoc\\*" "vc-git :.\*"
@@ -768,8 +787,7 @@
       (concat
        tab-vbar
        (propertize " " 'face tab-face)
-       (when (and (package-installed-p 'nerd-icons)
-                  (featurep 'nerd-icons))
+       (when (package-installed-p 'nerd-icons)
          (with-eval-after-load 'nerd-icons
            (with-current-buffer tab
              (propertize (format "%s " (nerd-icons-icon-for-buffer))
@@ -825,23 +843,10 @@
   (add-hook 'completion-at-point-functions #'file-capf)
   ;; (add-hook 'completion-at-point-functions #'dabbrev-capf 100) ; posframe/corfu issue
 
-  (add-to-list 'display-buffer-alist
-               '("\\*Completions\\*"
-                 (display-buffer-reuse-window display-buffer-at-bottom)
-                 (window-parameters (mode-line-format . none))))
-
   (setq tab-always-indent 'complete
         tab-first-completion 'word-or-paren
         completions-group t
-        completions-detailed t
-        ;; completions-buffer (for eval-expr)
-        completion-auto-help 'always
-        completion-auto-select 'second-tab
-        completion-auto-wrap t
-        completion-show-help nil
-        completions-max-height 15
-        completions-detailed t
-        completions-format 'one-column))
+        completions-detailed t))
 
 (use-package vertico-posframe
   :hook (vertico-mode . vertico-posframe-mode)
@@ -857,6 +862,12 @@
   :hook (after-init . global-corfu-mode)
   :hook ((corfu-mode . corfu-popupinfo-mode)
          (meow-insert-exit . corfu-quit))
+  :hook (minibuffer-setup . (lambda nil ;; src: doom
+                              (when (where-is-internal
+                                     #'completion-at-point
+                                     (list (current-local-map)))
+                                (setq-local corfu-echo-delay nil)
+                                (corfu-mode +1))))
   :bind (:map corfu-map
               ("TAB" . corfu-next)
               ([tab] . corfu-next)
@@ -881,6 +892,14 @@
     :when (not (display-graphic-p))
     :hook ((corfu-mode . corfu-terminal-mode))))
 
+(use-package eldoc-box
+  :after eldoc
+  :commands eldoc-box-help-at-point
+  :config
+  (setq eldoc-box-max-pixel-width 600
+        eldoc-box-max-pixel-height 700
+        eldoc-box-only-multi-line t))
+
 (use-package undo-fu-session
   :hook ((prog-mode conf-mode fundamental-mode text-mode tex-mode) . undo-fu-session-mode)
   :config
@@ -900,9 +919,9 @@
 (use-package nerd-icons
   :defer 0.2
   :config
-  (eval-after-load 'nerd-icons
-    (when (not (find-font (font-spec :name nerd-icons-font-family)))
-      (nerd-icons-install-fonts t)))
+  ;; causing issues in emacs -nw
+  ;; (when (not (find-font (font-spec :name nerd-icons-font-family)))
+  ;;   (nerd-icons-install-fonts t))
   (setq eglot-menu-string (nerd-icons-octicon "nf-oct-sync"))
   (when (custom-theme-enabled-p 'zed)
     (setq zed-tab-back-button
@@ -1113,9 +1132,11 @@
              (delete-indentation)))
    '("k" . meow-prev)
    '("K" . (lambda () (interactive)
-             (if (derived-mode-p 'emacs-lisp-mode)
-                 (describe-symbol (symbol-at-point))
-               (eldoc-doc-buffer t))))
+               (if (derived-mode-p 'emacs-lisp-mode)
+                   (describe-symbol (symbol-at-point))
+                 (if (package-installed-p 'eldoc-box)
+                     (eldoc-box-help-at-point)
+                   (eldoc-doc-buffer t)))))
    '("l" . meow-right)
    '("L" . up-list)
    ;; '("L" . meow-swap-grab)
@@ -1212,12 +1233,13 @@
   (dolist (map (list c-mode-map c++-mode-map))
     (define-key map (kbd "<tab>") #'c-indent-then-complete)))
 
-(push '("\\.rs\\'" . rust-ts-mode) auto-mode-alist)
-(push '("\\.go\\'" . go-ts-mode) auto-mode-alist)
-(push '("\\.ts\\'" . typescript-ts-mode) auto-mode-alist)
-(push '("\\.bin\\'" . hexl-mode) auto-mode-alist)
-(push '("\\.info\\'" . Info-mode) auto-mode-alist)
-(push '("\\.prototxt\\'" . js-json-mode) auto-mode-alist)
+(nconc auto-mode-alist
+       '(("\\.rs\\'" . rust-ts-mode)
+         ("\\.go\\'" . go-ts-mode)
+         ("\\.ts\\'" . typescript-ts-mode)
+         ("\\.bin\\'" . hexl-mode)
+         ("\\.info\\'" . Info-mode)
+         ("\\.prototxt\\'" . js-json-mode)))
 
 (use-package eglot
   :bind (:map meow-normal-state-keymap
@@ -1242,16 +1264,21 @@
   (setq go-ts-mode-indent-offset 4)
   (setq eglot-ignored-server-capabilities '(:inlayHintProvider))
   (setq-default eglot-workspace-configuration
-                '((:gopls .
-                          ((staticcheck . t)
-                           (matcher . "CaseSensitive")))))
-  (add-to-list 'eglot-server-programs ;; standalone r-a support (from rustic)
-               `(rust-ts-mode .
-                              ("rust-analyzer" :initializationOptions
-                               (:check (:command "clippy")
-                                       :detachedFiles
-                                       ,(vector (file-local-name
-                                                 (file-truename buffer-file-name)))))))
+                '((:gopls . ((staticcheck . t)
+                             (matcher . "CaseSensitive")))))
+  (defvar ra-setup
+    `(:rust-analyzer
+      (:procMacro (:attributes (:enable t)
+                               :enable t)
+                  :rootPath ,(file-local-name (file-truename buffer-file-name))
+                  :detachedFiles ,(vector (file-local-name
+                                           (file-truename buffer-file-name)))
+                  :diagnostics (:disabled ["unresolved-proc-macro"
+                                           "unresolved-macro-call"]))))
+  ;; (add-to-list 'eglot-server-programs ;; standalone r-a support (from rustic)
+  ;;              `(rust-ts-mode . ("rust-analyzer"
+  ;;                                :initializationOptions
+  ;;                                ,ra-setup)))
   (add-hook 'go-ts-mode-hook
             (lambda ()
               (add-hook 'before-save-hook
@@ -1353,7 +1380,7 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
+   '(eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
  '(package-vc-selected-packages
    '((janet-ts-mode :vc-backend Git :url "https://github.com/sogaiu/janet-ts-mode"))))
 (custom-set-faces

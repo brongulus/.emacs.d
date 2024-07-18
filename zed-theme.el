@@ -332,6 +332,8 @@
    `(tab-line-tab-current ((t (:inherit tab-line-tab))))
    `(tab-line-highlight ((t (:inherit tab-line-tab))))
 
+   `(eldoc-box-border ((t (:inherit child-frame-border))))
+   `(eldoc-box-body ((t (:background ,subtle-color))))
    `(deadgrep-filename-face ((t (:inherit bold :inverse-video t))))
    ;; `(vertico-posframe ((t (:foreground ,foreground-color :background "#1a1a1a")))
    `(vertico-posframe-border ((t (:inherit child-frame-border))))
@@ -409,7 +411,8 @@
    "%e "
    (:eval (when zed-icons-p
             (with-eval-after-load 'nerd-icons
-              (nerd-icons-icon-for-buffer))))
+              (propertize (nerd-icons-icon-for-buffer)
+                          'display '(raise 0.15)))))
    (:eval (propertize " %b " 'face (if (and (buffer-modified-p)
                                             (or (derived-mode-p 'prog-mode)
                                                 (derived-mode-p 'text-mode)))

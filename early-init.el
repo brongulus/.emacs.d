@@ -22,13 +22,13 @@
   (add-function :after after-focus-change-function
                 #'gc-on-last-frame-out-of-focus))
 
-(add-hook 'minibuffer-setup-hook
-          #'(lambda ()
-              (setq gc-cons-threshold most-positive-fixnum)))
-(add-hook 'minibuffer-exit-hook
-          #'(lambda ()
-              (garbage-collect)
-              (setq gc-cons-threshold (* 60 1024 1024))))
+;; (add-hook 'minibuffer-setup-hook
+;;           #'(lambda ()
+;;               (setq gc-cons-threshold most-positive-fixnum)))
+;; (add-hook 'minibuffer-exit-hook
+;;           #'(lambda ()
+;;               (garbage-collect)
+;;               (setq gc-cons-threshold (* 60 1024 1024))))
 
 ;; Android
 (when (string-equal system-type "android")
@@ -55,7 +55,18 @@
               bidi-display-reordering 'left-to-right
               bidi-inhibit-bpa t
               bidi-paragraph-direction 'left-to-right)
-
+;; doom
+(setq-default inhibit-redisplay t
+              inhibit-message t)
+(advice-add #'tool-bar-setup :override #'ignore)
+(add-hook 'after-init-hook
+          (lambda nil
+            (setq-default inhibit-redisplay nil
+                          inhibit-message nil)
+            (redraw-frame)
+            (advice-remove #'tool-bar-setup #'ignore))
+          :depth -105)
+;;
 (fset 'display-startup-echo-area-message 'ignore)
 
 (setf (cdr (assq 'continuation fringe-indicator-alist))
@@ -66,6 +77,7 @@
   (setq package-quickstart t))
 
 (setq package-enable-at-startup nil
+      inhibit-startup-screen t
       redisplay-skip-fontification-on-input t
       window-combination-resize t
       frame-inhibit-implied-resize t

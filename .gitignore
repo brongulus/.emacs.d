@@ -7,10 +7,13 @@ gnus/cache/
 org-persist/
 transient/
 tree-sitter/
+tutorial/
 undo-fu-session/
 url/
 history
 ido.last
+.emacs.desktop
+.emacs.desktop.lock
 .newsrc.eld
 network-security.data
 nov-places
