@@ -110,7 +110,7 @@
    `(highline-face ((t (:background ,subtle-color))))
    `(highlight ((t (:background ,highlight-color))))
    `(highlight-symbol-face ((t (:background ,secondary-color))))
-   `(isearch ((t (:background ,highlight-color))))
+   `(isearch ((t (:background ,light-yellow-color :foreground ,background-color))))
    `(lazy-highlight ((t (:background ,secondary-color))))
    `(primary-selection ((t (:background ,selection-color))))
    `(region ((t (:background ,selection-color :extend nil))))

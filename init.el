@@ -147,7 +147,7 @@
                                '(lambda ()
                                   (unless indent-tabs-mode
                                       (untabify (point-min) (point-max)))
-                                  (when (bound-and-true-p emacs-lisp-mode) ;; FIXME
+                                  (when (eq major-mode 'emacs-lisp-mode) ;; FIXME
                                     (check-parens))
                                   nil))
                   (with-eval-after-load 'whitespace
@@ -189,8 +189,7 @@
 (use-package dired
   :ensure nil
   :hook (dired-mode . dired-hide-details-mode) ;; dired-hide-dotfiles-mode
-  :bind (("C-x d" . dired-left)
-         :map dired-mode-map
+  :bind (:map dired-mode-map
          ("q" . kill-this-buffer)
          ("RET" . dired-find-alternate-file)
          ("TAB" . dired-maybe-insert-subdir)
@@ -209,16 +208,6 @@
           dired-listing-switches
           "-l --almost-all --human-readable --group-directories-first"))
   
-  (defun dired-left()
-    (interactive)
-    (let ((dir (dired-noselect default-directory)))
-      (display-buffer-in-side-window
-       dir `((side . left)
-             (slot . 0)
-             (window-width . 0.20)
-             (window-parameters . ((mode-line-format . (" %b"))))))
-      (pop-to-buffer dir)))
-
   (with-eval-after-load 'project
     (add-to-list 'project-switch-commands '(project-dired "Dired" ?D)))
 
@@ -884,6 +873,7 @@
               ([backtab] . corfu-previous))
   :config
   (add-hook 'eshell-mode #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
+  (setq completion-ignore-case t)
   (setq corfu-cycle t
         corfu-auto t
         corfu-auto-prefix 2
@@ -914,8 +904,6 @@
 
 (use-package magit
   :commands (magit magit-file-dispatch magit-log-all magit-ediff-show-unstaged)
-  ;; :hook ((magit-pre-refresh .diff-hl-magit-pre-refresh)
-  ;;        (magit-post-refresh . diff-hl-magit-post-refresh))
   :bind (:map magit-mode-map
               ("q" . magit-kill-this-buffer)))
 
@@ -924,9 +912,19 @@
   :config
   (setq undo-fu-session-compression nil))
 
+(use-package isearch-mb
+  :hook (isearch-mode . isearch-mb-mode))
+
+(use-package dired-sidebar
+  :bind ("C-x d" . dired-sidebar-toggle-sidebar)
+  :config
+  (setq dired-sidebar-mode-line-format
+        '("%e" mode-line-buffer-identification)))
+
 (use-package writeroom-mode
   :config
   (setq writeroom-width 90
+        writeroom-mode-line t
         writeroom-global-effects nil
         writeroom-maximize-window nil)
   (add-hook 'writeroom-mode-hook
@@ -991,10 +989,13 @@
         eat-term-name "xterm-256color"))
 
 (use-package diff-hl
-  :hook ((prog-mode . turn-on-diff-hl-mode)
-         (prog-mode . diff-hl-margin-mode))
+  :hook (((prog-mode conf-mode) . turn-on-diff-hl-mode)
+         ((prog-mode conf-mode) . diff-hl-margin-mode))
   :config
   (diff-hl-flydiff-mode t)
+  (when (package-installed-p 'magit)
+    (add-hook 'magit-pre-refresh-hook  #'diff-hl-magit-pre-refresh)
+    (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh))
   (setq vc-git-diff-switches '("--histogram")
         diff-hl-flydiff-delay 0.5
         diff-hl-update-async t
@@ -1276,10 +1277,22 @@
         eglot-autoshutdown t
         eglot-inlay-hints-mode nil)
   (add-hook 'rust-ts-mode-hook (lambda () (setq-local tab-width 2)))
-  (add-hook 'go-ts-mode-hook
-            (lambda () (setq-local tab-width 4)))
+  (add-hook 'go-ts-mode-hook (lambda () (setq-local tab-width 4)))
+
+  (defun my-eglot-organize-imports ()
+    (interactive)
+    (ignore-errors
+      (eglot-code-actions nil nil "source.organizeImports" t)))
+  (defun my-eglot-setup ()
+    (interactive)
+    (when (not (eq major-mode 'sql-mode))
+      (add-hook 'before-save-hook 'my-eglot-organize-imports nil t)
+      (add-hook 'before-save-hook 'eglot-format-buffer nil t)))
+  
   (add-hook 'eglot-managed-mode-hook
-            (lambda () (setq-local flymake-cc-command nil)))
+            (lambda nil
+              (setq-local flymake-cc-command nil)
+              (my-eglot-setup)))
   (setq go-ts-mode-indent-offset 4)
   (setq eglot-ignored-server-capabilities '(:inlayHintProvider))
   (setq-default eglot-workspace-configuration
@@ -1293,23 +1306,11 @@
                   :detachedFiles ,(vector (file-local-name
                                            (file-truename buffer-file-name)))
                   :diagnostics (:disabled ["unresolved-proc-macro"
-                                           "unresolved-macro-call"]))))
+                                           "unresolved-macro-call"])))))
   ;; (add-to-list 'eglot-server-programs ;; standalone r-a support (from rustic)
   ;;              `(rust-ts-mode . ("rust-analyzer"
   ;;                                :initializationOptions
   ;;                                ,ra-setup)))
-  (add-hook 'go-ts-mode-hook
-            (lambda ()
-              (add-hook 'before-save-hook
-                        #'eglot-format-buffer -10 t))
-            nil t)
-  (add-hook 'go-ts-mode-hook
-            (lambda ()
-              (add-hook 'after-save-hook
-                        (lambda ()
-                          (call-interactively
-                           'eglot-code-action-organize-imports))
-                        nil t))))
 
 (use-package zig-mode
   :mode ("\\.zig\\'" . zig-mode))
@@ -1404,7 +1405,7 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
+   '(isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
  '(package-vc-selected-packages
    '((janet-ts-mode :vc-backend Git :url "https://github.com/sogaiu/janet-ts-mode"))))
 (custom-set-faces
