@@ -17,7 +17,7 @@
   :type 'boolean
   :group 'zed)
 
-(setq zed-icons-p (package-installed-p 'nerd-icons))
+(setq zed-icons-p t);(package-installed-p 'nerd-icons))
 
 (let ((selection-color (if load-theme-light
                            "#C9D0D9"
@@ -260,6 +260,8 @@
    `(solaire-default-face ((t (:inherit default :background ,subtle-color))))
    `(solaire-fringe-face ((t (:inherit fringe :background ,subtle-color))))
    `(solaire-header-line-face ((t (:inherit header-line :background ,subtle-color))))
+
+   `(magit-section-highlight ((t (:inherit hl-line))))
    
    `(meow-beacon-indicator
      ((t (:background ,background-color :foreground ,green-color :inverse-video t))))
@@ -272,6 +274,7 @@
    `(meow-insert-indicator
      ((t (:background ,background-color :foreground ,yellow-color :inverse-video t))))
    `(minibuffer-prompt ((t (:foreground ,yellow-color))))
+   `(widget-field ((t (:background ,subtle-color :extend t))))
    
    `(org-block ((t (:inherit default :background ,subtle-color :extend t :height 1.0))))
    `(org-block-begin-line ((t (:inherit org-meta-line :background ,subtle-color :extend t))))
@@ -412,7 +415,7 @@
    (:eval (when zed-icons-p
             (with-eval-after-load 'nerd-icons
               (propertize (nerd-icons-icon-for-buffer)
-                          'display '(raise 0.15)))))
+                          'display '(raise 0.15))))) ;; issues with underline
    (:eval (propertize " %b " 'face (if (and (buffer-modified-p)
                                             (or (derived-mode-p 'prog-mode)
                                                 (derived-mode-p 'text-mode)))

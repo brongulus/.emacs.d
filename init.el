@@ -57,7 +57,6 @@
 
   (setq read-process-output-max (* 16 1024)
         process-adaptive-read-buffering nil
-        switch-to-buffer-obey-display-actions t
         kill-do-not-save-duplicates t
         auto-mode-case-fold nil
         idle-update-delay 1.0
@@ -85,19 +84,6 @@
         compilation-ask-about-save nil
         compilation-scroll-output 'first-error)
 
-  (push 'check-parens write-file-functions) ;; issue in org - fixed below
-  (add-hook 'debugger-mode-hook #'visual-line-mode)
-  (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
-  (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
-  (add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
-  (add-hook 'prog-mode-hook (electric-pair-mode t))
-  (add-hook 'prog-mode-hook (show-paren-mode t))
-  (add-hook 'prog-mode-hook (which-function-mode))
-  (add-to-list 'write-file-functions
-               '(lambda () (if (not indent-tabs-mode)
-                               (untabify (point-min) (point-max)))
-                  nil))
-
   (defun silent-command (fn &rest args)
     "Used to suppress output of FN."
     (let ((inhibit-message t)
@@ -108,14 +94,8 @@
   ;; (copy-face 'default 'fixed-pitch)
   (set-register ?f `(file . ,(locate-user-emacs-file "init.el")))
   (set-register ?c `(file . "~/problems/"))
-  (with-eval-after-load 'whitespace
-    (add-to-list 'whitespace-display-mappings '(newline-mark ?\n [8626 ?\n]) t))
-  (unless (display-graphic-p)
-    (set-display-table-slot standard-display-table
-                            'vertical-border
-                            (make-glyph-code ?│))
-    (xterm-mouse-mode))
-
+  
+  (add-hook 'prog-mode-hook (which-function-mode))
   ;; load theme based on the time of the day
   (let ((hour (substring (current-time-string) 11 13)))
     (if (and (string-lessp hour "17") (string-greaterp hour "08"))
@@ -155,6 +135,29 @@
                     (pulse-momentary-highlight-region beg end)
                     (apply orig-fn beg end args))
                   (advice-add 'kill-ring-save :around #'my/kill-pulse-advice)
+                  ;; misc
+                  ;; (push 'check-parens write-file-functions) ;; issue in org - fixed below
+                  (add-hook 'debugger-mode-hook #'visual-line-mode)
+                  (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
+                  (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
+                  (add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
+                  (add-hook 'prog-mode-hook (electric-pair-mode t))
+                  (add-hook 'prog-mode-hook (show-paren-mode t))
+                  (add-to-list 'write-file-functions
+                               '(lambda ()
+                                  (unless indent-tabs-mode
+                                      (untabify (point-min) (point-max)))
+                                  (when (bound-and-true-p emacs-lisp-mode) ;; FIXME
+                                    (check-parens))
+                                  nil))
+                  (with-eval-after-load 'whitespace
+                    (add-to-list 'whitespace-display-mappings
+                                 '(newline-mark ?\n [8626 ?\n]) t))
+                  (unless (display-graphic-p)
+                    (set-display-table-slot standard-display-table
+                                            'vertical-border
+                                            (make-glyph-code ?│))
+                    (xterm-mouse-mode))
                   ;; enable some useful modes
                   (save-place-mode 1)
                   (setq savehist-additional-variables '(kill-ring))
@@ -192,6 +195,9 @@
          ("RET" . dired-find-alternate-file)
          ("TAB" . dired-maybe-insert-subdir)
          ("<backspace>" . (lambda nil (interactive)
+                            (dired-kill-subdir)
+                            (set-mark-command '(4))))
+         ("<backtab>" . (lambda nil (interactive)
                             (dired-kill-subdir)
                             (set-mark-command '(4))))
          ("\\" . dired-up-directory)
@@ -420,7 +426,7 @@
         recentf-auto-cleanup 'never))
 
 (use-package tramp
-  :after minibuffer
+  :defer 1
   :hook (minibuffer-mode . tramp-cleanup-all-connections)
   :config
   (setq tramp-process-connection-type nil)
@@ -577,7 +583,7 @@
                       (apply orig args)
                     (message "Desktop restored in %.2fs"
                              (float-time
-                             (time-subtract (current-time) start-time)))))))
+                              (time-subtract (current-time) start-time)))))))
   (dolist (item
            '(alpha background-color background-mode border-width tab-bar
                    bottom-divider-width cursor-color cursor-type display-type
@@ -869,6 +875,8 @@
                                 (setq-local corfu-echo-delay nil)
                                 (corfu-mode +1))))
   :bind (:map corfu-map
+              ("C-f" . forward-char)
+              ("C-b" . backward-char)
               ("TAB" . corfu-next)
               ([tab] . corfu-next)
               ("M-TAB" . corfu-previous)
@@ -899,6 +907,17 @@
   (setq eldoc-box-max-pixel-width 600
         eldoc-box-max-pixel-height 700
         eldoc-box-only-multi-line t))
+
+(use-package exec-path-from-shell
+  :if (display-graphic-p)
+  :hook (after-init . exec-path-from-shell-initialize))
+
+(use-package magit
+  :commands (magit magit-file-dispatch magit-log-all magit-ediff-show-unstaged)
+  ;; :hook ((magit-pre-refresh .diff-hl-magit-pre-refresh)
+  ;;        (magit-post-refresh . diff-hl-magit-post-refresh))
+  :bind (:map magit-mode-map
+              ("q" . magit-kill-this-buffer)))
 
 (use-package undo-fu-session
   :hook ((prog-mode conf-mode fundamental-mode text-mode tex-mode) . undo-fu-session-mode)
@@ -1132,11 +1151,11 @@
              (delete-indentation)))
    '("k" . meow-prev)
    '("K" . (lambda () (interactive)
-               (if (derived-mode-p 'emacs-lisp-mode)
-                   (describe-symbol (symbol-at-point))
-                 (if (package-installed-p 'eldoc-box)
-                     (eldoc-box-help-at-point)
-                   (eldoc-doc-buffer t)))))
+             (if (derived-mode-p 'emacs-lisp-mode)
+                 (describe-symbol (symbol-at-point))
+               (if (package-installed-p 'eldoc-box)
+                   (eldoc-box-help-at-point)
+                 (eldoc-doc-buffer t)))))
    '("l" . meow-right)
    '("L" . up-list)
    ;; '("L" . meow-swap-grab)
@@ -1295,6 +1314,9 @@
 (use-package zig-mode
   :mode ("\\.zig\\'" . zig-mode))
 
+(use-package nix-mode
+  :mode ("\\.nix\\'" . nix-mode))
+
 (use-package janet-ts-mode
   :init
   (unless (package-installed-p 'janet-ts-mode)
@@ -1310,13 +1332,15 @@
 (use-package foxy
   :ensure nil
   :load-path "~/.emacs.d/lisp"
-  :bind (("C-c C-l" . foxy-listen-start)
-         ("C-c C-c" . foxy-cycle-files)
-         ("C-C C-b" . foxy-run-all-tests))
+  :bind (("C-c l" . foxy-listen-start)
+         ("C-c ]" . foxy-cycle-files)
+         ("C-c [" . (lambda nil (interactive)
+                      (foxy-cycle-files -1)))
+         ("C-c b" . foxy-run-all-tests))
   :init
   (defvar foxy-compile-commands
     '((rust-ts-mode-hook . "rustc -o a.out ")
-      (c++-mode-hook . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 ")
+      (c++-mode-hook . "g++-14 -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 ")
       (go-ts-mode-hook . "go build -o a.out ")))
   (dolist (pair foxy-compile-commands)
     (let ((mode (car pair))
@@ -1380,7 +1404,7 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
+   '(exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
  '(package-vc-selected-packages
    '((janet-ts-mode :vc-backend Git :url "https://github.com/sogaiu/janet-ts-mode"))))
 (custom-set-faces
