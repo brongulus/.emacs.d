@@ -16,6 +16,12 @@
   :bind (("C-h '" . describe-face)
          ("M-c" . quick-calc) ; 16#hex
          ("M-k" . kill-word)
+         ("C-w" . (lambda (&optional arg)
+                    (interactive)
+                    (if (region-active-p)
+                        (kill-region (region-beginning)
+                                     (region-end))
+                      (backward-kill-word (or arg 1)))))
          ;; ("M-d" . backward-kill-word)
          ("C-d" . delete-backward-char)
          ("C-a" . (lambda nil (interactive)
@@ -147,7 +153,7 @@
                                '(lambda ()
                                   (unless indent-tabs-mode
                                       (untabify (point-min) (point-max)))
-                                  (when (eq major-mode 'emacs-lisp-mode) ;; FIXME
+                                  (when (eq major-mode 'emacs-lisp-mode)
                                     (check-parens))
                                   nil))
                   (with-eval-after-load 'whitespace
@@ -435,12 +441,7 @@
 (use-package org
   :ensure nil
   :hook (org-mode . (lambda nil
-                      (setq-local line-spacing 8)
-                      ;; fix for check-parens
-                      (modify-syntax-entry ?\) "." org-mode-syntax-table)
-                      (modify-syntax-entry ?\( "." org-mode-syntax-table)
-                      (modify-syntax-entry ?< "." org-mode-syntax-table)
-                      (modify-syntax-entry ?> "." org-mode-syntax-table)))
+                      (setq-local line-spacing 8)))
   :hook (org-mode . visual-line-mode)
   :config
   ;; Taken from rougier: org-outer-indent
@@ -915,7 +916,20 @@
   (define-prefix-command 'macrursors-mark-map)
   :bind-keymap ("C-;" . macrursors-mark-map)
   :bind (("M-n" . macrursors-mark-next-instance-of)
-         ("M-p" . macrursors-mark-previous-instance-of)))
+         ("M-p" . macrursors-mark-previous-instance-of)
+         ("M-d" . macrursors-mark-all-instances-of)
+         :map macrursors-mark-map
+         ("C-g" . macrursors-early-quit)
+         ("C-n" . macrursors-mark-next-line)
+         ("C-p" . macrursors-mark-previous-line)
+         :repeat-map macrursors-mark-repeat-map
+         ("n" . macrursors-mark-next-line)
+         ("p" . macrursors-mark-previous-line))
+  :config
+  (dolist (mode '(corfu-mode beacon-mode))
+    (add-hook 'macrursors-pre-finish-hook mode)
+    (add-hook 'macrursors-post-finish-hook mode))
+  (add-hook 'macrursors-mode-hook #'meow-insert))
 
 (use-package isearch-mb
   :hook (isearch-mode . isearch-mb-mode))
@@ -1108,9 +1122,9 @@
    '("2" . meow-digit-argument)
    '("1" . meow-digit-argument)
    '("-" . negative-argument)
-   '("C-;" . meow-reverse)
+   ;; '("C-;" . meow-reverse)
    '(";" . meow-cancel-selection)
-   '("'" . meow-cancel-selection)
+   '("'" . meow-reverse)
    '("," . meow-inner-of-thing)
    '("." . meow-bounds-of-thing)
    '("[" . meow-beginning-of-thing)
