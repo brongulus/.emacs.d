@@ -262,6 +262,8 @@
    `(solaire-header-line-face ((t (:inherit header-line :background ,subtle-color))))
 
    `(magit-section-highlight ((t (:inherit hl-line))))
+   `(Man-overstrike ((t (:inherit font-lock-constant-face :bold t))))
+   `(Man-underline ((t (:inherit font-lock-keyword-face :bold t))))
    
    `(meow-beacon-indicator
      ((t (:background ,background-color :foreground ,green-color :inverse-video t))))
@@ -361,11 +363,12 @@
       ;; all the stuff that will be right-aligned
       mode-line-end-spaces
       `("%n " mode-line-misc-info
-        (:eval (propertize (format " %s" (upcase (if (stringp mode-name)
-                                                     mode-name
-                                                   (car mode-name))))
-                           'help-echo "Mouse-1: Show major-mode-menu"
-                           'local-map mode-line-major-mode-keymap))
+        (:eval (unless zed-icons-p
+                 (propertize (format " %s" (upcase (if (stringp mode-name)
+                                                       mode-name
+                                                     (car mode-name))))
+                             'help-echo "Mouse-1: Show major-mode-menu"
+                             'local-map mode-line-major-mode-keymap)))
         (:eval (when (bound-and-true-p vc-mode)
                  (propertize (concat "" vc-mode) 'face ;; vc-display-status 'no-backend
                              '(:inherit success :weight bold))))
@@ -382,12 +385,13 @@
                                 flymake-mode-line-warning-counter
                                 ,(when (flymake--mode-line-counter :note nil)
                                    (concat " " (nerd-icons-codicon "nf-cod-info" :face 'success :v-adjust 0.1) ""))
-                                flymake-mode-line-note-counter ""))
+                                flymake-mode-line-note-counter " "))
                           '(" " flymake-mode-line-error-counter
                             flymake-mode-line-warning-counter
-                            flymake-mode-line-note-counter ""))))
+                            flymake-mode-line-note-counter " "))))
                    (flymake--mode-line-counters))))
-        (:eval (propertize " %l:%C " 'face 'which-func))))
+        ;; (:eval (propertize " %l:%C " 'face 'which-func))
+        ))
 
 (defun my/ml-padding ()
   "Adding padding to the modeline so that spme elements can be right aligned."
@@ -411,11 +415,15 @@
                           'face `(,indicator-face
                                   :inverse-video t
                                   :box (:style flat-button))))))
+   (:eval (when (bound-and-true-p macrursors-mode)
+            macrursors-mode-line))
    "%e "
    (:eval (when zed-icons-p
             (with-eval-after-load 'nerd-icons
               (propertize (nerd-icons-icon-for-buffer)
-                          'display '(raise 0.15))))) ;; issues with underline
+                          'display '(raise 0.15)
+                          'help-echo "Mouse-1: Show major-mode-menu"
+                          'local-map mode-line-major-mode-keymap)))) ;; issues with underline
    (:eval (propertize " %b " 'face (if (and (buffer-modified-p)
                                             (or (derived-mode-p 'prog-mode)
                                                 (derived-mode-p 'text-mode)))

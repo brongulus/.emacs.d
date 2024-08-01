@@ -16,7 +16,7 @@
   :bind (("C-h '" . describe-face)
          ("M-c" . quick-calc) ; 16#hex
          ("M-k" . kill-word)
-         ("M-d" . backward-kill-word)
+         ;; ("M-d" . backward-kill-word)
          ("C-d" . delete-backward-char)
          ("C-a" . (lambda nil (interactive)
                     (if (= (point) (progn (beginning-of-line-text) (point)))
@@ -857,12 +857,6 @@
   :hook (after-init . global-corfu-mode)
   :hook ((corfu-mode . corfu-popupinfo-mode)
          (meow-insert-exit . corfu-quit))
-  :hook (minibuffer-setup . (lambda nil ;; src: doom
-                              (when (where-is-internal
-                                     #'completion-at-point
-                                     (list (current-local-map)))
-                                (setq-local corfu-echo-delay nil)
-                                (corfu-mode +1))))
   :bind (:map corfu-map
               ("C-f" . forward-char)
               ("C-b" . backward-char)
@@ -904,6 +898,7 @@
 
 (use-package magit
   :commands (magit magit-file-dispatch magit-log-all magit-ediff-show-unstaged)
+  :bind ("C-M-g" . magit)
   :bind (:map magit-mode-map
               ("q" . magit-kill-this-buffer)))
 
@@ -912,11 +907,23 @@
   :config
   (setq undo-fu-session-compression nil))
 
+(use-package macrursors ; use C-; (macrursors-end) to do edits
+  :ensure nil
+  :init
+  (unless (package-installed-p 'macrursors)
+    (package-vc-install "https://github.com/karthink/macrursors"))
+  (define-prefix-command 'macrursors-mark-map)
+  :bind-keymap ("C-;" . macrursors-mark-map)
+  :bind (("M-n" . macrursors-mark-next-instance-of)
+         ("M-p" . macrursors-mark-previous-instance-of)))
+
 (use-package isearch-mb
   :hook (isearch-mode . isearch-mb-mode))
 
 (use-package dired-sidebar
   :bind ("C-x d" . dired-sidebar-toggle-sidebar)
+  :bind (:map dired-sidebar-mode-map
+              ("l" . windmove-right))
   :config
   (setq dired-sidebar-mode-line-format
         '("%e" mode-line-buffer-identification)))
@@ -926,12 +933,7 @@
   (setq writeroom-width 90
         writeroom-mode-line t
         writeroom-global-effects nil
-        writeroom-maximize-window nil)
-  (add-hook 'writeroom-mode-hook
-            (lambda nil
-              (if writeroom-mode
-                  (add-hook 'post-command-hook #'recenter nil t)
-                (remove-hook 'post-command-hook #'recenter t)))))
+        writeroom-maximize-window nil))
 
 (use-package nerd-icons
   :defer 0.2
@@ -1068,6 +1070,8 @@
     (let ((map (make-sparse-keymap)))
       (define-key map [t] #'delete-pair)
       map))
+  
+  (autoload 'viper-ex "viper")
 
   :config
   (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
@@ -1213,7 +1217,7 @@
    '("Z" . undo-redo)
    '("+" . meow-block)
    '("-" . negative-argument)
-   '(":" . meow-reverse)
+   '(":" . viper-ex)
    '("\\" . dired-jump)
    '("*" . isearch-forward-thing-at-point)
    '("&" . align-regexp)
@@ -1405,9 +1409,10 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
+   '(macrursors isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
  '(package-vc-selected-packages
-   '((janet-ts-mode :vc-backend Git :url "https://github.com/sogaiu/janet-ts-mode"))))
+   '((macrursors :vc-backend Git :url "https://github.com/karthink/macrursors")
+     (janet-ts-mode :vc-backend Git :url "https://github.com/sogaiu/janet-ts-mode"))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
