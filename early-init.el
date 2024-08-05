@@ -9,7 +9,7 @@
 
 (add-hook 'emacs-startup-hook ; hook run after loading init files
           #'(lambda ()
-              (setq gc-cons-threshold (* 60 1024 1024)
+              (setq gc-cons-threshold (* 16 1024 1024)
                     gc-cons-percentage 0.1
                     file-name-handler-alist my/saved-file-name-handler-alist)))
 
@@ -55,6 +55,7 @@
               bidi-display-reordering 'left-to-right
               bidi-inhibit-bpa t
               bidi-paragraph-direction 'left-to-right)
+
 ;; doom
 (setq-default inhibit-redisplay t
               inhibit-message t)
@@ -136,6 +137,21 @@
   (setq command-line-ns-option-alist nil))
 (unless (eq system-type 'gnu/linux)
   (setq command-line-x-option-alist nil))
+
+(set-face-attribute
+ 'variable-pitch nil :family "Iosevka Comfy" :weight 'regular :height 180)
+
+;; native-comp
+(if (and (featurep 'native-compile)
+         (fboundp 'native-comp-available-p)
+         (native-comp-available-p))
+    ;; Activate `native-compile'
+    (setq native-comp-jit-compilation t
+          native-comp-enable-subr-trampolines t
+          native-comp-async-report-warnings-errors nil
+          package-native-compile t)
+  ;; Deactivate the `native-compile' feature if it is not available
+  (setq features (delq 'native-compile features)))
 
 (provide 'early-init)
 ;;; early-init.el ends here

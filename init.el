@@ -22,16 +22,26 @@
                         (kill-region (region-beginning)
                                      (region-end))
                       (backward-kill-word (or arg 1)))))
-         ;; ("M-d" . backward-kill-word)
-         ("C-d" . delete-backward-char)
          ("C-a" . (lambda nil (interactive)
                     (if (= (point) (progn (beginning-of-line-text) (point)))
                         (beginning-of-line))))
+         ("C-z" . (lambda () (interactive)
+                    (if (derived-mode-p 'emacs-lisp-mode)
+                        (describe-symbol (symbol-at-point))
+                      (if (package-installed-p 'eldoc-box)
+                          (eldoc-box-help-at-point)
+                        (eldoc-doc-buffer t)))))
+         ("C-o" . other-window)
          ("M-P" . execute-extended-command)
+         ("M-s r" . replace-regexp)
+         ("M-s f" . ffap)
          ("C-x C-m" . execute-extended-command)
-         ("C-x C-j" . delete-indentation)
+         ("C-x C-j" . (lambda nil (interactive)
+                        (let ((current-prefix-arg '(4)))
+                          (call-interactively 'delete-indentation))))
          ("C-h C-o" . describe-symbol)
          ("C-x C-b" . ibuffer)
+         ("C-x k" . kill-this-buffer)
          ("C-x l" . revert-buffer-quick)
          ("C-x L" . desktop-read)
          ("C-M-r" . raise-sexp)
@@ -40,13 +50,14 @@
          ("<f5>" . (lambda () (interactive)
                      (setq-default display-line-numbers-type 'relative)
                      (hl-line-mode 'toggle)
-                     (display-line-numbers-mode 'toggle)))
+                     (display-line-numbers-mode 'toggle)
+                     (highlight-indent-guides-mode 'toggle)))
          ("<f6>" . zed-toggle-theme))
   :config
   (setq-default line-spacing 3
-                cursor-type 'bar
+                ;; cursor-type 'bar
                 tab-width 2
-                fill-column 80
+                fill-column 100
                 indent-tabs-mode nil
                 enable-recursive-minibuffers t
                 show-paren-delay 0
@@ -73,6 +84,7 @@
         scroll-conservatively 10
         scroll-preserve-screen-position t
         split-height-threshold nil
+        split-width-threshold 100
         save-abbrevs nil
         make-backup-files nil
         create-lockfiles nil
@@ -87,6 +99,7 @@
         electric-pair-preserve-balance nil
         shell-command-prompt-show-cwd t
         shell-kill-buffer-on-exit t
+        set-mark-command-repeat-pop t
         compilation-ask-about-save nil
         compilation-scroll-output 'first-error)
 
@@ -117,6 +130,9 @@
 (use-package emacs
   :no-require
   :bind ("C-x w w" . my/toggle-full-window)
+  :bind (:map special-mode-map
+              ("Q" . (lambda nil (interactive)
+                       (quit-window t))))
   :defer 2
   :hook
   (after-init . (lambda nil
@@ -206,7 +222,8 @@
                             (dired-kill-subdir)
                             (set-mark-command '(4))))
          ("\\" . dired-up-directory)
-         ("E" . wdired-change-to-wdired-mode))
+         ("E" . wdired-change-to-wdired-mode)
+         ("z" . find-grep-dired))
   :config
   (when (eq system-type 'darwin)
     (require 'ls-lisp)
@@ -220,6 +237,7 @@
   (put 'dired-find-alternate-file 'disabled nil)
   
   (setq dired-dwim-target t
+        dired-omit-mode t
         dired-auto-revert-buffer t
         dired-mouse-drag-files t
         dired-use-ls-dired nil
@@ -348,14 +366,17 @@
 
 (use-package isearch
   :ensure nil
-  :bind (("C-s" . isearch-forward)
+  :bind (("C-s" . isearch-forward-regexp)
          :repeat-map isearch-repeat-map
          ("s" . isearch-repeat-forward)
          ("r" . isearch-repeat-backward))
+  :config
+  (add-hook 'isearch-mode (electric-pair-mode 'toggle))
   :custom
   (isearch-wrap-pause 'no)
   (isearch-lazy-count t)
   (isearch-allow-scroll 'unlimited)
+  (isearch-regexp-lax-whitespace t)
   (search-whitespace-regexp ".*?"))
 
 (use-package flymake
@@ -459,7 +480,9 @@
                                  #'(lambda (item)
                                      (org-element-property :level item)))
                                 '()))
-           (max-level (seq-max headline-levels))
+           (max-level (seq-max (if headline-levels
+                                   headline-levels
+                                 0)))
            ;; We could also iterate over each evel to get maximum length
            ;; Instead, we take the length of the deepest numbered level.
            (line-indentation (+ 3 max-level))
@@ -542,7 +565,7 @@
 
 (use-package org-capture
   :ensure nil
-  :hook (org-capture-mode . meow-insert)
+  ;; :hook (org-capture-mode . meow-insert)
   :config
   (add-hook 'org-capture-mode-hook
             (lambda nil
@@ -563,8 +586,9 @@
 
 (use-package desktop ;; session-persistence
   :ensure nil
-  :hook (window-setup . desktop-save-mode)
-  :hook (window-setup . desktop-read)
+  :if (display-graphic-p)
+ :hook (window-setup . desktop-save-mode)
+ :hook (window-setup . desktop-read)
   :config
   (advice-add 'desktop-read :around
               (lambda (orig &rest args)
@@ -812,6 +836,7 @@
   :hook (after-init . vertico-mode)
   :hook (rfn-eshadow-update-overlay . vertico-directory-tidy)
   :bind (:map vertico-map
+              ("<escape>" . minibuffer-keyboard-quit)
               ("<backspace>" . vertico-directory-delete-char)
               ("RET" . vertico-directory-enter)
               ("TAB" . vertico-next)
@@ -845,6 +870,7 @@
         completions-detailed t))
 
 (use-package vertico-posframe
+  :disabled t
   :hook (vertico-mode . vertico-posframe-mode)
   :config
   (setq vertico-posframe-parameters
@@ -859,14 +885,14 @@
   :hook ((corfu-mode . corfu-popupinfo-mode)
          (meow-insert-exit . corfu-quit))
   :bind (:map corfu-map
-              ("C-f" . forward-char)
-              ("C-b" . backward-char)
               ("TAB" . corfu-next)
               ([tab] . corfu-next)
               ("M-TAB" . corfu-previous)
               ("S-TAB" . corfu-previous)
               ([backtab] . corfu-previous))
   :config
+  (dolist (key '("C-f" "C-b" "C-a" "C-e"))
+    (define-key corfu-map key nil))
   (add-hook 'eshell-mode #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
   (setq completion-ignore-case t)
   (setq corfu-cycle t
@@ -908,6 +934,12 @@
   :config
   (setq undo-fu-session-compression nil))
 
+(use-package expand-region
+  :bind (("C-=" . er/expand-region)
+         :repeat-map expand-region-repeat-map
+         ("-" . er/contract-region)
+         ("=" . er/expand-region)))
+
 (use-package macrursors ; use C-; (macrursors-end) to do edits
   :ensure nil
   :init
@@ -926,21 +958,32 @@
          ("n" . macrursors-mark-next-line)
          ("p" . macrursors-mark-previous-line))
   :config
+  (set-face-attribute 'macrursors-cursor-face nil
+                      :inverse-video nil :inherit 'cursor)
   (dolist (mode '(corfu-mode beacon-mode))
     (add-hook 'macrursors-pre-finish-hook mode)
     (add-hook 'macrursors-post-finish-hook mode))
-  (add-hook 'macrursors-mode-hook #'meow-insert))
+  (when (featurep 'meow)
+    (add-hook 'macrursors-mode-hook #'meow-insert)))
 
 (use-package isearch-mb
+  :after isearch
   :hook (isearch-mode . isearch-mb-mode))
 
 (use-package dired-sidebar
   :bind ("C-x d" . dired-sidebar-toggle-sidebar)
   :bind (:map dired-sidebar-mode-map
-              ("l" . windmove-right))
+              ("l" . windmove-right)
+              ("\\" . dired-sidebar-up-directory))
   :config
   (setq dired-sidebar-mode-line-format
         '("%e" mode-line-buffer-identification)))
+
+(use-package ibuffer-vc
+  :after ibuffer
+  :bind (:map ibuffer-mode-map
+              ("/ V" . ibuffer-vc-set-filter-groups-by-vc-root)
+              ("/ <deletechar>" . ibuffer-clear-filer-groups)))
 
 (use-package writeroom-mode
   :config
@@ -967,7 +1010,9 @@
     (with-eval-after-load 'corfu
       (push 'nerd-icons-corfu-formatter corfu-margin-formatters)))
   (use-package nerd-icons-dired
-    :hook (dired-mode . nerd-icons-dired-mode)))
+    :hook (dired-mode . nerd-icons-dired-mode))
+  (use-package nerd-icons-ibuffer
+    :hook (ibuffer-mode . nerd-icons-ibuffer-mode)))
 
 (use-package eat
   :commands eat-project
@@ -986,6 +1031,7 @@
                       (call-interactively 'eat))))
          (:map eat-semi-char-mode-map
                ("C-u" . eat-self-input)
+               ("C-o" . other-window)
                ("M-j" . popper-toggle)
                ("M-w" . kill-ring-save)))
   :config
@@ -1022,8 +1068,34 @@
         diff-hl-draw-borders nil))
 
 (use-package solaire-mode
+  :if (display-graphic-p)
   :hook (after-init . solaire-global-mode)
   :hook (minibuffer-mode . turn-on-solaire-mode))
+
+(use-package shr-tag-pre-highlight ;; FIXME: complains if mode isnt available
+  :defer 1
+  :config
+  (with-eval-after-load 'nov
+    (advice-add 'shr--set-target-ids :around
+                (lambda (orig-fn &rest args)
+                  (if (and (get-buffer-window)
+                           (bufferp (point)))
+                      (apply orig-fn args)
+                    nil)))
+    (add-to-list 'nov-shr-rendering-functions
+                 '(pre . shr-tag-pre-highlight) t))
+  ;; eww
+  (add-to-list 'shr-external-rendering-functions
+               '(pre . shr-tag-pre-highlight)))
+
+(use-package highlight-indent-guides
+  ;; :hook (prog-mode . highlight-indent-guides-mode)
+  :config
+  (set-face-attribute 'highlight-indent-guides-character-face nil
+                      :inherit 'vertical-border)
+  (setq highlight-indent-guides-method 'character
+        highlight-indent-guides-auto-enabled nil
+        highlight-indent-guides-responsive nil))
 
 (use-package markdown-mode
   :config
@@ -1042,6 +1114,7 @@
   :after org)
 
 (use-package deadgrep
+  :bind ("M-s d" . deadgrep)
   :preface
   (defun deadgrep-current-dir (search-term)
     "Grep for SEARCH-TERM in current directory."
@@ -1054,10 +1127,27 @@
   (nov-mode . visual-line-mode)
   (nov-mode . writeroom-mode)
   :config
+  (add-hook 'nov-mode-hook
+            (lambda nil ;; thx teco
+              (setq-local
+               global-mode-string
+               (append global-mode-string
+                       (list '(:eval
+                               (propertize
+                                (format " %d/%d"
+                                        (1+ nov-documents-index)
+                                        (length nov-documents))
+                                'face font-lock-comment-face)))))))
   (setq nov-text-width 80
         nov-header-line-format nil))
+  
+(use-package devil
+  :hook (after-init . global-devil-mode)
+  :config
+  (devil-set-key (kbd "'")))
 
 (use-package meow
+  :disabled t
   :hook (after-init . (lambda ()
                         (require 'meow)
                         (meow-global-mode)))
@@ -1253,6 +1343,7 @@
           (c "https://github.com/tree-sitter/tree-sitter-c")
           (go "https://github.com/tree-sitter/tree-sitter-go")
           (rust "https://github.com/tree-sitter/tree-sitter-rust")
+          (json "https://github.com/tree-sitter/tree-sitter-json")
           (janet-simple "https://github.com/sogaiu/tree-sitter-janet-simple")
           (typescript "https://github.com/tree-sitter/tree-sitter-typescript"
                       "master" "typescript/src"))
@@ -1276,14 +1367,13 @@
          ("\\.go\\'" . go-ts-mode)
          ("\\.ts\\'" . typescript-ts-mode)
          ("\\.bin\\'" . hexl-mode)
-         ("\\.info\\'" . Info-mode)
-         ("\\.prototxt\\'" . js-json-mode)))
+         ("\\.info\\'" . Info-mode)))
 
 (use-package eglot
-  :bind (:map meow-normal-state-keymap
-              ;; ("ga" . eglot-code-actions)
-              ("gr" . eglot-rename)
-              ("gF" . eglot-format))
+  ;; :bind (:map meow-normal-state-keymap
+  ;;             ("gA" . eglot-code-actions)
+  ;;             ("gr" . eglot-rename)
+  ;;             ("gF" . eglot-format))
   :hook (((rust-ts-mode go-ts-mode) . eglot-ensure)
          (eglot-managed-mode . (lambda ()
                                  (setq eldoc-documentation-strategy
@@ -1337,16 +1427,13 @@
   :mode ("\\.nix\\'" . nix-mode))
 
 (use-package janet-ts-mode
+  :ensure nil
   :init
   (unless (package-installed-p 'janet-ts-mode)
     (package-vc-install "https://github.com/sogaiu/janet-ts-mode"))
   :mode ("\\.janet\\'" . janet-ts-mode)
   :config
   (remove-hook 'janet-ts-mode-hook 'treesit-inspect-mode))
-
-;; comp
-(add-hook 'minibuffer-mode-hook
-          (lambda nil (load "~/.emacs.d/lisp/comp" nil t)))
 
 (use-package foxy
   :ensure nil
@@ -1423,7 +1510,7 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(macrursors isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
+   '(nerd-icons-ibuffer ibuffer-vc devil expand-region shr-tag-pre-highlight highlight-indent-guides macrursors isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
  '(package-vc-selected-packages
    '((macrursors :vc-backend Git :url "https://github.com/karthink/macrursors")
      (janet-ts-mode :vc-backend Git :url "https://github.com/sogaiu/janet-ts-mode"))))

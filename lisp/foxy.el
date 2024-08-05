@@ -42,8 +42,8 @@
 (require 'cl-lib)
 (require 'files)
 
-;; (require 'widget)
-;; (require 'wid-edit)
+(require 'widget)
+(require 'wid-edit)
 (if (package-installed-p 'diff-lisp)
     (require 'diff-lisp))
 
@@ -84,7 +84,7 @@
   (setq foxy-currently-listening nil))
 
 (defun foxy-listen-filter (proc string)
-  "Parses the incoming JSON data (STRING) from competitive-companion
+  "Parse the incoming JSON data (STRING) from competitive-companion
 and populates the testcase files."
   (let* ((json-input (json-read-from-string
                      (replace-regexp-in-string ".*\r\n" ""
@@ -205,7 +205,8 @@ and populates the testcase files."
 
 (defun foxy-cycle-files (&optional step)
   "Go STEP steps in the current directory listing.
-Given a step of 1 (the default), will go to the next file. -1 means previous file."
+Given a step of 1 (the default), will go to the next file.
+-1 means previous file."
   (interactive)
   (when (not buffer-file-name)
     (user-error "Not visiting a file - cannot cycle"))
@@ -225,199 +226,354 @@ Given a step of 1 (the default), will go to the next file. -1 means previous fil
 ;; (global-set-key (kbd "C-M-c") #'foxy-cycle-files)
 ;; (global-set-key (kbd "C-M-l") #'foxy-start-server-with-timer)
 
+;;;; Snippets
+;;; --Rust------------------------------------------------------------------
+(define-skeleton rs-header "Base rust template for competitive programming." ""
+  "use std::io::{self, prelude::*};\n\n"
+
+  "fn solve<R: BufRead, W: Write>(scan: &mut Scanner<R>, w: &mut W) -> io::Result<()> {\n"
+  "\t// cin == scan.token(); cout == writeln!(w, \"{ans}\")\n"
+  "\t" _ "\n"
+  "}\n\n"
+  
+  "fn main() -> io::Result<()> {\n"
+  "\tlet (stdin, stdout) = (io::stdin(), io::stdout());\n"
+  "\tlet mut scan = Scanner::new(io::BufReader::new(stdin.lock()));\n"
+  "\tlet mut out = io::BufWriter::new(stdout.lock());\n"
+ 
+  "\t(0..scan.token()).try_for_each(|_| solve(&mut scan, &mut out))\n"
+  "}\n\n"
+  
+  "pub struct Scanner<R> {\n"
+  "\treader: R,\n"
+  "\tbuf_str: Vec<u8>,\n"
+  "\tbuf_iter: std::str::SplitAsciiWhitespace<'static>,\n"
+  "}\n\n"
+  
+  "impl<R: std::io::BufRead> Scanner<R> {\n"
+  "\tpub fn new(reader: R) -> Self {\n"
+  "\t\tSelf {\n"
+  "\t\t\treader,\n"
+  "\t\t\tbuf_str: vec![],\n"
+  "\t\t\tbuf_iter: \"\".split_ascii_whitespace(),\n"
+  "\t\t}\n"
+  "\t}\n\n"
+ 
+  "\tpub fn token<T: std::str::FromStr>(&mut self) -> T {\n"
+  "\t\tloop {\n"
+  "\t\t\tif let Some(token) = self.buf_iter.next() {\n"
+  "\t\t\t\treturn token.parse().ok().expect(\"Failed parse\");\n"
+  "\t\t\t}\n"
+  "\t\t\tself.buf_str.clear();\n"
+  "\t\t\tself.reader\n"
+  "\t\t\t\t.read_until(b'\\n', &mut self.buf_str)\n"
+  "\t\t\t\t.expect(\"Failed read\");\n"
+  "\t\t\tself.buf_iter = unsafe {\n"
+  "\t\t\t\tlet slice = std::str::from_utf8_unchecked(&self.buf_str);\n"
+  "\t\t\t\tstd::mem::transmute(slice.split_ascii_whitespace())\n"
+  "\t\t\t}\n"
+  "\t\t}\n"
+  "\t}\n"
+  "}")
+
+(add-hook 'rust-ts-mode-hook 'abbrev-mode)
+(add-hook 'rust-ts-mode-hook (lambda ()
+                             (define-abbrev rust-ts-mode-abbrev-table
+                               "gtc" "" 'rs-header)))
+
+;;; --C++------------------------------------------------------------------
+(setq foxy-templates-dir "~/problems/templates/")
+
+(defun insert-template nil
+  "Prompt for list of all template files to insert from."
+  (interactive)
+  (let* ((files (directory-files-recursively foxy-templates-dir ""))
+         (file (completing-read "Choose template file: " files nil t)))
+    (insert-file file)))
+
+(define-skeleton cpp-header "Base c++ template for competitive programming." ""
+  "#include<bits/stdc++.h>\n"
+  "using namespace std;\n"
+  "\n#ifdef LOCAL\n"
+  "#include \"algo/debug.h\"\n"
+  "#else\n"
+  "#define debug(...) 42\n"
+  "#endif\n"
+  "\nint main () {\n"
+  "  ios::sync_with_stdio(0);\n"
+  "  cin.tie(0);\n"
+  "  " _ "\n"
+  "}")
+
+(define-skeleton cpp-for-loop
+  "Insert a C++ for loop with user-defined iterator and termination variable." ""
+  > "for (int " (setq iterator (read-char "Iterator variable: ")) " = 0; " iterator " < "
+  > (read-char "Termination: ") "; " iterator "++) {\n\t\t"
+  > _ "\n}"
+  > (indent-according-to-mode)
+  > (delete-char -1))
+
+(define-skeleton sortl "Sort with custom comparator." ""
+  > "std::sort(v.begin(), v.end(), [](auto &left, auto &right) {\n\t"
+  > "return " _ "left.second < right.second;\n"
+  > "});")
+
+(define-skeleton cpp-tests "Run multiple testcases." ""
+  > "int tt = 0; cin >> tt;\n\t"
+  > "while(tt--) {\n\t\t"
+  > _ "\n}"
+  > (indent-according-to-mode)
+  > (delete-char -1))
+
+(define-skeleton cpp-all "Run from beginning to end of iterator." ""
+  > (setq var (read-from-minibuffer "")) ".begin(), " var ".end()"
+  > (forward-char)
+  > _)
+
+(defun init-c++-abbrevs ()
+  (define-abbrev c++-mode-abbrev-table "gtc" "" 'cpp-header)
+  (define-abbrev c++-mode-abbrev-table "forl" "" 'cpp-for-loop)
+  (define-abbrev c++-mode-abbrev-table "all" "" 'cpp-all)
+  (define-abbrev c++-mode-abbrev-table "ttt" "" 'cpp-tests))
+(defun init-c++-ts-abbrevs ()
+  (define-abbrev c++-ts-mode-abbrev-table "gtc" "" 'cpp-header)
+  (define-abbrev c++-ts-mode-abbrev-table "forl" "" 'cpp-for-loop)
+  (define-abbrev c++-ts-mode-abbrev-table "all" "" 'cpp-all)
+  (define-abbrev c++-ts-mode-abbrev-table "ttt" "" 'cpp-tests))
+(add-hook 'c++-mode-hook 'abbrev-mode)
+(add-hook 'c++-ts-mode-hook 'abbrev-mode)
+(add-hook 'c++-mode-hook 'init-c++-abbrevs)
+(add-hook 'c++-ts-mode-hook 'init-c++-ts-abbrevs)
+
 ;;;; TODO: Widget
 
-;; (defface persistent-variable '((t :inherit custom-variable-tag
-;;                                 :height 1.2
-;;                                 :weight semi-bold))
-;;   "Face for Persistent menu headers.")
+(defface persistent-variable '((t :inherit custom-variable-tag
+                                :height 1.2
+                                :weight semi-bold))
+  "Face for Persistent menu headers.")
 
-;; (custom-set-faces
-;;  `(widget-button ((t (:foreground unspecified)))))
+(custom-set-faces
+ `(widget-button ((t (:foreground "white" :background "grey50")))))
 
-;; (defmacro with-visible-org-buffer (body)
-;;   `(if-let
-;;        ((win (seq-find (lambda (w)
-;;                          (eq
-;;                           (buffer-mode (window-buffer w))
-;;                          'org-mode))
-;;               (window-list))))
-;;        (with-current-buffer (window-buffer win)
-;;         (progn ,body))
-;;      (message "No org-buffer visible!")))
+(defmacro with-visible-org-buffer (body)
+  `(if-let
+       ((win (seq-find (lambda (w)
+                         (eq
+                          (buffer-mode (window-buffer w))
+                         'org-mode))
+              (window-list))))
+       (with-current-buffer (window-buffer win)
+        (progn ,body))
+     (message "No org-buffer visible!")))
 
-;; (defmacro persistent-choice (desc val choices notify-func)
-;;   `(progn
-;;     (widget-create 'menu-choice
-;;      :format
-;;      (concat "%{%t%}"
-;;       (propertize " " 'display
-;;        '(space :align-to 20))
-;;       "%[%v%]")
-;;      :tag ,desc
-;;      :sample-face 'persistent-variable
-;;      :value ,val
-;;      ;; :help-echo "Choose color theme"
-;;      :notify #',notify-func
-;;      ,@(cl-loop for (choice-tag . choice-val) in choices
-;;         collect
-;;         `'(choice-item :tag ,choice-tag :value ,choice-val)))
-;;     (widget-insert "\n")))
+(defmacro persistent-choice (desc val choices notify-func)
+  `(progn
+    (widget-create 'menu-choice
+     :format
+     (concat "%{%t%}"
+      (propertize " " 'display
+       '(space :align-to 20))
+      "%[%v%]")
+     :tag ,desc
+     :sample-face 'persistent-variable
+     :value ,val
+     ;; :help-echo "Choose color theme"
+     :notify #',notify-func
+     ,@(cl-loop for (choice-tag . choice-val) in choices
+        collect
+        `'(choice-item :tag ,choice-tag :value ,choice-val)))
+    (widget-insert "\n")))
 
-;; (defmacro persistent-toggler (desc var &optional var-values on-string off-string)
-;;   `(progn
-;;      (widget-insert (propertize ,desc 'face 'persistent-variable))
-;;      (widget-insert (propertize " " 'display '(space :align-to 20)))
-;;      ,(if (not var-values)
-;;           `(widget-create 'toggle
-;;             :value (with-visible-org-buffer ,var)
-;;             :on (concat
-;;                  (propertize ,(or on-string " on ")
-;;                   'face '(:inherit success :box t
-;;                           :weight semi-bold :slant italic
-;;                           :height 1.2)))
-;;             :off (concat
-;;                   (propertize ,(or off-string " off ")
-;;                    'face '(:inherit error :box t
-;;                            :weight semi-bold
-;;                            :height 1.2 )))
-;;             :notify
-;;             (lambda (widget &rest ignore)
-;;               (with-visible-org-buffer
-;;                (if (commandp ',var)
-;;                    (,var (if (widget-value widget) 1 0))
-;;                  (setq ,var (widget-value widget))))))
-;;         `(widget-create 'toggle
-;;           :value (eq ,var ',(caar var-values))
-;;           :on
-;;           (concat
-;;            (propertize ,(cdr (car var-values))
-;;             'face '(:box t :weight semi-bold :slant italic
-;;                     :inherit success :height 1.2))
-;;            "  "
-;;            (propertize ,(cdr (cadr var-values))
-;;             'face 'shadow
-;;                   ;; '(:box t :weight semi-bold
-;;                   ;;   :inherit shadow :height 1.2)
-;;             ))
-;;           :off (concat
-;;                 (propertize ,(cdr (car var-values))
-;;                  'face 'shadow
-;;                        ;; '(:box t :weight semi-bold
-;;                        ;;   :inherit shadow :height 1.2)
-;;                        )
-;;                 "  "
-;;                 (propertize ,(cdr (cadr var-values))
-;;                  'face '(:box t :weight semi-bold :slant italic
-;;                          :inherit success :height 1.2)))
-;;           ;; :notify (lambda (widget &rest _)
-;;           ;;           (setq org-latex-preview-default-process
-;;           ;;            (if (widget-value widget)
-;;           ;;                ',(caar var-values) ',(caadr var-values))))
-;;           ))
-;;      (widget-insert "\n")))
+;; TODO: add delete tc as well
+(defmacro persistent-toggler (desc var &optional var-values on-string off-string)
+  `(progn
+     (widget-insert (propertize ,desc 'face 'persistent-variable))
+     (widget-insert (propertize " " 'display '(space :align-to 20)))
+     ,(if (not var-values)
+          `(widget-create 'toggle
+            :value (with-visible-org-buffer ,var)
+            :on (concat
+                 (propertize ,(or on-string " on ")
+                  'face '(:inherit success :box t
+                          :weight semi-bold :slant italic
+                          :height 1.2)))
+            :off (concat
+                  (propertize ,(or off-string " off ")
+                   'face '(:inherit error :box t
+                           :weight semi-bold
+                           :height 1.2 )))
+            :notify
+            (lambda (widget &rest ignore)
+              (with-visible-org-buffer
+               (if (commandp ',var)
+                   (,var (if (widget-value widget) 1 0))
+                 (setq ,var (widget-value widget))))))
+        `(widget-create 'toggle
+          :value (eq ,var ',(caar var-values))
+          :on
+          (concat
+           (propertize ,(cdr (car var-values))
+            'face '(:box t :weight semi-bold :slant italic
+                    :inherit success :height 1.2))
+           "  "
+           (propertize ,(cdr (cadr var-values))
+            'face 'shadow
+                  ;; '(:box t :weight semi-bold
+                  ;;   :inherit shadow :height 1.2)
+            ))
+          :off (concat
+                (propertize ,(cdr (car var-values))
+                 'face 'shadow
+                       ;; '(:box t :weight semi-bold
+                       ;;   :inherit shadow :height 1.2)
+                       )
+                "  "
+                (propertize ,(cdr (cadr var-values))
+                 'face '(:box t :weight semi-bold :slant italic
+                         :inherit success :height 1.2)))
+          ;; :notify (lambda (widget &rest _)
+          ;;           (setq org-latex-preview-default-process
+          ;;            (if (widget-value widget)
+          ;;                ',(caar var-values) ',(caadr var-values))))
+          ))
+     (widget-insert "\n")))
 
-;; (defun persistent-toggle ()
-;;   "Show or hide the persistent menu."
-;;   (interactive)
-;;   (if-let ((win (cl-some (lambda (w)
-;;                            (and (string= (buffer-name (window-buffer w))
-;;                                    "*persistent*")
-;;                                 w))
-;;                          (window-list))))
-;;       (delete-window win)
-;;     (persistent-make-buffer)))
+(defun persistent-toggle ()
+  "Show or hide the persistent menu."
+  (interactive)
+  (if-let ((win (cl-some (lambda (w)
+                           (and (string= (buffer-name (window-buffer w))
+                                   "*persistent*")
+                                w))
+                         (window-list))))
+      (delete-window win)
+    (persistent-make-buffer)))
 
-;; (define-key emacs-lisp-mode-map (kbd "<f6>") #'persistent-toggle)
+(define-key emacs-lisp-mode-map (kbd "<f7>") #'persistent-toggle)
 
-;; (defun persistent-make-buffer ()
-;;   "Create the test buffer."
-;;   (interactive)
-;;   (with-current-buffer (get-buffer-create "*tests*")
-;;     (let ((display-buffer-mark-dedicated t))
-;;       (display-buffer (current-buffer)
-;;                       '(display-buffer-in-side-window
-;;                         (slot . -20)
-;;                         (direction . right)
-;;                         (side . right)
-;;                         (window-width . 40)
-;;                         (window-parameters
-;;                          (dedicated . t)
-;;                          (no-delete-other-windows . t)))))
-;;     (let ((inhibit-read-only t)) (erase-buffer))
-;;     (remove-overlays)
-;;     (widget-insert "\n           ")
-;;     (widget-create 'push-button
-;;                    :format "%{%[[PREVIEW!]%]%}"
-;;                    ;; :button-prefix "       "
-;;                    :sample-face '(:height 2.0 :box (:line-width 2))
-;;                    :help-echo "Preview LaTeX fragments in document"
-;;                    :notify (lambda (widget &rest _)
-;;                              (with-visible-org-buffer
-;;                               (org-latex-preview '(16)))))
-;;     (widget-insert "\n\n ")
-;;     ;; hide testcase
-;;     (widget-create 'push-button
-;;                    :format "%{%[[test 0]%]%}"
-;;                    :help-echo "Show/hide testcase input"
-;;                    :notify (lambda (widget &rest _)))
-;;     (widget-insert "  ")
-;;     ;; edit tc
-;;     (widget-create 'push-button
-;;                    :format "%{%[[edit]%]%}"
-;;                    :value "in1.txt"
-;;                    :help-echo "Edit the current testcase"
-;;                    :notify (lambda (widget &rest ignore)
-;;                              (message "Switch to: %s"
-;;                                       (widget-value widget))
-;;                              (display-buffer
-;;                               (find-file-noselect
-;;                                (file-name-concat
-;;                                 "/mnt/Data/Documents/problems/Codeforces/1842/a/"
-;;                                 (widget-value widget)))
-;;                               '((display-buffer-reuse-window
-;;                                  display-buffer-reuse-mode-window
-;;                                  display-buffer-use-some-window)))))
-;;     (widget-insert "  ")
-;;     ;; run tc
-;;     (widget-create 'push-button
-;;                    :format "%{%[[run]%]%}"
-;;                    :value "in1.txt"
-;;                    :help-echo "Run the current testcase"
-;;                    :notify (lambda (widget &rest ignore)
-;;                              (message "Running testcase")
-;;                              (compile
-;;                               (concat "g++ "
-;;                                "/mnt/Data/Documents/problems/Codeforces/1842/a/a.cpp"
-;;                                       " && ./a.out < "
-;;                                (file-name-concat
-;;                                 "/mnt/Data/Documents/problems/Codeforces/1842/a/"
-;;                                 (widget-value widget))))))
-;;     (widget-insert "\n")
-;;     (widget-create 'editable-field ;; FIXME (widget-insert)
-;;                    :format "%{%v%}"
-;;                    :value-face 'font-lock-comment-face
-;;                    :value
-;;                     (foxy-read-file
-;;                      "/mnt/Data/Documents/problems/Codeforces/1842/a/in1.txt")
-;;                    :indent 2
-;;                     )
+(defvar test-data)
 
-;;     ;; TODO: Time (ms) and next test
-;;     (widget-insert "\n\n\n\n")
+(defun persistent-make-buffer ()
+  "Create the test buffer."
+  (interactive)
+  (with-current-buffer (get-buffer-create "*tests*")
+    (let ((display-buffer-mark-dedicated t))
+      (display-buffer (current-buffer)
+                      '(display-buffer-in-side-window
+                        (slot . -20)
+                        (direction . right)
+                        (side . right)
+                        (window-width . 40)
+                        (window-parameters
+                         (dedicated . t)
+                         (no-delete-other-windows . t)))))
+    (kill-all-local-variables)
+    (make-local-variable 'test-data)
+    (let ((inhibit-read-only t)) (erase-buffer))
+    (remove-overlays)
+    ;; (widget-insert "\n           ")
+    ;; (widget-create 'push-button
+    ;;                :format "%{%[[PREVIEW!]%]%}"
+    ;;                ;; :button-prefix "       "
+    ;;                :sample-face '(:height 2.0 :box (:line-width 2))
+    ;;                :help-echo "Preview LaTeX fragments in document"
+    ;;                :notify (lambda (widget &rest _)
+    ;;                          (with-visible-org-buffer
+    ;;                           (org-latex-preview '(16)))))
+    ;; (widget-insert "\n\n")
+
+    ;; compile
+    ;; (compile
+    ;;  (concat "g++-14 " default-directory "main.cpp"))
+    ;; iterate over all present cases
+    (let* ((tests (length (directory-files
+                           default-directory nil "in.*txt")))
+           (i 1))
+      (while (< i (1+ tests))
+        (widget-insert "\n")
+        ;; hide testcase
+        (widget-create 'push-button
+                       :format (concat "%{%[ test " (number-to-string i) " %]%}")
+                       :help-echo "Show/hide testcase input"
+                       :notify (lambda (&rest ignore)
+                                 (widget-value-set test-data nil)
+                                 (widget-setup)))
+        (widget-insert " ")
+        ;; edit tc
+        (widget-create 'push-button
+                       :format "%{%[ edit %]%}"
+                       :value (format "in%d.txt" i)
+                       :help-echo "Edit the current testcase"
+                       :notify (lambda (widget &rest ignore)
+                                 (message "Switch to: %s"
+                                          (widget-value widget))
+                                 (display-buffer
+                                  (find-file-noselect
+                                   (file-name-concat
+                                    default-directory
+                                    (widget-value widget)))
+                                  '((display-buffer-reuse-window
+                                     display-buffer-reuse-mode-window
+                                     display-buffer-use-some-window)))))
+        (widget-insert " ")
+        ;; run tc
+        (widget-create 'push-button
+                       :format "%{%[ run %]%}"
+                       :value (format "%d" i)
+                       :help-echo "Run the current testcase"
+                       :notify (lambda (widget &rest ignore)
+                                 (message "Running testcase")
+                                 (let* ((test-output ;; (2>./deb.txt handles debug output)
+                                         (shell-command-to-string (concat "./a.out < ./in"
+                                                                          (widget-value widget) ".txt 2> ./deb.txt")))
+                                        ;; (test-debug (foxy-read-file "./deb.txt"))
+                                        (test-ans (foxy-read-file (concat "./ans"
+                                                                          (widget-value widget) ".txt"))))
+                                   ;; If output is same as test, continue else show all three strings
+                                   (if (string-equal test-output test-ans)
+                                       (progn
+                                         (message "Testcase Passed")
+                                         (setq results (concat "Testcase " (widget-value widget) " passed!\n")))
+                                     (progn
+                                       (message "Testcase Mismatch")
+                                       (if (fboundp 'diff-lisp-diff-strings)
+                                           (setq results (concat (diff-lisp-diff-strings
+                                                          test-output test-ans
+                                                          (concat "Testcase "
+                                                                  (widget-value widget) " mismatch!"))))
+                                         (setq results (concat "Testcase " (widget-value widget)
+                                                               " mismatch!\nOutput:\n" test-output
+                                                               "\nAns:\n" test-ans "\n"))))))
+                                 ;;       (unless (string-equal "" test-debug)
+                                 ;;         (setq results (concat "Debug:\n" test-debug))))))
+                                 ;; (delete-file "./deb.txt")
+                                 ))
+        (widget-insert "\n")
+        ;; show tc-should be linked to the hide [test 0] button
+        (setq test-data
+              (widget-create 'editable-field ;; FIXME (widget-insert)
+                             :format "%{%v%}"
+                             :value
+                             (foxy-read-file
+                              (concat default-directory "in"
+                                      (number-to-string i) ".txt"))
+                             :indent 2))
+        (setq i (1+ i))))
+    ;; TODO: Time (ms) and next test
+    (widget-insert "\n\n\n\n")
    
-;;     (use-local-map
-;;      (make-composed-keymap
-;;       (list (let ((map (make-sparse-keymap)))
-;;               (define-key map (kbd "<mouse-1>") 'widget-button-click)
-;;               (define-key map (kbd "RET") 'widget-button-press)
-;;               (define-key map (kbd "q") 'kill-buffer-and-window)
-;;               (define-key map (kbd "<f6>") 'kill-buffer-and-window)
-;;               (if (bound-and-true-p evil-mode)
-;;                   (evil-make-overriding-map map 'normal))
-;;               map))
-;;       widget-keymap))
-;;     (widget-setup)))
+    (use-local-map
+     (make-composed-keymap
+      (list (let ((map (make-sparse-keymap)))
+              (define-key map (kbd "<mouse-1>") 'widget-button-click)
+              (define-key map (kbd "RET") 'widget-button-press)
+              (define-key map (kbd "q") 'kill-buffer-and-window)
+              (define-key map (kbd "<f7>") 'kill-buffer-and-window)
+              (if (bound-and-true-p evil-mode)
+                  (evil-make-overriding-map map 'normal))
+              map))
+      widget-keymap))
+    (widget-setup)))
 
 (provide 'foxy)
 ;;; foxy.el ends here

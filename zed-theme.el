@@ -17,7 +17,7 @@
   :type 'boolean
   :group 'zed)
 
-(setq zed-icons-p t);(package-installed-p 'nerd-icons))
+(setq zed-icons-p t);(require 'nerd-icons nil t))
 
 (let ((selection-color (if load-theme-light
                            "#C9D0D9"
@@ -121,7 +121,7 @@
 
    ;; Font-lock
    `(font-lock-builtin-face ((t (:foreground ,blue-color :inherit italic))))
-   `(font-lock-comment-face ((t (:foreground "#5e636e"))))
+   `(font-lock-comment-face ((t (:foreground ,inactive-color))))
    `(font-lock-constant-face ((t (:foreground ,yellow-color))))
    `(font-lock-number-face ((t (:inherit font-lock-constant-face))))
    `(font-lock-doc-string-face ((t (:foreground "#1A93AE" :background "#F4F9FE"))))
@@ -212,7 +212,7 @@
    `(pulse-highlight-start-face ((t (:background ,light-yellow-color))))
    `(pulse-highlight-face ((t (:background ,light-yellow-color :extend t))))
    `(vertical-border ((t (:foreground ,border-color))))
-   `(whitespace-space ((t (:inherit font-lock-comment-face))))
+   `(whitespace-space ((t (:weight light :inherit font-lock-comment-face))))
    `(whitespace-line ((t (:inherit font-lock-comment-face))))
    `(whitespace-newline ((t (:inherit font-lock-comment-face))))
    `(whitespace-trailing ((t (:inherit font-lock-warning-face))))
@@ -227,8 +227,8 @@
    `(erc-timestamp-face ((t (:inherit font-lock-comment-face :weight bold))))
    `(erc-header-line ((t (:background ,modeline-color :foreground ,green-color))))
 
-   ;; `(variable-pitch-text ((t (:inherit variable-pitch))))
-   `(shr-text ((t (:inherit default :weight regular))))
+   `(variable-pitch-text ((t (:inherit variable-pitch))))
+   `(shr-code ((t (:inherit default :foreground ,yellow-color))))
    `(gnus-group-mail-1 ((t (:foreground ,red-color :weight bold))))
    `(gnus-group-mail-2 ((t (:foreground ,red-color :weight bold))))
    `(gnus-group-mail-3 ((t (:foreground ,red-color :weight bold))))
@@ -343,6 +343,8 @@
    ;; `(vertico-posframe ((t (:foreground ,foreground-color :background "#1a1a1a")))
    `(vertico-posframe-border ((t (:inherit child-frame-border))))
    `(why-this-face ((t (:inherit font-lock-comment-face))))
+   `(which-key-key-face ((t (:inherit default))))
+   `(which-key-command-description-face ((t (:inherit font-lock-comment-face :slant italic))))
    `(which-func ((t (:foreground ,inactive-color))))))
 
 ;; Mode-line
@@ -363,7 +365,7 @@
       ;; all the stuff that will be right-aligned
       mode-line-end-spaces
       `("%n " mode-line-misc-info
-        (:eval (unless zed-icons-p
+        (:eval (unless nil ;zed-icons-p
                  (propertize (format " %s" (upcase (if (stringp mode-name)
                                                        mode-name
                                                      (car mode-name))))
@@ -391,6 +393,7 @@
                             flymake-mode-line-note-counter " "))))
                    (flymake--mode-line-counters))))
         ;; (:eval (propertize " %l:%C " 'face 'which-func))
+        (:eval (propertize " %p " 'face 'which-func))
         ))
 
 (defun my/ml-padding ()
@@ -401,32 +404,35 @@
 
 (setq-default
  mode-line-format
- '((:eval (when (and (bound-and-true-p meow-global-mode)
-                     (mode-line-window-selected-p))
-            (let* ((state (meow--current-state))
-                   (indicator-face (alist-get state meow-indicator-face-alist))
-                   (buffer-state (cond ((file-remote-p default-directory)
+ '((:eval (when (mode-line-window-selected-p)
+            (let* ((indicator-face
+                    (if (bound-and-true-p meow-global-mode)
+                        (alist-get (meow--curent-state) meow-indicator-face-alist)
+                      'mode-line-active))
+                   (buffer-state (cond (defining-kbd-macro " >> ")
+                                       (buffer-read-only " RO ")
+                                       ((buffer-modified-p) " ** ")
+                                       ((file-remote-p default-directory)
                                         (concat " " (file-remote-p
                                                      default-directory 'host)
                                                 " "))
-                                       (t
-                                        " %p "))))
+                                       (t " -- "))))
               (propertize buffer-state
                           'face `(,indicator-face
-                                  :inverse-video t
+                                  ;; :inverse-video t
                                   :box (:style flat-button))))))
    (:eval (when (bound-and-true-p macrursors-mode)
             macrursors-mode-line))
-   "%e "
-   (:eval (when zed-icons-p
+   "%e"
+   (:eval (when nil ;zed-icons-p
             (with-eval-after-load 'nerd-icons
               (propertize (nerd-icons-icon-for-buffer)
                           'display '(raise 0.15)
                           'help-echo "Mouse-1: Show major-mode-menu"
                           'local-map mode-line-major-mode-keymap)))) ;; issues with underline
-   (:eval (propertize " %b " 'face (if (and (buffer-modified-p)
-                                            (or (derived-mode-p 'prog-mode)
-                                                (derived-mode-p 'text-mode)))
+   (:eval (propertize " %b " 'face (if (and (buffer-modified-p))
+                                            ;; (or (derived-mode-p 'prog-mode)
+                                            ;;     (derived-mode-p 'text-mode)))
                                        '(:inherit font-lock-warning-face :weight bold)
                                      '(:weight bold))
                       'help-echo (buffer-file-name)))
