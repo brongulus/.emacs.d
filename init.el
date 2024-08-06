@@ -13,6 +13,7 @@
 
 (use-package emacs
   :no-require
+  :bind-keymap ("C-j" . ctl-x-r-map)
   :bind (("C-h '" . describe-face)
          ("M-c" . quick-calc) ; 16#hex
          ("M-k" . kill-word)
@@ -96,7 +97,10 @@
         tabify-regexp "^\t* [ \t]+"
         grep-command "grep --color=always -nHi -r --include=*.* -e \"pattern\" ."
         electric-pair-skip-self t
-        electric-pair-preserve-balance nil
+        electric-pair-preserve-balance 'electric-pair-inhibit-predicate
+        electric-pair-delete-adjacent-pairs t
+        ;; electric-pair-open-newline-between-pairs nil
+        electric-pair-skip-whitespace nil
         shell-command-prompt-show-cwd t
         shell-kill-buffer-on-exit t
         set-mark-command-repeat-pop t
@@ -131,8 +135,7 @@
   :no-require
   :bind ("C-x w w" . my/toggle-full-window)
   :bind (:map special-mode-map
-              ("Q" . (lambda nil (interactive)
-                       (quit-window t))))
+              ("Q" . kill-buffer-and-window))
   :defer 2
   :hook
   (after-init . (lambda nil
@@ -164,6 +167,8 @@
                   (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
                   (add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
                   (add-hook 'prog-mode-hook (electric-pair-mode t))
+                  (add-hook 'minibuffer-setup-hook (lambda () (electric-pair-mode 0)))
+                  (add-hook 'minibuffer-exit-hook (lambda () (electric-pair-mode 1)))
                   (add-hook 'prog-mode-hook (show-paren-mode t))
                   (add-to-list 'write-file-functions
                                '(lambda ()
@@ -182,12 +187,12 @@
                     (xterm-mouse-mode))
                   ;; enable some useful modes
                   (save-place-mode 1)
-                  (setq savehist-additional-variables '(kill-ring))
+                  (setq savehist-additional-variables '(register-alist kill-ring))
                   (setq save-interprogram-paste-before-kill t)
                   (global-subword-mode 1)
                   (delete-selection-mode)
                   (context-menu-mode 1)
-                  (savehist-mode)
+                  (savehist-mode 1)
                   (blink-cursor-mode -1)
                   (setq blink-cursor-interval 0.7)
                   (tooltip-mode -1))))
@@ -370,8 +375,6 @@
          :repeat-map isearch-repeat-map
          ("s" . isearch-repeat-forward)
          ("r" . isearch-repeat-backward))
-  :config
-  (add-hook 'isearch-mode (electric-pair-mode 'toggle))
   :custom
   (isearch-wrap-pause 'no)
   (isearch-lazy-count t)
@@ -827,7 +830,7 @@
   (completion-styles '(orderless basic)))
 
 (use-package avy
-  :bind ("C-j" . avy-goto-char-timer)
+  :bind ("M-s j" . avy-goto-char-timer)
   :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer)
   :custom
   (avy-single-candidate-jump nil))
@@ -894,6 +897,9 @@
   (dolist (key '("C-f" "C-b" "C-a" "C-e"))
     (define-key corfu-map key nil))
   (add-hook 'eshell-mode #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
+  (with-eval-after-load 'savehist
+    (corfu-history-mode 1)
+    (add-to-list 'savehist-additional-variables 'corfu-history))
   (setq completion-ignore-case t)
   (setq corfu-cycle t
         corfu-auto t
@@ -986,6 +992,7 @@
               ("/ <deletechar>" . ibuffer-clear-filer-groups)))
 
 (use-package writeroom-mode
+  :hook ((nov-mode Info-mode) . writeroom-mode)
   :config
   (setq writeroom-width 90
         writeroom-mode-line t
@@ -1123,9 +1130,7 @@
 
 (use-package nov
   :mode ("\\.epub\\'" . nov-mode)
-  :hook
-  (nov-mode . visual-line-mode)
-  (nov-mode . writeroom-mode)
+  :hook (nov-mode . visual-line-mode)
   :config
   (add-hook 'nov-mode-hook
             (lambda nil ;; thx teco

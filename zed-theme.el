@@ -408,7 +408,7 @@
             (let* ((indicator-face
                     (if (bound-and-true-p meow-global-mode)
                         (alist-get (meow--curent-state) meow-indicator-face-alist)
-                      'mode-line-active))
+                      'font-lock-comment-face))
                    (buffer-state (cond (defining-kbd-macro " >> ")
                                        (buffer-read-only " RO ")
                                        ((buffer-modified-p) " ** ")
