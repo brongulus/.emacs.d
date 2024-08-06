@@ -195,6 +195,7 @@
    `(dired-marked ((t (:foreground ,magenta-color))))
    `(fill-column-indicator ((t (:inherit font-lock-comment-face :height 1.1))))
    `(fixed-pitch ((t (:inherit default))))
+   `(fixed-pitch-serif ((t (:inherit default))))
    `(info-menu-star ((t (:foreground ,red-color))))
    `(icomplete-selected-match ((t (:inherit highlight :extend t))))
    `(tty-menu-selected-face ((t (:inherit highlight))))
@@ -313,26 +314,16 @@
    `(org-habit-ready-future-face ((t (:foreground ,green-color))))
    
    `(tab-bar ((t (:background ,subtle-color :box ,border-color :height 1.0))))
-   `(tab-bar-tab
-     ((t (:background ,background-color :foreground ,foreground-color :height 1.0
-                      ,@(when (display-graphic-p)
-                          (list :underline
-                                (list :color background-color :position -1)))))))
+   `(tab-bar-tab ((t (:inherit default))))
    `(tab-bar-tab-inactive
      ((t (:background ,subtle-color :foreground ,inactive-color :weight regular :height 1.0
                       ,@(when (display-graphic-p)
                           (list :underline
                                 (list :color border-color :position -1)))))))
-   ;; TODO make it solaire-compatible
-   `(tab-line ((t (:background ,background-color :box ,border-color))))
-   `(tab-line-tab
-     ((t (:background ,subtle-color :foreground ,foreground-color
-                      ,@(when (display-graphic-p)
-                          (list :underline (list :color subtle-color :position -1)))))))
-   `(tab-line-tab-inactive
-     ((t (:background ,background-color :foreground ,inactive-color :weight regular
-                      ,@(when (display-graphic-p)
-                          (list :underline (list :color border-color :position -1)))))))
+
+   `(tab-line ((t (:inherit tab-bar))))
+   `(tab-line-tab ((t (:inherit tab-bar-tab))))
+   `(tab-line-tab-inactive ((t (:inherit tab-bar-tab-inactive))))
    `(tab-line-tab-special ((t (:italic nil))))
    `(tab-line-tab-current ((t (:inherit tab-line-tab))))
    `(tab-line-highlight ((t (:inherit tab-line-tab))))

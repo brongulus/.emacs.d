@@ -139,7 +139,7 @@
   (setq command-line-x-option-alist nil))
 
 (set-face-attribute
- 'variable-pitch nil :family "Iosevka Comfy" :weight 'regular :height 180)
+ 'variable-pitch nil :family "Iosevka Comfy" :weight 'regular :height 170)
 
 ;; native-comp
 (if (and (featurep 'native-compile)

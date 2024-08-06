@@ -107,6 +107,16 @@
         compilation-ask-about-save nil
         compilation-scroll-output 'first-error)
 
+  ;; Kill-line if region not selected
+  (defun slick-copy (beg end)
+    (interactive)
+     (if mark-active
+         (list (region-beginning) (region-end))
+       (message "Copied line")
+       (list (line-beginning-position) (line-end-position))))
+
+  (advice-add 'kill-ring-save :before #'slick-copy)
+  
   (defun silent-command (fn &rest args)
     "Used to suppress output of FN."
     (let ((inhibit-message t)
@@ -135,7 +145,8 @@
   :no-require
   :bind ("C-x w w" . my/toggle-full-window)
   :bind (:map special-mode-map
-              ("Q" . kill-buffer-and-window))
+              ("Q" . (lambda nil (interactive)
+                       (quit-window t))))
   :defer 2
   :hook
   (after-init . (lambda nil
@@ -148,20 +159,7 @@
                     (if (window-parent)
                         (delete-other-windows)
                       (winner-undo)))
-                  ;; highlight area when yanking/killing
-                  (defun my/yank-pulse-advice (orig-fn &rest args)
-                    (let (begin end)
-                      (setq begin (point))
-                      (apply orig-fn args)
-                      (setq end (point))
-                      (pulse-momentary-highlight-region begin end)))
-                  (advice-add 'yank :around #'my/yank-pulse-advice)
-                  (defun my/kill-pulse-advice (orig-fn beg end &rest args)
-                    (pulse-momentary-highlight-region beg end)
-                    (apply orig-fn beg end args))
-                  (advice-add 'kill-ring-save :around #'my/kill-pulse-advice)
                   ;; misc
-                  ;; (push 'check-parens write-file-functions) ;; issue in org - fixed below
                   (add-hook 'debugger-mode-hook #'visual-line-mode)
                   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
                   (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
@@ -230,6 +228,13 @@
          ("E" . wdired-change-to-wdired-mode)
          ("z" . find-grep-dired))
   :config
+  (add-hook 'dired-mode-hook ;; solaire
+          (lambda nil
+            (dolist (face '(default fringe))
+              (face-remap-add-relative
+               face :background (if load-theme-light
+                                    "#EEEEEE"
+                                  "#30343D")))))
   (when (eq system-type 'darwin)
     (require 'ls-lisp)
     (setq ls-lisp-use-insert-directory-program nil
@@ -994,7 +999,7 @@
 (use-package writeroom-mode
   :hook ((nov-mode Info-mode) . writeroom-mode)
   :config
-  (setq writeroom-width 90
+  (setq writeroom-width (min 90 (window-width))
         writeroom-mode-line t
         writeroom-global-effects nil
         writeroom-maximize-window nil))
@@ -1074,10 +1079,14 @@
                                        (change . "█"))
         diff-hl-draw-borders nil))
 
-(use-package solaire-mode
-  :if (display-graphic-p)
-  :hook (after-init . solaire-global-mode)
-  :hook (minibuffer-mode . turn-on-solaire-mode))
+(use-package info-colors
+  :ensure nil
+  :init
+  (unless (package-installed-p 'info-colors)
+    (package-vc-install "https://github.com/ubolonton/info-colors"))
+  :hook
+  (Info-selection . info-colors-fontify-node)
+  (Info-mode . variable-pitch-mode))
 
 (use-package shr-tag-pre-highlight ;; FIXME: complains if mode isnt available
   :defer 1
@@ -1143,7 +1152,7 @@
                                         (1+ nov-documents-index)
                                         (length nov-documents))
                                 'face font-lock-comment-face)))))))
-  (setq nov-text-width 80
+  (setq nov-text-width (min 80 (window-width))
         nov-header-line-format nil))
   
 (use-package devil
@@ -1452,7 +1461,8 @@
   (defvar foxy-compile-commands
     '((rust-ts-mode-hook . "rustc -o a.out ")
       (c++-mode-hook . "g++-14 -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 ")
-      (go-ts-mode-hook . "go build -o a.out ")))
+      ;; (go-ts-mode-hook . "go build -o a.out ")
+      ))
   (dolist (pair foxy-compile-commands)
     (let ((mode (car pair))
           (command (cdr pair)))
@@ -1515,9 +1525,10 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(nerd-icons-ibuffer ibuffer-vc devil expand-region shr-tag-pre-highlight highlight-indent-guides macrursors isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode solaire-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
+   '(info-colors nerd-icons-ibuffer ibuffer-vc devil expand-region shr-tag-pre-highlight highlight-indent-guides macrursors isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
  '(package-vc-selected-packages
-   '((macrursors :vc-backend Git :url "https://github.com/karthink/macrursors")
+   '((info-colors :vc-backend Git :url "htttps://github.com/ubolonton/info-colors")
+     (macrursors :vc-backend Git :url "https://github.com/karthink/macrursors")
      (janet-ts-mode :vc-backend Git :url "https://github.com/sogaiu/janet-ts-mode"))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
