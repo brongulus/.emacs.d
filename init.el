@@ -2,6 +2,7 @@
 ;;; Commentary:
 ;;; Ah shit, here we go again.
 ;;; Code:
+(define-key global-map (kbd "C-z") (make-sparse-keymap))
 (use-package use-package
   :no-require
   :config
@@ -26,13 +27,15 @@
          ("C-a" . (lambda nil (interactive)
                     (if (= (point) (progn (beginning-of-line-text) (point)))
                         (beginning-of-line))))
-         ("C-z" . (lambda () (interactive)
-                    (if (derived-mode-p 'emacs-lisp-mode)
-                        (describe-symbol (symbol-at-point))
-                      (if (package-installed-p 'eldoc-box)
-                          (eldoc-box-help-at-point)
-                        (eldoc-doc-buffer t)))))
+         ("C-z C-z" . (lambda () (interactive)
+                        (if (derived-mode-p 'emacs-lisp-mode)
+                            (describe-symbol (symbol-at-point))
+                          (if (package-installed-p 'eldoc-box)
+                              (eldoc-box-help-at-point)
+                            (eldoc-doc-buffer t)))))
          ("C-o" . other-window)
+         ("C-," . scroll-other-window)
+         ("C-." . scroll-other-window-down)
          ("M-P" . execute-extended-command)
          ("M-s r" . replace-regexp)
          ("M-s f" . ffap)
@@ -96,6 +99,7 @@
         outline-minor-mode-cycle nil ;t
         tabify-regexp "^\t* [ \t]+"
         grep-command "grep --color=always -nHi -r --include=*.* -e \"pattern\" ."
+        ;; list-matching-lines-default-context-lines 2
         electric-pair-skip-self t
         electric-pair-preserve-balance 'electric-pair-inhibit-predicate
         electric-pair-delete-adjacent-pairs t
@@ -107,15 +111,29 @@
         compilation-ask-about-save nil
         compilation-scroll-output 'first-error)
 
-  ;; Kill-line if region not selected
-  (defun slick-copy (beg end)
+  ;; Copy-line if region not selected
+  (defun slick-copy nil
     (interactive)
-     (if mark-active
-         (list (region-beginning) (region-end))
-       (message "Copied line")
-       (list (line-beginning-position) (line-end-position))))
+    (if mark-active
+        (call-interactively 'kill-ring-save)
+      (message "Copied current line")
+      (copy-region-as-kill (line-beginning-position 1)
+                           (line-end-position 1))))
 
-  (advice-add 'kill-ring-save :before #'slick-copy)
+  (defun my/select-current-line-and-forward-line (arg) ;src: kaushal modi
+    "Select the current line and move the cursor by ARG lines IF
+no region is selected.
+
+If a region is already selected when calling this command, only move
+the cursor by ARG lines."
+    (interactive "p")
+    (when (not (use-region-p))
+      (forward-line 0)
+      (set-mark-command nil))
+    (forward-line arg))
+  
+  (global-set-key (kbd "M-w") 'slick-copy)
+  (global-set-key (kbd "M-l") #'my/select-current-line-and-forward-line)
   
   (defun silent-command (fn &rest args)
     "Used to suppress output of FN."
@@ -143,23 +161,52 @@
 
 (use-package emacs
   :no-require
-  :bind ("C-x w w" . my/toggle-full-window)
+  :bind ("C-x w w" . my-min-max-window)
   :bind (:map special-mode-map
               ("Q" . (lambda nil (interactive)
-                       (quit-window t))))
+                       (quit-window t)))
+              :map prog-mode-map
+              ("C-c C-c" . compile)
+              ("C-c C-r" . recompile))
   :defer 2
   :hook
   (after-init . (lambda nil
                   ;; random functions
-                  (defun my/toggle-full-window()
+                  (defvar my-min-max-window nil)
+                  (defun my-min-max-window()
                     "Toggle full view of selected window."
                     (interactive)
-                    (unless (bound-and-true-p winner-mode)
-                      (winner-mode +1))
-                    (if (window-parent)
-                        (delete-other-windows)
-                      (winner-undo)))
-                  ;; misc
+                    (if (and (one-window-p) my-min-max-window)
+                        (window-state-put my-min-max-window)
+                      (setq my-min-max-window (window-state-get))
+                      (delete-other-windows)))
+                  
+                  ;; highlight area when yanking/killing
+                  (defun my/yank-pulse-advice (orig-fn &rest args)
+                    (let (begin end)
+                      (setq begin (point))
+                      (apply orig-fn args)
+                      (setq end (point))
+                      (pulse-momentary-highlight-region begin end)))
+                  (advice-add 'yank :around #'my/yank-pulse-advice)
+                  (defun my/kill-pulse-advice (orig-fn beg end &rest args)
+                    (pulse-momentary-highlight-region beg end)
+                    (apply orig-fn beg end args))
+                  (advice-add 'kill-ring-save :around #'my/kill-pulse-advice)
+                  
+                  ;; surround
+                  (defvar insert-pair-map ;; src: oantolin
+                    (let ((map (make-sparse-keymap)))
+                      (define-key map [t] #'insert-pair)
+                      map))
+                  (defvar delete-pair-map
+                    (let ((map (make-sparse-keymap)))
+                      (define-key map [t] #'delete-pair)
+                      map))
+                  (global-set-key (kbd "M-s s") insert-pair-map)
+                  (global-set-key (kbd "M-s d") delete-pair-map)
+                  
+                  ;; misc modes and hooks
                   (add-hook 'debugger-mode-hook #'visual-line-mode)
                   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
                   (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
@@ -171,7 +218,7 @@
                   (add-to-list 'write-file-functions
                                '(lambda ()
                                   (unless indent-tabs-mode
-                                      (untabify (point-min) (point-max)))
+                                    (untabify (point-min) (point-max)))
                                   (when (eq major-mode 'emacs-lisp-mode)
                                     (check-parens))
                                   nil))
@@ -215,26 +262,26 @@
   :ensure nil
   :hook (dired-mode . dired-hide-details-mode) ;; dired-hide-dotfiles-mode
   :bind (:map dired-mode-map
-         ("q" . kill-this-buffer)
-         ("RET" . dired-find-alternate-file)
-         ("TAB" . dired-maybe-insert-subdir)
-         ("<backspace>" . (lambda nil (interactive)
-                            (dired-kill-subdir)
-                            (set-mark-command '(4))))
-         ("<backtab>" . (lambda nil (interactive)
-                            (dired-kill-subdir)
-                            (set-mark-command '(4))))
-         ("\\" . dired-up-directory)
-         ("E" . wdired-change-to-wdired-mode)
-         ("z" . find-grep-dired))
+              ("q" . kill-this-buffer)
+              ("RET" . dired-find-alternate-file)
+              ("TAB" . dired-maybe-insert-subdir)
+              ("<backspace>" . (lambda nil (interactive)
+                                 (dired-kill-subdir)
+                                 (set-mark-command '(4))))
+              ("<backtab>" . (lambda nil (interactive)
+                               (dired-kill-subdir)
+                               (set-mark-command '(4))))
+              ("\\" . dired-up-directory)
+              ("E" . wdired-change-to-wdired-mode)
+              ("z" . find-grep-dired))
   :config
   (add-hook 'dired-mode-hook ;; solaire
-          (lambda nil
-            (dolist (face '(default fringe))
-              (face-remap-add-relative
-               face :background (if load-theme-light
-                                    "#EEEEEE"
-                                  "#30343D")))))
+            (lambda nil
+              (dolist (face '(default fringe))
+                (face-remap-add-relative
+                 face :background (if load-theme-light
+                                      "#EEEEEE"
+                                    "#30343D")))))
   (when (eq system-type 'darwin)
     (require 'ls-lisp)
     (setq ls-lisp-use-insert-directory-program nil
@@ -294,6 +341,8 @@
 (use-package hideshow
   :ensure nil
   :hook (prog-mode . hs-minor-mode)
+  :bind (("C-z a" . hs-global-cycle)
+         ("C-z f" . hs-cycle))
   :config
   (defun hs-cycle (&optional level)
     (interactive "p")
@@ -389,6 +438,7 @@
 
 (use-package flymake
   :ensure nil
+  :bind ("M-s x" . flymake-show-buffer-diagnostics)
   :hook (prog-mode . flymake-mode)
   :hook (cc-mode . check-cc-tramp)
   :config
@@ -592,11 +642,11 @@
            "* TODO %?\n:PROPERTIES:\n:STYLE: habit\n:LOGGING: TODO(!) DONE(!)\n:END:"
            :prepend t))))
 
-(use-package desktop ;; session-persistence
+(use-package desktop
   :ensure nil
   :if (display-graphic-p)
- :hook (window-setup . desktop-save-mode)
- :hook (window-setup . desktop-read)
+  :hook (window-setup . desktop-save-mode)
+  :hook (window-setup . desktop-read)
   :config
   (advice-add 'desktop-read :around
               (lambda (orig &rest args)
@@ -767,9 +817,9 @@
                               "gwene.org.bitlbee.news.rss")
                              ("Unread")))))
 
-;;; --------------
-;;; ELPA packages
-;;; --------------
+;;; -----------------
+;;; External packages
+;;; -----------------
 (use-package popper
   :bind (("M-j"   . popper-toggle)
          ("C-`"   . popper-cycle)
@@ -822,6 +872,13 @@
                          'face tab-face))))
        (tab-line-tab-name-format-default tab tabs)
        tab-vbar))))
+
+(use-package transpose-frame
+  :bind
+  ("C-x 5 t" . transpose-frame)
+  ("C-x 5 r" . rotate-frame)
+  ("C-x 5 f" . flip-frame)
+  ("C-x 5 l" . flop-frame))
 
 (use-package orderless
   :after minibuffer
@@ -877,17 +934,6 @@
         completions-group t
         completions-detailed t))
 
-(use-package vertico-posframe
-  :disabled t
-  :hook (vertico-mode . vertico-posframe-mode)
-  :config
-  (setq vertico-posframe-parameters
-        '((left-fringe . 8)
-          (right-fringe . 8))
-        vertico-posframe-width 80
-        vertico-posframe-border-width 1
-        vertico-posframe-poshandler 'posframe-poshandler-frame-top-center))
-
 (use-package corfu
   :hook (after-init . global-corfu-mode)
   :hook ((corfu-mode . corfu-popupinfo-mode)
@@ -930,9 +976,24 @@
         eldoc-box-max-pixel-height 700
         eldoc-box-only-multi-line t))
 
+(use-package sideline-flymake
+  :hook (flymake-mode . sideline-mode)
+  :init
+  (setq sideline-flymake-display-mode 'line)
+  (setq sideline-backends-right '(sideline-flymake)
+        sideline-flymake-show-backend-name t))
+
 (use-package exec-path-from-shell
   :if (display-graphic-p)
   :hook (after-init . exec-path-from-shell-initialize))
+
+(use-package xclip
+  :unless (display-graphic-p)
+  :init (xclip-mode 1))
+
+(use-package kkp
+  :unless (display-graphic-p)
+  :init (global-kkp-mode +1))
 
 (use-package magit
   :commands (magit magit-file-dispatch magit-log-all magit-ediff-show-unstaged)
@@ -952,7 +1013,7 @@
          ("=" . er/expand-region)))
 
 (use-package macrursors ; use C-; (macrursors-end) to do edits
-  :ensure nil
+  :ensure nil           ; for beacon-like selection C-; SPC/ C-; C-g
   :init
   (unless (package-installed-p 'macrursors)
     (package-vc-install "https://github.com/karthink/macrursors"))
@@ -960,14 +1021,40 @@
   :bind-keymap ("C-;" . macrursors-mark-map)
   :bind (("M-n" . macrursors-mark-next-instance-of)
          ("M-p" . macrursors-mark-previous-instance-of)
-         ("M-d" . macrursors-mark-all-instances-of)
+         ("M-d" . (lambda nil
+                    (interactive)
+                    (if (region-active-p)
+                      (macrursors-mark-all-instances-of)
+                    (mark-word))))
+         
          :map macrursors-mark-map
          ("C-g" . macrursors-early-quit)
          ("C-n" . macrursors-mark-next-line)
          ("C-p" . macrursors-mark-previous-line)
+         ("M-<down>" . macrursors-mark-next-line)
+         ("M-<up>" . macrursors-mark-previous-line)
+         
          :repeat-map macrursors-mark-repeat-map
          ("n" . macrursors-mark-next-line)
-         ("p" . macrursors-mark-previous-line))
+         ("C-n" . macrursors-mark-next-line)
+         ("<down>" . macrursors-mark-next-line)
+         ("M-<down>" . macrursors-mark-next-line)
+         ("p" . macrursors-mark-previous-line)
+         ("C-p" . macrursors-mark-previous-line)
+         ("<up>" . macrursors-mark-previous-line)
+         ("M-<up>" . macrursors-mark-previous-line)
+         
+         :map macrursors-mode-map
+         ("C-'" . macrursors-hideshow)
+         
+         :map isearch-mode-map
+         ("C-;" . macrursors-mark-from-isearch)
+         ("M-<down>" . macrursors-mark-next-from-isearch)
+         ("M-<up>" . macrursors-mark-previous-from-isearch)
+         
+         :repeat-map isearch-repeat-map
+         ("<down>" . macrursors-mark-next-from-isearch)
+         ("<up>" . macrursors-mark-previous-from-isearch))
   :config
   (set-face-attribute 'macrursors-cursor-face nil
                       :inverse-video nil :inherit 'cursor)
@@ -978,6 +1065,7 @@
     (add-hook 'macrursors-mode-hook #'meow-insert)))
 
 (use-package isearch-mb
+  :disabled t
   :after isearch
   :hook (isearch-mode . isearch-mb-mode))
 
@@ -994,10 +1082,10 @@
   :after ibuffer
   :bind (:map ibuffer-mode-map
               ("/ V" . ibuffer-vc-set-filter-groups-by-vc-root)
-              ("/ <deletechar>" . ibuffer-clear-filer-groups)))
+              ("/ /" . ibuffer-clear-filter-groups)))
 
 (use-package writeroom-mode
-  :hook ((nov-mode Info-mode) . writeroom-mode)
+  :hook ((nov-mode Info-mode Man-mode) . writeroom-mode)
   :config
   (setq writeroom-width (min 90 (window-width))
         writeroom-mode-line t
@@ -1030,17 +1118,17 @@
   :commands eat-project
   :init (with-eval-after-load 'project
           (add-to-list 'project-switch-commands '(eat-project "Eat" ?t)))
-  :bind (("C-." . (lambda () (interactive)
-                    (defvar eat-buffer-name)
-                    (let ((current-prefix-arg t)
-                          (eat-buffer-name
-                           (concat "*" (file-name-nondirectory
-                                        (directory-file-name
-                                         (if (vc-root-dir)
-                                             (vc-root-dir)
-                                           default-directory)))
-                                   "-eat*")))
-                      (call-interactively 'eat))))
+  :bind (("C-\\" . (lambda () (interactive)
+                     (defvar eat-buffer-name)
+                     (let ((current-prefix-arg t)
+                           (eat-buffer-name
+                            (concat "*" (file-name-nondirectory
+                                         (directory-file-name
+                                          (if (vc-root-dir)
+                                              (vc-root-dir)
+                                            default-directory)))
+                                    "-eat*")))
+                       (call-interactively 'eat))))
          (:map eat-semi-char-mode-map
                ("C-u" . eat-self-input)
                ("C-o" . other-window)
@@ -1154,7 +1242,7 @@
                                 'face font-lock-comment-face)))))))
   (setq nov-text-width (min 80 (window-width))
         nov-header-line-format nil))
-  
+
 (use-package devil
   :hook (after-init . global-devil-mode)
   :config
@@ -1180,15 +1268,6 @@
             (push event unread-command-events))
         (insert initial-key))))
 
-  (defvar insert-pair-map ;; src: oantolin
-    (let ((map (make-sparse-keymap)))
-      (define-key map [t] #'insert-pair)
-      map))
-  (defvar delete-pair-map
-    (let ((map (make-sparse-keymap)))
-      (define-key map [t] #'delete-pair)
-      map))
-  
   (autoload 'viper-ex "viper")
 
   :config
@@ -1429,10 +1508,10 @@
                                            (file-truename buffer-file-name)))
                   :diagnostics (:disabled ["unresolved-proc-macro"
                                            "unresolved-macro-call"])))))
-  ;; (add-to-list 'eglot-server-programs ;; standalone r-a support (from rustic)
-  ;;              `(rust-ts-mode . ("rust-analyzer"
-  ;;                                :initializationOptions
-  ;;                                ,ra-setup)))
+;; (add-to-list 'eglot-server-programs ;; standalone r-a support (from rustic)
+;;              `(rust-ts-mode . ("rust-analyzer"
+;;                                :initializationOptions
+;;                                ,ra-setup)))
 
 (use-package zig-mode
   :mode ("\\.zig\\'" . zig-mode))
@@ -1525,10 +1604,10 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(info-colors nerd-icons-ibuffer ibuffer-vc devil expand-region shr-tag-pre-highlight highlight-indent-guides macrursors isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico-posframe vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
+   '(kkp macrursors xclip sideline-flymake info-colors nerd-icons-ibuffer ibuffer-vc devil expand-region shr-tag-pre-highlight highlight-indent-guides isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
  '(package-vc-selected-packages
-   '((info-colors :vc-backend Git :url "htttps://github.com/ubolonton/info-colors")
-     (macrursors :vc-backend Git :url "https://github.com/karthink/macrursors")
+   '((macrursors :vc-backend Git :url "https://github.com/karthink/macrursors")
+     (info-colors :vc-backend Git :url "htttps://github.com/ubolonton/info-colors")
      (janet-ts-mode :vc-backend Git :url "https://github.com/sogaiu/janet-ts-mode"))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
