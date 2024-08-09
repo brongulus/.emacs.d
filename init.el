@@ -37,6 +37,7 @@
          ("C-," . scroll-other-window)
          ("C-." . scroll-other-window-down)
          ("M-P" . execute-extended-command)
+         ("M-\\" . fixup-whitespace)
          ("M-s r" . replace-regexp)
          ("M-s f" . ffap)
          ("C-x C-m" . execute-extended-command)
@@ -70,7 +71,7 @@
                 custom-safe-themes t
                 ring-bell-function 'ignore
                 use-short-answers t
-                debug-on-error t
+                ;; debug-on-error t ; issues w/ completion in :bind
                 warning-minimum-level :error
                 display-line-numbers-width 5
                 display-line-numbers-grow-only t
@@ -132,7 +133,7 @@ the cursor by ARG lines."
       (set-mark-command nil))
     (forward-line arg))
   
-  (global-set-key (kbd "M-w") 'slick-copy)
+  ;; (global-set-key (kbd "M-w") 'slick-copy)
   (global-set-key (kbd "M-l") #'my/select-current-line-and-forward-line)
   
   (defun silent-command (fn &rest args)
@@ -149,8 +150,9 @@ the cursor by ARG lines."
   (add-hook 'prog-mode-hook (which-function-mode))
   ;; load theme based on the time of the day
   (let ((hour (substring (current-time-string) 11 13)))
-    (if (and (string-lessp hour "17") (string-greaterp hour "08"))
-        (setq load-theme-light t))) ;; load-theme-light is a languid-theme var
+    (if (and (string-lessp hour "17") (string-greaterp hour "08")
+             (display-graphic-p))
+        (setq load-theme-light t))) ;; load-theme-light is a zed-theme var
   (load-theme 'zed :no-confirm)
   (defadvice load-theme (before theme-dont-propagate activate)
     (mapc #'disable-theme custom-enabled-themes))
@@ -205,6 +207,14 @@ the cursor by ARG lines."
                       map))
                   (global-set-key (kbd "M-s s") insert-pair-map)
                   (global-set-key (kbd "M-s d") delete-pair-map)
+                  (defun match-pair nil
+                    (interactive)
+                    (if (nth 3 (syntax-ppss))
+                        (backward-up-list 1 t t)
+                      (cond ((looking-at "\\s\(\\|\{") (forward-list 1) (backward-char 1))
+                            ((looking-at "\\s\)\\|\}") (forward-char 1) (backward-list 1))
+                            (t (backward-up-list 1 t t)))))
+                  (global-set-key (kbd "M-s m") #'match-pair)
                   
                   ;; misc modes and hooks
                   (add-hook 'debugger-mode-hook #'visual-line-mode)
@@ -260,7 +270,7 @@ the cursor by ARG lines."
 ;;; ------------------
 (use-package dired
   :ensure nil
-  :hook (dired-mode . dired-hide-details-mode) ;; dired-hide-dotfiles-mode
+  :hook (dired-mode . dired-hide-details-mode)
   :bind (:map dired-mode-map
               ("q" . kill-this-buffer)
               ("RET" . dired-find-alternate-file)
@@ -874,11 +884,15 @@ the cursor by ARG lines."
        tab-vbar))))
 
 (use-package transpose-frame
-  :bind
-  ("C-x 5 t" . transpose-frame)
-  ("C-x 5 r" . rotate-frame)
-  ("C-x 5 f" . flip-frame)
-  ("C-x 5 l" . flop-frame))
+  :bind (("C-x 5 t" . transpose-frame)
+         ("C-x 5 r" . rotate-frame)
+         ("C-x 5 f" . flip-frame)
+         ("C-x 5 l" . flop-frame)
+         :repeat-map ctl-x-5-repeat-map
+         ("t" . transpose-frame)
+         ("r" . rotate-frame)
+         ("f" . flip-frame)
+         ("l" . flop-frame)))
 
 (use-package orderless
   :after minibuffer
@@ -1006,6 +1020,10 @@ the cursor by ARG lines."
   :config
   (setq undo-fu-session-compression nil))
 
+(use-package easy-kill
+  :bind (([remap kill-ring-save] . #'easy-kill)
+         ([remap mark-sexp]      . #'easy-mark)))
+
 (use-package expand-region
   :bind (("C-=" . er/expand-region)
          :repeat-map expand-region-repeat-map
@@ -1024,8 +1042,9 @@ the cursor by ARG lines."
          ("M-d" . (lambda nil
                     (interactive)
                     (if (region-active-p)
-                      (macrursors-mark-all-instances-of)
-                    (mark-word))))
+                        (macrursors-mark-all-instances-of)
+                      (backward-word)
+                      (mark-word))))
          
          :map macrursors-mark-map
          ("C-g" . macrursors-early-quit)
@@ -1248,183 +1267,6 @@ the cursor by ARG lines."
   :config
   (devil-set-key (kbd "'")))
 
-(use-package meow
-  :disabled t
-  :hook (after-init . (lambda ()
-                        (require 'meow)
-                        (meow-global-mode)))
-  :hook (meow-insert-enter . (lambda nil (blink-cursor-mode +1)))
-  :hook (meow-insert-exit . (lambda nil (blink-cursor-mode -1)))
-  ;; :hook (special-mode . meow-normal-mode)
-  :preface
-  (defun my-chord (initial-key final-key fn) ;; src: wasamasa
-    (interactive)
-    (let* ((timeout 0.5)
-           (event (read-event nil nil timeout)))
-      (if event ;; timeout met
-          (if (and (characterp event) (= event final-key))
-              (funcall fn)
-            (insert initial-key)
-            (push event unread-command-events))
-        (insert initial-key))))
-
-  (autoload 'viper-ex "viper")
-
-  :config
-  (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
-        meow-keypad-leader-dispatch "C-x" ;ctl-x-map
-        meow-keypad-describe-delay 1.0 ;; not interfere with which-key
-        meow-use-cursor-position-hack t
-        meow-use-clipboard t
-        meow-esc-delay 0.01
-        meow-cursor-type-insert '(bar . 3))
-  (dolist (item '(word line block find till))
-    (push `(,item . 0) meow-expand-hint-counts))
-  (define-key meow-insert-state-keymap (kbd "j") (lambda nil (interactive)
-                                                   (my-chord ?j ?k 'meow-insert-exit)))
-  (define-key meow-normal-state-keymap (kbd "m s") insert-pair-map)
-  (define-key meow-normal-state-keymap (kbd "m d") delete-pair-map)
-
-  (dolist (imode '(reb-mode eat-mode shell-mode eshell-mode log-edit-mode))
-    (push `(,imode . insert) meow-mode-state-list))
-  (meow-motion-overwrite-define-key
-   '("Q" . kill-this-buffer)
-   '("j" . meow-next)
-   '("k" . meow-prev)
-   '("/" . meow-visit)
-   '("<escape>" . ignore))
-  (meow-normal-define-key
-   '("0" . meow-digit-argument)
-   '("9" . meow-digit-argument)
-   '("8" . meow-digit-argument)
-   '("7" . meow-digit-argument)
-   '("6" . meow-digit-argument)
-   '("5" . meow-digit-argument)
-   '("4" . meow-digit-argument)
-   '("3" . meow-digit-argument)
-   '("2" . meow-digit-argument)
-   '("1" . meow-digit-argument)
-   '("-" . negative-argument)
-   ;; '("C-;" . meow-reverse)
-   '(";" . meow-cancel-selection)
-   '("'" . meow-reverse)
-   '("," . meow-inner-of-thing)
-   '("." . meow-bounds-of-thing)
-   '("[" . meow-beginning-of-thing)
-   '("]" . meow-end-of-thing)
-   '("{" . flymake-goto-prev-error)
-   '("}" . flymake-goto-next-error)
-   '("a" . meow-append)
-   '("A" . meow-open-below)
-   '("b" . meow-back-word)
-   '("B" . meow-back-symbol)
-   '("c" . meow-change)
-   '("C" . string-rectangle)
-   '("d" . (lambda () (interactive)
-             (if (region-active-p)
-                 (meow-kill)
-               (delete-forward-char 1))))
-   '("e" . meow-next-word)
-   '("E" . meow-next-symbol)
-   '("f" . meow-find)
-   '("F" . fff)
-   '("ga" . (lambda nil (interactive)
-              (org-agenda nil "n")))
-   '("gb" . xref-go-back)
-   '("gc" . org-capture)
-   '("gC" . meow-comment)
-   '("gd" . xref-find-definitions)
-   '("gf" . ffap)
-   '("gg" . avy-goto-char-timer)
-   '("gh" . diff-hl-show-hunk)
-   '("gi" . imenu)
-   '("gs" . scratch-buffer)
-   '("gt" . tab-bar-switch-to-next-tab)
-   '("gT" . tab-bar-switch-to-prev-tab)
-   '("gx" . flymake-show-buffer-diagnostics)
-   '("G" . meow-grab)
-   '("h" . meow-left)
-   '("H" . down-list)
-   '("i" . meow-insert)
-   '("I" . meow-open-above)
-   '("j" . meow-next)
-   '("J" . (lambda () (interactive)
-             (meow-next 1)
-             (delete-indentation)))
-   '("k" . meow-prev)
-   '("K" . (lambda () (interactive)
-             (if (derived-mode-p 'emacs-lisp-mode)
-                 (describe-symbol (symbol-at-point))
-               (if (package-installed-p 'eldoc-box)
-                   (eldoc-box-help-at-point)
-                 (eldoc-doc-buffer t)))))
-   '("l" . meow-right)
-   '("L" . up-list)
-   ;; '("L" . meow-swap-grab)
-   '("mm" . (lambda nil (interactive)
-              (if (nth 3 (syntax-ppss))
-                  (backward-up-list 1 t t)
-                (cond ((looking-at "\\s\(\\|\{") (forward-list 1) (backward-char 1))
-                      ((looking-at "\\s\)\\|\}") (forward-char 1) (backward-list 1))
-                      (t (backward-up-list 1 t t))))))
-   '("mi" . meow-inner-of-thing)
-   '("ma" . meow-bounds-of-thing)
-   '("n" . (lambda nil (interactive)
-             (meow--direction-forward)
-             (call-interactively 'meow-search)))
-   '("N" . (lambda nil (interactive)
-             (meow--direction-backward)
-             (call-interactively 'meow-search)))
-   '("o" . occur)
-   '("O" . meow-to-block)
-   '("p" . meow-yank)
-   '("P" . meow-yank-pop)
-   '("q" . meow-quit)
-   '("Q" . kill-this-buffer)
-   '("r" . (lambda nil (interactive)
-             (delete-char 1)
-             (insert-char (read-char nil t))
-             (backward-char 1)))
-   '("R" . replace-regexp)
-   '("s" . kmacro-start-macro)
-   '("S" . kmacro-end-or-call-macro)
-   '("t" . meow-till)
-   '("u" . undo-only)
-   '("U" . meow-page-up)
-   '("v" . (lambda () (interactive)
-             (if (region-active-p)
-                 (thread-first
-                   (meow--make-selection '(expand . char) (mark) (point) t)
-                   (meow--select))
-               (thread-first
-                 (meow--make-selection '(expand . char) (point) (point) t)
-                 (meow--select)))
-             (message "Visual selection mode enabled")))
-   '("V" . rectangle-mark-mode)
-   '("w" . meow-mark-word)
-   '("W" . meow-mark-symbol)
-   '("x" . meow-line)
-   '("X" . meow-goto-line)
-   '("y" . meow-save)
-   '("Y" . meow-sync-grab)
-   '("zz" . (lambda nil (interactive)
-              (set-mark-command '(4))))
-   '("za" . hs-global-cycle)
-   '("zf" . hs-cycle)
-   '("Z" . undo-redo)
-   '("+" . meow-block)
-   '("-" . negative-argument)
-   '(":" . viper-ex)
-   '("\\" . dired-jump)
-   '("*" . isearch-forward-thing-at-point)
-   '("&" . align-regexp)
-   '("%" . mark-whole-buffer)
-   '("/" . meow-visit)
-   '("<" . indent-rigidly-left-to-tab-stop)
-   '(">" . indent-rigidly-right-to-tab-stop)
-   '("\"" . repeat)
-   '("<escape>" . ignore)))
-
 ;;; ------------------
 ;;; Programming setup
 ;;; ------------------
@@ -1447,13 +1289,17 @@ the cursor by ARG lines."
 (setq python-indent-guess-indent-offset t
       python-indent-guess-indent-offset-verbose nil)
 
-(with-eval-after-load 'cc-mode ;; why is this in dired
+(with-eval-after-load 'cc-mode
+  (add-hook 'c++-mode-hook
+            (lambda nil
+              (local-set-key (kbd "C-c C-c") #'compile)))
   (defun c-indent-then-complete ()
     (interactive)
     (if (= 0 (c-indent-line-or-region))
         (completion-at-point)))
-  (dolist (map (list c-mode-map c++-mode-map))
-    (define-key map (kbd "<tab>") #'c-indent-then-complete)))
+  (dolist (map (list c-mode-map c++-mode-map c-mode-base-map))
+    (define-key map (kbd "<tab>") #'c-indent-then-complete)
+    (define-key map "C-c C-r" #'recompile)))
 
 (nconc auto-mode-alist
        '(("\\.rs\\'" . rust-ts-mode)
@@ -1552,50 +1398,6 @@ the cursor by ARG lines."
                                                       " && ./a.out"))
                   (setq-local foxy-compile-command command))))))
 
-(defun async-project-find-file (program &rest args)
-  "Prompt the user to filter & select a file from a list of all files.
-The files are returned by calling PROGRAM with ARGS."
-  (interactive)
-  ;; oantolin gawd
-  (let ((output-buffer (get-buffer-create "*async-completing-read*"))
-        (default-directory (vc-root-dir))
-        (make-process-fn (if (file-remote-p default-directory)
-                             'tramp-handle-make-process
-                           'make-process))
-        (update-timer (run-with-timer 0.3 0.3
-                                      (lambda () ;; Refresh icomplete by faking change
-                                        (when-let ((mini (active-minibuffer-window)))
-                                          (with-selected-window mini
-                                            (icomplete-exhibit)))))))
-    (funcall
-     make-process-fn
-     :name "project-files"
-     :buffer output-buffer
-     :sentinel #'ignore
-     :noquery t
-     :command (cons program args);(list "git" "ls-tree" "-rtd" "--format=%(path)" "HEAD")
-     :connection-type 'pipe)
-    (unwind-protect
-        (completing-read
-         "Choose: " (lambda (string pred action)
-                      (complete-with-action
-                       action
-                       (split-string
-                        (with-current-buffer output-buffer (buffer-string))
-                        "\n" 'omit-nulls)
-                       string pred)))
-      (cancel-timer update-timer)
-      (kill-buffer output-buffer))))
-
-(defun fff (filename)
-  "Call `find-file' and search for FILENAME asynchronously."
-  (interactive
-   (list (async-project-find-file "git" "ls-files")))
-  (let ((default-directory (if (vc-root-dir)
-                               (vc-root-dir)
-                             default-directory)))
-    (find-file filename)))
-
 (provide 'init)
 ;;; init.el ends here
 (custom-set-variables
@@ -1604,7 +1406,7 @@ The files are returned by calling PROGRAM with ARGS."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(kkp macrursors xclip sideline-flymake info-colors nerd-icons-ibuffer ibuffer-vc devil expand-region shr-tag-pre-highlight highlight-indent-guides isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
+   '(easy-kill kkp macrursors xclip sideline-flymake info-colors nerd-icons-ibuffer ibuffer-vc devil expand-region shr-tag-pre-highlight highlight-indent-guides isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
  '(package-vc-selected-packages
    '((macrursors :vc-backend Git :url "https://github.com/karthink/macrursors")
      (info-colors :vc-backend Git :url "htttps://github.com/ubolonton/info-colors")
