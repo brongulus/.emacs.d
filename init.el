@@ -86,8 +86,10 @@
         undo-strong-limit 100663296
         undo-outer-limit 1006632960
         enable-local-variables :safe
+        scroll-margin 0
         scroll-conservatively 10
         scroll-preserve-screen-position t
+        pixel-scroll-precision-large-scroll-height 35.0
         split-height-threshold nil
         split-width-threshold 100
         save-abbrevs nil
@@ -918,35 +920,36 @@ the cursor by ARG lines."
               ("<escape>" . minibuffer-keyboard-quit)
               ("<backspace>" . vertico-directory-delete-char)
               ("RET" . vertico-directory-enter)
+              ("C-<return>" . vertico-exit-input)
               ("TAB" . vertico-next)
               ("<backtab>" . vertico-previous)
               ("S-TAB" . vertico-previous)
               ("M-TAB" . vertico-previous)
               ("C-j" . vertico-next)
               ("C-k" . vertico-previous))
+  :custom
+  (vertico-multiform-categories
+   '((command flat)
+     (buffer flat)
+     (project-file flat)
+     (file flat)))
   :config
+  (vertico-multiform-mode)
+  
   (setq vertico-scroll-margin 0
         vertico-resize nil
         vertico-cycle t)
-
-  (defun file-capf () ;; src: eshelyaron
-    "File completion at point function."
-    (pcase (bounds-of-thing-at-point 'filename)
-      (`(,beg . ,end)
-       (list beg end #'completion-file-name-table
-             :annotation-function (lambda (_) " File")
-             :exclusive 'no))))
-
-  (require 'dabbrev)
-  (advice-add #'dabbrev-capf :before #'dabbrev--reset-global-variables)
-
-  (add-hook 'completion-at-point-functions #'file-capf)
-  ;; (add-hook 'completion-at-point-functions #'dabbrev-capf 100) ; posframe/corfu issue
 
   (setq tab-always-indent 'complete
         tab-first-completion 'word-or-paren
         completions-group t
         completions-detailed t))
+
+(use-package cape
+  :init
+  (add-hook 'completion-at-point-functions #'cape-dabbrev)
+  (add-hook 'completion-at-point-functions #'cape-file)
+  (add-hook 'completion-at-point-functions #'cape-abbrev))
 
 (use-package corfu
   :hook (after-init . global-corfu-mode)
@@ -961,6 +964,8 @@ the cursor by ARG lines."
   :config
   (dolist (key '("C-f" "C-b" "C-a" "C-e"))
     (define-key corfu-map key nil))
+  (keymap-unset corfu-map "<remap> <next-line>")
+  (keymap-unset corfu-map "<remap> <previous-line>")
   (add-hook 'eshell-mode #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
   (with-eval-after-load 'savehist
     (corfu-history-mode 1)
@@ -1012,8 +1017,17 @@ the cursor by ARG lines."
 (use-package magit
   :commands (magit magit-file-dispatch magit-log-all magit-ediff-show-unstaged)
   :bind ("C-M-g" . magit)
-  :bind (:map magit-mode-map
-              ("q" . magit-kill-this-buffer)))
+  ;; :bind (:map magit-mode-map
+  ;;             ("q" . magit-kill-this-buffer))
+  :config
+  (defun mu-magit-kill-buffers () ;src: manuel-uberti
+    "Restore window configuration and kill all Magit buffers."
+    (interactive)
+    (let ((buffers (magit-mode-get-buffers)))
+      (magit-restore-window-configuration)
+      (mapc #'kill-buffer buffers)))
+
+  (bind-key "q" #'mu-magit-kill-buffers magit-status-mode-map))
 
 (use-package undo-fu-session
   :hook ((prog-mode conf-mode fundamental-mode text-mode tex-mode) . undo-fu-session-mode)
@@ -1406,7 +1420,7 @@ the cursor by ARG lines."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(easy-kill kkp macrursors xclip sideline-flymake info-colors nerd-icons-ibuffer ibuffer-vc devil expand-region shr-tag-pre-highlight highlight-indent-guides isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
+   '(cape easy-kill kkp macrursors xclip sideline-flymake info-colors nerd-icons-ibuffer ibuffer-vc devil expand-region shr-tag-pre-highlight highlight-indent-guides isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
  '(package-vc-selected-packages
    '((macrursors :vc-backend Git :url "https://github.com/karthink/macrursors")
      (info-colors :vc-backend Git :url "htttps://github.com/ubolonton/info-colors")
