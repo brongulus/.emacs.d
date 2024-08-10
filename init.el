@@ -2,7 +2,11 @@
 ;;; Commentary:
 ;;; Ah shit, here we go again.
 ;;; Code:
+
+;;; Bootstrap
+
 (define-key global-map (kbd "C-z") (make-sparse-keymap))
+
 (use-package use-package
   :no-require
   :config
@@ -265,54 +269,213 @@ the cursor by ARG lines."
         package-install-upgrade-built-in t
         package-check-signature nil))
 
-;;; ------------------
-;;; Built-in packages
-;;; ------------------
-(use-package dired
-  :ensure nil
-  :hook (dired-mode . dired-hide-details-mode)
-  :bind (:map dired-mode-map
-              ("q" . kill-this-buffer)
-              ("RET" . dired-find-alternate-file)
-              ("TAB" . dired-maybe-insert-subdir)
-              ("<backspace>" . (lambda nil (interactive)
-                                 (dired-kill-subdir)
-                                 (set-mark-command '(4))))
-              ("<backtab>" . (lambda nil (interactive)
-                               (dired-kill-subdir)
-                               (set-mark-command '(4))))
-              ("\\" . dired-up-directory)
-              ("E" . wdired-change-to-wdired-mode)
-              ("z" . find-grep-dired))
-  :config
-  (add-hook 'dired-mode-hook ;; solaire
-            (lambda nil
-              (dolist (face '(default fringe))
-                (face-remap-add-relative
-                 face :background (if load-theme-light
-                                      "#EEEEEE"
-                                    "#30343D")))))
-  (when (eq system-type 'darwin)
-    (require 'ls-lisp)
-    (setq ls-lisp-use-insert-directory-program nil
-          dired-listing-switches
-          "-l --almost-all --human-readable --group-directories-first"))
-  
-  (with-eval-after-load 'project
-    (add-to-list 'project-switch-commands '(project-dired "Dired" ?D)))
+;;; Completion
 
-  (put 'dired-find-alternate-file 'disabled nil)
+(use-package orderless
+  :after minibuffer
+  :hook (completion-in-region-mode . (lambda nil
+                                       (setq-local orderless-component-separator "[ -]")))
+  :hook (icomplete-minibuffer-setup . (lambda nil
+                                        (setq-local completion-styles '(orderless basic))))
+  :config
+  (bind-key "<SPC>" #'self-insert-command minibuffer-local-completion-map)
+  :custom
+  (completion-styles '(orderless basic)))
+
+(use-package vertico
+  :hook (after-init . vertico-mode)
+  :hook (rfn-eshadow-update-overlay . vertico-directory-tidy)
+  :bind (:map vertico-map
+              ("<escape>" . minibuffer-keyboard-quit)
+              ("<backspace>" . vertico-directory-delete-char)
+              ("RET" . vertico-directory-enter)
+              ("C-<return>" . vertico-exit-input)
+              ("TAB" . vertico-next)
+              ("<backtab>" . vertico-previous)
+              ("S-TAB" . vertico-previous)
+              ("M-TAB" . vertico-previous)
+              ("C-j" . vertico-next)
+              ("C-k" . vertico-previous))
+  :custom
+  (vertico-multiform-categories
+   '((command flat)
+     (buffer flat)
+     (project-file flat)
+     (file flat)))
+  :config
+  (vertico-multiform-mode)
   
-  (setq dired-dwim-target t
-        dired-omit-mode t
-        dired-auto-revert-buffer t
-        dired-mouse-drag-files t
-        dired-use-ls-dired nil
-        dired-free-space nil
-        mouse-drag-and-drop-region-cross-program t
-        dired-kill-when-opening-new-dired-buffer t
-        dired-recursive-deletes 'always
-        dired-recursive-copies 'always))
+  (setq vertico-scroll-margin 0
+        vertico-resize nil
+        vertico-cycle t)
+
+  (setq tab-always-indent 'complete
+        tab-first-completion 'word-or-paren
+        completions-group t
+        completions-detailed t))
+
+(use-package cape
+  :hook (eglot-managed-mode . (lambda nil
+                                (setq-local completion-at-point-functions
+                                            (list (cape-capf-super
+                                                   #'eglot-completion-at-point
+                                                   #'cape-abbrev
+                                                   #'cape-file
+                                                   #'cape-dabbrev)))))
+  :hook (emacs-lisp-mode . (lambda nil
+                             (setq-local completion-at-point-functions
+                                         (list (cape-capf-super
+                                                #'elisp-completion-at-point
+                                                #'cape-dabbrev)
+                                               #'cape-file))))
+  :init
+  (add-hook 'completion-at-point-functions #'cape-dabbrev)
+  (add-hook 'completion-at-point-functions #'cape-file)
+  (add-hook 'completion-at-point-functions #'cape-abbrev))
+
+(use-package corfu
+  :hook (after-init . global-corfu-mode)
+  :hook ((corfu-mode . corfu-popupinfo-mode)
+         (meow-insert-exit . corfu-quit))
+  :bind (:map corfu-map
+              ("TAB" . corfu-next)
+              ([tab] . corfu-next)
+              ("M-TAB" . corfu-previous)
+              ("S-TAB" . corfu-previous)
+              ([backtab] . corfu-previous))
+  :config
+  (dolist (key '("C-f" "C-b" "C-a" "C-e"))
+    (define-key corfu-map key nil))
+  (keymap-unset corfu-map "<remap> <next-line>")
+  (keymap-unset corfu-map "<remap> <previous-line>")
+  (add-hook 'eshell-mode #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
+  (with-eval-after-load 'savehist
+    (corfu-history-mode 1)
+    (add-to-list 'savehist-additional-variables 'corfu-history))
+  (setq completion-ignore-case t)
+  (setq corfu-cycle t
+        corfu-auto t
+        corfu-auto-prefix 2
+        corfu-auto-delay 0.1
+        corfu-separator 32
+        corfu-max-width 80
+        corfu-preselect 'prompt
+        corfu-quit-no-match t
+        corfu-quit-at-boundary 'separator
+        corfu-preview-current nil
+        corfu-popupinfo-delay '(0.5 . 0.1)
+        corfu-preselect-first nil)
+  (use-package corfu-terminal
+    :when (not (display-graphic-p))
+    :hook ((corfu-mode . corfu-terminal-mode))))
+
+;;; Editing
+
+(use-package easy-kill
+  :bind (([remap kill-ring-save] . #'easy-kill)
+         ([remap mark-sexp]      . #'easy-mark)))
+
+(use-package macrursors ; use C-; (macrursors-end) to do edits
+  :ensure nil           ; for beacon-like selection C-; SPC/ C-; C-g
+  :init
+  (unless (package-installed-p 'macrursors)
+    (package-vc-install "https://github.com/karthink/macrursors"))
+  (define-prefix-command 'macrursors-mark-map)
+  :bind-keymap ("C-;" . macrursors-mark-map)
+  :bind (("M-d" . (lambda nil ; mark-word-then-select-next
+                    (interactive)
+                    (if (or (use-region-p)
+                            defining-kbd-macro)
+                        (progn
+                          (call-interactively 'macrursors-mark-next-instance-of)
+                          (if (use-region-p)
+                              (deactivate-mark)))
+                      (let ((start-of-word (save-excursion (backward-word) (point))))
+                        (unless (eq (point) start-of-word)
+                          (backward-word)))
+                      (mark-word))))
+         ("M-'" . macrursors-mark-all-instances-of)
+         
+         :map macrursors-mark-map
+         ("M-a" . macrursors-mark-all-instances-of)
+         ("M-n" . macrursors-mark-next-instance-of)
+         ("M-p" . macrursors-mark-previous-instance-of)
+         ("C-g" . macrursors-early-quit)
+         ("C-n" . macrursors-mark-next-line)
+         ("C-p" . macrursors-mark-previous-line)
+         
+         :repeat-map macrursors-mark-repeat-map
+         ("n" . macrursors-mark-next-line)
+         ("C-n" . macrursors-mark-next-line)
+         ("p" . macrursors-mark-previous-line)
+         ("C-p" . macrursors-mark-previous-line)
+         
+         :map macrursors-mode-map
+         ("C-'" . macrursors-hideshow)
+         
+         :map isearch-mode-map
+         ("C-;" . macrursors-mark-from-isearch)
+         ("M-<down>" . macrursors-mark-next-from-isearch)
+         ("M-<up>" . macrursors-mark-previous-from-isearch)
+         
+         :repeat-map isearch-repeat-map
+         ("<down>" . macrursors-mark-next-from-isearch)
+         ("<up>" . macrursors-mark-previous-from-isearch))
+  :config
+  (set-face-attribute 'macrursors-cursor-face nil
+                      :inverse-video nil :inherit 'cursor)
+  (dolist (mode '(corfu-mode beacon-mode))
+    (add-hook 'macrursors-pre-finish-hook mode)
+    (add-hook 'macrursors-post-finish-hook mode))
+  (when (featurep 'meow)
+    (add-hook 'macrursors-mode-hook #'meow-insert)))
+
+(use-package snap-indent
+  :hook (prog-mode . snap-indent-mode)
+  :custom ((snap-indent-format 'untabify)
+           (snap-indent-on-save t)))
+
+(use-package puni
+  ;; TODO: https://karthinks.com/software/a-consistent-structural-editing-interface/
+  ;; https://countvajhula.com/2021/09/25/the-animated-guide-to-symex/
+  :hook ((emacs-lisp-mode tex-mode eval-expression-minibuffer-setup) . puni-mode)
+  :bind (("C-=" . puni-expand-region)
+         :map puni-mode-map
+         ("C-w" . nil) ;delete-backword
+         ("M-w" . nil) ;easy-kill
+         ("M-d" . nil) ;macrursors
+         ("s-s" . puni-splice)
+         ("M-]" . puni-slurp-forward)
+         ("M-[" . puni-barf-forward)
+         ("M-}" . puni-barf-backward)
+         ("M-{" . puni-slurp-backward)
+         :repeat-map puni-mode-repeat-map
+         ("-" . puni-contract-region)
+         ("=" . puni-expand-region)))
+
+(use-package devil
+  :hook (after-init . global-devil-mode)
+  :config
+  (devil-set-key (kbd "'")))
+
+(use-package avy
+  :bind ("C-'" . avy-goto-char-timer)
+  :bind (:map isearch-mode-map
+              ("M-s M-s" . avy-isearch))
+  :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer)
+  :custom
+  (avy-single-candidate-jump t)
+  (avy-background t))
+
+(use-package deadgrep
+  :bind ("M-s d" . deadgrep)
+  :preface
+  (defun deadgrep-current-dir (search-term)
+    "Grep for SEARCH-TERM in current directory."
+    (interactive "sTerm: ")
+    (deadgrep search-term default-directory)))
+
+;;; Built-ins
 
 (use-package xref
   :ensure nil
@@ -325,14 +488,6 @@ the cursor by ARG lines."
         xref-auto-jump-to-first-xref nil ; 'move
         xref-show-definitions-function 'xref-show-definitions-buffer-at-bottom
         xref-show-xrefs-function 'xref-show-definitions-buffer-at-bottom))
-
-(use-package windmove
-  :defer 1
-  :ensure nil
-  :config
-  (setq windmove-wrap-around t)
-  (windmove-default-keybindings 'none)
-  (windmove-swap-states-default-keybindings 'meta))
 
 (use-package ediff
   :defer 1
@@ -387,44 +542,6 @@ the cursor by ARG lines."
        (save-excursion (hs-show-all))
        (setq this-command 'hs-global-show))
       (_ (hs-hide-all)))))
-
-(use-package vc
-  :defer nil
-  :ensure nil
-  :bind (("C-x v c" . (lambda (command) (interactive "P")
-                        (unless server-mode (server-force-delete) (server-mode))
-                        (let ((command (if command command (read-string "Command: git "))))
-                          (compile (concat "GIT_EDITOR=\"emacsclient\" bash -c \"git " command "\"")))))
-         ("C-x v f" . (lambda () (interactive)
-                        (vc-git--pushpull "push" nil '("--force-with-lease"))))
-         ("C-x v e" . vc-ediff))
-  :config
-  (setq vc-handled-backends '(Git)
-        vc-find-revision-no-save t
-        vc-follow-symlinks t
-        project-vc-merge-submodules nil
-        diff-default-read-only t
-        vc-annotate-background-mode t)
-  ;; fixing vc-annotate : vc-annotate-background-mode doesn't play
-  ;; well with white fg, so we tweak the faces to have black fg
-  (defun vc-annotate-readable (&rest _)
-    (dolist (anno-face (seq-filter
-                        (lambda (face)
-                          (string-prefix-p "vc-annotate-face-" (symbol-name face)))
-                        (face-list)))
-      (face-remap-add-relative anno-face :foreground "black")))
-
-  (with-eval-after-load 'vc-annotate
-    (if vc-annotate-background-mode
-        (advice-add 'vc-annotate-lines :after #'vc-annotate-readable))
-    (define-key vc-annotate-mode-map
-                "q" (lambda () (interactive)
-                      (kill-this-buffer)
-                      (tab-bar-close-tab))))
-  ;; vc-annotate messes up the window-arrangement, give it a dedicated tab
-  (add-to-list 'display-buffer-alist
-               '("^\\*Annotate.*\\*$"
-                 (display-buffer-reuse-mode-window display-buffer-in-tab))))
 
 (use-package repeat
   :ensure nil
@@ -527,130 +644,200 @@ the cursor by ARG lines."
         tramp-verbose 0
         tramp-remote-path '(tramp-own-remote-path)))
 
-(use-package org
-  :ensure nil
-  :hook (org-mode . (lambda nil
-                      (setq-local line-spacing 8)))
-  :hook (org-mode . visual-line-mode)
-  :config
-  ;; Taken from rougier: org-outer-indent
-  (defun org-outer-indent--compute-prefixes ()
-    "Compute prefix strings for regular text and headlines."
-    (setq org-indent--heading-line-prefixes
-          (make-vector org-indent--deepest-level nil))
-    (setq org-indent--inlinetask-line-prefixes
-          (make-vector org-indent--deepest-level nil))
-    (setq org-indent--text-line-prefixes
-          (make-vector org-indent--deepest-level nil))
-    ;; Find the lowest headline level
-    (let* ((headline-levels (or (org-element-map
-                                 (org-element-parse-buffer) 'headline
-                                 #'(lambda (item)
-                                     (org-element-property :level item)))
-                                '()))
-           (max-level (seq-max (if headline-levels
-                                   headline-levels
-                                 0)))
-           ;; We could also iterate over each evel to get maximum length
-           ;; Instead, we take the length of the deepest numbered level.
-           (line-indentation (+ 3 max-level))
-           (headline-indentation))
-      (dotimes (level org-indent--deepest-level)
-        (setq headline-indentation
-              (max 0 (- line-indentation (+ 1 level))))
-        (aset org-indent--inlinetask-line-prefixes level
-              (make-string line-indentation ?\s))
-        (aset org-indent--text-line-prefixes level
-              (make-string line-indentation ?\s))
-        (aset org-indent--heading-line-prefixes level
-              (make-string headline-indentation ?\s))))
-    (setq-local org-hide-leading-stars nil))
+;;; Window Management
 
-  (advice-add 'org-indent--compute-prefixes :override
-              #'org-outer-indent--compute-prefixes)
-
-  (push 'org-habit org-modules)
-  ;; configure <s template for org-src-blocks
-  (require 'org-tempo)
-  (add-hook 'org-mode-hook
-            (lambda ()
-              (setq-local electric-pair-inhibit-predicate
-                          `(lambda (c)
-                             (if (char-equal c ?<)
-                                 t
-                               (,electric-pair-inhibit-predicate c))))))
-  (setq org-directory "~/.emacs.d/org"
-        org-use-sub-superscripts '{}
-        ;; org-export-with-sub-superscripts nil
-        org-ellipsis "…"
-        org-pretty-entities t
-        org-startup-indented t
-        org-adapt-indentation t
-        org-special-ctrl-a/e t
-        org-fold-catch-invisible-edits 'show-and-error
-        org-edit-src-content-indentation 0
-        org-src-preserve-indentation t
-        org-src-fontify-natively t))
-
-(use-package org-agenda
+(use-package windmove
+  :defer 1
   :ensure nil
   :config
-  (add-to-list 'display-buffer-alist
-               '("\\*Calendar\\*"
-                 (display-buffer-reuse-window display-buffer-below-selected)
-                 (window-parameters (height . 0.33))))
+  (setq windmove-wrap-around t)
+  (windmove-default-keybindings 'none)
+  (windmove-swap-states-default-keybindings 'meta))
 
-  (setq org-agenda-files (list org-directory)
-        org-agenda-window-setup 'current-window
-        org-agenda-restore-windows-after-quit t
-        org-agenda-start-with-log-mode t
-        org-agenda-show-all-dates nil
-        org-log-done t
-        org-log-into-drawer t
-        org-agenda-skip-timestamp-if-done t
-        org-agenda-skip-scheduled-if-done t
-        org-agenda-skip-deadline-if-done t
-        org-agenda-include-deadlines t)
+(use-package popper
+  :bind (("M-j"   . popper-toggle)
+         ("C-`"   . popper-cycle)
+         ("C-M-`" . popper-toggle-type)
+         :repeat-map popper-repeat-map
+         ("`"     . popper-cycle))
+  :hook ((after-init . popper-mode)
+         (after-init . popper-tab-line-mode))
+  :init
+  (setq popper-reference-buffers
+        '("\\*Messages\\*" "Output\\*$" "\\*xref\\*"
+          "\\*Async Shell Command\\*" "\\*shell.\*"
+          "magit:.\*" "\\*pabbrev suggestions\\*"
+          ".*-eat\\*" "\\*eldoc\\*" "vc-git :.\*"
+          "\\*vc-change-log\\*" "\\*Deletions\\*"
+          "\\*Flymake .\*" "\\*CDLaTex Help\\*"
+          "\\*Process List\\*" "\\*Org Select\\*"
+          "^CAPTURE.*" "\\*Warnings\\*"
+          "\\*Backtrace\\*" "\\*Occur\\*"
+          help-mode compilation-mode
+          "^\\*eshell.*\\*$" eshell-mode
+          "^\\*term.*\\*$" term-mode)
+        popper-mode-line nil
+        popper-window-height 0.33))
 
-  (setf (alist-get 'agenda org-agenda-prefix-format
-                   nil nil #'equal)
-        "  %?-12t% s"))
-
-(use-package org-habit
-  :after org-agenda
+(use-package popper-echo
+  :after popper
   :ensure nil
   :config
-  ;; (graph (make-string (1+ (- end start)) org-habit-missed-glyph)) ;; BRUH FIXME
-  ;; (advice-add 'org-habit-build-graph )
+  ;; cleaner tab-line
+  (advice-add 'tab-line-tab-name-buffer :around
+              (lambda (orig-fn &rest args)
+                (string-replace "*" "" (apply orig-fn args))))
+  (defun popper-tab-line--format (tab tabs)
+    (let ((tab-vbar (when (display-graphic-p)
+                      (propertize " "
+                                  'face `(:background ,(face-foreground 'vertical-border))
+                                  'display '(space :width (1)))))
+          (tab-face (if (eq tab (current-buffer))
+                        (if (mode-line-window-selected-p)
+                            'tab-line-tab-current 'tab-line-tab)
+                      'tab-line-tab-inactive)))
+      (concat
+       tab-vbar
+       (propertize " " 'face tab-face)
+       (when (package-installed-p 'nerd-icons)
+         (with-eval-after-load 'nerd-icons
+           (with-current-buffer tab
+             (propertize (format "%s " (nerd-icons-icon-for-buffer))
+                         'face tab-face))))
+       (tab-line-tab-name-format-default tab tabs)
+       tab-vbar))))
 
-  (setq org-habit-show-habits-only-for-today t
-        org-habit-show-done-always-green t
-        ;; org-habit-today-glyph ?○ ;; 9675
-        ;; org-habit-completed-glyph ?● ;; 9679
-        ;; org-habit-missed-glyph ?○ ;; 9675
-        org-habit-following-days 1
-        org-habit-preceding-days 21))
+(use-package transpose-frame
+  :bind (("C-x 5 t" . transpose-frame)
+         ("C-x 5 r" . rotate-frame)
+         ("C-x 5 f" . flip-frame)
+         ("C-x 5 l" . flop-frame)
+         :repeat-map ctl-x-5-repeat-map
+         ("t" . transpose-frame)
+         ("r" . rotate-frame)
+         ("f" . flip-frame)
+         ("l" . flop-frame)))
 
-(use-package org-capture
-  :ensure nil
-  ;; :hook (org-capture-mode . meow-insert)
+;;; Environment
+
+(use-package exec-path-from-shell
+  :if (display-graphic-p)
+  :hook (after-init . exec-path-from-shell-initialize))
+
+(use-package xclip
+  :unless (display-graphic-p)
+  :init (xclip-mode 1))
+
+(use-package kkp
+  :unless (display-graphic-p)
+  :init (global-kkp-mode +1))
+
+(use-package undo-fu-session
+  :hook ((prog-mode conf-mode fundamental-mode text-mode tex-mode) . undo-fu-session-mode)
   :config
-  (add-hook 'org-capture-mode-hook
-            (lambda nil
-              (setq-local header-line-format nil)))
-  (setq org-capture-file
-        (concat org-directory "/inbox.org")
-        org-capture-templates
-        '(("t" "TODO" entry
-           (file+headline org-capture-file "TODOs")
-           "* TODO %?\n%<%d %b '%g %R>%i %a" :prepend t)
-          ("n" "Note" entry
-           (file+headline org-capture-file "Notes")
-           "* %?\n%i %a" :prepend t)
-          ("h" "Habit" entry
-           (file+headline org-capture-file "Habits")
-           "* TODO %?\n:PROPERTIES:\n:STYLE: habit\n:LOGGING: TODO(!) DONE(!)\n:END:"
-           :prepend t))))
+  (setq undo-fu-session-compression nil))
+
+(use-package which-key
+  :hook (minibuffer-mode . which-key-mode))
+
+;;; Visual Niceties
+
+(use-package eldoc-box
+  :after eldoc
+  :commands eldoc-box-help-at-point
+  :config
+  (setq eldoc-box-max-pixel-width 600
+        eldoc-box-max-pixel-height 700
+        eldoc-box-only-multi-line t))
+
+(use-package sideline-flymake
+  :hook (flymake-mode . sideline-mode)
+  :init
+  (setq sideline-flymake-display-mode 'line)
+  (setq sideline-backends-right '(sideline-flymake)
+        sideline-flymake-show-backend-name t))
+
+(use-package writeroom-mode
+  :hook ((nov-mode Info-mode Man-mode) . writeroom-mode)
+  :config
+  (setq writeroom-width (min 90 (window-width))
+        writeroom-mode-line t
+        writeroom-global-effects nil
+        writeroom-maximize-window nil))
+
+(use-package nerd-icons
+  :defer 0.2
+  :config
+  ;; causing issues in emacs -nw
+  ;; (when (not (find-font (font-spec :name nerd-icons-font-family)))
+  ;;   (nerd-icons-install-fonts t))
+  (setq eglot-menu-string (nerd-icons-octicon "nf-oct-sync"))
+  (when (custom-theme-enabled-p 'zed)
+    (setq zed-tab-back-button
+          (nerd-icons-octicon "nf-oct-arrow_left" :v-adjust 0.2)
+          zed-tab-forward-button
+          (nerd-icons-octicon "nf-oct-arrow_right" :v-adjust 0.2)))
+  (push '(eat-mode nerd-icons-devicon "nf-dev-terminal") nerd-icons-mode-icon-alist)
+  (use-package nerd-icons-corfu
+    :init
+    (with-eval-after-load 'corfu
+      (push 'nerd-icons-corfu-formatter corfu-margin-formatters)))
+  (use-package nerd-icons-dired
+    :hook (dired-mode . nerd-icons-dired-mode))
+  (use-package nerd-icons-ibuffer
+    :hook (ibuffer-mode . nerd-icons-ibuffer-mode)))
+
+(use-package info-colors
+  :ensure nil
+  :init
+  (unless (package-installed-p 'info-colors)
+    (package-vc-install "https://github.com/ubolonton/info-colors"))
+  :hook
+  (Info-selection . info-colors-fontify-node)
+  (Info-mode . variable-pitch-mode))
+
+(use-package shr-tag-pre-highlight ;; FIXME: complains if mode isnt available
+  :defer 1
+  :config
+  (with-eval-after-load 'nov
+    (advice-add 'shr--set-target-ids :around
+                (lambda (orig-fn &rest args)
+                  (if (and (get-buffer-window)
+                           (bufferp (point)))
+                      (apply orig-fn args)
+                    nil)))
+    (add-to-list 'nov-shr-rendering-functions
+                 '(pre . shr-tag-pre-highlight) t))
+  ;; eww
+  (add-to-list 'shr-external-rendering-functions
+               '(pre . shr-tag-pre-highlight)))
+
+(use-package highlight-indent-guides
+  :config
+  (set-face-attribute 'highlight-indent-guides-character-face nil
+                      :inherit 'vertical-border)
+  (setq highlight-indent-guides-method 'character
+        highlight-indent-guides-auto-enabled nil
+        highlight-indent-guides-responsive nil))
+
+(use-package diff-hl
+  :hook (((prog-mode conf-mode) . turn-on-diff-hl-mode)
+         ((prog-mode conf-mode) . diff-hl-margin-mode))
+  :config
+  (diff-hl-flydiff-mode t)
+  (when (package-installed-p 'magit)
+    (add-hook 'magit-pre-refresh-hook  #'diff-hl-magit-pre-refresh)
+    (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh))
+  (setq vc-git-diff-switches '("--histogram")
+        diff-hl-flydiff-delay 0.5
+        diff-hl-update-async t
+        diff-hl-show-staged-changes nil
+        diff-hl-margin-symbols-alist '((insert . "█")
+                                       (delete . "█")
+                                       (change . "█"))
+        diff-hl-draw-borders nil))
+
+;;; Apps
 
 (use-package desktop
   :ensure nil
@@ -827,206 +1014,43 @@ the cursor by ARG lines."
                               "gwene.org.bitlbee.news.rss")
                              ("Unread")))))
 
-;;; -----------------
-;;; External packages
-;;; -----------------
-(use-package popper
-  :bind (("M-j"   . popper-toggle)
-         ("C-`"   . popper-cycle)
-         ("C-M-`" . popper-toggle-type)
-         :repeat-map popper-repeat-map
-         ("`"     . popper-cycle))
-  :hook ((after-init . popper-mode)
-         (after-init . popper-tab-line-mode))
-  :init
-  (setq popper-reference-buffers
-        '("\\*Messages\\*" "Output\\*$" "\\*xref\\*"
-          "\\*Async Shell Command\\*" "\\*shell.\*"
-          "magit:.\*" "\\*pabbrev suggestions\\*"
-          ".*-eat\\*" "\\*eldoc\\*" "vc-git :.\*"
-          "\\*vc-change-log\\*" "\\*Deletions\\*"
-          "\\*Flymake .\*" "\\*CDLaTex Help\\*"
-          "\\*Process List\\*" "\\*Org Select\\*"
-          "^CAPTURE.*" "\\*Warnings\\*"
-          "\\*Backtrace\\*" "\\*Occur\\*"
-          help-mode compilation-mode
-          "^\\*eshell.*\\*$" eshell-mode
-          "^\\*term.*\\*$" term-mode)
-        popper-mode-line nil
-        popper-window-height 0.33))
-
-(use-package popper-echo
-  :after popper
+(use-package vc
+  :defer nil
   :ensure nil
+  :bind (("C-x v c" . (lambda (command) (interactive "P")
+                        (unless server-mode (server-force-delete) (server-mode))
+                        (let ((command (if command command (read-string "Command: git "))))
+                          (compile (concat "GIT_EDITOR=\"emacsclient\" bash -c \"git " command "\"")))))
+         ("C-x v f" . (lambda () (interactive)
+                        (vc-git--pushpull "push" nil '("--force-with-lease"))))
+         ("C-x v e" . vc-ediff))
   :config
-  ;; cleaner tab-line
-  (advice-add 'tab-line-tab-name-buffer :around
-              (lambda (orig-fn &rest args)
-                (string-replace "*" "" (apply orig-fn args))))
-  (defun popper-tab-line--format (tab tabs)
-    (let ((tab-vbar (when (display-graphic-p)
-                      (propertize " "
-                                  'face `(:background ,(face-foreground 'vertical-border))
-                                  'display '(space :width (1)))))
-          (tab-face (if (eq tab (current-buffer))
-                        (if (mode-line-window-selected-p)
-                            'tab-line-tab-current 'tab-line-tab)
-                      'tab-line-tab-inactive)))
-      (concat
-       tab-vbar
-       (propertize " " 'face tab-face)
-       (when (package-installed-p 'nerd-icons)
-         (with-eval-after-load 'nerd-icons
-           (with-current-buffer tab
-             (propertize (format "%s " (nerd-icons-icon-for-buffer))
-                         'face tab-face))))
-       (tab-line-tab-name-format-default tab tabs)
-       tab-vbar))))
+  (setq vc-handled-backends '(Git)
+        vc-find-revision-no-save t
+        vc-follow-symlinks t
+        project-vc-merge-submodules nil
+        diff-default-read-only t
+        vc-annotate-background-mode t)
+  ;; fixing vc-annotate : vc-annotate-background-mode doesn't play
+  ;; well with white fg, so we tweak the faces to have black fg
+  (defun vc-annotate-readable (&rest _)
+    (dolist (anno-face (seq-filter
+                        (lambda (face)
+                          (string-prefix-p "vc-annotate-face-" (symbol-name face)))
+                        (face-list)))
+      (face-remap-add-relative anno-face :foreground "black")))
 
-(use-package transpose-frame
-  :bind (("C-x 5 t" . transpose-frame)
-         ("C-x 5 r" . rotate-frame)
-         ("C-x 5 f" . flip-frame)
-         ("C-x 5 l" . flop-frame)
-         :repeat-map ctl-x-5-repeat-map
-         ("t" . transpose-frame)
-         ("r" . rotate-frame)
-         ("f" . flip-frame)
-         ("l" . flop-frame)))
-
-(use-package orderless
-  :after minibuffer
-  :hook (completion-in-region-mode . (lambda nil
-                                       (setq-local orderless-component-separator "[ -]")))
-  :hook (icomplete-minibuffer-setup . (lambda nil
-                                        (setq-local completion-styles '(orderless basic))))
-  :config
-  (bind-key "<SPC>" #'self-insert-command minibuffer-local-completion-map)
-  :custom
-  (completion-styles '(orderless basic)))
-
-(use-package avy
-  :bind ("C-'" . avy-goto-char-timer)
-  :bind (:map isearch-mode-map
-              ("M-s M-s" . avy-isearch))
-  :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer)
-  :custom
-  (avy-single-candidate-jump t)
-  (avy-background t))
-
-(use-package vertico
-  :hook (after-init . vertico-mode)
-  :hook (rfn-eshadow-update-overlay . vertico-directory-tidy)
-  :bind (:map vertico-map
-              ("<escape>" . minibuffer-keyboard-quit)
-              ("<backspace>" . vertico-directory-delete-char)
-              ("RET" . vertico-directory-enter)
-              ("C-<return>" . vertico-exit-input)
-              ("TAB" . vertico-next)
-              ("<backtab>" . vertico-previous)
-              ("S-TAB" . vertico-previous)
-              ("M-TAB" . vertico-previous)
-              ("C-j" . vertico-next)
-              ("C-k" . vertico-previous))
-  :custom
-  (vertico-multiform-categories
-   '((command flat)
-     (buffer flat)
-     (project-file flat)
-     (file flat)))
-  :config
-  (vertico-multiform-mode)
-  
-  (setq vertico-scroll-margin 0
-        vertico-resize nil
-        vertico-cycle t)
-
-  (setq tab-always-indent 'complete
-        tab-first-completion 'word-or-paren
-        completions-group t
-        completions-detailed t))
-
-(use-package cape
-  :hook (eglot-managed-mode . (lambda nil
-                                (setq-local completion-at-point-functions
-                                            (list (cape-capf-super
-                                                   #'eglot-completion-at-point
-                                                   #'cape-abbrev
-                                                   #'cape-file
-                                                   #'cape-dabbrev)))))
-  :hook (emacs-lisp-mode . (lambda nil
-                             (setq-local completion-at-point-functions
-                                         (list (cape-capf-super
-                                                #'elisp-completion-at-point
-                                                #'cape-dabbrev)
-                                               #'cape-file))))
-  :init
-  (add-hook 'completion-at-point-functions #'cape-dabbrev)
-  (add-hook 'completion-at-point-functions #'cape-file)
-  (add-hook 'completion-at-point-functions #'cape-abbrev))
-
-(use-package corfu
-  :hook (after-init . global-corfu-mode)
-  :hook ((corfu-mode . corfu-popupinfo-mode)
-         (meow-insert-exit . corfu-quit))
-  :bind (:map corfu-map
-              ("TAB" . corfu-next)
-              ([tab] . corfu-next)
-              ("M-TAB" . corfu-previous)
-              ("S-TAB" . corfu-previous)
-              ([backtab] . corfu-previous))
-  :config
-  (dolist (key '("C-f" "C-b" "C-a" "C-e"))
-    (define-key corfu-map key nil))
-  (keymap-unset corfu-map "<remap> <next-line>")
-  (keymap-unset corfu-map "<remap> <previous-line>")
-  (add-hook 'eshell-mode #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
-  (with-eval-after-load 'savehist
-    (corfu-history-mode 1)
-    (add-to-list 'savehist-additional-variables 'corfu-history))
-  (setq completion-ignore-case t)
-  (setq corfu-cycle t
-        corfu-auto t
-        corfu-auto-prefix 2
-        corfu-auto-delay 0.1
-        corfu-separator 32
-        corfu-max-width 80
-        corfu-preselect 'prompt
-        corfu-quit-no-match t
-        corfu-quit-at-boundary 'separator
-        corfu-preview-current nil
-        corfu-popupinfo-delay '(0.5 . 0.1)
-        corfu-preselect-first nil)
-  (use-package corfu-terminal
-    :when (not (display-graphic-p))
-    :hook ((corfu-mode . corfu-terminal-mode))))
-
-(use-package eldoc-box
-  :after eldoc
-  :commands eldoc-box-help-at-point
-  :config
-  (setq eldoc-box-max-pixel-width 600
-        eldoc-box-max-pixel-height 700
-        eldoc-box-only-multi-line t))
-
-(use-package sideline-flymake
-  :hook (flymake-mode . sideline-mode)
-  :init
-  (setq sideline-flymake-display-mode 'line)
-  (setq sideline-backends-right '(sideline-flymake)
-        sideline-flymake-show-backend-name t))
-
-(use-package exec-path-from-shell
-  :if (display-graphic-p)
-  :hook (after-init . exec-path-from-shell-initialize))
-
-(use-package xclip
-  :unless (display-graphic-p)
-  :init (xclip-mode 1))
-
-(use-package kkp
-  :unless (display-graphic-p)
-  :init (global-kkp-mode +1))
+  (with-eval-after-load 'vc-annotate
+    (if vc-annotate-background-mode
+        (advice-add 'vc-annotate-lines :after #'vc-annotate-readable))
+    (define-key vc-annotate-mode-map
+                "q" (lambda () (interactive)
+                      (kill-this-buffer)
+                      (tab-bar-close-tab))))
+  ;; vc-annotate messes up the window-arrangement, give it a dedicated tab
+  (add-to-list 'display-buffer-alist
+               '("^\\*Annotate.*\\*$"
+                 (display-buffer-reuse-mode-window display-buffer-in-tab))))
 
 (use-package magit
   :commands (magit magit-file-dispatch magit-log-all magit-ediff-show-unstaged)
@@ -1045,74 +1069,51 @@ the cursor by ARG lines."
 
   (bind-key "q" #'mu-magit-kill-buffers magit-status-mode-map))
 
-(use-package undo-fu-session
-  :hook ((prog-mode conf-mode fundamental-mode text-mode tex-mode) . undo-fu-session-mode)
+(use-package dired
+  :ensure nil
+  :hook (dired-mode . dired-hide-details-mode)
+  :bind (:map dired-mode-map
+              ("q" . kill-this-buffer)
+              ("RET" . dired-find-alternate-file)
+              ("TAB" . dired-maybe-insert-subdir)
+              ("<backspace>" . (lambda nil (interactive)
+                                 (dired-kill-subdir)
+                                 (set-mark-command '(4))))
+              ("<backtab>" . (lambda nil (interactive)
+                               (dired-kill-subdir)
+                               (set-mark-command '(4))))
+              ("\\" . dired-up-directory)
+              ("E" . wdired-change-to-wdired-mode)
+              ("z" . find-grep-dired))
   :config
-  (setq undo-fu-session-compression nil))
+  (add-hook 'dired-mode-hook ;; solaire
+            (lambda nil
+              (dolist (face '(default fringe))
+                (face-remap-add-relative
+                 face :background (if load-theme-light
+                                      "#EEEEEE"
+                                    "#30343D")))))
+  (when (eq system-type 'darwin)
+    (require 'ls-lisp)
+    (setq ls-lisp-use-insert-directory-program nil
+          dired-listing-switches
+          "-l --almost-all --human-readable --group-directories-first"))
+  
+  (with-eval-after-load 'project
+    (add-to-list 'project-switch-commands '(project-dired "Dired" ?D)))
 
-(use-package easy-kill
-  :bind (([remap kill-ring-save] . #'easy-kill)
-         ([remap mark-sexp]      . #'easy-mark)))
-
-(use-package macrursors ; use C-; (macrursors-end) to do edits
-  :ensure nil           ; for beacon-like selection C-; SPC/ C-; C-g
-  :init
-  (unless (package-installed-p 'macrursors)
-    (package-vc-install "https://github.com/karthink/macrursors"))
-  (define-prefix-command 'macrursors-mark-map)
-  :bind-keymap ("C-;" . macrursors-mark-map)
-  :bind (("M-d" . (lambda nil ; mark-word-then-select-next
-                    (interactive)
-                    (if (or (use-region-p)
-                            defining-kbd-macro)
-                        (progn
-                          (call-interactively 'macrursors-mark-next-instance-of)
-                          (if (use-region-p)
-                              (deactivate-mark)))
-                      (let ((start-of-word (save-excursion (backward-word) (point))))
-                        (unless (eq (point) start-of-word)
-                          (backward-word)))
-                      (mark-word))))
-         ("M-'" . macrursors-mark-all-instances-of)
-         
-         :map macrursors-mark-map
-         ("M-a" . macrursors-mark-all-instances-of)
-         ("M-n" . macrursors-mark-next-instance-of)
-         ("M-p" . macrursors-mark-previous-instance-of)
-         ("C-g" . macrursors-early-quit)
-         ("C-n" . macrursors-mark-next-line)
-         ("C-p" . macrursors-mark-previous-line)
-         
-         :repeat-map macrursors-mark-repeat-map
-         ("n" . macrursors-mark-next-line)
-         ("C-n" . macrursors-mark-next-line)
-         ("p" . macrursors-mark-previous-line)
-         ("C-p" . macrursors-mark-previous-line)
-         
-         :map macrursors-mode-map
-         ("C-'" . macrursors-hideshow)
-         
-         :map isearch-mode-map
-         ("C-;" . macrursors-mark-from-isearch)
-         ("M-<down>" . macrursors-mark-next-from-isearch)
-         ("M-<up>" . macrursors-mark-previous-from-isearch)
-         
-         :repeat-map isearch-repeat-map
-         ("<down>" . macrursors-mark-next-from-isearch)
-         ("<up>" . macrursors-mark-previous-from-isearch))
-  :config
-  (set-face-attribute 'macrursors-cursor-face nil
-                      :inverse-video nil :inherit 'cursor)
-  (dolist (mode '(corfu-mode beacon-mode))
-    (add-hook 'macrursors-pre-finish-hook mode)
-    (add-hook 'macrursors-post-finish-hook mode))
-  (when (featurep 'meow)
-    (add-hook 'macrursors-mode-hook #'meow-insert)))
-
-(use-package isearch-mb
-  :disabled t
-  :after isearch
-  :hook (isearch-mode . isearch-mb-mode))
+  (put 'dired-find-alternate-file 'disabled nil)
+  
+  (setq dired-dwim-target t
+        dired-omit-mode t
+        dired-auto-revert-buffer t
+        dired-mouse-drag-files t
+        dired-use-ls-dired nil
+        dired-free-space nil
+        mouse-drag-and-drop-region-cross-program t
+        dired-kill-when-opening-new-dired-buffer t
+        dired-recursive-deletes 'always
+        dired-recursive-copies 'always))
 
 (use-package dired-sidebar
   :bind ("C-x d" . dired-sidebar-toggle-sidebar)
@@ -1122,65 +1123,6 @@ the cursor by ARG lines."
   :config
   (setq dired-sidebar-mode-line-format
         '("%e" mode-line-buffer-identification)))
-
-(use-package ibuffer-vc
-  :after ibuffer
-  :bind (:map ibuffer-mode-map
-              ("/ V" . ibuffer-vc-set-filter-groups-by-vc-root)
-              ("/ /" . ibuffer-clear-filter-groups)))
-
-(use-package snap-indent
-  :hook (prog-mode . snap-indent-mode)
-  :custom ((snap-indent-format 'untabify)
-           (snap-indent-on-save t)))
-
-(use-package puni
-  ;; TODO: https://karthinks.com/software/a-consistent-structural-editing-interface/
-  ;; https://countvajhula.com/2021/09/25/the-animated-guide-to-symex/
-  :hook ((emacs-lisp-mode tex-mode eval-expression-minibuffer-setup) . puni-mode)
-  :bind (("C-=" . puni-expand-region)
-         :map puni-mode-map
-         ("C-w" . nil) ;delete-backword
-         ("M-w" . nil) ;easy-kill
-         ("M-d" . nil) ;macrursors
-         ("s-s" . puni-splice)
-         ("M-]" . puni-slurp-forward)
-         ("M-[" . puni-barf-forward)
-         ("M-}" . puni-barf-backward)
-         ("M-{" . puni-slurp-backward)
-         :repeat-map puni-mode-repeat-map
-         ("-" . puni-contract-region)
-         ("=" . puni-expand-region)))
-
-(use-package writeroom-mode
-  :hook ((nov-mode Info-mode Man-mode) . writeroom-mode)
-  :config
-  (setq writeroom-width (min 90 (window-width))
-        writeroom-mode-line t
-        writeroom-global-effects nil
-        writeroom-maximize-window nil))
-
-(use-package nerd-icons
-  :defer 0.2
-  :config
-  ;; causing issues in emacs -nw
-  ;; (when (not (find-font (font-spec :name nerd-icons-font-family)))
-  ;;   (nerd-icons-install-fonts t))
-  (setq eglot-menu-string (nerd-icons-octicon "nf-oct-sync"))
-  (when (custom-theme-enabled-p 'zed)
-    (setq zed-tab-back-button
-          (nerd-icons-octicon "nf-oct-arrow_left" :v-adjust 0.2)
-          zed-tab-forward-button
-          (nerd-icons-octicon "nf-oct-arrow_right" :v-adjust 0.2)))
-  (push '(eat-mode nerd-icons-devicon "nf-dev-terminal") nerd-icons-mode-icon-alist)
-  (use-package nerd-icons-corfu
-    :init
-    (with-eval-after-load 'corfu
-      (push 'nerd-icons-corfu-formatter corfu-margin-formatters)))
-  (use-package nerd-icons-dired
-    :hook (dired-mode . nerd-icons-dired-mode))
-  (use-package nerd-icons-ibuffer
-    :hook (ibuffer-mode . nerd-icons-ibuffer-mode)))
 
 (use-package eat
   :commands eat-project
@@ -1220,81 +1162,6 @@ the cursor by ARG lines."
         eat-kill-buffer-on-exit t
         eat-term-name "xterm-256color"))
 
-(use-package diff-hl
-  :hook (((prog-mode conf-mode) . turn-on-diff-hl-mode)
-         ((prog-mode conf-mode) . diff-hl-margin-mode))
-  :config
-  (diff-hl-flydiff-mode t)
-  (when (package-installed-p 'magit)
-    (add-hook 'magit-pre-refresh-hook  #'diff-hl-magit-pre-refresh)
-    (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh))
-  (setq vc-git-diff-switches '("--histogram")
-        diff-hl-flydiff-delay 0.5
-        diff-hl-update-async t
-        diff-hl-show-staged-changes nil
-        diff-hl-margin-symbols-alist '((insert . "█")
-                                       (delete . "█")
-                                       (change . "█"))
-        diff-hl-draw-borders nil))
-
-(use-package info-colors
-  :ensure nil
-  :init
-  (unless (package-installed-p 'info-colors)
-    (package-vc-install "https://github.com/ubolonton/info-colors"))
-  :hook
-  (Info-selection . info-colors-fontify-node)
-  (Info-mode . variable-pitch-mode))
-
-(use-package shr-tag-pre-highlight ;; FIXME: complains if mode isnt available
-  :defer 1
-  :config
-  (with-eval-after-load 'nov
-    (advice-add 'shr--set-target-ids :around
-                (lambda (orig-fn &rest args)
-                  (if (and (get-buffer-window)
-                           (bufferp (point)))
-                      (apply orig-fn args)
-                    nil)))
-    (add-to-list 'nov-shr-rendering-functions
-                 '(pre . shr-tag-pre-highlight) t))
-  ;; eww
-  (add-to-list 'shr-external-rendering-functions
-               '(pre . shr-tag-pre-highlight)))
-
-(use-package highlight-indent-guides
-  ;; :hook (prog-mode . highlight-indent-guides-mode)
-  :config
-  (set-face-attribute 'highlight-indent-guides-character-face nil
-                      :inherit 'vertical-border)
-  (setq highlight-indent-guides-method 'character
-        highlight-indent-guides-auto-enabled nil
-        highlight-indent-guides-responsive nil))
-
-(use-package markdown-mode
-  :config
-  (setq markdown-fontify-code-blocks-natively t))
-
-(use-package cdlatex
-  :hook (org-mode . turn-on-org-cdlatex))
-
-(use-package which-key
-  :hook (minibuffer-mode . which-key-mode))
-
-(use-package ox-awesomecv
-  :ensure nil
-  :load-path "~/Documents/org-cv"
-  ;; :vc (:fetcher gitlab :repo "Titan-C/org-cv")
-  :after org)
-
-(use-package deadgrep
-  :bind ("M-s d" . deadgrep)
-  :preface
-  (defun deadgrep-current-dir (search-term)
-    "Grep for SEARCH-TERM in current directory."
-    (interactive "sTerm: ")
-    (deadgrep search-term default-directory)))
-
 (use-package nov
   :mode ("\\.epub\\'" . nov-mode)
   :hook (nov-mode . visual-line-mode)
@@ -1313,14 +1180,141 @@ the cursor by ARG lines."
   (setq nov-text-width (min 80 (window-width))
         nov-header-line-format nil))
 
-(use-package devil
-  :hook (after-init . global-devil-mode)
-  :config
-  (devil-set-key (kbd "'")))
+;;; Org
 
-;;; ------------------
+(use-package org
+  :ensure nil
+  :hook (org-mode . (lambda nil
+                      (setq-local line-spacing 8)))
+  :hook (org-mode . visual-line-mode)
+  :config
+  ;; Taken from rougier: org-outer-indent
+  (defun org-outer-indent--compute-prefixes ()
+    "Compute prefix strings for regular text and headlines."
+    (setq org-indent--heading-line-prefixes
+          (make-vector org-indent--deepest-level nil))
+    (setq org-indent--inlinetask-line-prefixes
+          (make-vector org-indent--deepest-level nil))
+    (setq org-indent--text-line-prefixes
+          (make-vector org-indent--deepest-level nil))
+    ;; Find the lowest headline level
+    (let* ((headline-levels (or (org-element-map
+                                 (org-element-parse-buffer) 'headline
+                                 #'(lambda (item)
+                                     (org-element-property :level item)))
+                                '()))
+           (max-level (seq-max (if headline-levels
+                                   headline-levels
+                                 0)))
+           ;; We could also iterate over each evel to get maximum length
+           ;; Instead, we take the length of the deepest numbered level.
+           (line-indentation (+ 3 max-level))
+           (headline-indentation))
+      (dotimes (level org-indent--deepest-level)
+        (setq headline-indentation
+              (max 0 (- line-indentation (+ 1 level))))
+        (aset org-indent--inlinetask-line-prefixes level
+              (make-string line-indentation ?\s))
+        (aset org-indent--text-line-prefixes level
+              (make-string line-indentation ?\s))
+        (aset org-indent--heading-line-prefixes level
+              (make-string headline-indentation ?\s))))
+    (setq-local org-hide-leading-stars nil))
+
+  (advice-add 'org-indent--compute-prefixes :override
+              #'org-outer-indent--compute-prefixes)
+
+  (push 'org-habit org-modules)
+  ;; configure <s template for org-src-blocks
+  (require 'org-tempo)
+  (add-hook 'org-mode-hook
+            (lambda ()
+              (setq-local electric-pair-inhibit-predicate
+                          `(lambda (c)
+                             (if (char-equal c ?<)
+                                 t
+                               (,electric-pair-inhibit-predicate c))))))
+  (setq org-directory "~/.emacs.d/org"
+        org-use-sub-superscripts '{}
+        ;; org-export-with-sub-superscripts nil
+        org-ellipsis "…"
+        org-pretty-entities t
+        org-startup-indented t
+        org-adapt-indentation t
+        org-special-ctrl-a/e t
+        org-fold-catch-invisible-edits 'show-and-error
+        org-edit-src-content-indentation 0
+        org-src-preserve-indentation t
+        org-src-fontify-natively t))
+
+(use-package org-agenda
+  :ensure nil
+  :config
+  (add-to-list 'display-buffer-alist
+               '("\\*Calendar\\*"
+                 (display-buffer-reuse-window display-buffer-below-selected)
+                 (window-parameters (height . 0.33))))
+
+  (setq org-agenda-files (list org-directory)
+        org-agenda-window-setup 'current-window
+        org-agenda-restore-windows-after-quit t
+        org-agenda-start-with-log-mode t
+        org-agenda-show-all-dates nil
+        org-log-done t
+        org-log-into-drawer t
+        org-agenda-skip-timestamp-if-done t
+        org-agenda-skip-scheduled-if-done t
+        org-agenda-skip-deadline-if-done t
+        org-agenda-include-deadlines t)
+
+  (setf (alist-get 'agenda org-agenda-prefix-format
+                   nil nil #'equal)
+        "  %?-12t% s"))
+
+(use-package org-habit
+  :after org-agenda
+  :ensure nil
+  :config
+  ;; (graph (make-string (1+ (- end start)) org-habit-missed-glyph)) ;; BRUH FIXME
+  ;; (advice-add 'org-habit-build-graph )
+
+  (setq org-habit-show-habits-only-for-today t
+        org-habit-show-done-always-green t
+        ;; org-habit-today-glyph ?○ ;; 9675
+        ;; org-habit-completed-glyph ?● ;; 9679
+        ;; org-habit-missed-glyph ?○ ;; 9675
+        org-habit-following-days 1
+        org-habit-preceding-days 21))
+
+(use-package org-capture
+  :ensure nil
+  ;; :hook (org-capture-mode . meow-insert)
+  :config
+  (add-hook 'org-capture-mode-hook
+            (lambda nil
+              (setq-local header-line-format nil)))
+  (setq org-capture-file
+        (concat org-directory "/inbox.org")
+        org-capture-templates
+        '(("t" "TODO" entry
+           (file+headline org-capture-file "TODOs")
+           "* TODO %?\n%<%d %b '%g %R>%i %a" :prepend t)
+          ("n" "Note" entry
+           (file+headline org-capture-file "Notes")
+           "* %?\n%i %a" :prepend t)
+          ("h" "Habit" entry
+           (file+headline org-capture-file "Habits")
+           "* TODO %?\n:PROPERTIES:\n:STYLE: habit\n:LOGGING: TODO(!) DONE(!)\n:END:"
+           :prepend t))))
+
+(use-package ox-awesomecv
+  :ensure nil
+  :load-path "~/Documents/org-cv"
+  ;; :vc (:fetcher gitlab :repo "Titan-C/org-cv")
+  :after org)
+
 ;;; Programming setup
-;;; ------------------
+
 (use-package treesit
   :ensure nil
   :config
@@ -1425,6 +1419,13 @@ the cursor by ARG lines."
   :config
   (remove-hook 'janet-ts-mode-hook 'treesit-inspect-mode))
 
+(use-package markdown-mode
+  :config
+  (setq markdown-fontify-code-blocks-natively t))
+
+(use-package cdlatex
+  :hook (org-mode . turn-on-org-cdlatex))
+
 (use-package foxy
   :ensure nil
   :load-path "~/.emacs.d/lisp"
@@ -1457,7 +1458,7 @@ the cursor by ARG lines."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(puni snap-indent cape easy-kill kkp macrursors xclip sideline-flymake info-colors nerd-icons-ibuffer ibuffer-vc devil shr-tag-pre-highlight highlight-indent-guides isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
+   '(puni snap-indent cape easy-kill kkp macrursors xclip sideline-flymake info-colors nerd-icons-ibuffer devil shr-tag-pre-highlight highlight-indent-guides dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
  '(package-vc-selected-packages
    '((macrursors :vc-backend Git :url "https://github.com/karthink/macrursors")
      (info-colors :vc-backend Git :url "htttps://github.com/ubolonton/info-colors")
