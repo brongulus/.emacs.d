@@ -76,7 +76,7 @@
    `(cursor ((t (:background "#00c2ff"))))
    `(border-glyph ((t (nil))))
    `(info-node ((t (:italic t :bold t))))
-   `(info-xref ((t (:bold t))))
+   `(info-xref ((t (:inherit link))))
    `(left-margin ((t (nil))))
    `(right-margin ((t (nil))))
    `(pointer ((t (nil))))
@@ -169,10 +169,10 @@
    `(ansi-color-blue ((t (:foreground ,blue-color :background ,blue-color))))
    `(ansi-color-cyan ((t (:foreground ,cyan-color :background ,cyan-color))))
    
-   `(avy-lead-face ((t (:foreground ,yellow-color :inverse-video t :weight bold))))
-   `(avy-lead-face-0 ((t (:foreground ,yellow-color :inverse-video t :weight bold))))
-   `(avy-lead-face-1 ((t (:foreground ,yellow-color :inverse-video t :weight bold))))
-   `(avy-lead-face-2 ((t (:foreground ,yellow-color :inverse-video t :weight bold))))
+   `(avy-lead-face ((t (:background ,orange-color :foreground "black" :weight bold))))
+   `(avy-lead-face-0 ((t (:background ,orange-color :foreground "black" :weight bold))))
+   `(avy-lead-face-1 ((t (:background ,orange-color :foreground "black" :weight bold))))
+   `(avy-lead-face-2 ((t (:background ,orange-color :foreground "black" :weight bold))))
    
    `(compilation-info ((t (:foreground ,green-color))))
    `(compilation-warning ((t (:foreground ,yellow-color))))
@@ -229,7 +229,7 @@
    `(erc-header-line ((t (:background ,modeline-color :foreground ,green-color))))
 
    `(variable-pitch-text ((t (:inherit variable-pitch))))
-   `(shr-code ((t (:inherit default :foreground ,yellow-color))))
+   `(shr-code ((t (:inherit default :slant italic))))
    `(gnus-group-mail-1 ((t (:foreground ,red-color :weight bold))))
    `(gnus-group-mail-2 ((t (:foreground ,red-color :weight bold))))
    `(gnus-group-mail-3 ((t (:foreground ,red-color :weight bold))))
@@ -422,8 +422,8 @@
                           'help-echo "Mouse-1: Show major-mode-menu"
                           'local-map mode-line-major-mode-keymap)))) ;; issues with underline
    (:eval (propertize " %b " 'face (if (and (buffer-modified-p))
-                                            ;; (or (derived-mode-p 'prog-mode)
-                                            ;;     (derived-mode-p 'text-mode)))
+                                       ;; (or (derived-mode-p 'prog-mode)
+                                       ;;     (derived-mode-p 'text-mode)))
                                        '(:inherit font-lock-warning-face :weight bold)
                                      '(:weight bold))
                       'help-echo (buffer-file-name)))

@@ -229,8 +229,6 @@ the cursor by ARG lines."
                   (add-hook 'prog-mode-hook (show-paren-mode t))
                   (add-to-list 'write-file-functions
                                '(lambda ()
-                                  (unless indent-tabs-mode
-                                    (untabify (point-min) (point-max)))
                                   (when (eq major-mode 'emacs-lisp-mode)
                                     (check-parens))
                                   nil))
@@ -247,7 +245,7 @@ the cursor by ARG lines."
                   (setq savehist-additional-variables '(register-alist kill-ring))
                   (setq save-interprogram-paste-before-kill t)
                   (global-subword-mode 1)
-                  (delete-selection-mode)
+                  (delete-selection-mode) ;; pending-delete-mode
                   (context-menu-mode 1)
                   (savehist-mode 1)
                   (blink-cursor-mode -1)
@@ -257,7 +255,7 @@ the cursor by ARG lines."
 (use-package package
   :ensure nil
   :init
-  (if t ;package-quickstart
+  (if package-quickstart
       (let ((load-source-file-function nil))
         (package-activate-all))
     (package-initialize))
@@ -513,7 +511,7 @@ the cursor by ARG lines."
 
 (use-package tramp
   :defer 1
-  :hook (minibuffer-mode . tramp-cleanup-all-connections)
+  ;; :hook (minibuffer-mode . tramp-cleanup-all-connections)
   :config
   (setq tramp-process-connection-type nil)
   (setq tramp-ssh-controlmaster-options
@@ -908,10 +906,13 @@ the cursor by ARG lines."
   (completion-styles '(orderless basic)))
 
 (use-package avy
-  :bind ("M-s j" . avy-goto-char-timer)
+  :bind ("C-'" . avy-goto-char-timer)
+  :bind (:map isearch-mode-map
+              ("M-s M-s" . avy-isearch))
   :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer)
   :custom
-  (avy-single-candidate-jump nil))
+  (avy-single-candidate-jump t)
+  (avy-background t))
 
 (use-package vertico
   :hook (after-init . vertico-mode)
@@ -946,6 +947,19 @@ the cursor by ARG lines."
         completions-detailed t))
 
 (use-package cape
+  :hook (eglot-managed-mode . (lambda nil
+                                (setq-local completion-at-point-functions
+                                            (list (cape-capf-super
+                                                   #'eglot-completion-at-point
+                                                   #'cape-abbrev
+                                                   #'cape-file
+                                                   #'cape-dabbrev)))))
+  :hook (emacs-lisp-mode . (lambda nil
+                             (setq-local completion-at-point-functions
+                                         (list (cape-capf-super
+                                                #'elisp-completion-at-point
+                                                #'cape-dabbrev)
+                                               #'cape-file))))
   :init
   (add-hook 'completion-at-point-functions #'cape-dabbrev)
   (add-hook 'completion-at-point-functions #'cape-file)
@@ -1017,9 +1031,11 @@ the cursor by ARG lines."
 (use-package magit
   :commands (magit magit-file-dispatch magit-log-all magit-ediff-show-unstaged)
   :bind ("C-M-g" . magit)
-  ;; :bind (:map magit-mode-map
-  ;;             ("q" . magit-kill-this-buffer))
   :config
+  (setq magit-refresh-status-buffer nil
+        magit-diff-refine-hunk t
+        magit-save-repository-buffers nil
+        magit-revision-insert-related-refs nil)
   (defun mu-magit-kill-buffers () ;src: manuel-uberti
     "Restore window configuration and kill all Magit buffers."
     (interactive)
@@ -1038,12 +1054,6 @@ the cursor by ARG lines."
   :bind (([remap kill-ring-save] . #'easy-kill)
          ([remap mark-sexp]      . #'easy-mark)))
 
-(use-package expand-region
-  :bind (("C-=" . er/expand-region)
-         :repeat-map expand-region-repeat-map
-         ("-" . er/contract-region)
-         ("=" . er/expand-region)))
-
 (use-package macrursors ; use C-; (macrursors-end) to do edits
   :ensure nil           ; for beacon-like selection C-; SPC/ C-; C-g
   :init
@@ -1051,31 +1061,33 @@ the cursor by ARG lines."
     (package-vc-install "https://github.com/karthink/macrursors"))
   (define-prefix-command 'macrursors-mark-map)
   :bind-keymap ("C-;" . macrursors-mark-map)
-  :bind (("M-n" . macrursors-mark-next-instance-of)
-         ("M-p" . macrursors-mark-previous-instance-of)
-         ("M-d" . (lambda nil
+  :bind (("M-d" . (lambda nil ; mark-word-then-select-next
                     (interactive)
-                    (if (region-active-p)
-                        (macrursors-mark-all-instances-of)
-                      (backward-word)
+                    (if (or (use-region-p)
+                            defining-kbd-macro)
+                        (progn
+                          (call-interactively 'macrursors-mark-next-instance-of)
+                          (if (use-region-p)
+                              (deactivate-mark)))
+                      (let ((start-of-word (save-excursion (backward-word) (point))))
+                        (unless (eq (point) start-of-word)
+                          (backward-word)))
                       (mark-word))))
+         ("M-'" . macrursors-mark-all-instances-of)
          
          :map macrursors-mark-map
+         ("M-a" . macrursors-mark-all-instances-of)
+         ("M-n" . macrursors-mark-next-instance-of)
+         ("M-p" . macrursors-mark-previous-instance-of)
          ("C-g" . macrursors-early-quit)
          ("C-n" . macrursors-mark-next-line)
          ("C-p" . macrursors-mark-previous-line)
-         ("M-<down>" . macrursors-mark-next-line)
-         ("M-<up>" . macrursors-mark-previous-line)
          
          :repeat-map macrursors-mark-repeat-map
          ("n" . macrursors-mark-next-line)
          ("C-n" . macrursors-mark-next-line)
-         ("<down>" . macrursors-mark-next-line)
-         ("M-<down>" . macrursors-mark-next-line)
          ("p" . macrursors-mark-previous-line)
          ("C-p" . macrursors-mark-previous-line)
-         ("<up>" . macrursors-mark-previous-line)
-         ("M-<up>" . macrursors-mark-previous-line)
          
          :map macrursors-mode-map
          ("C-'" . macrursors-hideshow)
@@ -1117,6 +1129,29 @@ the cursor by ARG lines."
               ("/ V" . ibuffer-vc-set-filter-groups-by-vc-root)
               ("/ /" . ibuffer-clear-filter-groups)))
 
+(use-package snap-indent
+  :hook (prog-mode . snap-indent-mode)
+  :custom ((snap-indent-format 'untabify)
+           (snap-indent-on-save t)))
+
+(use-package puni
+  ;; TODO: https://karthinks.com/software/a-consistent-structural-editing-interface/
+  ;; https://countvajhula.com/2021/09/25/the-animated-guide-to-symex/
+  :hook ((emacs-lisp-mode tex-mode eval-expression-minibuffer-setup) . puni-mode)
+  :bind (("C-=" . puni-expand-region)
+         :map puni-mode-map
+         ("C-w" . nil) ;delete-backword
+         ("M-w" . nil) ;easy-kill
+         ("M-d" . nil) ;macrursors
+         ("s-s" . puni-splice)
+         ("M-]" . puni-slurp-forward)
+         ("M-[" . puni-barf-forward)
+         ("M-}" . puni-barf-backward)
+         ("M-{" . puni-slurp-backward)
+         :repeat-map puni-mode-repeat-map
+         ("-" . puni-contract-region)
+         ("=" . puni-expand-region)))
+
 (use-package writeroom-mode
   :hook ((nov-mode Info-mode Man-mode) . writeroom-mode)
   :config
@@ -1151,6 +1186,8 @@ the cursor by ARG lines."
   :commands eat-project
   :init (with-eval-after-load 'project
           (add-to-list 'project-switch-commands '(eat-project "Eat" ?t)))
+  :hook ((eshell-load . #'eat-eshell-mode)
+         (eshell-load . #'eat-eshell-visual-command-mode))
   :bind (("C-\\" . (lambda () (interactive)
                      (defvar eat-buffer-name)
                      (let ((current-prefix-arg t)
@@ -1420,7 +1457,7 @@ the cursor by ARG lines."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(cape easy-kill kkp macrursors xclip sideline-flymake info-colors nerd-icons-ibuffer ibuffer-vc devil expand-region shr-tag-pre-highlight highlight-indent-guides isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
+   '(puni snap-indent cape easy-kill kkp macrursors xclip sideline-flymake info-colors nerd-icons-ibuffer ibuffer-vc devil shr-tag-pre-highlight highlight-indent-guides isearch-mb dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
  '(package-vc-selected-packages
    '((macrursors :vc-backend Git :url "https://github.com/karthink/macrursors")
      (info-colors :vc-backend Git :url "htttps://github.com/ubolonton/info-colors")
