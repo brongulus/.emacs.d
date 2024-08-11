@@ -18,6 +18,7 @@
 
 (use-package emacs
   :no-require
+  :ensure nil
   :bind-keymap ("C-j" . ctl-x-r-map)
   :bind (("C-h '" . describe-face)
          ("M-c" . quick-calc) ; 16#hex
@@ -41,7 +42,6 @@
          ("C-," . scroll-other-window)
          ("C-." . scroll-other-window-down)
          ("M-P" . execute-extended-command)
-         ("M-\\" . fixup-whitespace)
          ("M-s r" . replace-regexp)
          ("M-s f" . ffap)
          ("C-x C-m" . execute-extended-command)
@@ -50,7 +50,7 @@
                           (call-interactively 'delete-indentation))))
          ("C-h C-o" . describe-symbol)
          ("C-x C-b" . ibuffer)
-         ("C-x k" . kill-this-buffer)
+         ("C-x k" . kill-current-buffer)
          ("C-x l" . revert-buffer-quick)
          ("C-x L" . desktop-read)
          ("C-M-r" . raise-sexp)
@@ -85,15 +85,16 @@
         process-adaptive-read-buffering nil
         kill-do-not-save-duplicates t
         auto-mode-case-fold nil
-        idle-update-delay 1.0
+        which-func-update-delay 1.0
         undo-limit 67108864
         undo-strong-limit 100663296
         undo-outer-limit 1006632960
         enable-local-variables :safe
         scroll-margin 0
-        scroll-conservatively 10
+        scroll-conservatively 100
         scroll-preserve-screen-position t
         pixel-scroll-precision-large-scroll-height 35.0
+        mwheel-coalesce-scroll-events nil
         split-height-threshold nil
         split-width-threshold 100
         save-abbrevs nil
@@ -160,15 +161,16 @@ the cursor by ARG lines."
              (display-graphic-p))
         (setq load-theme-light t))) ;; load-theme-light is a zed-theme var
   (load-theme 'zed :no-confirm)
-  (defadvice load-theme (before theme-dont-propagate activate)
-    (mapc #'disable-theme custom-enabled-themes))
-  ;; Quitly kill term buffers on exit
-  (defadvice term-handle-exit
-      (after term-kill-buffer-on-exit activate)
-    (kill-buffer)))
+  (define-advice load-theme (:before (&rest _args)
+                                     "Disable all enabled themes before loading a new theme."
+                                     (mapc #'disable-theme custom-enabled-themes)))
+  (define-advice term-handle-exit (:after (&rest _args) ;; FIXME
+                                          "Kill the buffer after the term exits."
+                                          (kill-buffer))))
 
 (use-package emacs
   :no-require
+  :ensure nil
   :bind ("C-x w w" . my-min-max-window)
   :bind (:map special-mode-map
               ("Q" . (lambda nil (interactive)
@@ -236,6 +238,8 @@ the cursor by ARG lines."
                                   (when (eq major-mode 'emacs-lisp-mode)
                                     (check-parens))
                                   nil))
+                  (add-hook 'help-fns-describe-function-functions
+                            #'shortdoc-help-fns-examples-function)
                   (with-eval-after-load 'whitespace
                     (add-to-list 'whitespace-display-mappings
                                  '(newline-mark ?\n [8626 ?\n]) t))
@@ -245,7 +249,11 @@ the cursor by ARG lines."
                                             (make-glyph-code ?│))
                     (xterm-mouse-mode))
                   ;; enable some useful modes
+                  (when (display-graphic-p)
+                    (pixel-scroll-precision-mode 1))
                   (save-place-mode 1)
+                  (when (string> emacs-version "29.4")
+                    (which-key-mode 1))
                   (setq savehist-additional-variables '(register-alist kill-ring))
                   (setq save-interprogram-paste-before-kill t)
                   (global-subword-mode 1)
@@ -333,6 +341,19 @@ the cursor by ARG lines."
   (add-hook 'completion-at-point-functions #'cape-file)
   (add-hook 'completion-at-point-functions #'cape-abbrev))
 
+(use-package completion-preview
+  :if (string> emacs-version "29.4")
+  :ensure nil
+  :hook ((text-mode prog-mode comint-mode eshell-mode)
+         . completion-preview-mode)
+  :bind (:map completion-preview-active-mode-map
+              ([tab] . completion-preview-next-candidate)
+              ([backtab] . completion-preview-previous-candidate)
+              ("M-i" . completion-at-point)
+              ("C-<return>" . completion-preview-complete))
+  :config
+  (push 'org-self-insert-command completion-preview-commands))
+
 (use-package corfu
   :hook (after-init . global-corfu-mode)
   :hook ((corfu-mode . corfu-popupinfo-mode)
@@ -354,7 +375,7 @@ the cursor by ARG lines."
     (add-to-list 'savehist-additional-variables 'corfu-history))
   (setq completion-ignore-case t)
   (setq corfu-cycle t
-        corfu-auto t
+        corfu-auto nil;t
         corfu-auto-prefix 2
         corfu-auto-delay 0.1
         corfu-separator 32
@@ -376,10 +397,9 @@ the cursor by ARG lines."
          ([remap mark-sexp]      . #'easy-mark)))
 
 (use-package macrursors ; use C-; (macrursors-end) to do edits
-  :ensure nil           ; for beacon-like selection C-; SPC/ C-; C-g
+  :vc (:url "https://github.com/karthink/macrursors"
+            :rev :newest)
   :init
-  (unless (package-installed-p 'macrursors)
-    (package-vc-install "https://github.com/karthink/macrursors"))
   (define-prefix-command 'macrursors-mark-map)
   :bind-keymap ("C-;" . macrursors-mark-map)
   :bind (("M-d" . (lambda nil ; mark-word-then-select-next
@@ -395,20 +415,22 @@ the cursor by ARG lines."
                           (backward-word)))
                       (mark-word))))
          ("M-'" . macrursors-mark-all-instances-of)
+         ("M-\\" . (lambda nil (interactive) ; toggle secondary selection
+                     (if (secondary-selection-exist-p)
+                         (macrursors-select-clear)
+                       (macrursors-select))))
+         ("M-<down>" . macrursors-mark-next-line)
+         ("M-<up>" . macrursors-mark-previous-line)
          
          :map macrursors-mark-map
          ("M-a" . macrursors-mark-all-instances-of)
          ("M-n" . macrursors-mark-next-instance-of)
          ("M-p" . macrursors-mark-previous-instance-of)
          ("C-g" . macrursors-early-quit)
-         ("C-n" . macrursors-mark-next-line)
-         ("C-p" . macrursors-mark-previous-line)
          
          :repeat-map macrursors-mark-repeat-map
-         ("n" . macrursors-mark-next-line)
-         ("C-n" . macrursors-mark-next-line)
-         ("p" . macrursors-mark-previous-line)
-         ("C-p" . macrursors-mark-previous-line)
+         ("<down>" . macrursors-mark-next-line)
+         ("<up" . macrursors-mark-previous-line)
          
          :map macrursors-mode-map
          ("C-'" . macrursors-hideshow)
@@ -436,6 +458,7 @@ the cursor by ARG lines."
            (snap-indent-on-save t)))
 
 (use-package puni
+  :if (display-graphic-p) ; FIXME: puni is messing terminal
   ;; TODO: https://karthinks.com/software/a-consistent-structural-editing-interface/
   ;; https://countvajhula.com/2021/09/25/the-animated-guide-to-symex/
   :hook ((emacs-lisp-mode tex-mode eval-expression-minibuffer-setup) . puni-mode)
@@ -553,6 +576,7 @@ the cursor by ARG lines."
 (use-package isearch
   :ensure nil
   :bind (("C-s" . isearch-forward-regexp)
+         ("M-s a" . multi-occur-in-matching-buffers)
          :repeat-map isearch-repeat-map
          ("s" . isearch-repeat-forward)
          ("r" . isearch-repeat-backward))
@@ -580,7 +604,7 @@ the cursor by ARG lines."
         flymake-error-bitmap '(filled-square compilation-error)
         flymake-warning-bitmap '(filled-square compilation-warning)
         flymake-note-bitmap '(filled-square compilation-info)
-        ;; flymake-show-diagnostics-at-end-of-line t
+        flymake-show-diagnostics-at-end-of-line t
         flymake-fringe-indicator-position 'right-fringe)
   (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake))
 
@@ -605,7 +629,7 @@ the cursor by ARG lines."
   (defun my/recentf-buffer () ;; src:James dyer
     "Switch to a buffer or open a recent file from a unified interface."
     (interactive)
-    (unless (recentf-mode (recentf-mode 1)))
+    (unless recentf-mode (recentf-mode 1))
     (let* ((buffers (mapcar #'buffer-name (buffer-list)))
            (recent-files recentf-list)
            (all-options (append buffers recent-files))
@@ -649,15 +673,16 @@ the cursor by ARG lines."
 (use-package windmove
   :defer 1
   :ensure nil
+  :bind (("M-<right>" . windmove-swap-states-right)
+         ("M-<left>" . windmove-swap-states-left))
   :config
   (setq windmove-wrap-around t)
-  (windmove-default-keybindings 'none)
-  (windmove-swap-states-default-keybindings 'meta))
+  (windmove-default-keybindings 'none))
 
 (use-package popper
   :bind (("M-j"   . popper-toggle)
          ("C-`"   . popper-cycle)
-         ("C-M-`" . popper-toggle-type)
+         ("M-`" . popper-toggle-type)
          :repeat-map popper-repeat-map
          ("`"     . popper-cycle))
   :hook ((after-init . popper-mode)
@@ -730,7 +755,7 @@ the cursor by ARG lines."
 
 (use-package kkp
   :unless (display-graphic-p)
-  :init (global-kkp-mode +1))
+  :hook (after-init . global-kkp-mode))
 
 (use-package undo-fu-session
   :hook ((prog-mode conf-mode fundamental-mode text-mode tex-mode) . undo-fu-session-mode)
@@ -738,6 +763,7 @@ the cursor by ARG lines."
   (setq undo-fu-session-compression nil))
 
 (use-package which-key
+  :if (string< emacs-version "30.0")
   :hook (minibuffer-mode . which-key-mode))
 
 ;;; Visual Niceties
@@ -751,6 +777,7 @@ the cursor by ARG lines."
         eldoc-box-only-multi-line t))
 
 (use-package sideline-flymake
+  :if (string< emacs-version "30.0")
   :hook (flymake-mode . sideline-mode)
   :init
   (setq sideline-flymake-display-mode 'line)
@@ -758,7 +785,8 @@ the cursor by ARG lines."
         sideline-flymake-show-backend-name t))
 
 (use-package writeroom-mode
-  :hook ((nov-mode Info-mode Man-mode) . writeroom-mode)
+  :bind ("<f9>" . writeroom-mode)
+  :hook ((nov-mode Info-mode Man-mode eww-mode) . writeroom-mode)
   :config
   (setq writeroom-width (min 90 (window-width))
         writeroom-mode-line t
@@ -788,10 +816,7 @@ the cursor by ARG lines."
     :hook (ibuffer-mode . nerd-icons-ibuffer-mode)))
 
 (use-package info-colors
-  :ensure nil
-  :init
-  (unless (package-installed-p 'info-colors)
-    (package-vc-install "https://github.com/ubolonton/info-colors"))
+  :vc (:url "https://github.com/ubolonton/info-colors")
   :hook
   (Info-selection . info-colors-fontify-node)
   (Info-mode . variable-pitch-mode))
@@ -1015,17 +1040,14 @@ the cursor by ARG lines."
                              ("Unread")))))
 
 (use-package vc
-  :defer nil
+  :defer 1
   :ensure nil
-  :bind (("C-x v c" . (lambda (command) (interactive "P")
-                        (unless server-mode (server-force-delete) (server-mode))
-                        (let ((command (if command command (read-string "Command: git "))))
-                          (compile (concat "GIT_EDITOR=\"emacsclient\" bash -c \"git " command "\"")))))
-         ("C-x v f" . (lambda () (interactive)
+  :bind (("C-x v f" . (lambda () (interactive)
                         (vc-git--pushpull "push" nil '("--force-with-lease"))))
          ("C-x v e" . vc-ediff))
   :config
   (setq vc-handled-backends '(Git)
+        ;; vc-display-status 'no-backend
         vc-find-revision-no-save t
         vc-follow-symlinks t
         project-vc-merge-submodules nil
@@ -1045,7 +1067,7 @@ the cursor by ARG lines."
         (advice-add 'vc-annotate-lines :after #'vc-annotate-readable))
     (define-key vc-annotate-mode-map
                 "q" (lambda () (interactive)
-                      (kill-this-buffer)
+                      (kill-current-buffer)
                       (tab-bar-close-tab))))
   ;; vc-annotate messes up the window-arrangement, give it a dedicated tab
   (add-to-list 'display-buffer-alist
@@ -1056,6 +1078,7 @@ the cursor by ARG lines."
   :commands (magit magit-file-dispatch magit-log-all magit-ediff-show-unstaged)
   :bind ("C-M-g" . magit)
   :config
+  (transient-bind-q-to-quit)
   (setq magit-refresh-status-buffer nil
         magit-diff-refine-hunk t
         magit-save-repository-buffers nil
@@ -1073,7 +1096,7 @@ the cursor by ARG lines."
   :ensure nil
   :hook (dired-mode . dired-hide-details-mode)
   :bind (:map dired-mode-map
-              ("q" . kill-this-buffer)
+              ("q" . kill-current-buffer)
               ("RET" . dired-find-alternate-file)
               ("TAB" . dired-maybe-insert-subdir)
               ("<backspace>" . (lambda nil (interactive)
@@ -1128,8 +1151,8 @@ the cursor by ARG lines."
   :commands eat-project
   :init (with-eval-after-load 'project
           (add-to-list 'project-switch-commands '(eat-project "Eat" ?t)))
-  :hook ((eshell-load . #'eat-eshell-mode)
-         (eshell-load . #'eat-eshell-visual-command-mode))
+  ;; :hook ((eshell-load . #'eat-eshell-mode)
+  ;; (eshell-load . #'eat-eshell-visual-command-mode))
   :bind (("C-\\" . (lambda () (interactive)
                      (defvar eat-buffer-name)
                      (let ((current-prefix-arg t)
@@ -1365,7 +1388,7 @@ the cursor by ARG lines."
   ;; :init (setq eglot-stay-out-of '(flymake))
   :config
   (fset #'jsonrpc--log-event #'ignore)
-  (setq eglot-events-buffer-size 0
+  (setq eglot-events-buffer-config 0
         eglot-autoshutdown t
         eglot-inlay-hints-mode nil)
   (add-hook 'rust-ts-mode-hook (lambda () (setq-local tab-width 2)))
@@ -1411,10 +1434,7 @@ the cursor by ARG lines."
   :mode ("\\.nix\\'" . nix-mode))
 
 (use-package janet-ts-mode
-  :ensure nil
-  :init
-  (unless (package-installed-p 'janet-ts-mode)
-    (package-vc-install "https://github.com/sogaiu/janet-ts-mode"))
+  :vc (:url "https://github.com/sogaiu/janet-ts-mode")
   :mode ("\\.janet\\'" . janet-ts-mode)
   :config
   (remove-hook 'janet-ts-mode-hook 'treesit-inspect-mode))
@@ -1452,17 +1472,22 @@ the cursor by ARG lines."
 
 (provide 'init)
 ;;; init.el ends here
+
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(puni snap-indent cape easy-kill kkp macrursors xclip sideline-flymake info-colors nerd-icons-ibuffer devil shr-tag-pre-highlight highlight-indent-guides dired-sidebar exec-path-from-shell magit nix-mode eldoc-box corfu-terminal nerd-icons-corfu nerd-icons-dired avy corfu vertico janet-ts-mode zig-mode which-key undo-fu-session writeroom-mode popper orderless nov meow markdown-mode inf-ruby esup eat diff-hl deadgrep cdlatex))
+   '(avy cape cdlatex corfu-terminal deadgrep devil diff-hl dired-sidebar easy-kill eat eldoc-box
+         exec-path-from-shell highlight-indent-guides info-colors janet-ts-mode kkp macrursors magit
+         markdown-mode nerd-icons nerd-icons-corfu nerd-icons-dired nerd-icons-ibuffer nix-mode nov
+         orderless popper puni shr-tag-pre-highlight sideline-flymake snap-indent transpose-frame
+         undo-fu-session vertico writeroom-mode xclip zig-mode))
  '(package-vc-selected-packages
-   '((macrursors :vc-backend Git :url "https://github.com/karthink/macrursors")
-     (info-colors :vc-backend Git :url "htttps://github.com/ubolonton/info-colors")
-     (janet-ts-mode :vc-backend Git :url "https://github.com/sogaiu/janet-ts-mode"))))
+   '((janet-ts-mode :url "https://github.com/sogaiu/janet-ts-mode")
+     (info-colors :url "https://github.com/ubolonton/info-colors")
+     (macrursors :url "https://github.com/karthink/macrursors"))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

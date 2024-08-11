@@ -73,7 +73,7 @@
 (setf (cdr (assq 'continuation fringe-indicator-alist))
       '(nil nil))
 
-(when (file-exists-p (locate-user-emacs-file "package-quickstart.el"))
+(when t;(file-exists-p (locate-user-emacs-file "package-quickstart.el"))
   (defvar package-quickstart)
   (setq package-quickstart t))
 
@@ -118,8 +118,8 @@
     (setq-local cursor-type nil)
     (read-only-mode +1)
     (switch-to-buffer (current-buffer))
-    (local-set-key (kbd "q") 'kill-this-buffer)
-    (local-set-key (kbd "RET") 'kill-this-buffer)))
+    (local-set-key (kbd "q") 'kill-current-buffer)
+    (local-set-key (kbd "RET") 'kill-current-buffer)))
 
 (add-hook 'window-setup-hook
           (lambda ()

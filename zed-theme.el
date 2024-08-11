@@ -92,12 +92,7 @@
                                           :overline border-color))
                                 :box (:line-width 4 :style flat-button)))))
    `(mode-line-highlight ((t (:box (:line-width 2 :color ,inactive-color)))))
-   `(mode-line-inactive ((t (:background ,modeline-color :foreground ,inactive-color
-                                         ,@(when (display-graphic-p)
-                                             (list :underline
-                                                   (list :color border-color :position -2)
-                                                   :overline border-color))
-                                         :box (:line-width 4 :style flat-button)))))
+   `(mode-line-inactive ((t (:inherit mode-line :foreground ,inactive-color))))
 
    ;; Parens
    `(show-paren-match ((t (:background ,selection-color))))
@@ -169,10 +164,11 @@
    `(ansi-color-blue ((t (:foreground ,blue-color :background ,blue-color))))
    `(ansi-color-cyan ((t (:foreground ,cyan-color :background ,cyan-color))))
    
-   `(avy-lead-face ((t (:background ,orange-color :foreground "black" :weight bold))))
-   `(avy-lead-face-0 ((t (:background ,orange-color :foreground "black" :weight bold))))
-   `(avy-lead-face-1 ((t (:background ,orange-color :foreground "black" :weight bold))))
-   `(avy-lead-face-2 ((t (:background ,orange-color :foreground "black" :weight bold))))
+   `(avy-lead-face ((t (:foreground ,orange-color :weight bold
+                                    :height 0.85 :box (:line-width -1)))))
+   `(avy-lead-face-0 ((t (:inherit avy-lead-face))))
+   `(avy-lead-face-1 ((t (:inherit avy-lead-face))))
+   `(avy-lead-face-2 ((t (:inherit avy-lead-face))))
    
    `(compilation-info ((t (:foreground ,green-color))))
    `(compilation-warning ((t (:foreground ,yellow-color))))
@@ -351,7 +347,8 @@
       mode-line-misc-info (delete
                            '(which-function-mode
                              (which-func-mode
-                              ("" which-func-format " ")))
+                              (which-func--use-mode-line
+                               (#1="" which-func-format " "))))
                            mode-line-misc-info)
       ;; all the stuff that will be right-aligned
       mode-line-end-spaces
@@ -363,20 +360,20 @@
                              'help-echo "Mouse-1: Show major-mode-menu"
                              'local-map mode-line-major-mode-keymap)))
         (:eval (when (bound-and-true-p vc-mode)
-                 (propertize (concat "" vc-mode) 'face ;; vc-display-status 'no-backend
+                 (propertize (concat "" vc-mode) 'face
                              '(:inherit success :weight bold))))
         (:eval (when (bound-and-true-p flymake-mode)
                  (let ((flymake-mode-line-counter-format
                         (if zed-icons-p
                             (with-eval-after-load 'nerd-icons
                               `(""
-                                ,(when (flymake--mode-line-counter :error nil)
+                                ,(when (flymake--mode-line-counter :error)
                                    (concat " " (nerd-icons-codicon "nf-cod-error" :face 'error :v-adjust 0.1) " "))
                                 flymake-mode-line-error-counter
-                                ,(when (flymake--mode-line-counter :warning nil)
+                                ,(when (flymake--mode-line-counter :warning)
                                    (concat " " (nerd-icons-codicon "nf-cod-warning" :face 'warning :v-adjust 0.1) ""))
                                 flymake-mode-line-warning-counter
-                                ,(when (flymake--mode-line-counter :note nil)
+                                ,(when (flymake--mode-line-counter :note)
                                    (concat " " (nerd-icons-codicon "nf-cod-info" :face 'success :v-adjust 0.1) ""))
                                 flymake-mode-line-note-counter " "))
                           '(" " flymake-mode-line-error-counter
@@ -421,17 +418,15 @@
                           'display '(raise 0.15)
                           'help-echo "Mouse-1: Show major-mode-menu"
                           'local-map mode-line-major-mode-keymap)))) ;; issues with underline
-   (:eval (propertize " %b " 'face (if (and (buffer-modified-p))
-                                       ;; (or (derived-mode-p 'prog-mode)
-                                       ;;     (derived-mode-p 'text-mode)))
+   (:eval (propertize " %b " 'face (if (and (buffer-modified-p)
+                                            (or (derived-mode-p 'prog-mode)
+                                                (derived-mode-p 'text-mode)))
                                        '(:inherit font-lock-warning-face :weight bold)
                                      '(:weight bold))
                       'help-echo (buffer-file-name)))
    (which-function-mode (which-func-mode
                          ("" which-func-format " ")))
-   (:eval (if (string> emacs-version "29.4")
-              mode-line-format-right-align
-            (my/ml-padding)))
+   mode-line-format-right-align
    (:eval (when (mode-line-window-selected-p)
             mode-line-end-spaces))))
 
