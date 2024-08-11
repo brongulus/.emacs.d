@@ -23,12 +23,6 @@
   :bind (("C-h '" . describe-face)
          ("M-c" . quick-calc) ; 16#hex
          ("M-k" . kill-word)
-         ("C-w" . (lambda (&optional arg)
-                    (interactive)
-                    (if (region-active-p)
-                        (kill-region (region-beginning)
-                                     (region-end))
-                      (backward-kill-word (or arg 1)))))
          ("C-a" . (lambda nil (interactive)
                     (if (= (point) (progn (beginning-of-line-text) (point)))
                         (beginning-of-line))))
@@ -81,11 +75,9 @@
                 display-line-numbers-grow-only t
                 delete-pair-blink-delay 0)
 
-  (setq read-process-output-max (* 16 1024)
-        process-adaptive-read-buffering nil
+  (setq process-adaptive-read-buffering nil
         kill-do-not-save-duplicates t
         auto-mode-case-fold nil
-        which-func-update-delay 1.0
         undo-limit 67108864
         undo-strong-limit 100663296
         undo-outer-limit 1006632960
@@ -161,12 +153,21 @@ the cursor by ARG lines."
              (display-graphic-p))
         (setq load-theme-light t))) ;; load-theme-light is a zed-theme var
   (load-theme 'zed :no-confirm)
-  (define-advice load-theme (:before (&rest _args)
-                                     "Disable all enabled themes before loading a new theme."
-                                     (mapc #'disable-theme custom-enabled-themes)))
-  (define-advice term-handle-exit (:after (&rest _args) ;; FIXME
-                                          "Kill the buffer after the term exits."
-                                          (kill-buffer))))
+  
+  (define-advice load-theme (:before (&rest _args) theme-dont-propagate)
+    "Discard all themes before loading new."
+    (mapc #'disable-theme custom-enabled-themes))
+
+  (define-advice kill-region (:before (&rest _args) unix-werase)
+    "When called interactively with no active region, delete a single word
+backwards instead."
+    (interactive
+     (if mark-active (list (region-beginning) (region-end))
+       (list (save-excursion (backward-word 1) (point)) (point)))))
+  
+  (define-advice term-handle-exit (:after (&rest _args) term-kill-buffer-on-exit)
+    "Kill the buffer after the term exits."
+    (kill-buffer (current-buffer))))
 
 (use-package emacs
   :no-require
@@ -320,6 +321,7 @@ the cursor by ARG lines."
   (setq tab-always-indent 'complete
         tab-first-completion 'word-or-paren
         completions-group t
+        completions-sort 'historical
         completions-detailed t))
 
 (use-package cape
@@ -348,7 +350,9 @@ the cursor by ARG lines."
          . completion-preview-mode)
   :bind (:map completion-preview-active-mode-map
               ([tab] . completion-preview-next-candidate)
+              ("TAB" . completion-preview-next-candidate)
               ([backtab] . completion-preview-previous-candidate)
+              ("S-TAB" . completion-preview-previous-candidate)
               ("M-i" . completion-at-point)
               ("C-<return>" . completion-preview-complete))
   :config
@@ -361,7 +365,6 @@ the cursor by ARG lines."
   :bind (:map corfu-map
               ("TAB" . corfu-next)
               ([tab] . corfu-next)
-              ("M-TAB" . corfu-previous)
               ("S-TAB" . corfu-previous)
               ([backtab] . corfu-previous))
   :config
@@ -479,6 +482,7 @@ the cursor by ARG lines."
 (use-package devil
   :hook (after-init . global-devil-mode)
   :config
+  (push '("%k v") devil-repeatable-keys)
   (devil-set-key (kbd "'")))
 
 (use-package avy
@@ -601,11 +605,13 @@ the cursor by ARG lines."
               "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/x86_64-apple-darwin23"
               "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/" "-x" "c++" "-"))))
   (setq flymake-suppress-zero-counters t
-        flymake-error-bitmap '(filled-square compilation-error)
-        flymake-warning-bitmap '(filled-square compilation-warning)
-        flymake-note-bitmap '(filled-square compilation-info)
-        flymake-show-diagnostics-at-end-of-line t
-        flymake-fringe-indicator-position 'right-fringe)
+        flymake-margin-indicator-position 'right-margin
+        flymake-margin-indicators-string
+        '((error "E" compilation-error)
+          (warning "W" compilation-warning)
+          (note "!" compilation-info))
+        flymake-show-diagnostics-at-end-of-line t)
+
   (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake))
 
 (use-package eldoc
@@ -931,7 +937,8 @@ the cursor by ARG lines."
                   (nnimap-stream ssl)
                   (nnir-search-engine imap)
                   (nnmail-expiry-target "nnimap+personal:[Imap]/Trash")
-                  (nnmail-expiry-wait 'immediate)))
+                  (nnmail-expiry-wait 'immediate))
+          (nnrss ""))
         ;; opts
         gnus-check-new-newsgroups nil ;; disable first time you use gnus
         gnus-asynchronous t
@@ -999,7 +1006,7 @@ the cursor by ARG lines."
   (setq gnus-message-archive-group '((format-time-string "sent.%Y"))))
 
 (use-package gnus-group
-  :ensure nil
+  :ensure nil     ; use G R to subscribe to rss feeds
   :after gnus
   :hook (gnus-group-mode . gnus-topic-mode)
   :config
@@ -1027,6 +1034,9 @@ the cursor by ARG lines."
                               "nnimap+personal:sent.2023"
                               "nnimap+personal:[Gmail]/Starred")
                              ("📰 News"
+                              "nnrss:Prot Codelog" "nnrss:HLTV.org"
+                              "nnatom:Gluer"
+                              "nnatom:Lobsters"
                               "gwene.com.blogspot.petr-mitrichev"
                               "gmane.emacs.announce" "gmane.emacs.devel"
                               "gmane.emacs.gnus.general" "gmane.emacs.gnus.user"
@@ -1097,6 +1107,7 @@ the cursor by ARG lines."
   :hook (dired-mode . dired-hide-details-mode)
   :bind (:map dired-mode-map
               ("q" . kill-current-buffer)
+              ("O" . dired-do-open)
               ("RET" . dired-find-alternate-file)
               ("TAB" . dired-maybe-insert-subdir)
               ("<backspace>" . (lambda nil (interactive)
@@ -1222,9 +1233,9 @@ the cursor by ARG lines."
           (make-vector org-indent--deepest-level nil))
     ;; Find the lowest headline level
     (let* ((headline-levels (or (org-element-map
-                                 (org-element-parse-buffer) 'headline
-                                 #'(lambda (item)
-                                     (org-element-property :level item)))
+                                    (org-element-parse-buffer) 'headline
+                                  #'(lambda (item)
+                                      (org-element-property :level item)))
                                 '()))
            (max-level (seq-max (if headline-levels
                                    headline-levels
@@ -1346,6 +1357,7 @@ the cursor by ARG lines."
           (c "https://github.com/tree-sitter/tree-sitter-c")
           (go "https://github.com/tree-sitter/tree-sitter-go")
           (rust "https://github.com/tree-sitter/tree-sitter-rust")
+          (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua")
           (json "https://github.com/tree-sitter/tree-sitter-json")
           (janet-simple "https://github.com/sogaiu/tree-sitter-janet-simple")
           (typescript "https://github.com/tree-sitter/tree-sitter-typescript"
@@ -1373,6 +1385,7 @@ the cursor by ARG lines."
        '(("\\.rs\\'" . rust-ts-mode)
          ("\\.go\\'" . go-ts-mode)
          ("\\.ts\\'" . typescript-ts-mode)
+         ("\\.lua\\'" . lua-ts-mode)
          ("\\.bin\\'" . hexl-mode)
          ("\\.info\\'" . Info-mode)))
 

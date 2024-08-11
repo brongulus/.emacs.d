@@ -336,10 +336,13 @@
 
 ;; Mode-line
 (setq global-mode-string nil
+      project-mode-line t
+      project-mode-line-face 'font-lock-comment-face
       ;; clean eglot
       eglot-menu-string (char-to-string #x2699)
       which-func-non-auto-modes '(erc-mode)
       which-func-unknown ""
+      which-func-update-delay 1.0
       ;; which-func-modes '(text-mode prog-mode)
       which-func-format
       `(:propertize which-func-current face which-func)
@@ -353,6 +356,7 @@
       ;; all the stuff that will be right-aligned
       mode-line-end-spaces
       `("%n " mode-line-misc-info
+        project-mode-line-format
         (:eval (unless nil ;zed-icons-p
                  (propertize (format " %s" (upcase (if (stringp mode-name)
                                                        mode-name
@@ -381,7 +385,7 @@
                             flymake-mode-line-note-counter " "))))
                    (flymake--mode-line-counters))))
         ;; (:eval (propertize " %l:%C " 'face 'which-func))
-        (:eval (propertize " %p " 'face 'which-func))
+        (:eval (propertize "%p " 'face 'which-func))
         ))
 
 (defun my/ml-padding ()
@@ -547,3 +551,7 @@
 
 (provide-theme 'zed)
 ;;; zed-theme.el ends here
+
+;; Local Variables:
+;; byte-compile-warnings: (not free-vars unresolved)
+;; End:
