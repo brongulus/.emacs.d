@@ -73,7 +73,7 @@
    'zed
    ;; Basics
    `(default ((t (:background ,background-color :foreground ,foreground-color))))
-   `(cursor ((t (:background "#00c2ff"))))
+   `(cursor ((t (:background "#00c2ff" :foreground "black"))))
    `(border-glyph ((t (nil))))
    `(info-node ((t (:italic t :bold t))))
    `(info-xref ((t (:inherit link))))
@@ -335,6 +335,26 @@
    `(which-func ((t (:foreground ,inactive-color))))))
 
 ;; Mode-line
+(with-eval-after-load 'macrursors
+  (setq macrursors-mode-line ; src: karthink
+        '((:eval
+           (when (or defining-kbd-macro executing-kbd-macro)
+             (let ((sep (propertize " " 'face 'cursor))
+                   (vsep (propertize " " 'face '(:inherit variable-pitch))))
+               ;; "●"
+               (propertize
+                (concat
+                 sep "REC" vsep
+                 (number-to-string kmacro-counter) vsep "▶" vsep
+                 (when macrursors-mode
+                   (if macrursors--overlays
+                       (format (concat "[%d/%d]" vsep)
+                               (1+ (cl-count-if (lambda (p) (< p (point))) macrursors--overlays
+                                                :key #'overlay-start))
+                               (1+ (length macrursors--overlays)))
+                     (concat "[1/1]" vsep))))
+                'face 'cursor)))))))
+
 (setq global-mode-string nil
       project-mode-line t
       project-mode-line-face 'font-lock-comment-face
@@ -364,7 +384,7 @@
                              'help-echo "Mouse-1: Show major-mode-menu"
                              'local-map mode-line-major-mode-keymap)))
         (:eval (when (bound-and-true-p vc-mode)
-                 (propertize (concat "" vc-mode) 'face
+                 (propertize vc-mode 'face
                              '(:inherit success :weight bold))))
         (:eval (when (bound-and-true-p flymake-mode)
                  (let ((flymake-mode-line-counter-format
@@ -379,13 +399,13 @@
                                 flymake-mode-line-warning-counter
                                 ,(when (flymake--mode-line-counter :note)
                                    (concat " " (nerd-icons-codicon "nf-cod-info" :face 'success :v-adjust 0.1) ""))
-                                flymake-mode-line-note-counter " "))
+                                flymake-mode-line-note-counter ""))
                           '(" " flymake-mode-line-error-counter
                             flymake-mode-line-warning-counter
-                            flymake-mode-line-note-counter " "))))
+                            flymake-mode-line-note-counter ""))))
                    (flymake--mode-line-counters))))
         ;; (:eval (propertize " %l:%C " 'face 'which-func))
-        (:eval (propertize "%p " 'face 'which-func))
+        (:eval (propertize " %p " 'face 'which-func))
         ))
 
 (defun my/ml-padding ()

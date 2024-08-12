@@ -77,6 +77,7 @@
 
   (setq process-adaptive-read-buffering nil
         kill-do-not-save-duplicates t
+        kill-whole-line t
         auto-mode-case-fold nil
         undo-limit 67108864
         undo-strong-limit 100663296
@@ -85,8 +86,7 @@
         scroll-margin 0
         scroll-conservatively 100
         scroll-preserve-screen-position t
-        pixel-scroll-precision-large-scroll-height 35.0
-        mwheel-coalesce-scroll-events nil
+        ;; pixel-scroll-precision-large-scroll-height 35.0
         split-height-threshold nil
         split-width-threshold 100
         save-abbrevs nil
@@ -158,14 +158,21 @@ the cursor by ARG lines."
     "Discard all themes before loading new."
     (mapc #'disable-theme custom-enabled-themes))
 
-  (define-advice kill-region (:before (&rest _args) unix-werase)
+  (define-advice kill-region (:before (&rest _args) unix-werase) ; src: wiki
     "When called interactively with no active region, delete a single word
 backwards instead."
     (interactive
      (if mark-active (list (region-beginning) (region-end))
        (list (save-excursion (backward-word 1) (point)) (point)))))
+
+  (dolist (func '(yank yank-pop))
+    (eval
+     `(define-advice ,func (:after (&rest _args) yank-indent) ; src: magnars
+       "Indent yanked text (with prefix arg don't indent)."
+       (let ((transient-mark-mode nil))
+             (indent-region (region-beginning) (region-end) nil)))))
   
-  (define-advice term-handle-exit (:after (&rest _args) term-kill-buffer-on-exit)
+  (define-advice term-handle-exit (:after (&rest _args) term-kill-on-exit)
     "Kill the buffer after the term exits."
     (kill-buffer (current-buffer))))
 
@@ -250,7 +257,7 @@ backwards instead."
                                             (make-glyph-code ?│))
                     (xterm-mouse-mode))
                   ;; enable some useful modes
-                  (when (display-graphic-p)
+                  (when nil;(display-graphic-p)
                     (pixel-scroll-precision-mode 1))
                   (save-place-mode 1)
                   (when (string> emacs-version "29.4")
@@ -299,6 +306,7 @@ backwards instead."
               ("<backspace>" . vertico-directory-delete-char)
               ("RET" . vertico-directory-enter)
               ("C-<return>" . vertico-exit-input)
+              ("M-`" . vertico-multiform-vertical)
               ("TAB" . vertico-next)
               ("<backtab>" . vertico-previous)
               ("S-TAB" . vertico-previous)
@@ -396,6 +404,7 @@ backwards instead."
 ;;; Editing
 
 (use-package easy-kill
+  ;; use M-w ? for help!
   :bind (([remap kill-ring-save] . #'easy-kill)
          ([remap mark-sexp]      . #'easy-mark)))
 
@@ -455,21 +464,21 @@ backwards instead."
   (when (featurep 'meow)
     (add-hook 'macrursors-mode-hook #'meow-insert)))
 
-(use-package snap-indent
-  :hook (prog-mode . snap-indent-mode)
-  :custom ((snap-indent-format 'untabify)
-           (snap-indent-on-save t)))
+(use-package move-text
+  :bind (("M-p" . #'move-text-up)
+         ("M-n" . #'move-text-down)))
 
 (use-package puni
   :if (display-graphic-p) ; FIXME: puni is messing terminal
   ;; TODO: https://karthinks.com/software/a-consistent-structural-editing-interface/
   ;; https://countvajhula.com/2021/09/25/the-animated-guide-to-symex/
-  :hook ((emacs-lisp-mode tex-mode eval-expression-minibuffer-setup) . puni-mode)
+  :hook ((emacs-lisp-mode go-ts-mode tex-mode eval-expression-minibuffer-setup) . puni-mode)
   :bind (("C-=" . puni-expand-region)
          :map puni-mode-map
          ("C-w" . nil) ;delete-backword
          ("M-w" . nil) ;easy-kill
          ("M-d" . nil) ;macrursors
+         ("C-k" . my-puni-kill-line)
          ("s-s" . puni-splice)
          ("M-]" . puni-slurp-forward)
          ("M-[" . puni-barf-forward)
@@ -477,7 +486,20 @@ backwards instead."
          ("M-{" . puni-slurp-backward)
          :repeat-map puni-mode-repeat-map
          ("-" . puni-contract-region)
-         ("=" . puni-expand-region)))
+         ("=" . puni-expand-region))
+  :config
+  (defun my-puni-kill-line ()
+    "Kill a line forward while keeping expressions balanced.
+If nothing can be deleted, kill backward.  If still nothing can be
+deleted, kill the pairs around point."
+    (interactive)
+    (let ((bounds (puni-bounds-of-list-around-point)))
+      (if (eq (car bounds) (cdr bounds))
+          (when-let ((sexp-bounds (puni-bounds-of-sexp-around-point)))
+            (puni-delete-region (car sexp-bounds) (cdr sexp-bounds) 'kill))
+        (if (eq (point) (cdr bounds))
+            (puni-backward-kill-line)
+          (puni-kill-line))))))
 
 (use-package devil
   :hook (after-init . global-devil-mode)
@@ -604,7 +626,8 @@ backwards instead."
             '("gcc" "-fsyntax-only" "-Wall" "-Wextra"
               "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/x86_64-apple-darwin23"
               "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/" "-x" "c++" "-"))))
-  (setq flymake-suppress-zero-counters t
+  (setq flymake-no-changes-timeout nil
+        flymake-suppress-zero-counters t
         flymake-margin-indicator-position 'right-margin
         flymake-margin-indicators-string
         '((error "E" compilation-error)
@@ -657,10 +680,8 @@ backwards instead."
         recentf-auto-cleanup 'never))
 
 (use-package tramp
-  :defer 1
-  ;; :hook (minibuffer-mode . tramp-cleanup-all-connections)
+  :hook (minibuffer-mode . tramp-cleanup-all-connections)
   :config
-  (setq tramp-process-connection-type nil)
   (setq tramp-ssh-controlmaster-options
         (concat
          "-o ControlPath=\~/.ssh/control/ssh-%%r@%%h:%%p "
@@ -1086,7 +1107,6 @@ backwards instead."
 
 (use-package magit
   :commands (magit magit-file-dispatch magit-log-all magit-ediff-show-unstaged)
-  :bind ("C-M-g" . magit)
   :config
   (transient-bind-q-to-quit)
   (setq magit-refresh-status-buffer nil
@@ -1104,7 +1124,8 @@ backwards instead."
 
 (use-package dired
   :ensure nil
-  :hook (dired-mode . dired-hide-details-mode)
+  :hook ((dired-mode . dired-hide-details-mode)
+         (dired-mode . dired-omit-mode))
   :bind (:map dired-mode-map
               ("q" . kill-current-buffer)
               ("O" . dired-do-open)
@@ -1120,6 +1141,7 @@ backwards instead."
               ("E" . wdired-change-to-wdired-mode)
               ("z" . find-grep-dired))
   :config
+  (define-key dired-mode-map "?" dired-mode-map) ;src: amno1
   (add-hook 'dired-mode-hook ;; solaire
             (lambda nil
               (dolist (face '(default fringe))
@@ -1139,7 +1161,6 @@ backwards instead."
   (put 'dired-find-alternate-file 'disabled nil)
   
   (setq dired-dwim-target t
-        dired-omit-mode t
         dired-auto-revert-buffer t
         dired-mouse-drag-files t
         dired-use-ls-dired nil
@@ -1152,6 +1173,7 @@ backwards instead."
 (use-package dired-sidebar
   :bind ("C-x d" . dired-sidebar-toggle-sidebar)
   :bind (:map dired-sidebar-mode-map
+              ("C-o" . other-window)
               ("l" . windmove-right)
               ("\\" . dired-sidebar-up-directory))
   :config
@@ -1214,10 +1236,29 @@ backwards instead."
   (setq nov-text-width (min 80 (window-width))
         nov-header-line-format nil))
 
+(use-package pdf-tools
+  :mode ("\\.pdf\\'" . pdf-view-mode)
+  :hook ((pdf-view-mode . pdf-view-fit-page-to-window)
+         (pdf-view-mode . pdf-view-themed-minor-mode))
+  :config ;; pdf-tools-install
+  (add-hook 'pdf-view-mode-hook
+            (lambda nil
+              (setq-local
+               global-mode-string
+               (append global-mode-string
+                       (list '(:eval
+                               (propertize
+                                (format " %d/%d"
+                                        (pdf-view-current-page)
+                                        (pdf-cache-number-of-pages))
+                                'face font-lock-comment-face))))))))
+
 ;;; Org
+(use-package auctex)
 
 (use-package org
   :ensure nil
+  :bind ("C-x y" . yank-media)
   :hook (org-mode . (lambda nil
                       (setq-local line-spacing 8)))
   :hook (org-mode . visual-line-mode)
@@ -1233,9 +1274,9 @@ backwards instead."
           (make-vector org-indent--deepest-level nil))
     ;; Find the lowest headline level
     (let* ((headline-levels (or (org-element-map
-                                    (org-element-parse-buffer) 'headline
-                                  #'(lambda (item)
-                                      (org-element-property :level item)))
+                                 (org-element-parse-buffer) 'headline
+                                 #'(lambda (item)
+                                     (org-element-property :level item)))
                                 '()))
            (max-level (seq-max (if headline-levels
                                    headline-levels
@@ -1492,11 +1533,11 @@ backwards instead."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(avy cape cdlatex corfu-terminal deadgrep devil diff-hl dired-sidebar easy-kill eat eldoc-box
-         exec-path-from-shell highlight-indent-guides info-colors janet-ts-mode kkp macrursors magit
-         markdown-mode nerd-icons nerd-icons-corfu nerd-icons-dired nerd-icons-ibuffer nix-mode nov
-         orderless popper puni shr-tag-pre-highlight sideline-flymake snap-indent transpose-frame
-         undo-fu-session vertico writeroom-mode xclip zig-mode))
+   '(auctex avy cape cdlatex corfu-terminal deadgrep devil diff-hl dired-sidebar easy-kill eat
+            eldoc-box exec-path-from-shell highlight-indent-guides info-colors janet-ts-mode kkp
+            macrursors magit markdown-mode move-text nerd-icons nerd-icons-corfu nerd-icons-dired
+            nerd-icons-ibuffer nix-mode nov orderless pdf-tools popper puni shr-tag-pre-highlight
+            sideline-flymake transpose-frame undo-fu-session vertico writeroom-mode xclip zig-mode))
  '(package-vc-selected-packages
    '((janet-ts-mode :url "https://github.com/sogaiu/janet-ts-mode")
      (info-colors :url "https://github.com/ubolonton/info-colors")
