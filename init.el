@@ -268,7 +268,7 @@ backwards instead."
                   (delete-selection-mode) ;; pending-delete-mode
                   (context-menu-mode 1)
                   (savehist-mode 1)
-                  (blink-cursor-mode -1)
+                  (blink-cursor-mode 1)
                   (setq blink-cursor-interval 0.7)
                   (tooltip-mode -1))))
 
@@ -814,9 +814,37 @@ deleted, kill the pairs around point."
 (use-package writeroom-mode
   :bind ("<f9>" . writeroom-mode)
   :hook ((nov-mode Info-mode Man-mode eww-mode) . writeroom-mode)
+  :hook (org-mode . org-writer-mode)
   :config
-  (setq writeroom-width (min 90 (window-width))
+  (defun org-writer-mode nil
+    (add-to-list ;; TODO: Add line-height support as well
+     'window-size-change-functions
+     (lambda (window)
+       (when (eq major-mode 'org-mode)
+         (let* ((window (selected-window))
+                (width (window-total-width window))
+                (wheight (window-total-height window)))
+           
+           (face-remap-add-relative
+            'default :height
+            (if (> wheight 35)
+                (min (max 170 (* 10 (round (/ (* 1.6 width) 10)))) 220)
+              160))
+           (setq-local line-spacing 0.4) ;; FIXME
+           ))))
+    (setq-local mode-line-format nil
+                writeroom-bottom-divider-width 0
+                writeroom-maximize-window t)
+    (writeroom-mode)
+    (setq-local cursor-type 'bar
+                scroll-preserve-screen-position t
+                scroll-conservatively 0
+                maximum-scroll-margin 0.5
+                scroll-margin 99999))
+  
+  (setq writeroom-width (min 100 (max 90 (- (window-width) 10)))
         writeroom-mode-line t
+        writeroom-restore-window-config t
         writeroom-global-effects nil
         writeroom-maximize-window nil))
 
@@ -1254,14 +1282,27 @@ deleted, kill the pairs around point."
                                 'face font-lock-comment-face))))))))
 
 ;;; Org
-(use-package auctex)
+(use-package auctex
+  :config ; ref: tectonic docs
+  (setq TeX-engine-alist '((default
+                            "Tectonic"
+                            "tectonic -X compile -f plain %T"
+                            "tectonic -X watch"
+                            nil)))
+  (setq LaTeX-command-style '(("" "%(latex)"))
+        TeX-process-asynchronous t
+        TeX-check-TeX nil
+        TeX-engine 'default)
+  (let ((tex-list (assoc "TeX" TeX-command-list))
+        (latex-list (assoc "LaTeX" TeX-command-list)))
+    (setf (cadr tex-list) "%(tex)"
+          (cadr latex-list) "%l")))
 
 (use-package org
   :ensure nil
   :bind ("C-x y" . yank-media)
-  :hook (org-mode . (lambda nil
-                      (setq-local line-spacing 8)))
-  :hook (org-mode . visual-line-mode)
+  :hook ((org-mode . visual-line-mode)
+         (org-mode . variable-pitch-mode))
   :config
   ;; Taken from rougier: org-outer-indent
   (defun org-outer-indent--compute-prefixes ()
@@ -1274,13 +1315,13 @@ deleted, kill the pairs around point."
           (make-vector org-indent--deepest-level nil))
     ;; Find the lowest headline level
     (let* ((headline-levels (or (org-element-map
-                                 (org-element-parse-buffer) 'headline
-                                 #'(lambda (item)
-                                     (org-element-property :level item)))
+                                    (org-element-parse-buffer) 'headline
+                                  #'(lambda (item)
+                                      (org-element-property :level item)))
                                 '()))
            (max-level (seq-max (if headline-levels
                                    headline-levels
-                                 0)))
+                                 '(0))))
            ;; We could also iterate over each evel to get maximum length
            ;; Instead, we take the length of the deepest numbered level.
            (line-indentation (+ 3 max-level))
@@ -1318,9 +1359,27 @@ deleted, kill the pairs around point."
         org-adapt-indentation t
         org-special-ctrl-a/e t
         org-fold-catch-invisible-edits 'show-and-error
-        org-edit-src-content-indentation 0
+        org-edit-src-content-indentation 2;0
         org-src-preserve-indentation t
-        org-src-fontify-natively t))
+        org-src-fontify-natively t
+        ;; tectonic
+        org-highlight-latex-and-related '(latex script entities)
+        org-preview-latex-default-process 'tectonic
+        org-preview-latex-process-alist
+        '((tectonic :programs
+                    ("tectonic" "convert")
+                    :description "pdf > png"
+                    :message "you need install the programs: tectonic and imagemagick."
+                    :image-input-type "pdf"
+                    :image-output-type "png"
+                    :image-size-adjust (1.0 . 1.0)
+                    :latex-compiler
+                    ("tectonic -Z shell-escape-cwd=%o -Z continue-on-errors --outfmt pdf --outdir %o %f")
+                    :image-converter
+                    ("magick convert -density %D -trim -antialias %f -quality 300 %O")))
+        org-latex-compiler "tectonic"
+        org-latex-pdf-process
+        '("tectonic -X compile -Z shell-escape -Z continue-on-errors --outdir=%o %f")))
 
 (use-package org-agenda
   :ensure nil

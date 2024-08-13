@@ -73,7 +73,7 @@
    'zed
    ;; Basics
    `(default ((t (:background ,background-color :foreground ,foreground-color))))
-   `(cursor ((t (:background "#00c2ff" :foreground "black"))))
+   `(cursor ((t (:background "#00c2ff"))))
    `(border-glyph ((t (nil))))
    `(info-node ((t (:italic t :bold t))))
    `(info-xref ((t (:inherit link))))
@@ -290,15 +290,17 @@
    `(org-level-6 ((t (:height 1.1 :weight bold))))
    `(org-level-7 ((t (:height 1.1 :weight bold))))
    `(org-level-8 ((t (:height 1.1 :weight bold))))
-   `(org-agenda-structure ((t (:foreground ,magenta-color :height 1.2))))
-   `(org-agenda-date ((t (:foreground ,blue-color :height 1.1))))
+   `(org-agenda-structure ((t (:inherit font-lock-comment-face :slant italic :height 1.2))))
+   `(org-agenda-structure-filter ((t (:inherit org-agenda-structure :foreground ,foreground-color))))
+   `(org-agenda-date ((t (:inherit default :weight bold :height 1.1))))
    `(org-time-grid ((t (:inherit font-lock-comment-face))))
    `(org-agenda-current-time ((t (:foreground ,foreground-color))))
    `(org-imminent-deadline ((t (:foreground ,red-color :weight bold))))
-   `(org-todo ((t (:foreground ,yellow-color :weight bold))))
-   `(org-scheduled ((t (:foreground ,green-color))))
+   `(org-todo ((t (:inherit default :box 1))))
+   `(org-scheduled ((t (:inherit default :weight bold))))
    `(org-scheduled-today ((t (:inherit org-scheduled))))
    `(org-date ((t (:inherit link))))
+   `(org-latex-and-related ((t (:inherit default))))
    `(org-verbatim ((t (:foreground ,yellow-color))))
    `(org-habit-clear-face ((t (:foreground ,background-color))))
    `(org-habit-clear-future-face ((t (:foreground ,background-color))))
@@ -309,10 +311,10 @@
    `(org-habit-ready-face ((t (:foreground ,green-color))))
    `(org-habit-ready-future-face ((t (:foreground ,green-color))))
    
-   `(tab-bar ((t (:background ,subtle-color :box ,border-color :height 1.0))))
-   `(tab-bar-tab ((t (:inherit default))))
+   `(tab-bar ((t (:background ,subtle-color :box ,border-color :height 160))))
+   `(tab-bar-tab ((t (:inherit default :height 160))))
    `(tab-bar-tab-inactive
-     ((t (:background ,subtle-color :foreground ,inactive-color :weight regular :height 1.0
+     ((t (:background ,subtle-color :foreground ,inactive-color :weight regular :height 160
                       ,@(when (display-graphic-p)
                           (list :underline
                                 (list :color border-color :position -1)))))))
@@ -339,7 +341,7 @@
   (setq macrursors-mode-line ; src: karthink
         '((:eval
            (when (or defining-kbd-macro executing-kbd-macro)
-             (let ((sep (propertize " " 'face 'cursor))
+             (let ((sep (propertize " " 'face '(:background "#00x2ff" :foreground "black")))
                    (vsep (propertize " " 'face '(:inherit variable-pitch))))
                ;; "●"
                (propertize
@@ -353,7 +355,7 @@
                                                 :key #'overlay-start))
                                (1+ (length macrursors--overlays)))
                      (concat "[1/1]" vsep))))
-                'face 'cursor)))))))
+                'face '(:background "#00c2ff" :foreground "black"))))))))
 
 (setq global-mode-string nil
       project-mode-line t
@@ -392,13 +394,22 @@
                             (with-eval-after-load 'nerd-icons
                               `(""
                                 ,(when (flymake--mode-line-counter :error)
-                                   (concat " " (nerd-icons-codicon "nf-cod-error" :face 'error :v-adjust 0.1) " "))
+                                   (concat " " (nerd-icons-codicon
+                                                "nf-cod-error" :face 'error
+                                                :v-adjust 0.1)
+                                           " "))
                                 flymake-mode-line-error-counter
                                 ,(when (flymake--mode-line-counter :warning)
-                                   (concat " " (nerd-icons-codicon "nf-cod-warning" :face 'warning :v-adjust 0.1) ""))
+                                   (concat " " (nerd-icons-codicon
+                                                "nf-cod-warning" :face 'warning
+                                                :v-adjust 0.1)
+                                           ""))
                                 flymake-mode-line-warning-counter
                                 ,(when (flymake--mode-line-counter :note)
-                                   (concat " " (nerd-icons-codicon "nf-cod-info" :face 'success :v-adjust 0.1) ""))
+                                   (concat " " (nerd-icons-codicon
+                                                "nf-cod-info" :face 'success
+                                                :v-adjust 0.1)
+                                           ""))
                                 flymake-mode-line-note-counter ""))
                           '(" " flymake-mode-line-error-counter
                             flymake-mode-line-warning-counter
@@ -432,7 +443,7 @@
               (propertize buffer-state
                           'face `(,indicator-face
                                   ;; :inverse-video t
-                                  :box (:style flat-button))))))
+                                  :box (:style flat-button) :weight bold)))))
    (:eval (when (bound-and-true-p macrursors-mode)
             macrursors-mode-line))
    "%e"
@@ -516,8 +527,7 @@
 
   (defun tab-bar-format-menu-bar ()
     "Produce the Menu button for the tab bar that shows the menu bar."
-    `((menu-bar menu-item ,(propertize " ≡ " 'display '((raise 0.1)
-                                                        (height 1.1)))
+    `((menu-bar menu-item ,(propertize " ≡ " 'display '((raise 0.1)))
                 tab-bar-menu-bar :help "Menu Bar")))
 
   (defun tab-bar-format-history ()
