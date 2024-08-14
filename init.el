@@ -833,6 +833,7 @@ deleted, kill the pairs around point."
            (setq-local line-spacing 0.4) ;; FIXME
            ))))
     (setq-local mode-line-format nil
+                writeroom-restore-window-config t
                 writeroom-bottom-divider-width 0
                 writeroom-maximize-window t)
     (writeroom-mode)
