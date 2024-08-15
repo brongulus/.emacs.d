@@ -23,6 +23,7 @@
   :bind (("C-h '" . describe-face)
          ("M-c" . quick-calc) ; 16#hex
          ("M-k" . kill-word)
+         ("C-d" . delete-backward-char)
          ("C-a" . (lambda nil (interactive)
                     (if (= (point) (progn (beginning-of-line-text) (point)))
                         (beginning-of-line))))
@@ -51,7 +52,7 @@
          ("C-x \\" . align-regexp)
          ("C-x C-z" . restart-emacs)
          ("<f5>" . (lambda () (interactive)
-                     (setq-default display-line-numbers-type 'relative)
+                     (setq-default display-line-numbers-type t);'relative)
                      (hl-line-mode 'toggle)
                      (display-line-numbers-mode 'toggle)
                      (highlight-indent-guides-mode 'toggle)))
@@ -153,7 +154,7 @@ the cursor by ARG lines."
              (display-graphic-p))
         (setq load-theme-light t))) ;; load-theme-light is a zed-theme var
   (load-theme 'zed :no-confirm)
-  
+    
   (define-advice load-theme (:before (&rest _args) theme-dont-propagate)
     "Discard all themes before loading new."
     (mapc #'disable-theme custom-enabled-themes))
@@ -257,8 +258,9 @@ backwards instead."
                                             (make-glyph-code ?│))
                     (xterm-mouse-mode))
                   ;; enable some useful modes
-                  (when nil;(display-graphic-p)
-                    (pixel-scroll-precision-mode 1))
+                  (when (display-graphic-p)
+                    (tab-bar-mode +1))
+                    ;; (pixel-scroll-precision-mode 1))
                   (save-place-mode 1)
                   (when (string> emacs-version "29.4")
                     (which-key-mode 1))
@@ -357,12 +359,10 @@ backwards instead."
   :hook ((text-mode prog-mode comint-mode eshell-mode)
          . completion-preview-mode)
   :bind (:map completion-preview-active-mode-map
-              ([tab] . completion-preview-next-candidate)
-              ("TAB" . completion-preview-next-candidate)
-              ([backtab] . completion-preview-previous-candidate)
-              ("S-TAB" . completion-preview-previous-candidate)
+              ([tab] . completion-preview-complete)
+              ("TAB" . completion-preview-complete)
               ("M-i" . completion-at-point)
-              ("C-<return>" . completion-preview-complete))
+              ("C-<return>" . completion-preview-insert))
   :config
   (push 'org-self-insert-command completion-preview-commands))
 
@@ -408,7 +408,8 @@ backwards instead."
   :bind (([remap kill-ring-save] . #'easy-kill)
          ([remap mark-sexp]      . #'easy-mark)))
 
-(use-package macrursors ; use C-; (macrursors-end) to do edits
+(use-package macrursors
+  ; use C-; (macrursors-end) to do edits
   :vc (:url "https://github.com/karthink/macrursors"
             :rev :newest)
   :init
@@ -505,11 +506,14 @@ deleted, kill the pairs around point."
   :hook (after-init . global-devil-mode)
   :config
   (push '("%k v") devil-repeatable-keys)
+  (assoc-delete-all "%k SPC" devil-special-keys)
   (devil-set-key (kbd "'")))
 
 (use-package avy
   :bind ("C-'" . avy-goto-char-timer)
-  :bind (:map isearch-mode-map
+  :bind (:map org-mode-map
+              ("C-'" . avy-goto-char-timer)
+         :map isearch-mode-map
               ("M-s M-s" . avy-isearch))
   :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer)
   :custom
@@ -817,24 +821,23 @@ deleted, kill the pairs around point."
   :hook (org-mode . org-writer-mode)
   :config
   (defun org-writer-mode nil
+    ;; visual-line-mode & variable-pitch-mode
     (add-to-list ;; TODO: Add line-height support as well
      'window-size-change-functions
      (lambda (window)
        (when (eq major-mode 'org-mode)
          (let* ((window (selected-window))
                 (width (window-total-width window))
+                (width-ten (* 10 (round (/ (* 1.6 width) 10))))
+                (adaptive-height (min (max 170 width-ten) 220))
                 (wheight (window-total-height window)))
-           
-           (face-remap-add-relative
-            'default :height
-            (if (> wheight 35)
-                (min (max 170 (* 10 (round (/ (* 1.6 width) 10)))) 220)
-              160))
-           (setq-local line-spacing 0.4) ;; FIXME
-           ))))
+           (face-remap-add-relative 'default :height
+                                    (if (> wheight 35)
+                                        adaptive-height
+                                      160))
+           (setq-local line-spacing 0.5)))))
     (setq-local mode-line-format nil
                 writeroom-restore-window-config t
-                writeroom-bottom-divider-width 0
                 writeroom-maximize-window t)
     (writeroom-mode)
     (setq-local cursor-type 'bar
@@ -874,8 +877,7 @@ deleted, kill the pairs around point."
 (use-package info-colors
   :vc (:url "https://github.com/ubolonton/info-colors")
   :hook
-  (Info-selection . info-colors-fontify-node)
-  (Info-mode . variable-pitch-mode))
+  (Info-selection . info-colors-fontify-node))
 
 (use-package shr-tag-pre-highlight ;; FIXME: complains if mode isnt available
   :defer 1
@@ -1283,6 +1285,7 @@ deleted, kill the pairs around point."
                                 'face font-lock-comment-face))))))))
 
 ;;; Org
+
 (use-package auctex
   :config ; ref: tectonic docs
   (setq TeX-engine-alist '((default
@@ -1348,7 +1351,8 @@ deleted, kill the pairs around point."
             (lambda ()
               (setq-local electric-pair-inhibit-predicate
                           `(lambda (c)
-                             (if (char-equal c ?<)
+                             (if (or (char-equal c ?\[)
+                                     (char-equal c ?<))
                                  t
                                (,electric-pair-inhibit-predicate c))))))
   (setq org-directory "~/.emacs.d/org"
@@ -1357,6 +1361,7 @@ deleted, kill the pairs around point."
         org-ellipsis "…"
         org-pretty-entities t
         org-startup-indented t
+        org-startup-truncated nil
         org-adapt-indentation t
         org-special-ctrl-a/e t
         org-fold-catch-invisible-edits 'show-and-error
@@ -1364,7 +1369,7 @@ deleted, kill the pairs around point."
         org-src-preserve-indentation t
         org-src-fontify-natively t
         ;; tectonic
-        org-highlight-latex-and-related '(latex script entities)
+        org-highlight-latex-and-related '(latex)
         org-preview-latex-default-process 'tectonic
         org-preview-latex-process-alist
         '((tectonic :programs
@@ -1444,9 +1449,30 @@ deleted, kill the pairs around point."
 
 (use-package ox-awesomecv
   :ensure nil
-  :load-path "~/Documents/org-cv"
-  ;; :vc (:fetcher gitlab :repo "Titan-C/org-cv")
+  :disabled t ; installation error
+  :vc (:url "https://gitlab.com/Titan-C/org-cv")
   :after org)
+
+(use-package denote
+  :bind (("C-c n n" . denote)
+         ("C-c n r" . denote-rename-file-using-front-matter)
+         ("C-c n j" . denote-journal-extras-new-entry)
+         ("C-c n l" . denote-link-after-creating)
+         ("C-c n b" . denote-org-extras-dblock-insert-backlinks)
+         ("C-c n o" . denote-open-or-create))
+  :hook (dired-mode . denote-dired-mode-in-directories)
+  :hook (dired-sidebar . denote-dired-mode-in-directories)
+  :config
+  (define-advice org-mark-ring-goto (:before (&rest _args) close-window)
+    "Close current window before going back."
+    (when (window-parent)
+      (delete-window)))
+  
+  (denote-rename-buffer-mode 1)
+  (setq denote-directory "~/Dropbox/denote/"
+        denote-dired-directories-include-subdirectories t
+        denote-dired-directories
+        `(,denote-directory ,org-directory)))
 
 ;;; Programming setup
 
@@ -1593,13 +1619,15 @@ deleted, kill the pairs around point."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(auctex avy cape cdlatex corfu-terminal deadgrep devil diff-hl dired-sidebar easy-kill eat
+   '(auctex avy cape cdlatex corfu-terminal deadgrep denote devil diff-hl dired-sidebar easy-kill eat
             eldoc-box exec-path-from-shell highlight-indent-guides info-colors janet-ts-mode kkp
-            macrursors magit markdown-mode move-text nerd-icons nerd-icons-corfu nerd-icons-dired
-            nerd-icons-ibuffer nix-mode nov orderless pdf-tools popper puni shr-tag-pre-highlight
-            sideline-flymake transpose-frame undo-fu-session vertico writeroom-mode xclip zig-mode))
+            macrursors magit markdown-mode move-text nerd-icons-corfu nerd-icons-dired
+            nerd-icons-ibuffer nix-mode nov orderless ox-hugo pdf-tools popper puni
+            shr-tag-pre-highlight sideline-flymake transpose-frame undo-fu-session vertico
+            writeroom-mode xclip zig-mode))
  '(package-vc-selected-packages
-   '((janet-ts-mode :url "https://github.com/sogaiu/janet-ts-mode")
+   '((ox-awesomecv :url "https://gitlab.com/Titan-C/org-cv")
+     (janet-ts-mode :url "https://github.com/sogaiu/janet-ts-mode")
      (info-colors :url "https://github.com/ubolonton/info-colors")
      (macrursors :url "https://github.com/karthink/macrursors"))))
 (custom-set-faces
@@ -1607,7 +1635,7 @@ deleted, kill the pairs around point."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- )
+ '(widget-button ((t (:foreground "white" :background "grey50")))))
 ;; Local Variables:
 ;; byte-compile-warnings: (not free-vars unresolved)
 ;; End:

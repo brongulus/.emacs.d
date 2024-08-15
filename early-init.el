@@ -34,9 +34,7 @@
 (when (string-equal system-type "android")
   (let ((termuxpath "/data/data/com.termux/files/usr/"))
     (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin"))
-    (setenv "LD_LIBRARY_PATH" (concat (getenv "LD_LIBRARY_PATH") ":" termuxpath "lib"))
     (push (concat termuxpath "bin") exec-path))
-  (setq overriding-text-conversion-style nil)
   (set-frame-font "monospace 16" nil t))
 
 (setq-default default-frame-alist
@@ -46,7 +44,7 @@
                 ;; (left-fringe . 15)
                 ;; (right-fringe . 15)
                 ;; (internal-border-width . 00)
-                (fullscreen . fullboth)
+                ;; (fullscreen . fullboth)
                 (font . "VictorMono Nerd Font Mono-16:weight=semi-bold"))
               ;; (font . "Zed Mono-17"))
               fringe-indicator-alist
