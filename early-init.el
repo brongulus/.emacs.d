@@ -22,14 +22,6 @@
   (add-function :after after-focus-change-function
                 #'gc-on-last-frame-out-of-focus))
 
-;; (add-hook 'minibuffer-setup-hook
-;;           #'(lambda ()
-;;               (setq gc-cons-threshold most-positive-fixnum)))
-;; (add-hook 'minibuffer-exit-hook
-;;           #'(lambda ()
-;;               (garbage-collect)
-;;               (setq gc-cons-threshold (* 60 1024 1024))))
-
 ;; Android
 (when (string-equal system-type "android")
   (let ((termuxpath "/data/data/com.termux/files/usr/"))
@@ -41,12 +33,7 @@
               '((menu-bar-lines . 0)
                 (tool-bar-lines . 0)
                 (vertical-scroll-bars)
-                ;; (left-fringe . 15)
-                ;; (right-fringe . 15)
-                ;; (internal-border-width . 00)
-                ;; (fullscreen . fullboth)
                 (font . "VictorMono Nerd Font Mono-16:weight=semi-bold"))
-              ;; (font . "Zed Mono-17"))
               fringe-indicator-alist
               (assq-delete-all 'truncation fringe-indicator-alist)
               cursor-in-non-selected-windows nil

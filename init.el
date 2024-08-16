@@ -36,18 +36,14 @@
          ("C-o" . other-window)
          ("C-," . scroll-other-window)
          ("C-." . scroll-other-window-down)
-         ("M-P" . execute-extended-command)
          ("M-s r" . replace-regexp)
          ("M-s f" . ffap)
          ("C-x C-m" . execute-extended-command)
          ("C-x C-j" . (lambda nil (interactive)
                         (let ((current-prefix-arg '(4)))
                           (call-interactively 'delete-indentation))))
-         ("C-h C-o" . describe-symbol)
          ("C-x C-b" . ibuffer)
          ("C-x k" . kill-current-buffer)
-         ("C-x l" . revert-buffer-quick)
-         ("C-x L" . desktop-read)
          ("C-M-r" . raise-sexp)
          ("C-x \\" . align-regexp)
          ("C-x C-z" . restart-emacs)
@@ -143,7 +139,6 @@ the cursor by ARG lines."
           (save-silently t))
       (apply fn args)))
 
-  ;; (copy-face 'default 'fixed-pitch)
   (set-register ?f `(file . ,(locate-user-emacs-file "init.el")))
   (set-register ?c `(file . "~/problems/"))
   
@@ -154,6 +149,8 @@ the cursor by ARG lines."
              (display-graphic-p))
         (setq load-theme-light t))) ;; load-theme-light is a zed-theme var
   (load-theme 'zed :no-confirm)
+
+  (define-key key-translation-map (kbd "ESC") (kbd "C-g"))
     
   (define-advice load-theme (:before (&rest _args) theme-dont-propagate)
     "Discard all themes before loading new."
@@ -266,6 +263,7 @@ backwards instead."
                     (which-key-mode 1))
                   (setq savehist-additional-variables '(register-alist kill-ring))
                   (setq save-interprogram-paste-before-kill t)
+                  (global-auto-revert-mode 1)
                   (global-subword-mode 1)
                   (delete-selection-mode) ;; pending-delete-mode
                   (context-menu-mode 1)
@@ -356,7 +354,7 @@ backwards instead."
 (use-package completion-preview
   :if (string> emacs-version "29.4")
   :ensure nil
-  :hook ((text-mode prog-mode comint-mode eshell-mode)
+  :hook ((prog-mode comint-mode eshell-mode)
          . completion-preview-mode)
   :bind (:map completion-preview-active-mode-map
               ([tab] . completion-preview-complete)
@@ -511,9 +509,7 @@ deleted, kill the pairs around point."
 
 (use-package avy
   :bind ("C-'" . avy-goto-char-timer)
-  :bind (:map org-mode-map
-              ("C-'" . avy-goto-char-timer)
-         :map isearch-mode-map
+  :bind (:map isearch-mode-map
               ("M-s M-s" . avy-isearch))
   :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer)
   :custom
@@ -607,6 +603,8 @@ deleted, kill the pairs around point."
   :ensure nil
   :bind (("C-s" . isearch-forward-regexp)
          ("M-s a" . multi-occur-in-matching-buffers)
+         :map isearch-mode-map
+         ("M-/" . isearch-complete)
          :repeat-map isearch-repeat-map
          ("s" . isearch-repeat-forward)
          ("r" . isearch-repeat-backward))
@@ -632,11 +630,8 @@ deleted, kill the pairs around point."
               "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/" "-x" "c++" "-"))))
   (setq flymake-no-changes-timeout nil
         flymake-suppress-zero-counters t
-        flymake-margin-indicator-position 'right-margin
-        flymake-margin-indicators-string
-        '((error "E" compilation-error)
-          (warning "W" compilation-warning)
-          (note "!" compilation-info))
+        flymake-fringe-indicator-position nil
+        flymake-margin-indicator-position nil
         flymake-show-diagnostics-at-end-of-line t)
 
   (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake))
@@ -727,7 +722,7 @@ deleted, kill the pairs around point."
           "\\*vc-change-log\\*" "\\*Deletions\\*"
           "\\*Flymake .\*" "\\*CDLaTex Help\\*"
           "\\*Process List\\*" "\\*Org Select\\*"
-          "^CAPTURE.*" "\\*Warnings\\*"
+          "^CAPTURE.*" "\\*Org Agenda\\*" "\\*Warnings\\*"
           "\\*Backtrace\\*" "\\*Occur\\*"
           help-mode compilation-mode
           "^\\*eshell.*\\*$" eshell-mode
@@ -892,6 +887,7 @@ deleted, kill the pairs around point."
     (add-to-list 'nov-shr-rendering-functions
                  '(pre . shr-tag-pre-highlight) t))
   ;; eww
+  (setq eww-auto-rename-buffer 'title)
   (add-to-list 'shr-external-rendering-functions
                '(pre . shr-tag-pre-highlight)))
 
@@ -1071,11 +1067,11 @@ deleted, kill the pairs around point."
         (propertize (format " Unread:%s " unread-count)
                     'face 'which-func))))
   (with-eval-after-load 'gnus-topic
-    (setq global-mode-string
-          (append global-mode-string
-                  (list '(:eval (propertize
-                                 (my/gnus-unread-count)
-                                 'help-echo "Gnus - Unread")))))
+    (setq-local global-mode-string
+                (append global-mode-string
+                        (list '(:eval (propertize
+                                       (my/gnus-unread-count)
+                                       'help-echo "Gnus - Unread")))))
     (setq gnus-topic-topology '(("Unread" visible)
                                 (("📥 Personal" visible nil nil))
                                 (("📰 News" visible nil nil))))
@@ -1304,7 +1300,9 @@ deleted, kill the pairs around point."
 
 (use-package org
   :ensure nil
-  :bind ("C-x y" . yank-media)
+  :bind (("C-x y" . yank-media)
+         :map org-mode-map
+         ("C-'" . avy-goto-char-timer))
   :hook ((org-mode . visual-line-mode)
          (org-mode . variable-pitch-mode))
   :config
@@ -1355,7 +1353,7 @@ deleted, kill the pairs around point."
                                      (char-equal c ?<))
                                  t
                                (,electric-pair-inhibit-predicate c))))))
-  (setq org-directory "~/.emacs.d/org"
+  (setq org-directory "~/Dropbox/org"
         org-use-sub-superscripts '{}
         ;; org-export-with-sub-superscripts nil
         org-ellipsis "…"
@@ -1365,7 +1363,7 @@ deleted, kill the pairs around point."
         org-adapt-indentation t
         org-special-ctrl-a/e t
         org-fold-catch-invisible-edits 'show-and-error
-        org-edit-src-content-indentation 2;0
+        org-edit-src-content-indentation 0
         org-src-preserve-indentation t
         org-src-fontify-natively t
         ;; tectonic
@@ -1389,6 +1387,8 @@ deleted, kill the pairs around point."
 
 (use-package org-agenda
   :ensure nil
+  :bind ("C-c o a" . (lambda nil (interactive)
+                       (org-agenda nil "n")))
   :config
   (add-to-list 'display-buffer-alist
                '("\\*Calendar\\*"
@@ -1396,6 +1396,7 @@ deleted, kill the pairs around point."
                  (window-parameters (height . 0.33))))
 
   (setq org-agenda-files (list org-directory)
+        org-agenda-inhibit-startup t
         org-agenda-window-setup 'current-window
         org-agenda-restore-windows-after-quit t
         org-agenda-start-with-log-mode t
@@ -1415,19 +1416,24 @@ deleted, kill the pairs around point."
   :after org-agenda
   :ensure nil
   :config
-  ;; (graph (make-string (1+ (- end start)) org-habit-missed-glyph)) ;; BRUH FIXME
-  ;; (advice-add 'org-habit-build-graph )
-
   (setq org-habit-show-habits-only-for-today t
         org-habit-show-done-always-green t
-        ;; org-habit-today-glyph ?○ ;; 9675
-        ;; org-habit-completed-glyph ?● ;; 9679
-        ;; org-habit-missed-glyph ?○ ;; 9675
+        org-habit-today-glyph ?◌;; 9676
+        org-habit-completed-glyph ?● ;; 9679
+        org-habit-missed-glyph ?○ ;; 9675
         org-habit-following-days 1
-        org-habit-preceding-days 21))
+        org-habit-preceding-days 21)
+  
+  (defun add-missed-day-glyph (graph)
+    (replace-regexp-in-string
+     (regexp-quote (char-to-string ?\s))
+     (char-to-string org-habit-missed-glyph)
+     graph))
+  (advice-add 'org-habit-build-graph :filter-return #'add-missed-day-glyph))
 
 (use-package org-capture
   :ensure nil
+  :bind ("C-c o c" . org-capture)
   ;; :hook (org-capture-mode . meow-insert)
   :config
   (add-hook 'org-capture-mode-hook
@@ -1453,12 +1459,21 @@ deleted, kill the pairs around point."
   :vc (:url "https://gitlab.com/Titan-C/org-cv")
   :after org)
 
+(use-package org-modern
+  :hook (org-mode . org-modern-mode)
+  :config
+  (setq org-modern-star nil
+        org-modern-hide-stars nil
+        org-modern-todo nil
+        org-modern-list
+        '((?+ . "◦") (?- . "◦"))))
+
 (use-package denote
   :bind (("C-c n n" . denote)
          ("C-c n r" . denote-rename-file-using-front-matter)
          ("C-c n j" . denote-journal-extras-new-entry)
          ("C-c n l" . denote-link-after-creating)
-         ("C-c n b" . denote-org-extras-dblock-insert-backlinks)
+         ("C-c n b" . denote-backlinks)
          ("C-c n o" . denote-open-or-create))
   :hook (dired-mode . denote-dired-mode-in-directories)
   :hook (dired-sidebar . denote-dired-mode-in-directories)
@@ -1467,12 +1482,41 @@ deleted, kill the pairs around point."
     "Close current window before going back."
     (when (window-parent)
       (delete-window)))
+
+  (with-eval-after-load 'org-capture
+    (add-to-list 'org-capture-templates
+               '("d" "Denote" plain
+                 (file denote-last-path)
+                 #'denote-org-capture
+                 :no-save t
+                 :immediate-finish nil
+                 :kill-buffer t
+                 :jump-to-captured t)))
   
   (denote-rename-buffer-mode 1)
+  
   (setq denote-directory "~/Dropbox/denote/"
         denote-dired-directories-include-subdirectories t
         denote-dired-directories
-        `(,denote-directory ,org-directory)))
+        `(,denote-directory)))
+
+(use-package denote-refs
+  :ensure nil
+  :vc (:url "https://codeberg.org/akib/emacs-denote-refs")
+  :hook (org-mode . denote-refs-mode))
+
+(use-package deft
+  :bind ("<f8>" . deft)
+  :config
+  (setq deft-use-filename-as-title nil
+        deft-recursive t
+        deft-auto-save-interval -1.0
+        deft-directory "~/Dropbox/denote/"
+        deft-strip-summary-regexp
+        (format "%s\\|%s"
+                deft-strip-summary-regexp
+                "^#\\+.*")
+        deft-use-filter-string-for-filename t))
 
 ;;; Programming setup
 
@@ -1619,12 +1663,12 @@ deleted, kill the pairs around point."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(auctex avy cape cdlatex corfu-terminal deadgrep denote devil diff-hl dired-sidebar easy-kill eat
-            eldoc-box exec-path-from-shell highlight-indent-guides info-colors janet-ts-mode kkp
-            macrursors magit markdown-mode move-text nerd-icons-corfu nerd-icons-dired
-            nerd-icons-ibuffer nix-mode nov orderless ox-hugo pdf-tools popper puni
-            shr-tag-pre-highlight sideline-flymake transpose-frame undo-fu-session vertico
-            writeroom-mode xclip zig-mode))
+   '(auctex avy cape cdlatex corfu-terminal deadgrep deft denote denote-refs devil diff-hl
+            dired-sidebar easy-kill eat eldoc-box exec-path-from-shell highlight-indent-guides
+            info-colors janet-ts-mode kkp macrursors magit markdown-mode move-text nerd-icons-corfu
+            nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless org-modern ox-hugo pdf-tools
+            popper puni shr-tag-pre-highlight sideline-flymake transpose-frame undo-fu-session
+            vertico writeroom-mode xclip zig-mode))
  '(package-vc-selected-packages
    '((ox-awesomecv :url "https://gitlab.com/Titan-C/org-cv")
      (janet-ts-mode :url "https://github.com/sogaiu/janet-ts-mode")

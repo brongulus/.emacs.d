@@ -170,9 +170,9 @@
    `(avy-lead-face-1 ((t (:inherit avy-lead-face))))
    `(avy-lead-face-2 ((t (:inherit avy-lead-face))))
    
-   `(compilation-info ((t (:foreground ,green-color))))
-   `(compilation-warning ((t (:foreground ,yellow-color))))
-   `(compilation-error ((t (:foreground ,red-color))))
+   `(compilation-info ((t (:foreground ,inactive-color))))
+   `(compilation-warning ((t (:foreground ,inactive-color))))
+   `(compilation-error ((t (:foreground ,inactive-color))))
    `(success ((t (:foreground ,green-color))))
    `(warning ((t (:foreground ,yellow-color))))
    `(error ((t (:foreground ,red-color))))
@@ -296,19 +296,19 @@
    `(org-time-grid ((t (:inherit font-lock-comment-face))))
    `(org-agenda-current-time ((t (:foreground ,foreground-color))))
    `(org-imminent-deadline ((t (:foreground ,red-color :weight bold))))
-   `(org-todo ((t (:inherit default :box 1))))
+   `(org-todo ((t (:foreground ,inactive-color :box 1))))
    `(org-scheduled ((t (:inherit default :weight bold))))
    `(org-scheduled-today ((t (:inherit org-scheduled))))
    `(org-date ((t (:inherit link))))
    `(org-tag ((t (:inherit org-inline-src-block :extend nil))))
    `(org-latex-and-related ((t (:inherit org-inline-src-block :extend nil))))
    `(org-verbatim ((t (:inherit org-inline-src-block :extend nil))))
-   `(org-habit-clear-face ((t (:foreground ,background-color))))
-   `(org-habit-clear-future-face ((t (:foreground ,background-color))))
-   `(org-habit-alert-face ((t (:foreground ,yellow-color :inverse-video t))))
-   `(org-habit-alert-future-face ((t (:foreground ,yellow-color :inverse-video t))))
-   `(org-habit-overdue-face ((t (:foreground ,red-color :inverse-video t))))
-   `(org-habit-overdue-future-face ((t (:foreground ,red-color :inverse-video t))))
+   `(org-habit-clear-face ((t (:foreground ,inactive-color))))
+   `(org-habit-clear-future-face ((t (:foreground ,inactive-color))))
+   `(org-habit-alert-face ((t (:foreground ,yellow-color))))
+   `(org-habit-alert-future-face ((t (:foreground ,yellow-color))))
+   `(org-habit-overdue-face ((t (:foreground ,red-color))))
+   `(org-habit-overdue-future-face ((t (:foreground ,red-color))))
    `(org-habit-ready-face ((t (:foreground ,green-color))))
    `(org-habit-ready-future-face ((t (:foreground ,green-color))))
    
@@ -361,7 +361,7 @@
                 'face '(:background "#00c2ff" :foreground "black"))))))))
 
 (setq global-mode-string nil
-      project-mode-line t
+      project-mode-line nil
       project-mode-line-face 'font-lock-comment-face
       ;; clean eglot
       eglot-menu-string (char-to-string #x2699)
@@ -371,6 +371,7 @@
       ;; which-func-modes '(text-mode prog-mode)
       which-func-format
       `(:propertize which-func-current face which-func)
+      
       ;; dont show which-func information in misc-info
       mode-line-misc-info (delete
                            '(which-function-mode
@@ -378,19 +379,16 @@
                               (which-func--use-mode-line
                                (#1="" which-func-format " "))))
                            mode-line-misc-info)
+      
       ;; all the stuff that will be right-aligned
       mode-line-end-spaces
       `("%n " mode-line-misc-info
-        project-mode-line-format
-        (:eval (unless nil ;zed-icons-p
-                 (propertize (format " %s" (upcase (if (stringp mode-name)
-                                                       mode-name
-                                                     (car mode-name))))
-                             'help-echo "Mouse-1: Show major-mode-menu"
-                             'local-map mode-line-major-mode-keymap)))
-        (:eval (when (bound-and-true-p vc-mode)
-                 (propertize vc-mode 'face
-                             '(:inherit success :weight bold))))
+        ;; project-mode-line-format
+        ;; (:eval (propertize (format " %s" (upcase (if (stringp mode-name)
+        ;;                                                mode-name
+        ;;                                              (car mode-name))))
+        ;;                      'help-echo "Mouse-1: Show major-mode-menu"
+        ;;                      'local-map mode-line-major-mode-keymap))
         (:eval (when (bound-and-true-p flymake-mode)
                  (let ((flymake-mode-line-counter-format
                         (if zed-icons-p
@@ -398,19 +396,19 @@
                               `(""
                                 ,(when (flymake--mode-line-counter :error)
                                    (concat " " (nerd-icons-codicon
-                                                "nf-cod-error" :face 'error
+                                                "nf-cod-error" :face 'compilation-error
                                                 :v-adjust 0.1)
                                            " "))
                                 flymake-mode-line-error-counter
                                 ,(when (flymake--mode-line-counter :warning)
                                    (concat " " (nerd-icons-codicon
-                                                "nf-cod-warning" :face 'warning
+                                                "nf-cod-warning" :face 'compilation-warning
                                                 :v-adjust 0.1)
                                            ""))
                                 flymake-mode-line-warning-counter
                                 ,(when (flymake--mode-line-counter :note)
                                    (concat " " (nerd-icons-codicon
-                                                "nf-cod-info" :face 'success
+                                                "nf-cod-info" :face 'compilation-success
                                                 :v-adjust 0.1)
                                            ""))
                                 flymake-mode-line-note-counter ""))
@@ -418,7 +416,9 @@
                             flymake-mode-line-warning-counter
                             flymake-mode-line-note-counter ""))))
                    (flymake--mode-line-counters))))
-        ;; (:eval (propertize " %l:%C " 'face 'which-func))
+        (:eval (when (bound-and-true-p vc-mode)
+                 (propertize vc-mode 'face
+                             '(:inherit success))))
         (:eval (propertize " %p " 'face 'which-func))
         ))
 
@@ -450,18 +450,13 @@
    (:eval (when (bound-and-true-p macrursors-mode)
             macrursors-mode-line))
    "%e"
-   (:eval (when nil ;zed-icons-p
-            (with-eval-after-load 'nerd-icons
-              (propertize (nerd-icons-icon-for-buffer)
-                          'display '(raise 0.15)
-                          'help-echo "Mouse-1: Show major-mode-menu"
-                          'local-map mode-line-major-mode-keymap)))) ;; issues with underline
    (:eval (propertize " %b " 'face (if (and (buffer-modified-p)
                                             (or (derived-mode-p 'prog-mode)
                                                 (derived-mode-p 'text-mode)))
                                        '(:inherit font-lock-warning-face :weight bold)
                                      '(:weight bold))
-                      'help-echo (buffer-file-name)))
+                      'help-echo "Mouse-1: Show major-mode-menu"
+                      'local-map mode-line-major-mode-keymap))
    (which-function-mode (which-func-mode
                          ("" which-func-format " ")))
    mode-line-format-right-align
