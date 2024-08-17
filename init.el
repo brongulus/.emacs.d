@@ -1005,6 +1005,7 @@ deleted, kill the pairs around point."
         gnus-novice-user nil
         gnus-expert-user nil
         gnus-auto-select-first nil
+        gnus-auto-select-next 'quietly
         gnus-summary-display-arrow nil
         gnus-thread-sort-functions
         '(gnus-thread-sort-by-most-recent-date
@@ -1013,16 +1014,12 @@ deleted, kill the pairs around point."
   (gnus-add-configuration
    '(article
      (horizontal 1.0
-                 (vertical 25
-                           (group 1.0))
                  (vertical 1.0
                            (summary 0.25 point)
                            (article 1.0)))))
   (gnus-add-configuration
    '(summary
      (horizontal 1.0
-                 (vertical 25
-                           (group 1.0))
                  (vertical 1.0
                            (summary 1.0 point)))))
   (setq gnus-unread-mark #x2022 ;; dot
@@ -1058,6 +1055,32 @@ deleted, kill the pairs around point."
   :after gnus
   :hook (gnus-group-mode . gnus-topic-mode)
   :config
+  (with-eval-after-load 'gnus-cite
+    (defun gnus-clean-citation nil
+      (save-excursion
+        (goto-char (point-min)) ;; GPT citation
+        (while (re-search-forward "^[ ]*\\(>\\)+\\( \\)*\\(>\\)*" (point-max) t)
+          (let* ((line (match-string 0))       ; Entire matched line
+                 (prefix (match-string 1))     ; Consecutive '>' at the start
+                 (spaces (match-string 2))     ; Spaces between '>' characters
+                 (suffix (match-string 3))     ; Remaining '>' characters after spaces
+                 (num-prefix (length prefix))  ; Number of leading '>' characters
+                 (num-suffix (length suffix))  ; Number of trailing '>' characters
+                 (replacement (concat (make-string num-prefix ?▎)
+                                      spaces
+                                      (make-string num-suffix ?▎)))) ; Construct replacement string
+            (put-text-property 0 (length replacement)
+                               'face 'font-lock-comment-face
+                               replacement)
+            (replace-match replacement nil nil)))))
+
+    (nconc gnus-treatment-function-alist
+           '((t gnus-clean-citation))))
+
+  (add-hook 'gnus-part-display-hook
+            (lambda nil
+              (setq left-margin-width 5)))
+  
   ;; mode-line unread indicator
   (defun my/gnus-unread-count ()
     (interactive)
@@ -1209,10 +1232,11 @@ deleted, kill the pairs around point."
 
 (use-package eat
   :commands eat-project
-  :init (with-eval-after-load 'project
-          (add-to-list 'project-switch-commands '(eat-project "Eat" ?t)))
-  ;; :hook ((eshell-load . #'eat-eshell-mode)
-  ;; (eshell-load . #'eat-eshell-visual-command-mode))
+  :init
+  (with-eval-after-load 'project
+    (add-to-list 'project-switch-commands '(eat-project "Eat" ?t)))
+  (add-hook 'eshell-load-hook #'eat-eshell-mode)
+  (add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode)
   :bind (("C-\\" . (lambda () (interactive)
                      (defvar eat-buffer-name)
                      (let ((current-prefix-arg t)
@@ -1410,7 +1434,8 @@ deleted, kill the pairs around point."
 
   (setf (alist-get 'agenda org-agenda-prefix-format
                    nil nil #'equal)
-        "  %?-12t% s"))
+        " %?-12t% s")
+  (setq org-agenda-todo-keyword-format " ❱ %-1s"))
 
 (use-package org-habit
   :after org-agenda
@@ -1506,7 +1531,10 @@ deleted, kill the pairs around point."
   :hook (org-mode . denote-refs-mode))
 
 (use-package deft
-  :bind ("<f8>" . deft)
+  :bind (("<f8>" . deft)
+         :map deft-mode-map
+         ("TAB" . deft-open-file-other-window)
+         ([tab] . deft-open-file-other-window))
   :config
   (setq deft-use-filename-as-title nil
         deft-recursive t
