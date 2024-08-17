@@ -39,12 +39,13 @@
   (let ((termuxpath "/data/data/com.termux/files/usr/"))
     (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin"))
     (push (concat termuxpath "bin") exec-path))
-  (set-face-attribute 'default nil :height 170))
+  (set-face-attribute 'default nil :height 170)
+  (unless (file-directory-p "~/fonts")
+    (copy-directory "~/.emacs.d/fonts/" "~/fonts")))
 
-(unless is-android
-  (push '(font . "VictorMono Nerd Font Mono-16:weight=semi-bold") default-frame-alist)
-  (set-face-attribute
-   'variable-pitch nil :family "iA Writer Duospace" :weight 'regular :height 170))
+(push '(font . "VictorMono Nerd Font Mono-16:weight=semi-bold") default-frame-alist)
+(set-face-attribute
+ 'variable-pitch nil :family "iA Writer Duospace" :weight 'regular :height 170)
 
 ;; doom
 (setq-default inhibit-redisplay t
