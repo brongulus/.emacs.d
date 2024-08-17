@@ -477,6 +477,7 @@ backwards instead."
          ("C-w" . nil) ;delete-backword
          ("M-w" . nil) ;easy-kill
          ("M-d" . nil) ;macrursors
+         ("C-d" . nil) ;delete-back-char
          ("C-k" . my-puni-kill-line)
          ("s-s" . puni-splice)
          ("M-]" . puni-slurp-forward)
@@ -1230,6 +1231,18 @@ deleted, kill the pairs around point."
   (setq dired-sidebar-mode-line-format
         '("%e" mode-line-buffer-identification)))
 
+(use-package dired-preview
+  :after dired ;; FIXME Does not clean up after itself
+  :ensure nil
+  :vc (:url "https://github.com/protesilaos/dired-preview"
+            :rev :newest)
+  :bind (:map dired-mode-map
+              ("P" . dired-preview-mode)
+              ("C-," . dired-preview-page-down)
+              ("C-." . dired-preview-page-up))
+  :custom
+  (dired-preview-delay 0.3))
+
 (use-package eat
   :commands eat-project
   :init
@@ -1322,6 +1335,8 @@ deleted, kill the pairs around point."
     (setf (cadr tex-list) "%(tex)"
           (cadr latex-list) "%l")))
 
+
+
 (use-package org
   :ensure nil
   :bind (("C-x y" . yank-media)
@@ -1377,6 +1392,7 @@ deleted, kill the pairs around point."
                                      (char-equal c ?<))
                                  t
                                (,electric-pair-inhibit-predicate c))))))
+
   (setq org-directory "~/Dropbox/org"
         org-use-sub-superscripts '{}
         ;; org-export-with-sub-superscripts nil
@@ -1389,6 +1405,7 @@ deleted, kill the pairs around point."
         org-fold-catch-invisible-edits 'show-and-error
         org-edit-src-content-indentation 0
         org-src-preserve-indentation t
+        org-fontify-quote-and-verse-blocks t
         org-src-fontify-natively t
         ;; tectonic
         org-highlight-latex-and-related '(latex)
@@ -1427,15 +1444,42 @@ deleted, kill the pairs around point."
         org-agenda-show-all-dates nil
         org-log-done t
         org-log-into-drawer t
+        org-agenda-include-deadlines t)
+
+  (defun elegant-agenda--title nil ;; src: elegant-agenda-mode
+    (when-let ((title (when (and org-agenda-redo-command
+                                 (stringp (cadr org-agenda-redo-command)))
+                        (format "—  %s "
+                                (mapconcat
+                                 #'identity
+                                 (split-string-and-unquote
+                                  (cadr org-agenda-redo-command) "")
+                                 ""))))
+               (width (window-width)))
+      (face-remap-set-base 'header-line :height 1.4)
+      (setq-local header-line-format
+                  (format "%s %s" title (make-string (- width (length title)) ?— t)))))
+  
+  (add-hook 'org-agenda-finalize-hook #'elegant-agenda--title)
+  
+  (setq org-agenda-breadcrumbs-separator " ❱ "
+        org-agenda-todo-keyword-format "%-1s"
+        org-agenda-use-time-grid t
         org-agenda-skip-timestamp-if-done t
         org-agenda-skip-scheduled-if-done t
         org-agenda-skip-deadline-if-done t
-        org-agenda-include-deadlines t)
-
-  (setf (alist-get 'agenda org-agenda-prefix-format
-                   nil nil #'equal)
-        " %?-12t% s")
-  (setq org-agenda-todo-keyword-format " ❱ %-1s"))
+        org-agenda-scheduled-leaders '("" "")
+        org-agenda-deadline-leaders '("" "")
+        org-agenda-todo-keyword-format ""
+        org-agenda-block-separator (string-to-char " ")
+        org-agenda-current-time-string "← now ─────────"
+        org-agenda-time-grid
+        '((daily today require-timed remove-matched)
+          (800 1200 1600 2000)
+          "       " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+        org-agenda-prefix-format
+        '((agenda . " %i %-12b%t%s")
+          (todo . " %i %?-12b"))))
 
 (use-package org-habit
   :after org-agenda
@@ -1483,6 +1527,17 @@ deleted, kill the pairs around point."
   :disabled t ; installation error
   :vc (:url "https://gitlab.com/Titan-C/org-cv")
   :after org)
+
+(use-package org-appear
+  :hook (org-mode . org-appear-mode)
+  :config
+  (setq org-hide-emphasis-markers t
+        org-appear-autoemphasis t
+        org-appear-autosubmarkers t
+        org-appear-autolinks 'just-brackets)
+  ;; for proper first-time setup, `org-appear--set-elements'
+  ;; needs to be run after other hooks have acted.
+  (run-at-time nil nil #'org-appear--set-elements))
 
 (use-package org-modern
   :hook (org-mode . org-modern-mode)
@@ -1692,13 +1747,14 @@ deleted, kill the pairs around point."
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    '(auctex avy cape cdlatex corfu-terminal deadgrep deft denote denote-refs devil diff-hl
-            dired-sidebar easy-kill eat eldoc-box exec-path-from-shell highlight-indent-guides
-            info-colors janet-ts-mode kkp macrursors magit markdown-mode move-text nerd-icons-corfu
-            nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless org-modern ox-hugo pdf-tools
-            popper puni shr-tag-pre-highlight sideline-flymake transpose-frame undo-fu-session
-            vertico writeroom-mode xclip zig-mode))
+            dired-preview dired-sidebar easy-kill eat eldoc-box exec-path-from-shell
+            highlight-indent-guides info-colors janet-ts-mode kkp macrursors magit markdown-mode
+            move-text nerd-icons-corfu nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless
+            org-appear org-modern ox-hugo pdf-tools popper puni shr-tag-pre-highlight
+            sideline-flymake transpose-frame undo-fu-session vertico writeroom-mode xclip zig-mode))
  '(package-vc-selected-packages
-   '((ox-awesomecv :url "https://gitlab.com/Titan-C/org-cv")
+   '((dired-preview :url "https://github.com/protesilaos/dired-preview")
+     (ox-awesomecv :url "https://gitlab.com/Titan-C/org-cv")
      (janet-ts-mode :url "https://github.com/sogaiu/janet-ts-mode")
      (info-colors :url "https://github.com/ubolonton/info-colors")
      (macrursors :url "https://github.com/karthink/macrursors"))))

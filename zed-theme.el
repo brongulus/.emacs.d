@@ -290,15 +290,18 @@
    `(org-level-6 ((t (:height 1.1 :weight bold))))
    `(org-level-7 ((t (:height 1.1 :weight bold))))
    `(org-level-8 ((t (:height 1.1 :weight bold))))
-   `(org-agenda-structure ((t (:inherit font-lock-comment-face :slant italic :height 1.2))))
-   `(org-agenda-structure-filter ((t (:inherit org-agenda-structure :foreground ,foreground-color))))
-   `(org-agenda-date ((t (:inherit default :weight bold :height 1.1))))
+   `(org-agenda-structure ((t (:foreground ,magenta-color :height 1.1))))
+   `(org-agenda-structure-filter ((t (:inherit org-agenda-structure))))
+   `(org-agenda-date ((t (:foreground ,blue-color))))
+   `(org-agenda-date-today ((t (:foreground ,cyan-color))))
    `(org-time-grid ((t (:inherit font-lock-comment-face))))
    `(org-agenda-current-time ((t (:foreground ,foreground-color))))
    `(org-imminent-deadline ((t (:foreground ,red-color :weight bold))))
    `(org-todo ((t (:foreground ,inactive-color :box 1))))
-   `(org-scheduled ((t (:inherit default :weight bold))))
-   `(org-scheduled-today ((t (:inherit org-scheduled))))
+   `(org-scheduled ((t (:foreground ,yellow-color))))
+   `(org-scheduled-today ((t (:foreground ,green-color :weight bold))))
+   `(org-agenda-done ((t (:foreground ,inactive-color))))
+   `(org-done ((t (:foreground , inactive-color))))
    `(org-date ((t (:inherit link))))
    `(org-tag ((t (:inherit org-inline-src-block :extend nil))))
    `(org-latex-and-related ((t (:inherit org-inline-src-block :extend nil))))
@@ -408,7 +411,7 @@
                                 flymake-mode-line-warning-counter
                                 ,(when (flymake--mode-line-counter :note)
                                    (concat " " (nerd-icons-codicon
-                                                "nf-cod-info" :face 'compilation-success
+                                                "nf-cod-info" :face 'compilation-info
                                                 :v-adjust 0.1)
                                            ""))
                                 flymake-mode-line-note-counter ""))
