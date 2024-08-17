@@ -10,6 +10,8 @@
   (if is-android
       "/sdcard/Dropbox/"
     "~/Dropbox/"))
+(when is-android
+  (global-set-key (kbd "C-\\") 'term))
 
 (use-package use-package
   :no-require
