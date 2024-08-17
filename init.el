@@ -776,10 +776,6 @@ deleted, kill the pairs around point."
 
 ;;; Environment
 
-(use-package exec-path-from-shell
-  :if (display-graphic-p)
-  :hook (after-init . exec-path-from-shell-initialize))
-
 (use-package xclip
   :unless (display-graphic-p)
   :init (xclip-mode 1))
@@ -1248,6 +1244,7 @@ deleted, kill the pairs around point."
   (dired-preview-delay 0.3))
 
 (use-package eat
+  :unless is-android
   :commands eat-project
   :init
   (with-eval-after-load 'project
@@ -1751,11 +1748,11 @@ deleted, kill the pairs around point."
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    '(auctex avy cape cdlatex corfu-terminal deadgrep deft denote-refs devil diff-hl dired-preview
-            dired-sidebar easy-kill eat eldoc-box exec-path-from-shell highlight-indent-guides
-            info-colors janet-ts-mode kkp macrursors magit markdown-mode move-text nerd-icons
-            nerd-icons-corfu nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless org-appear
-            org-modern pdf-tools popper puni shr-tag-pre-highlight sideline-flymake transpose-frame
-            undo-fu-session vertico writeroom-mode xclip zig-mode))
+            dired-sidebar easy-kill eat eldoc-box highlight-indent-guides info-colors janet-ts-mode
+            kkp macrursors magit markdown-mode move-text nerd-icons nerd-icons-corfu
+            nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless org-appear org-modern
+            pdf-tools popper puni shr-tag-pre-highlight transpose-frame undo-fu-session vertico
+            writeroom-mode xclip zig-mode))
  '(package-vc-selected-packages
    '((dired-preview :url "https://github.com/protesilaos/dired-preview")
      (ox-awesomecv :url "https://gitlab.com/Titan-C/org-cv")

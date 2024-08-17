@@ -122,6 +122,14 @@
               (when (display-graphic-p)
                 (ar/show-welcome-buffer)))))
 
+(when (eq system-type 'darwin)
+  (let ((home (getenv "HOME")))
+     (setenv "PATH" (concat (getenv "PATH")
+                            ":" home "/.nix-profile/bin:/usr/bin"))
+     (setq exec-path (append `(,(concat home "/.nix-profile/bin")
+                               "/nix/var/nix/profiles/default/bin")
+                             exec-path))))
+
 (if (eq system-type 'darwin)
     (setq mac-option-modifier 'meta)
   (setq command-line-ns-option-alist nil))
