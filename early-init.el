@@ -44,8 +44,11 @@
     (copy-directory "~/.emacs.d/fonts/" "~/fonts")))
 
 (push '(font . "VictorMono Nerd Font Mono-16:weight=semi-bold") default-frame-alist)
-(set-face-attribute
- 'variable-pitch nil :family "iA Writer Duospace" :weight 'regular :height 170)
+(if is-android
+    (set-face-attribute
+     'variable-pitch nil :family "iA Writer Duo S" :weight 'regular :height 170)
+  (set-face-attribute
+   'variable-pitch nil :family "iA Writer Duospace" :weight 'regular :height 170))
 
 ;; doom
 (setq-default inhibit-redisplay t
