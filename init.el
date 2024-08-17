@@ -6,6 +6,10 @@
 ;;; Bootstrap
 
 (define-key global-map (kbd "C-z") (make-sparse-keymap))
+(defconst dropbox-dir
+  (if is-android
+      "/sdcard/Dropbox/"
+    "~/Dropbox/"))
 
 (use-package use-package
   :no-require
@@ -1393,7 +1397,7 @@ deleted, kill the pairs around point."
                                  t
                                (,electric-pair-inhibit-predicate c))))))
 
-  (setq org-directory "~/Dropbox/org"
+  (setq org-directory (concat dropbox-dir "org")
         org-use-sub-superscripts '{}
         ;; org-export-with-sub-superscripts nil
         org-ellipsis "…"
@@ -1575,7 +1579,7 @@ deleted, kill the pairs around point."
   
   (denote-rename-buffer-mode 1)
   
-  (setq denote-directory "~/Dropbox/denote/"
+  (setq denote-directory (concat dropbox-dir "denote/")
         denote-dired-directories-include-subdirectories t
         denote-dired-directories
         `(,denote-directory)))
@@ -1594,7 +1598,7 @@ deleted, kill the pairs around point."
   (setq deft-use-filename-as-title nil
         deft-recursive t
         deft-auto-save-interval -1.0
-        deft-directory "~/Dropbox/denote/"
+        deft-directory (concat dropbox-dir "denote/")
         deft-strip-summary-regexp
         (format "%s\\|%s"
                 deft-strip-summary-regexp
@@ -1746,12 +1750,12 @@ deleted, kill the pairs around point."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(auctex avy cape cdlatex corfu-terminal deadgrep deft denote denote-refs devil diff-hl
-            dired-preview dired-sidebar easy-kill eat eldoc-box exec-path-from-shell
-            highlight-indent-guides info-colors janet-ts-mode kkp macrursors magit markdown-mode
-            move-text nerd-icons-corfu nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless
-            org-appear org-modern ox-hugo pdf-tools popper puni shr-tag-pre-highlight
-            sideline-flymake transpose-frame undo-fu-session vertico writeroom-mode xclip zig-mode))
+   '(auctex avy cape cdlatex corfu-terminal deadgrep deft denote-refs devil diff-hl dired-preview
+            dired-sidebar easy-kill eat eldoc-box exec-path-from-shell highlight-indent-guides
+            info-colors janet-ts-mode kkp macrursors magit markdown-mode move-text nerd-icons
+            nerd-icons-corfu nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless org-appear
+            org-modern pdf-tools popper puni shr-tag-pre-highlight sideline-flymake transpose-frame
+            undo-fu-session vertico writeroom-mode xclip zig-mode))
  '(package-vc-selected-packages
    '((dired-preview :url "https://github.com/protesilaos/dired-preview")
      (ox-awesomecv :url "https://gitlab.com/Titan-C/org-cv")
