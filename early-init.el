@@ -22,24 +22,29 @@
   (add-function :after after-focus-change-function
                 #'gc-on-last-frame-out-of-focus))
 
-;; Android
-(when (string-equal system-type "android")
-  (let ((termuxpath "/data/data/com.termux/files/usr/"))
-    (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin"))
-    (push (concat termuxpath "bin") exec-path))
-  (set-frame-font "monospace 16" nil t))
-
 (setq-default default-frame-alist
               '((menu-bar-lines . 0)
                 (tool-bar-lines . 0)
-                (vertical-scroll-bars)
-                (font . "VictorMono Nerd Font Mono-16:weight=semi-bold"))
+                (vertical-scroll-bars))
               fringe-indicator-alist
               (assq-delete-all 'truncation fringe-indicator-alist)
               cursor-in-non-selected-windows nil
               bidi-display-reordering 'left-to-right
               bidi-inhibit-bpa t
               bidi-paragraph-direction 'left-to-right)
+;; Android
+(defconst is-android (eq system-type 'android))
+
+(when is-android
+  (let ((termuxpath "/data/data/com.termux/files/usr/"))
+    (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin"))
+    (push (concat termuxpath "bin") exec-path))
+  (set-face-attribute 'default nil :height 170))
+
+(unless is-android
+  (push '(font . "VictorMono Nerd Font Mono-16:weight=semi-bold") default-frame-alist)
+  (set-face-attribute
+   'variable-pitch nil :family "iA Writer Duospace" :weight 'regular :height 170))
 
 ;; doom
 (setq-default inhibit-redisplay t
@@ -58,7 +63,7 @@
 (setf (cdr (assq 'continuation fringe-indicator-alist))
       '(nil nil))
 
-(when t;(file-exists-p (locate-user-emacs-file "package-quickstart.el"))
+(when t
   (defvar package-quickstart)
   (setq package-quickstart t))
 
@@ -122,9 +127,6 @@
   (setq command-line-ns-option-alist nil))
 (unless (eq system-type 'gnu/linux)
   (setq command-line-x-option-alist nil))
-
-(set-face-attribute
- 'variable-pitch nil :family "iA Writer Duospace" :weight 'regular :height 170)
 
 ;; native-comp
 (if (and (featurep 'native-compile)
