@@ -422,8 +422,7 @@
         (:eval (when (bound-and-true-p vc-mode)
                  (propertize vc-mode 'face
                              '(:inherit success))))
-        (:eval (propertize " %p " 'face 'which-func))
-        ))
+        " "))
 
 (defun my/ml-padding ()
   "Adding padding to the modeline so that spme elements can be right aligned."
@@ -453,6 +452,7 @@
    (:eval (when (bound-and-true-p macrursors-mode)
             macrursors-mode-line))
    "%e"
+   (:eval (propertize " %p " 'face 'which-func))
    (:eval (propertize " %b " 'face (if (and (buffer-modified-p)
                                             (or (derived-mode-p 'prog-mode)
                                                 (derived-mode-p 'text-mode)))

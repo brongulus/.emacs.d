@@ -237,6 +237,7 @@ backwards instead."
                   (global-set-key (kbd "M-s m") #'match-pair)
                   
                   ;; misc modes and hooks
+                  (put 'narrow-to-region 'disabled nil)
                   (add-hook 'debugger-mode-hook #'visual-line-mode)
                   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
                   (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
@@ -649,12 +650,7 @@ deleted, kill the pairs around point."
   (setq eldoc-echo-area-prefer-doc-buffer t
         eldoc-idle-delay 0.1
         eldoc-echo-area-use-multiline-p nil
-        eldoc-echo-area-display-truncation-message nil)
-  ;; FIXME Show flymake diagnostics first.
-  (with-eval-after-load 'flymake
-    (setq eldoc-documentation-functions
-          (cons #'flymake-eldoc-function
-                (remove #'flymake-eldoc-function eldoc-documentation-functions)))))
+        eldoc-echo-area-display-truncation-message nil))
 
 (use-package recentf
   :ensure nil
@@ -840,9 +836,9 @@ deleted, kill the pairs around point."
     (writeroom-mode)
     (setq-local cursor-type 'bar
                 scroll-preserve-screen-position t
-                scroll-conservatively 0
+                scroll-conservatively 101
                 maximum-scroll-margin 0.5
-                scroll-margin 99999))
+                scroll-margin 28))
   
   (setq writeroom-width (min 100 (max 90 (- (window-width) 10)))
         writeroom-mode-line t
@@ -1061,22 +1057,12 @@ deleted, kill the pairs around point."
   (with-eval-after-load 'gnus-cite
     (defun gnus-clean-citation nil
       (save-excursion
-        (goto-char (point-min)) ;; GPT citation
-        (while (re-search-forward "^[ ]*\\(>\\)+\\( \\)*\\(>\\)*" (point-max) t)
-          (let* ((line (match-string 0))       ; Entire matched line
-                 (prefix (match-string 1))     ; Consecutive '>' at the start
-                 (spaces (match-string 2))     ; Spaces between '>' characters
-                 (suffix (match-string 3))     ; Remaining '>' characters after spaces
-                 (num-prefix (length prefix))  ; Number of leading '>' characters
-                 (num-suffix (length suffix))  ; Number of trailing '>' characters
-                 (replacement (concat (make-string num-prefix ?▎)
-                                      spaces
-                                      (make-string num-suffix ?▎)))) ; Construct replacement string
-            (put-text-property 0 (length replacement)
-                               'face 'font-lock-comment-face
-                               replacement)
-            (replace-match replacement nil nil)))))
-
+        (let ((replacement "▎ "))
+          (put-text-property 0 2 'face 'font-lock-comment-face replacement)
+          (replace-regexp-in-region
+           "\\(>[> ]?\\)" replacement (point-min) (point-max)))
+        (replace-regexp-in-region "\\([^\s\n]\\)▎ " "\\1>" (point-min) (point-max))))
+    
     (nconc gnus-treatment-function-alist
            '((t gnus-clean-citation))))
 
@@ -1109,8 +1095,6 @@ deleted, kill the pairs around point."
                               "nnimap+personal:[Gmail]/Starred")
                              ("📰 News"
                               "nnrss:Prot Codelog" "nnrss:HLTV.org"
-                              "nnatom:Gluer"
-                              "nnatom:Lobsters"
                               "gwene.com.blogspot.petr-mitrichev"
                               "gmane.emacs.announce" "gmane.emacs.devel"
                               "gmane.emacs.gnus.general" "gmane.emacs.gnus.user"
@@ -1160,12 +1144,28 @@ deleted, kill the pairs around point."
 
 (use-package magit
   :commands (magit magit-file-dispatch magit-log-all magit-ediff-show-unstaged)
+  :init
+  (setq magit-auto-revert-mode nil)
   :config
   (transient-bind-q-to-quit)
-  (setq magit-refresh-status-buffer nil
+  (setq magit-display-buffer-function
+        (lambda (buffer) ;; display diffs to the left, easier to use scroll-other-window
+          (with-current-buffer buffer
+            (if (eq major-mode 'magit-diff-mode)
+                (display-buffer buffer
+                                '(display-buffer-in-direction
+                                  (direction . leftmost)))
+              (magit-display-buffer-traditional buffer))))
+        magit-refresh-status-buffer nil
         magit-diff-refine-hunk t
         magit-save-repository-buffers nil
         magit-revision-insert-related-refs nil)
+
+  (add-hook 'magit-status-mode-hook ;; src: doom (Might break magit on tramp)
+             (lambda ()
+               (when-let (path (executable-find magit-git-executable t))
+                 (setq-local magit-git-executable path))))
+  
   (defun mu-magit-kill-buffers () ;src: manuel-uberti
     "Restore window configuration and kill all Magit buffers."
     (interactive)
@@ -1230,7 +1230,8 @@ deleted, kill the pairs around point."
               ("l" . windmove-right)
               ("\\" . dired-sidebar-up-directory))
   :config
-  (setq dired-sidebar-mode-line-format
+  (setq dired-sidebar-window-fixed nil
+        dired-sidebar-mode-line-format
         '("%e" mode-line-buffer-identification)))
 
 (use-package dired-preview
@@ -1338,8 +1339,6 @@ deleted, kill the pairs around point."
     (setf (cadr tex-list) "%(tex)"
           (cadr latex-list) "%l")))
 
-
-
 (use-package org
   :ensure nil
   :bind (("C-x y" . yank-media)
@@ -1357,18 +1356,16 @@ deleted, kill the pairs around point."
           (make-vector org-indent--deepest-level nil))
     (setq org-indent--text-line-prefixes
           (make-vector org-indent--deepest-level nil))
-    ;; Find the lowest headline level
-    (let* ((headline-levels (or (org-element-map
-                                    (org-element-parse-buffer) 'headline
-                                  #'(lambda (item)
-                                      (org-element-property :level item)))
-                                '()))
-           (max-level (seq-max (if headline-levels
-                                   headline-levels
-                                 '(0))))
-           ;; We could also iterate over each evel to get maximum length
-           ;; Instead, we take the length of the deepest numbered level.
-           (line-indentation (+ 3 max-level))
+    ;; Find the lowest headline level (FIXME)
+    (let* (;; (headline-levels (or (org-element-map
+           ;;                          (org-element-parse-buffer) 'headline
+           ;;                        #'(lambda (item)
+           ;;                            (org-element-property :level item)))
+           ;;                      '()))
+           ;; (max-level (seq-max (if headline-levels
+           ;;                         headline-levels
+           ;;                       '(0))))
+           (line-indentation (+ 3 4))
            (headline-indentation))
       (dotimes (level org-indent--deepest-level)
         (setq headline-indentation
@@ -1556,10 +1553,10 @@ deleted, kill the pairs around point."
          ("C-c n r" . denote-rename-file-using-front-matter)
          ("C-c n j" . denote-journal-extras-new-entry)
          ("C-c n l" . denote-link-after-creating)
-         ("C-c n b" . denote-backlinks)
          ("C-c n o" . denote-open-or-create))
   :hook (dired-mode . denote-dired-mode-in-directories)
   :hook (dired-sidebar . denote-dired-mode-in-directories)
+  :hook (org-mode . denote-rename-buffer-mode)
   :config
   (define-advice org-mark-ring-goto (:before (&rest _args) close-window)
     "Close current window before going back."
@@ -1586,7 +1583,7 @@ deleted, kill the pairs around point."
 (use-package denote-refs
   :ensure nil
   :vc (:url "https://codeberg.org/akib/emacs-denote-refs")
-  :hook (org-mode . denote-refs-mode))
+  :bind ("C-c n b" . denote-refs-mode))
 
 (use-package deft
   :bind (("<f8>" . deft)
