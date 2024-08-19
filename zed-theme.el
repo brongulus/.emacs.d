@@ -263,15 +263,15 @@
    `(Man-underline ((t (:inherit font-lock-keyword-face :bold t))))
    
    `(meow-beacon-indicator
-     ((t (:background ,background-color :foreground ,green-color :inverse-video t))))
+     ((t (:foreground ,inactive-color :background ,green-color))))
    `(meow-normal-indicator
-     ((t (:background ,foreground-color :foreground ,selection-color :inverse-video t))))
+     ((t (:foreground ,inactive-color))))
    `(meow-motion-indicator
-     ((t (:background ,foreground-color :foreground ,selection-color :inverse-video t))))
+     ((t (:foreground ,inactive-color))))
    `(meow-keypad-indicator
-     ((t (:background ,foreground-color :foreground ,selection-color :inverse-video t))))
+     ((t (:foreground ,inactive-color))))
    `(meow-insert-indicator
-     ((t (:background ,background-color :foreground ,yellow-color :inverse-video t))))
+     ((t (:foreground ,inactive-color :background ,yellow-color))))
    `(minibuffer-prompt ((t (:foreground ,yellow-color))))
    `(widget-field ((t (:background ,subtle-color :extend t))))
    
@@ -433,9 +433,10 @@
 (setq-default
  mode-line-format
  '((:eval (when (mode-line-window-selected-p)
-            (let* ((indicator-face
+            (let* ((state (meow--current-state))
+                   (indicator-face
                     (if (bound-and-true-p meow-global-mode)
-                        (alist-get (meow--curent-state) meow-indicator-face-alist)
+                        (alist-get state meow-indicator-face-alist)
                       'font-lock-comment-face))
                    (buffer-state (cond (defining-kbd-macro " >> ")
                                        (buffer-read-only " RO ")
@@ -447,7 +448,6 @@
                                        (t " -- "))))
               (propertize buffer-state
                           'face `(,indicator-face
-                                  ;; :inverse-video t
                                   :box (:style flat-button) :weight bold)))))
    (:eval (when (bound-and-true-p macrursors-mode)
             macrursors-mode-line))
