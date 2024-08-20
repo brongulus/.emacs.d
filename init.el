@@ -649,7 +649,7 @@ deleted, kill the pairs around point."
   :ensure nil
   :config
   (setq eldoc-echo-area-prefer-doc-buffer t
-        eldoc-idle-delay 0.1
+        eldoc-idle-delay 0.3
         eldoc-echo-area-use-multiline-p nil
         eldoc-echo-area-display-truncation-message nil))
 
@@ -803,6 +803,7 @@ deleted, kill the pairs around point."
         eldoc-box-only-multi-line t))
 
 (use-package sideline-flymake
+  :disabled t
   :if (string< emacs-version "30.0")
   :hook (flymake-mode . sideline-mode)
   :init
@@ -1644,6 +1645,7 @@ deleted, kill the pairs around point."
   (dolist (imode '(reb-mode eat-mode shell-mode eshell-mode
                             magit-log-edit-mode log-edit-mode))
     (push `(,imode . insert) meow-mode-state-list))
+  
   (meow-motion-overwrite-define-key
    '("Q" . kill-current-buffer)
    '("j" . meow-next)

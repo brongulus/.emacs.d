@@ -105,7 +105,7 @@
    `(highline-face ((t (:background ,subtle-color))))
    `(highlight ((t (:background ,highlight-color))))
    `(highlight-symbol-face ((t (:background ,secondary-color))))
-   `(isearch ((t (:background ,orange-color :foreground ,background-color))))
+   `(isearch ((t (:background ,green-color :foreground ,background-color))))
    `(lazy-highlight ((t (:background ,light-yellow-color :foreground ,background-color))))
    `(primary-selection ((t (:background ,selection-color))))
    `(region ((t (:background ,selection-color :extend nil))))
@@ -271,7 +271,7 @@
    `(meow-keypad-indicator
      ((t (:foreground ,inactive-color))))
    `(meow-insert-indicator
-     ((t (:foreground ,inactive-color :background ,yellow-color))))
+     ((t (:foreground "black" :background "#00c2ff"))))
    `(minibuffer-prompt ((t (:foreground ,yellow-color))))
    `(widget-field ((t (:background ,subtle-color :extend t))))
    
@@ -508,7 +508,10 @@
        (when (and selected-p (buffer-modified-p)
                   (or (derived-mode-p 'prog-mode)
                       (derived-mode-p 'text-mode)))
-         (propertize (concat "" (make-string 1 #x23fA) "")
+         (propertize (concat "" (if (and zed-icons-p is-android)
+                                    (nerd-icons-codicon "nf-cod-circle_filled")
+                                  (make-string 1 #x23fA))
+                             "")
                      'face `(:inherit tab-bar-tab
                                       :foreground ,(face-background 'cursor nil t))
                      'display '(raise 0.2)))
