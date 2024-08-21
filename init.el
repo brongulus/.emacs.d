@@ -102,7 +102,6 @@
         outline-minor-mode-cycle nil ;t
         tabify-regexp "^\t* [ \t]+"
         grep-command "grep --color=always -nHi -r --include=*.* -e \"pattern\" ."
-        ;; list-matching-lines-default-context-lines 2
         electric-pair-skip-self t
         electric-pair-preserve-balance 'electric-pair-inhibit-predicate
         electric-pair-delete-adjacent-pairs t
@@ -178,7 +177,7 @@ the cursor by ARG lines."
 
   (unless (package-installed-p 'meow)
     (define-key key-translation-map (kbd "ESC") (kbd "C-g")))
-    
+  
   (define-advice load-theme (:before (&rest _args) theme-dont-propagate)
     "Discard all themes before loading new."
     (mapc #'disable-theme custom-enabled-themes))
@@ -193,9 +192,9 @@ backwards instead."
   (dolist (func '(yank yank-pop))
     (eval
      `(define-advice ,func (:after (&rest _args) yank-indent) ; src: magnars
-       "Indent yanked text (with prefix arg don't indent)."
-       (let ((transient-mark-mode nil))
-             (indent-region (region-beginning) (region-end) nil)))))
+        "Indent yanked text (with prefix arg don't indent)."
+        (let ((transient-mark-mode nil))
+          (indent-region (region-beginning) (region-end) nil)))))
   
   (define-advice term-handle-exit (:after (&rest _args) term-kill-on-exit)
     "Kill the buffer after the term exits."
@@ -265,7 +264,7 @@ backwards instead."
                   ;; enable some useful modes
                   (when (display-graphic-p)
                     (tab-bar-mode +1))
-                    ;; (pixel-scroll-precision-mode 1))
+                  ;; (pixel-scroll-precision-mode 1))
                   (save-place-mode 1)
                   (when (string> emacs-version "29.4")
                     (which-key-mode 1))
@@ -415,7 +414,7 @@ backwards instead."
          ([remap mark-sexp]      . #'easy-mark)))
 
 (use-package macrursors
-  ; use C-; (macrursors-end) to do edits
+  ;; use C-; (macrursors-end) to do edits
   :vc (:url "https://github.com/karthink/macrursors"
             :rev :newest)
   :init
@@ -440,14 +439,21 @@ backwards instead."
                        (macrursors-select))))
          ("M-<down>" . macrursors-mark-next-line)
          ("M-<up>" . macrursors-mark-previous-line)
+         ("M-n" . macrursors-mark-next-instance-of)
+         ("M-p" . macrursors-mark-previous-instance-of)
+         ("M-u" . (lambda nil ; macrursors-undo-last
+                    (interactive)
+                    (and macrursors--overlays
+                         (delete-overlay (car macrursors--overlays)))
+                    (cl-callf cdr macrursors--overlays)))
          
          :map macrursors-mark-map
          ("M-a" . macrursors-mark-all-instances-of)
-         ("M-n" . macrursors-mark-next-instance-of)
-         ("M-p" . macrursors-mark-previous-instance-of)
          ("C-g" . macrursors-early-quit)
          
          :repeat-map macrursors-mark-repeat-map
+         ("n" . macrursors-mark-next-instance-of)
+         ("p" . macrursors-mark-previous-instance-of)
          ("<down>" . macrursors-mark-next-line)
          ("<up" . macrursors-mark-previous-line)
          
@@ -472,8 +478,8 @@ backwards instead."
     (add-hook 'macrursors-mode-hook #'meow-insert)))
 
 (use-package move-text
-  :bind (("M-p" . #'move-text-up)
-         ("M-n" . #'move-text-down)))
+  :bind (("M-P" . #'move-text-up)
+         ("M-N" . #'move-text-down)))
 
 (use-package puni
   :if (display-graphic-p) ; FIXME: puni is messing terminal
@@ -611,7 +617,6 @@ deleted, kill the pairs around point."
 (use-package isearch
   :ensure nil
   :bind (("C-s" . isearch-forward-regexp)
-         ("M-s a" . multi-occur-in-matching-buffers)
          :map isearch-mode-map
          ("M-/" . isearch-complete)
          :repeat-map isearch-repeat-map
@@ -623,6 +628,57 @@ deleted, kill the pairs around point."
   (isearch-allow-scroll 'unlimited)
   (isearch-regexp-lax-whitespace t)
   (search-whitespace-regexp ".*?"))
+
+(use-package replace
+  :ensure nil
+  :bind (("M-s a" . multi-occur-in-matching-buffers))
+  :hook (occur-mode . (lambda nil
+                        (setq-local truncate-lines t
+                                    mouse-wheel-tilt-scroll t
+                                    mouse-wheel-flip-direction t
+                                    mouse-wheel-scroll-amount-horizontal 2)))
+  :config
+  (add-hook 'occur-hook
+            (lambda nil
+              (rename-buffer (format "*Occur: %s*" (car regexp-history)))))
+  
+  (add-to-list 'display-buffer-alist
+               '("\\*Occur: .\*"
+                 (display-buffer-reuse-window)
+                 (window-parameters (width . 0.50)
+                                    (direction . right))))
+  
+  (setq list-matching-lines-buffer-name-face 'mode-line
+        list-matching-lines-prefix-face 'vertical-border
+        list-matching-lines-default-context-lines 2)
+  
+  (defun clean-occur-context-line (orig-fun &rest args) ; src: GPT
+    "Advice for `occur-context-lines` to change the separator."
+    (let ((result (apply orig-fun args)))
+      (cl-destructuring-bind (output-line after-lines) result
+        (setq output-line
+              (replace-regexp-in-string
+               "-------\n" ;; Old separator
+               (propertize (concat (make-string (window-total-width) ?─) "\n")
+                           'face list-matching-lines-prefix-face)
+               output-line))
+        (list output-line after-lines))))
+
+  (defun occur-engine-add-prefix (lines &optional prefix-face)
+    (let ((curr-line -1)) ;; FIXME after match line number
+      (mapcar
+       (lambda (line)
+         (let ((line-prefix (if prefix-face
+                                (propertize (format "%7d: " (+ (current-line)
+                                                               curr-line))
+                                            'font-lock-face prefix-face)
+                              (format "%7d: " (+ (current-line)
+                                                 curr-line)))))
+           (setq curr-line (1+ curr-line))
+           (concat line-prefix line "\n")))
+       lines)))
+  
+  (advice-add 'occur-context-lines :around #'clean-occur-context-line))
 
 (use-package flymake
   :ensure nil
@@ -726,8 +782,8 @@ deleted, kill the pairs around point."
           "\\*vc-change-log\\*" "\\*Deletions\\*"
           "\\*Flymake .\*" "\\*CDLaTex Help\\*"
           "\\*Process List\\*" "\\*Org Select\\*"
-          "^CAPTURE.*" "\\*Org Agenda\\*" "\\*Warnings\\*"
-          "\\*Backtrace\\*" "\\*Occur\\*"
+          "^CAPTURE.*" "\\*Org Agenda\\*"
+          "\\*Warnings\\*" "\\*Backtrace\\*"
           help-mode compilation-mode
           "^\\*eshell.*\\*$" eshell-mode
           "^\\*term.*\\*$" term-mode)
@@ -968,6 +1024,7 @@ deleted, kill the pairs around point."
   :bind (:map gnus-article-mode-map
               ("q" . kill-buffer-and-window)
               ("RET" . gnus-summary-scroll-up)
+              ("C-<return>" . gnus-summary-scroll-down)
               :map gnus-summary-mode-map
               ("R" . (lambda nil (interactive)
                        (gnus-summary-mark-article nil ?R))))
@@ -1164,9 +1221,9 @@ deleted, kill the pairs around point."
         magit-revision-insert-related-refs nil)
 
   (add-hook 'magit-status-mode-hook ;; src: doom (Might break magit on tramp)
-             (lambda ()
-               (when-let (path (executable-find magit-git-executable t))
-                 (setq-local magit-git-executable path))))
+            (lambda ()
+              (when-let (path (executable-find magit-git-executable t))
+                (setq-local magit-git-executable path))))
 
   (when (featurep 'meow)
     (add-hook 'git-commit-mode-hook #'meow-insert))
@@ -1454,7 +1511,7 @@ deleted, kill the pairs around point."
   (defun elegant-agenda--title nil ;; src: elegant-agenda-mode
     (when-let ((title (when (and org-agenda-redo-command
                                  (stringp (cadr org-agenda-redo-command)))
-                        (format "—  %s "
+                        (format "─  %s "
                                 (mapconcat
                                  #'identity
                                  (split-string-and-unquote
@@ -1463,7 +1520,7 @@ deleted, kill the pairs around point."
                (width (window-width)))
       (face-remap-set-base 'header-line :height 1.4)
       (setq-local header-line-format
-                  (format "%s %s" title (make-string (- width (length title)) ?— t)))))
+                  (format "%s %s" title (make-string (- width (length title)) ?─ t)))))
   
   (add-hook 'org-agenda-finalize-hook #'elegant-agenda--title)
   
@@ -1492,17 +1549,22 @@ deleted, kill the pairs around point."
   :config
   (setq org-habit-show-habits-only-for-today t
         org-habit-show-done-always-green t
-        org-habit-today-glyph ?◌;; 9676
+        org-habit-show-all-today t
+        org-habit-missed-glyph ?◌;; 9676
         org-habit-completed-glyph ?● ;; 9679
-        org-habit-missed-glyph ?○ ;; 9675
+        org-habit-today-glyph ?○ ;; 9675
         org-habit-following-days 1
         org-habit-preceding-days 21)
   
   (defun add-missed-day-glyph (graph)
-    (replace-regexp-in-string
-     (regexp-quote (char-to-string ?\s))
-     (char-to-string org-habit-missed-glyph)
-     graph))
+    (dotimes (i (length graph))
+      (when (char-equal ?\s (aref graph i))
+        (let* ((face (get-char-property i 'face graph))
+               (rep-str (propertize (char-to-string org-habit-missed-glyph)
+                                    'face face)))
+          (aset graph i (string-to-char rep-str)))))
+    graph)
+  
   (advice-add 'org-habit-build-graph :filter-return #'add-missed-day-glyph))
 
 (use-package org-capture
@@ -1517,14 +1579,14 @@ deleted, kill the pairs around point."
         (concat org-directory "/inbox.org")
         org-capture-templates
         '(("t" "TODO" entry
-           (file+headline org-capture-file "TODOs")
+           (file+headline org-capture-file "Tasks")
            "* TODO %?\n%<%d %b '%g %R>%i %a" :prepend t)
           ("n" "Note" entry
            (file+headline org-capture-file "Notes")
            "* %?\n%i %a" :prepend t)
           ("h" "Habit" entry
-           (file+headline org-capture-file "Habits")
-           "* TODO %?\n:PROPERTIES:\n:STYLE: habit\n:LOGGING: TODO(!) DONE(!)\n:END:"
+           (file+headline org-capture-file "Habit")
+           "* TODO %?\n:PROPERTIES:\n:STYLE: habit\n:END:"
            :prepend t))))
 
 (use-package ox-awesomecv
@@ -1570,13 +1632,13 @@ deleted, kill the pairs around point."
 
   (with-eval-after-load 'org-capture
     (add-to-list 'org-capture-templates
-               '("d" "Denote" plain
-                 (file denote-last-path)
-                 #'denote-org-capture
-                 :no-save t
-                 :immediate-finish nil
-                 :kill-buffer t
-                 :jump-to-captured t)))
+                 '("d" "Denote" plain
+                   (file denote-last-path)
+                   #'denote-org-capture
+                   :no-save t
+                   :immediate-finish nil
+                   :kill-buffer t
+                   :jump-to-captured t)))
   
   (denote-rename-buffer-mode 1)
   
@@ -1592,10 +1654,15 @@ deleted, kill the pairs around point."
 
 (use-package deft
   :bind (("<f8>" . deft)
+         ([remap deft-complete] . #'deft-use-denote)
          :map deft-mode-map
          ("TAB" . deft-open-file-other-window)
          ([tab] . deft-open-file-other-window))
   :config
+  (defun deft-use-denote nil
+    (interactive)
+    (denote (deft-whole-filter-regexp)))
+  
   (setq deft-use-filename-as-title nil
         deft-recursive t
         deft-auto-save-interval -1.0
@@ -1643,7 +1710,7 @@ deleted, kill the pairs around point."
   (define-key meow-normal-state-keymap (kbd "m d") delete-pair-map)
   
   (dolist (imode '(reb-mode eat-mode shell-mode eshell-mode
-                            magit-log-edit-mode log-edit-mode))
+                            deft-mode magit-log-edit-mode log-edit-mode))
     (push `(,imode . insert) meow-mode-state-list))
   
   (meow-motion-overwrite-define-key

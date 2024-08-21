@@ -90,6 +90,7 @@
                                     (list :underline
                                           (list :color border-color :position -2)
                                           :overline border-color))
+                                :extend t
                                 :box (:line-width 4 :style flat-button)))))
    `(mode-line-highlight ((t (:box (:line-width 2 :color ,inactive-color)))))
    `(mode-line-inactive ((t (:inherit mode-line :foreground ,inactive-color))))
@@ -309,7 +310,7 @@
    `(org-habit-clear-face ((t (:foreground ,inactive-color))))
    `(org-habit-clear-future-face ((t (:foreground ,inactive-color))))
    `(org-habit-alert-face ((t (:foreground ,yellow-color))))
-   `(org-habit-alert-future-face ((t (:foreground ,yellow-color))))
+   `(org-habit-alert-future-face ((t (:foreground ,red-color))))
    `(org-habit-overdue-face ((t (:foreground ,red-color))))
    `(org-habit-overdue-future-face ((t (:foreground ,red-color))))
    `(org-habit-ready-face ((t (:foreground ,green-color))))
