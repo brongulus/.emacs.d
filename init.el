@@ -664,17 +664,25 @@ deleted, kill the pairs around point."
                output-line))
         (list output-line after-lines))))
 
+  (defvar occur-engine-prev-linum -1)
   (defun occur-engine-add-prefix (lines &optional prefix-face)
-    (let ((curr-line -1)) ;; FIXME after match line number
+    (let ((curr-line (- 1 list-matching-lines-default-context-lines)))
+      ;; FIXME after match for last result
       (mapcar
        (lambda (line)
-         (let ((line-prefix (if prefix-face
-                                (propertize (format "%7d: " (+ (current-line)
-                                                               curr-line))
+         (let* ((linum (if (and (> occur-engine-prev-linum -1)
+                               (< occur-engine-prev-linum (current-line)))
+                           (+ occur-engine-prev-linum
+                              (1+ list-matching-lines-default-context-lines)
+                              curr-line)
+                        (+ (current-line) curr-line)))
+               (line-prefix (if prefix-face
+                                (propertize (format "%7d:" linum)
                                             'font-lock-face prefix-face)
-                              (format "%7d: " (+ (current-line)
-                                                 curr-line)))))
+                              (format "%7d:" linum))))
            (setq curr-line (1+ curr-line))
+           (if (> curr-line 0)
+               (setq occur-engine-prev-linum (current-line)))
            (concat line-prefix line "\n")))
        lines)))
   
