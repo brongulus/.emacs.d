@@ -373,7 +373,7 @@
 ;;       ;; which-func-modes '(text-mode prog-mode)
 ;;       which-func-format
 ;;       `(:propertize which-func-current face which-func)
-      
+
 ;;       ;; dont show which-func information in misc-info
 ;;       mode-line-misc-info (delete
 ;;                            '(which-function-mode
@@ -381,7 +381,7 @@
 ;;                               (which-func--use-mode-line
 ;;                                (#1="" which-func-format " "))))
 ;;                            mode-line-misc-info)
-      
+
 ;;       ;; all the stuff that will be right-aligned
 ;;       mode-line-end-spaces
 ;;       `("%n "
@@ -569,35 +569,31 @@
     (concat " "
             (when (project-mode-line-format)
               (propertize (project-mode-line-format)
-                          'display '((raise 0.2)
-                                     (height 0.8))))
+                          'display `((raise 0.2)
+                                     ,(unless (eq major-mode 'org-mode)
+                                        '(height 0.8)))))
             (when (bound-and-true-p vc-mode)
               (propertize (replace-regexp-in-string "^.." " " vc-mode)
                           'face '(:inherit font-lock-comment-face :weight bold)
-                          'display '((raise 0.2)
-                                     (height 0.8))))
-            (cond ((eq major-mode 'pdf-view-mode)
-                   (propertize
-                    (format "  %d/%d"
-                            (pdf-view-current-page)
-                            (pdf-cache-number-of-pages))
-                    'face font-lock-comment-face
-                    'display '((raise 0.2)
-                               (height 0.7))))
-                  ((eq major-mode 'nov-mode)
-                   (propertize
-                    (format "  %d/%d"
-                            (1+ nov-documents-index)
-                            (length nov-documents))
-                    'face font-lock-comment-face
-                    'display '((raise 0.2)
-                               (height 0.7))))
-                  (t (propertize
-                      (format " %3d%%"
-                              (/ (window-start) 0.01 (point-max)))
-                      'face font-lock-comment-face
-                      'display '((raise 0.2)
-                                 (height 0.7)))))))
+                          'display `((raise 0.2)
+                                     ,(unless (eq major-mode 'org-mode)
+                                        '(height 0.8)))))
+            (propertize
+             (cond
+              ((eq major-mode 'pdf-view-mode)
+               (format "  %d/%d"
+                       (pdf-view-current-page)
+                       (pdf-cache-number-of-pages)))
+              ((eq major-mode 'nov-mode)
+               (format "  %d/%d"
+                       (1+ nov-documents-index)
+                       (length nov-documents)))
+              (t (format "%3d%%"
+                         (/ (window-start) 0.01 (point-max)))))
+             ;; 'face font-lock-comment-face
+             'display `((raise 0.2)
+                        ,(unless (eq major-mode 'org-mode)
+                           '(height 0.7))))))
   
   (defun zed-bar-format-menu-bar ()
     "Produce the Menu button for the tab bar that shows the menu bar."
