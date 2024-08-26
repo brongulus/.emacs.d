@@ -19,7 +19,7 @@
   (setq use-package-compute-statistics t ;; use-package-report
         use-package-always-ensure t
         use-package-always-defer t
-        use-package-enable-imenu-support t
+        use-package-enable-imenu-support t ;; not working
         use-package-expand-minimally t))
 
 (use-package emacs
@@ -36,7 +36,8 @@
          ("C-z C-z" . (lambda () (interactive)
                         (if (derived-mode-p 'emacs-lisp-mode)
                             (describe-symbol (symbol-at-point))
-                          (if (package-installed-p 'eldoc-box)
+                          (if (and (display-graphic-p)
+                                   (package-installed-p 'eldoc-box))
                               (eldoc-box-help-at-point)
                             (eldoc-doc-buffer t)))))
          ("C-o" . other-window)
@@ -53,10 +54,8 @@
          ("C-M-r" . raise-sexp)
          ("C-x \\" . align-regexp)
          ("C-x C-z" . restart-emacs)
-         ("<f5>" . (lambda () (interactive)
-                     (setq-default display-line-numbers-type t);'relative)
+         ("<f7>" . (lambda () (interactive)
                      (hl-line-mode 'toggle)
-                     (display-line-numbers-mode 'toggle)
                      (highlight-indent-guides-mode 'toggle)))
          ("<f6>" . zed-toggle-theme))
   :config
@@ -203,7 +202,8 @@ backwards instead."
 (use-package emacs
   :no-require
   :ensure nil
-  :bind ("C-x w w" . my-min-max-window)
+  :bind (("C-x w w" . my-min-max-window)
+         ("<f5>" . my-switch-to-alternate-file))
   :bind (:map special-mode-map
               ("Q" . (lambda nil (interactive)
                        (quit-window t)))
@@ -222,7 +222,33 @@ backwards instead."
                         (window-state-put my-min-max-window)
                       (setq my-min-max-window (window-state-get))
                       (delete-other-windows)))
-                  
+
+                  (defun my-switch-to-alternate-file ()
+                    "Switch to or create an alternate file based on the major mode."
+                    (interactive)
+                    (let* ((filename (buffer-file-name))
+                           (extension (file-name-extension filename))
+                           (basename (file-name-sans-extension filename))
+                           (alternate-file
+                            (cond
+                             ((derived-mode-p 'c-mode 'c++-mode)
+                              (if (string= extension "h")
+                                  (concat basename ".c")
+                                (concat basename ".h")))
+                             ((derived-mode-p 'go-mode)
+                              (if (string-match-p "_test\\.go\\'" filename)
+                                  (concat (replace-regexp-in-string "_test\\'" ""
+                                                                    basename)
+                                          ".go")
+                                (concat basename "_test.go")))
+                             (t (message "No alternate file for current mode"))))
+                           (alternate-buffer (find-file-noselect alternate-file)))
+                      (if (file-exists-p alternate-file)
+                          (switch-to-buffer alternate-buffer)
+                        (progn
+                          (message "Creating new file: %s" alternate-file)
+                          (switch-to-buffer (find-file-noselect alternate-file))))))
+
                   ;; highlight area when yanking/killing
                   (defun my/yank-pulse-advice (orig-fn &rest args)
                     (let (begin end)
@@ -246,6 +272,8 @@ backwards instead."
                   (add-hook 'minibuffer-setup-hook (lambda () (electric-pair-mode 0)))
                   (add-hook 'minibuffer-exit-hook (lambda () (electric-pair-mode 1)))
                   (add-hook 'prog-mode-hook (show-paren-mode t))
+                  (add-hook 'prog-mode-hook #'display-line-numbers-mode)
+                  (add-hook 'conf-mode-hook #'display-line-numbers-mode)
                   (add-to-list 'write-file-functions
                                '(lambda ()
                                   (when (eq major-mode 'emacs-lisp-mode)
@@ -262,9 +290,8 @@ backwards instead."
                                             (make-glyph-code ?│))
                     (xterm-mouse-mode))
                   ;; enable some useful modes
-                  (when (display-graphic-p)
-                    (tab-bar-mode +1))
-                  ;; (pixel-scroll-precision-mode 1))
+                  (tab-bar-mode +1)
+                  ;; (pixel-scroll-precision-mode 1)) ;; modeline flickering
                   (save-place-mode 1)
                   (when (string> emacs-version "29.4")
                     (which-key-mode 1))
@@ -482,7 +509,7 @@ backwards instead."
          ("M-N" . #'move-text-down)))
 
 (use-package puni
-  :if (display-graphic-p) ; FIXME: puni is messing terminal
+  :if (display-graphic-p) ; FIXME puni is messing terminal
   ;; TODO: https://karthinks.com/software/a-consistent-structural-editing-interface/
   ;; https://countvajhula.com/2021/09/25/the-animated-guide-to-symex/
   :hook ((emacs-lisp-mode go-ts-mode tex-mode eval-expression-minibuffer-setup) . puni-mode)
@@ -527,6 +554,17 @@ deleted, kill the pairs around point."
   :bind (:map isearch-mode-map
               ("M-s M-s" . avy-isearch))
   :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer)
+  :config
+  (defun avy-action-add-cursor (pt) ; src: karthik
+    (require 'macrursors)
+    (unwind-protect
+        (progn
+          (macrursors--add-overlay-at-point pt)
+          (kmacro-keyboard-quit)
+          (avy-resume))
+      (macrursors-start)))
+
+  (push '(?\; . avy-action-add-cursor) avy-dispatch-alist)
   :custom
   (avy-single-candidate-jump t)
   (avy-background t))
@@ -538,6 +576,15 @@ deleted, kill the pairs around point."
     "Grep for SEARCH-TERM in current directory."
     (interactive "sTerm: ")
     (deadgrep search-term default-directory)))
+
+(use-package embark
+  :bind ("C-c C-o" . embark-act)
+  :custom
+  (prefix-help-command #'embark-prefix-help-command)
+  :config
+  (setq embark-prompter 'embark-completing-read-prompter
+        embark-keymap-prompter-key "'"
+        embark-indicators (delete 'embark-mixed-indicator embark-indicators)))
 
 ;;; Built-ins
 
@@ -573,7 +620,7 @@ deleted, kill the pairs around point."
   :bind (("C-z a" . hs-global-cycle)
          ("C-z f" . hs-cycle))
   :config
-  (defun hs-cycle (&optional level)
+  (defun hs-cycle (&optional level) ; src: Karthik
     (interactive "p")
     (let (message-log-max
           (inhibit-message t))
@@ -648,9 +695,28 @@ deleted, kill the pairs around point."
                  (window-parameters (width . 0.50)
                                     (direction . right))))
   
-  (setq list-matching-lines-buffer-name-face 'mode-line
+  (setq list-matching-lines-buffer-name-face 'tab-bar
         list-matching-lines-prefix-face 'vertical-border
         list-matching-lines-default-context-lines 2)
+
+  (defun noccur-project (regexp &optional nlines directory-to-search) ;; src: noccur (async?)
+    (interactive (occur-read-primary-args))
+    (let* ((default-directory
+            (or directory-to-search (read-directory-name "Search in directory: ")))
+           (files (mapcar #'find-file-noselect
+                          (noccur--find-files regexp))))
+      (when (package-installed-p 'diff-hl)
+        (let ((diff-hl-flydiff-mode -1))
+          (multi-occur files regexp nlines)))))
+
+  (defun noccur--find-files (regexp)
+    (let* ((listing-command (if (locate-dominating-file default-directory ".git")
+                                "git ls-files -z"
+                              "find . -type f -print0"))
+           (command (format "%s | xargs -0 rg -l \"%s\""
+                            listing-command
+                            regexp)))
+      (split-string (shell-command-to-string command) "\n")))
   
   (defun clean-occur-context-line (orig-fun &rest args) ; src: GPT
     "Advice for `occur-context-lines` to change the separator."
@@ -671,15 +737,15 @@ deleted, kill the pairs around point."
       (mapcar
        (lambda (line)
          (let* ((linum (if (and (> occur-engine-prev-linum -1)
-                               (< occur-engine-prev-linum (current-line)))
+                                (< occur-engine-prev-linum (current-line)))
                            (+ occur-engine-prev-linum
                               (1+ list-matching-lines-default-context-lines)
                               curr-line)
-                        (+ (current-line) curr-line)))
-               (line-prefix (if prefix-face
-                                (propertize (format "%7d:" linum)
-                                            'font-lock-face prefix-face)
-                              (format "%7d:" linum))))
+                         (+ (current-line) curr-line)))
+                (line-prefix (if prefix-face
+                                 (propertize (format "%7d:" linum)
+                                             'font-lock-face prefix-face)
+                               (format "%7d:" linum))))
            (setq curr-line (1+ curr-line))
            (if (> curr-line 0)
                (setq occur-engine-prev-linum (current-line)))
@@ -839,6 +905,10 @@ deleted, kill the pairs around point."
 
 ;;; Environment
 
+(use-package exec-path-from-shell
+  :if (display-graphic-p)
+  :hook (after-init . exec-path-from-shell-initialize))
+
 (use-package xclip
   :unless (display-graphic-p)
   :init (xclip-mode 1))
@@ -851,10 +921,6 @@ deleted, kill the pairs around point."
   :hook ((prog-mode conf-mode fundamental-mode text-mode tex-mode) . undo-fu-session-mode)
   :config
   (setq undo-fu-session-compression nil))
-
-(use-package which-key
-  :if (string< emacs-version "30.0")
-  :hook (minibuffer-mode . which-key-mode))
 
 ;;; Visual Niceties
 
@@ -918,7 +984,6 @@ deleted, kill the pairs around point."
   ;; causing issues in emacs -nw
   ;; (when (not (find-font (font-spec :name nerd-icons-font-family)))
   ;;   (nerd-icons-install-fonts t))
-  (setq eglot-menu-string (nerd-icons-octicon "nf-oct-sync"))
   (when (custom-theme-enabled-p 'zed)
     (setq zed-tab-back-button
           (nerd-icons-octicon "nf-oct-arrow_left" :v-adjust 0.2)
@@ -930,7 +995,22 @@ deleted, kill the pairs around point."
     (with-eval-after-load 'corfu
       (push 'nerd-icons-corfu-formatter corfu-margin-formatters)))
   (use-package nerd-icons-dired
-    :hook (dired-mode . nerd-icons-dired-mode))
+    :hook (dired-mode . nerd-icons-dired-mode)
+    :config
+    (define-advice nerd-icons-dired--setup
+        (:before (&rest _args) fix-pr22-18)
+      (when (derived-mode-p 'dired-mode)
+        (setq-local tab-width 1)
+        (with-eval-after-load 'dired-subtree
+          (advice-add 'dired-subtree-insert :around #'nerd-icons-dired--refresh-advice)
+          (advice-add 'dired-subtree-remove :around #'nerd-icons-dired--refresh-advice))
+        (with-eval-after-load 'wdired
+          (advice-add 'wdired-abort-changes :around #'nerd-icons-dired--refresh-advice))))
+    (define-advice nerd-icons-dired--teardown
+        (:before (&rest _args) fix-pr22-18)
+      (advice-remove 'dired-subtree-insert #'nerd-icons-dired--refresh-advice)
+      (advice-remove 'dired-subtree-remove #'nerd-icons-dired--refresh-advice)
+      (advice-remove 'wdired-abort-changes #'nerd-icons-dired--refresh-advice)))
   (use-package nerd-icons-ibuffer
     :hook (ibuffer-mode . nerd-icons-ibuffer-mode)))
 
@@ -939,7 +1019,8 @@ deleted, kill the pairs around point."
   :hook
   (Info-selection . info-colors-fontify-node))
 
-(use-package shr-tag-pre-highlight ;; FIXME: complains if mode isnt available
+(use-package shr-tag-pre-highlight
+  ;; FIXME complains if mode isnt available
   :defer 1
   :config
   (with-eval-after-load 'nov
@@ -1051,8 +1132,7 @@ deleted, kill the pairs around point."
                   (nnimap-stream ssl)
                   (nnir-search-engine imap)
                   (nnmail-expiry-target "nnimap+personal:[Imap]/Trash")
-                  (nnmail-expiry-wait 'immediate))
-          (nnrss ""))
+                  (nnmail-expiry-wait 'immediate)))
         ;; opts
         gnus-check-new-newsgroups nil ;; disable first time you use gnus
         gnus-asynchronous t
@@ -1182,7 +1262,7 @@ deleted, kill the pairs around point."
          ("C-x v e" . vc-ediff))
   :config
   (setq vc-handled-backends '(Git)
-        ;; vc-display-status 'no-backend
+        vc-display-status 'no-backend
         vc-find-revision-no-save t
         vc-follow-symlinks t
         project-vc-merge-submodules nil
@@ -1304,18 +1384,6 @@ deleted, kill the pairs around point."
         dired-sidebar-mode-line-format
         '("%e" mode-line-buffer-identification)))
 
-(use-package dired-preview
-  :after dired ;; FIXME Does not clean up after itself
-  :ensure nil
-  :vc (:url "https://github.com/protesilaos/dired-preview"
-            :rev :newest)
-  :bind (:map dired-mode-map
-              ("P" . dired-preview-mode)
-              ("C-," . dired-preview-page-down)
-              ("C-." . dired-preview-page-up))
-  :custom
-  (dired-preview-delay 0.3))
-
 (use-package eat
   :unless is-android
   :commands eat-project
@@ -1347,7 +1415,7 @@ deleted, kill the pairs around point."
                       (message x)))
           ("ff" . (lambda (file)
                     (find-file file)))
-          ;; FIXME: doesnt work over tramp with large name
+          ;; FIXME doesnt work over tramp with large name
           ("ediff" . (lambda (file1 file2)
                        (tab-bar-new-tab)
                        (ediff file1 file2)))))
@@ -1771,6 +1839,8 @@ deleted, kill the pairs around point."
    '("gf" . ffap)
    '("gg" . avy-goto-char-timer)
    '("gh" . diff-hl-show-hunk)
+   '("gk" . beginning-of-buffer)
+   '("gj" . end-of-buffer)
    '("gi" . imenu)
    '("gs" . scratch-buffer)
    '("gt" . tab-bar-switch-to-next-tab)
@@ -1789,7 +1859,8 @@ deleted, kill the pairs around point."
    '("K" . (lambda () (interactive)
              (if (derived-mode-p 'emacs-lisp-mode)
                  (describe-symbol (symbol-at-point))
-               (if (package-installed-p 'eldoc-box)
+               (if (and (display-graphic-p)
+                        (package-installed-p 'eldoc-box))
                    (eldoc-box-help-at-point)
                  (eldoc-doc-buffer t)))))
    '("l" . meow-right)
@@ -1847,7 +1918,7 @@ deleted, kill the pairs around point."
    '("\\" . dired-jump)
    '("*" . isearch-forward-thing-at-point)
    '("&" . align-regexp)
-   '("%" . mark-whole-buffer)
+   '("%" . match-pair)
    '("/" . meow-visit)
    '("<" . indent-rigidly-left-to-tab-stop)
    '(">" . indent-rigidly-right-to-tab-stop)
@@ -1871,8 +1942,8 @@ deleted, kill the pairs around point."
                       "master" "typescript/src"))
         treesit-font-lock-level 4))
 
-;; (setq major-mode-remap-alist '((c++-mode . c++-ts-mode)
-;;                                (c-mode . c-ts-mode)))
+(setq major-mode-remap-alist '((c++-mode . c++-ts-mode)
+                               (c-mode . c-ts-mode)))
 (setq python-indent-guess-indent-offset t
       python-indent-guess-indent-offset-verbose nil)
 
@@ -1897,8 +1968,8 @@ deleted, kill the pairs around point."
          ("\\.info\\'" . Info-mode)))
 
 (use-package eglot
+  :bind ("M-+" . eglot-code-actions)
   ;; :bind (:map meow-normal-state-keymap
-  ;;             ("gA" . eglot-code-actions)
   ;;             ("gr" . eglot-rename)
   ;;             ("gF" . eglot-format))
   :hook (((rust-ts-mode go-ts-mode) . eglot-ensure)
@@ -1977,7 +2048,8 @@ deleted, kill the pairs around point."
   :init
   (defvar foxy-compile-commands
     '((rust-ts-mode-hook . "rustc -o a.out ")
-      (c++-mode-hook . "g++-14 -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 ")
+      (c++-mode-hook . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -I/Users/admin/problems/include ")
+      (c++-ts-mode-hook . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -I/Users/admin/problems/include ")
       ;; (go-ts-mode-hook . "go build -o a.out ")
       ))
   (dolist (pair foxy-compile-commands)
@@ -1999,12 +2071,12 @@ deleted, kill the pairs around point."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(auctex avy cape cdlatex corfu-terminal deadgrep deft denote-refs devil diff-hl dired-preview
-            dired-sidebar easy-kill eat eldoc-box highlight-indent-guides info-colors janet-ts-mode
-            kkp macrursors magit markdown-mode meow move-text nerd-icons nerd-icons-corfu
-            nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless org-appear org-modern
-            pdf-tools popper puni shr-tag-pre-highlight transpose-frame undo-fu-session vertico
-            writeroom-mode xclip zig-mode))
+   '(auctex avy cape cdlatex corfu-terminal deadgrep deft denote-refs devil diff-hl dired-sidebar
+            easy-kill eat eldoc-box embark exec-path-from-shell highlight-indent-guides info-colors
+            janet-ts-mode kkp macrursors magit markdown-mode meow move-text nerd-icons
+            nerd-icons-corfu nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless org-appear
+            org-modern pdf-tools popper puni shr-tag-pre-highlight transpose-frame undo-fu-session
+            vertico writeroom-mode xclip zig-mode))
  '(package-vc-selected-packages
    '((dired-preview :url "https://github.com/protesilaos/dired-preview")
      (ox-awesomecv :url "https://gitlab.com/Titan-C/org-cv")

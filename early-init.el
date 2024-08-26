@@ -32,6 +32,7 @@
               bidi-display-reordering 'left-to-right
               bidi-inhibit-bpa t
               bidi-paragraph-direction 'left-to-right)
+
 ;; Android
 (defconst is-android (eq system-type 'android))
 

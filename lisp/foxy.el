@@ -227,6 +227,17 @@ Given a step of 1 (the default), will go to the next file.
 ;; (global-set-key (kbd "C-M-l") #'foxy-start-server-with-timer)
 
 ;;;; Snippets
+;;; --Go------------------------------------------------------------------
+(define-skeleton go-err "Go test check." ""
+  "if got != want {\n"
+  "\t\tt.Errorf(\"got %d want %d given, %v\", got, want, " _ ")\n"
+  "\t}\n")
+
+(add-hook 'go-ts-mode-hook 'abbrev-mode)
+(add-hook 'go-ts-mode-hook
+          (lambda ()
+            (define-abbrev go-ts-mode-abbrev-table "gerr" "" 'go-err)))
+
 ;;; --Rust------------------------------------------------------------------
 (define-skeleton rs-header "Base rust template for competitive programming." ""
   "use std::io::{self, prelude::*};\n\n"
