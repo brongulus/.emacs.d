@@ -22,9 +22,6 @@
 (let ((selection-color (if load-theme-light
                            "#C9D0D9"
                          "#3d4b5c"))
-      (highlight-color (if load-theme-light
-                           "#FFD863"
-                         "#3d4b5c"))
       (secondary-color (if load-theme-light
                            "#e0e3ed" ;"#FBE9AD"
                          "#38404e"))
@@ -85,15 +82,15 @@
    `(child-frame-border ((t (:background ,border-color :foreground ,border-color))))
    `(fringe ((t (:background ,background-color))))
    `(header-line ((t (:background ,background-color))))
-   `(mode-line ((t (:background ,modeline-color :foreground ,foreground-color
-                                ,@(when (display-graphic-p)
-                                    (list :underline
-                                          (list :color border-color :position -2)
-                                          :overline border-color))
-                                :extend t
-                                :box (:line-width 4 :style flat-button)))))
-   `(mode-line-highlight ((t (:box (:line-width 2 :color ,inactive-color)))))
-   `(mode-line-inactive ((t (:inherit mode-line :foreground ,inactive-color))))
+   ;; `(mode-line ((t (:background ,modeline-color :foreground ,foreground-color
+   ;;                              ,@(when (display-graphic-p)
+   ;;                                  (list :underline
+   ;;                                        (list :color border-color :position -2)
+   ;;                                        :overline border-color))
+   ;;                              :extend t
+   ;;                              :box (:line-width 4 :style flat-button)))))
+   ;; `(mode-line-highlight ((t (:box (:line-width 2 :color ,inactive-color)))))
+   ;; `(mode-line-inactive ((t (:inherit mode-line :foreground ,inactive-color))))
 
    ;; Parens
    `(show-paren-match ((t (:background ,selection-color))))
@@ -104,7 +101,7 @@
                                     (list "#dcdcdd")
                                   (list "#2D323B"))))))
    `(highline-face ((t (:background ,subtle-color))))
-   `(highlight ((t (:background ,highlight-color))))
+   `(highlight ((t (:background ,selection-color))))
    `(highlight-symbol-face ((t (:background ,secondary-color))))
    `(isearch ((t (:background ,green-color :foreground ,background-color))))
    `(lazy-highlight ((t (:background ,light-yellow-color :foreground ,background-color))))
@@ -272,7 +269,7 @@
    `(meow-keypad-indicator
      ((t (:foreground ,inactive-color))))
    `(meow-insert-indicator
-     ((t (:foreground "black" :background "#00c2ff"))))
+     ((t (:foreground ,inactive-color))));"black" :background "#00c2ff"))))
    `(minibuffer-prompt ((t (:foreground ,yellow-color))))
    `(widget-field ((t (:background ,subtle-color :extend t))))
    
@@ -331,6 +328,7 @@
    `(tab-line-tab-current ((t (:inherit tab-line-tab))))
    `(tab-line-highlight ((t (:inherit tab-line-tab))))
 
+   `(eglot-mode-line ((t (:foreground ,yellow-color))))
    `(eldoc-box-border ((t (:inherit child-frame-border))))
    `(eldoc-box-body ((t (:background ,subtle-color))))
    `(deadgrep-filename-face ((t (:inherit bold :inverse-video t))))
@@ -344,128 +342,165 @@
    `(which-func ((t (:foreground ,inactive-color))))))
 
 ;; Mode-line
-(with-eval-after-load 'macrursors
-  (setq macrursors-mode-line ; src: karthink
-        '((:eval
-           (when (or defining-kbd-macro executing-kbd-macro)
-             (let ((sep (propertize " " 'face '(:background "#00x2ff" :foreground "black")))
-                   (vsep (propertize " " 'face '(:inherit variable-pitch))))
-               ;; "●"
-               (propertize
-                (concat
-                 sep "REC" vsep
-                 (number-to-string kmacro-counter) vsep "▶" vsep
-                 (when macrursors-mode
-                   (if macrursors--overlays
-                       (format (concat "[%d/%d]" vsep)
-                               (1+ (cl-count-if (lambda (p) (< p (point))) macrursors--overlays
-                                                :key #'overlay-start))
-                               (1+ (length macrursors--overlays)))
-                     (concat "[1/1]" vsep))))
-                'face '(:background "#00c2ff" :foreground "black"))))))))
+;; (with-eval-after-load 'macrursors
+;;   (setq macrursors-mode-line ; src: karthink
+;;         '((:eval
+;;            (when (or defining-kbd-macro executing-kbd-macro)
+;;              (let ((sep (propertize " " 'face '(:background "#00x2ff" :foreground "black")))
+;;                    (vsep (propertize " " 'face '(:inherit variable-pitch))))
+;;                ;; "●"
+;;                (propertize
+;;                 (concat
+;;                  sep "REC" vsep
+;;                  (number-to-string kmacro-counter) vsep "▶" vsep
+;;                  (when macrursors-mode
+;;                    (if macrursors--overlays
+;;                        (format (concat "[%d/%d]" vsep)
+;;                                (1+ (cl-count-if (lambda (p) (< p (point))) macrursors--overlays
+;;                                                 :key #'overlay-start))
+;;                                (1+ (length macrursors--overlays)))
+;;                      (concat "[1/1]" vsep))))
+;;                 'face '(:background "#00c2ff" :foreground "black"))))))))
 
-(setq global-mode-string nil
-      project-mode-line nil
-      project-mode-line-face 'font-lock-comment-face
-      ;; clean eglot
-      eglot-menu-string (char-to-string #x2699)
-      which-func-non-auto-modes '(erc-mode)
-      which-func-unknown ""
-      which-func-update-delay 1.0
-      ;; which-func-modes '(text-mode prog-mode)
-      which-func-format
-      `(:propertize which-func-current face which-func)
+;; (setq global-mode-string nil
+;;       project-mode-line nil
+;;       ;; project-mode-line-face 'font-lock-comment-face
+;;       ;; clean eglot
+;;       eglot-menu-string (char-to-string #x2714)
+;;       which-func-non-auto-modes '(erc-mode)
+;;       which-func-unknown ""
+;;       which-func-update-delay 1.0
+;;       ;; which-func-modes '(text-mode prog-mode)
+;;       which-func-format
+;;       `(:propertize which-func-current face which-func)
       
-      ;; dont show which-func information in misc-info
-      mode-line-misc-info (delete
-                           '(which-function-mode
-                             (which-func-mode
-                              (which-func--use-mode-line
-                               (#1="" which-func-format " "))))
-                           mode-line-misc-info)
+;;       ;; dont show which-func information in misc-info
+;;       mode-line-misc-info (delete
+;;                            '(which-function-mode
+;;                              (which-func-mode
+;;                               (which-func--use-mode-line
+;;                                (#1="" which-func-format " "))))
+;;                            mode-line-misc-info)
       
-      ;; all the stuff that will be right-aligned
-      mode-line-end-spaces
-      `("%n " mode-line-misc-info
-        ;; project-mode-line-format
-        ;; (:eval (propertize (format " %s" (upcase (if (stringp mode-name)
-        ;;                                                mode-name
-        ;;                                              (car mode-name))))
-        ;;                      'help-echo "Mouse-1: Show major-mode-menu"
-        ;;                      'local-map mode-line-major-mode-keymap))
-        (:eval (when (bound-and-true-p flymake-mode)
-                 (let ((flymake-mode-line-counter-format
-                        (if zed-icons-p
-                            (with-eval-after-load 'nerd-icons
-                              `(""
-                                ,(when (flymake--mode-line-counter :error)
-                                   (concat " " (nerd-icons-codicon
-                                                "nf-cod-error" :face 'compilation-error
-                                                :v-adjust 0.1)
-                                           " "))
-                                flymake-mode-line-error-counter
-                                ,(when (flymake--mode-line-counter :warning)
-                                   (concat " " (nerd-icons-codicon
-                                                "nf-cod-warning" :face 'compilation-warning
-                                                :v-adjust 0.1)
-                                           ""))
-                                flymake-mode-line-warning-counter
-                                ,(when (flymake--mode-line-counter :note)
-                                   (concat " " (nerd-icons-codicon
-                                                "nf-cod-info" :face 'compilation-info
-                                                :v-adjust 0.1)
-                                           ""))
-                                flymake-mode-line-note-counter ""))
-                          '(" " flymake-mode-line-error-counter
-                            flymake-mode-line-warning-counter
-                            flymake-mode-line-note-counter ""))))
-                   (flymake--mode-line-counters))))
-        (:eval (when (bound-and-true-p vc-mode)
-                 (propertize vc-mode 'face
-                             '(:inherit success))))
-        " "))
+;;       ;; all the stuff that will be right-aligned
+;;       mode-line-end-spaces
+;;       `("%n "
+;;         mode-line-misc-info
+;;         ;; project-mode-line-format
+;;         ;; (:eval (propertize (format " %s" (upcase (if (stringp mode-name)
+;;         ;;                                                mode-name
+;;         ;;                                              (car mode-name))))
+;;         ;;                      'help-echo "Mouse-1: Show major-mode-menu"
+;;         ;;                      'local-map mode-line-major-mode-keymap))
+;;         (:eval (when (bound-and-true-p flymake-mode)
+;;                  (let ((flymake-mode-line-counter-format
+;;                         (if zed-icons-p
+;;                             (with-eval-after-load 'nerd-icons
+;;                               `(""
+;;                                 ,(when (flymake--mode-line-counter :error)
+;;                                    (concat " " (nerd-icons-codicon
+;;                                                 "nf-cod-error"
+;;                                                 :face 'compilation-error
+;;                                                 :v-adjust 0.1)
+;;                                            " "))
+;;                                 flymake-mode-line-error-counter
+;;                                 ,(when (flymake--mode-line-counter :warning)
+;;                                    (concat " " (nerd-icons-codicon
+;;                                                 "nf-cod-warning"
+;;                                                 :face 'compilation-warning
+;;                                                 :v-adjust 0.1)
+;;                                            ""))
+;;                                 flymake-mode-line-warning-counter
+;;                                 ,(when (flymake--mode-line-counter :note)
+;;                                    (concat " " (nerd-icons-codicon
+;;                                                 "nf-cod-info"
+;;                                                 :face 'compilation-info
+;;                                                 :v-adjust 0.1)
+;;                                            ""))
+;;                                 flymake-mode-line-note-counter ""))
+;;                           '(" " flymake-mode-line-error-counter
+;;                             flymake-mode-line-warning-counter
+;;                             flymake-mode-line-note-counter ""))))
+;;                    (flymake--mode-line-counters))))
+;;         (:eval (when (mode-line-window-selected-p)
+;;                  (meow-indicator)))
+;;         ;; (:eval (when (bound-and-true-p vc-mode)
+;;         ;;          (propertize vc-mode 'face
+;;         ;;                      '(:inherit success))))
+;;         " "))
 
-(defun my/ml-padding ()
-  "Adding padding to the modeline so that spme elements can be right aligned."
-  (let ((r-length (length (format-mode-line mode-line-end-spaces))))
-    (propertize " "
-                'display `(space :align-to (- right ,r-length)))))
+;; (defun my/ml-padding ()
+;;   "Adding padding to the modeline so that spme elements can be right aligned."
+;;   (let ((r-length (length (format-mode-line mode-line-end-spaces))))
+;;     (propertize " "
+;;                 'display `(space :align-to (- right ,r-length)))))
 
-(setq-default
- mode-line-format
- '((:eval (when (mode-line-window-selected-p)
-            (let* ((state (meow--current-state))
-                   (indicator-face
-                    (if (bound-and-true-p meow-global-mode)
-                        (alist-get state meow-indicator-face-alist)
-                      'font-lock-comment-face))
-                   (buffer-state (cond (defining-kbd-macro " >> ")
-                                       (buffer-read-only " RO ")
-                                       ((buffer-modified-p) " ** ")
-                                       ((file-remote-p default-directory)
-                                        (concat " " (file-remote-p
-                                                     default-directory 'host)
-                                                " "))
-                                       (t " -- "))))
-              (propertize buffer-state
-                          'face `(,indicator-face
-                                  :box (:style flat-button) :weight bold)))))
-   (:eval (when (bound-and-true-p macrursors-mode)
-            macrursors-mode-line))
-   "%e"
-   (:eval (propertize " %p " 'face 'which-func))
-   (:eval (propertize " %b " 'face (if (and (buffer-modified-p)
-                                            (or (derived-mode-p 'prog-mode)
-                                                (derived-mode-p 'text-mode)))
-                                       '(:inherit font-lock-warning-face :weight bold)
-                                     '(:weight bold))
-                      'help-echo "Mouse-1: Show major-mode-menu"
-                      'local-map mode-line-major-mode-keymap))
-   (which-function-mode (which-func-mode
-                         ("" which-func-format " ")))
-   mode-line-format-right-align
-   (:eval (when (mode-line-window-selected-p)
-            mode-line-end-spaces))))
+;; (setq-default
+;;  mode-line-format
+;;  '(;; (:eval (when (mode-line-window-selected-p)
+;;    ;;          (let* ((state meow--current-state)
+;;    ;;                 (indicator-face
+;;    ;;                  (if (bound-and-true-p meow-global-mode)
+;;    ;;                      (alist-get state meow-indicator-face-alist)
+;;    ;;                    'font-lock-comment-face))
+;;    ;;                 (buffer-state (cond (defining-kbd-macro " >> ")
+;;    ;;                                     (buffer-read-only " RO ")
+;;    ;;                                     ((buffer-modified-p) " ** ")
+;;    ;;                                     ((file-remote-p default-directory)
+;;    ;;                                      (concat " " (file-remote-p
+;;    ;;                                                   default-directory 'host)
+;;    ;;                                              " "))
+;;    ;;                                     (t " -- "))))
+;;    ;;            (propertize buffer-state
+;;    ;;                        'face `(,indicator-face
+;;    ;;                                :box (:style flat-button) :weight bold)))))
+;;    (:eval (when (bound-and-true-p macrursors-mode)
+;;             macrursors-mode-line))
+;;    "%e"
+;;    (:eval (propertize " %p " 'face 'which-func))
+;;    (:eval (propertize " %b " 'face (if (and (buffer-modified-p)
+;;                                             (or (derived-mode-p 'prog-mode)
+;;                                                 (derived-mode-p 'text-mode)))
+;;                                        '(:inherit font-lock-warning-face :weight bold)
+;;                                      '(:weight bold))
+;;                       'help-echo "Mouse-1: Show major-mode-menu"
+;;                       'local-map mode-line-major-mode-keymap))
+;;    (which-function-mode (which-func-mode
+;;                          ("" which-func-format " ")))
+;;    mode-line-format-right-align
+;;    (:eval (when (mode-line-window-selected-p)
+;;             mode-line-end-spaces))))
+
+;; Trying a no-mode-line view
+(setq mode-line-format (list ""))
+(setq-default mode-line-format (list ""))
+(unless (display-graphic-p)
+  (setq mode-line-format (make-string (window-width) ?─ t))
+  (setq-default mode-line-format (make-string (window-width) ?─ t)))
+(set-face-attribute 'mode-line nil
+                    :box nil
+                    :inherit nil
+                    :foreground (if load-theme-light
+                                    "grey"
+                                  "#474856")
+                    :background (if (display-graphic-p)
+                                    (if load-theme-light
+                                        "grey"
+                                      "#474856")
+                                  (face-background 'default))
+                    :height 0.1)
+(set-face-attribute 'mode-line-inactive nil
+                    :box nil
+                    :inherit nil
+                    :foreground (if load-theme-light
+                                    "grey"
+                                  "#474856")
+                    :background (if (display-graphic-p)
+                                    (if load-theme-light
+                                        "grey"
+                                      "#474856")
+                                  (face-background 'default))
+                    :height 0.1)
 
 (add-hook 'prog-mode-hook
           (lambda ()
@@ -490,11 +525,13 @@
            (name (concat " " name " "))
            (face (if selected-p
                      'tab-bar-tab
-                   'tab-bar-tab-inactive)))
+                   'tab-bar-tab-inactive))
+           (vsep (when (display-graphic-p)
+                   (propertize " " 'face `(:background ,
+                                           (face-foreground 'vertical-border nil t))
+                               'display '(space :width (1))))))
       (concat
-       (when (display-graphic-p)
-         (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
-                     'display '(space :width (1))))
+       vsep
        ;; apply face to buffer name
        (apply 'propertize
               (concat
@@ -526,16 +563,48 @@
                     face ,face
                     display (raise 0.2)))
 
-       (when (display-graphic-p)
-         (propertize " " 'face `(:background ,(face-foreground 'vertical-border nil t))
-                     'display '(space :width (1)))))))
+       vsep)))
 
-  (defun tab-bar-format-menu-bar ()
+  (defun zed-bar-modeline-format nil ; FIXME
+    (concat " "
+            (when (project-mode-line-format)
+              (propertize (project-mode-line-format)
+                          'display '((raise 0.2)
+                                     (height 0.8))))
+            (when (bound-and-true-p vc-mode)
+              (propertize (replace-regexp-in-string "^.." " " vc-mode)
+                          'face '(:inherit font-lock-comment-face :weight bold)
+                          'display '((raise 0.2)
+                                     (height 0.8))))
+            (cond ((eq major-mode 'pdf-view-mode)
+                   (propertize
+                    (format "  %d/%d"
+                            (pdf-view-current-page)
+                            (pdf-cache-number-of-pages))
+                    'face font-lock-comment-face
+                    'display '((raise 0.2)
+                               (height 0.7))))
+                  ((eq major-mode 'nov-mode)
+                   (propertize
+                    (format "  %d/%d"
+                            (1+ nov-documents-index)
+                            (length nov-documents))
+                    'face font-lock-comment-face
+                    'display '((raise 0.2)
+                               (height 0.7))))
+                  (t (propertize
+                      (format " %3d%%"
+                              (/ (window-start) 0.01 (point-max)))
+                      'face font-lock-comment-face
+                      'display '((raise 0.2)
+                                 (height 0.7)))))))
+  
+  (defun zed-bar-format-menu-bar ()
     "Produce the Menu button for the tab bar that shows the menu bar."
     `((menu-bar menu-item ,(propertize " ≡ " 'display '((raise 0.1)))
                 tab-bar-menu-bar :help "Menu Bar")))
 
-  (defun tab-bar-format-history ()
+  (defun zed-bar-format-history ()
     "Produce back and forward buttons for the tab bar."
     (when tab-bar-history-mode
       `((sep-history-back menu-item ,(tab-bar-separator) ignore)
@@ -549,11 +618,12 @@
   
   (setq tab-bar-tab-name-format-function #'zed-tab-name
         tab-bar-format
-        '(tab-bar-format-history
+        '(zed-bar-format-history
           tab-bar-format-tabs
           tab-bar-separator
           tab-bar-format-align-right
-          tab-bar-format-menu-bar))
+          zed-bar-modeline-format
+          zed-bar-format-menu-bar))
   
   (add-hook 'tab-bar-mode-hook #'tab-bar-history-mode)
   
