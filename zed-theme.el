@@ -567,14 +567,14 @@
 
   (defun zed-bar-modeline-format nil ; FIXME
     (concat " "
-            (when (project-mode-line-format)
-              (propertize (project-mode-line-format)
-                          'display `((raise 0.2)
-                                     ,(unless (eq major-mode 'org-mode)
-                                        '(height 0.8)))))
+            ;; (when (project-mode-line-format)
+            ;;   (propertize (project-mode-line-format)
+            ;;               'display `((raise 0.2)
+            ;;                          ,(unless (eq major-mode 'org-mode)
+            ;;                             '(height 0.8)))))
             (when (bound-and-true-p vc-mode)
               (propertize (replace-regexp-in-string "^.." " " vc-mode)
-                          'face '(:inherit font-lock-comment-face :weight bold)
+                          'face '(:foreground "#f5871f" :weight bold)
                           'display `((raise 0.2)
                                      ,(unless (eq major-mode 'org-mode)
                                         '(height 0.8)))))
@@ -588,6 +588,17 @@
                (format "  %d/%d"
                        (1+ nov-documents-index)
                        (length nov-documents)))
+              ((when (or defining-kbd-macro executing-kbd-macro)
+               (concat
+                " REC "
+                (number-to-string kmacro-counter)  " ▶ "
+                (when macrursors-mode
+                  (if macrursors--overlays
+                      (format (concat "[%d/%d]" " ")
+                              (1+ (cl-count-if (lambda (p) (< p (point))) macrursors--overlays
+                                               :key #'overlay-start))
+                              (1+ (length macrursors--overlays)))
+                    (concat "[1/1]" " "))))))
               (t (format "%3d%%"
                          (/ (window-start) 0.01 (point-max)))))
              ;; 'face font-lock-comment-face
@@ -641,8 +652,16 @@
   "Toggle between dark and light mode."
   (interactive)
   (if load-theme-light
-      (setq load-theme-light nil)
-    (setq load-theme-light t))
+      (progn
+        (when (eq system-type 'darwin)
+          ;; modify-all-frames-parameters
+          (modify-all-frames-parameters '((ns-appearance . dark))))
+        (setq load-theme-light nil))
+    (progn
+      (when (eq system-type 'darwin)
+        ;; modify-all-frames-parameters
+        (modify-all-frames-parameters '((ns-appearance . light))))
+    (setq load-theme-light t)))
   (load-theme 'zed :no-confirm))
 
 ;;;###autoload

@@ -171,7 +171,10 @@ the cursor by ARG lines."
   (let ((hour (substring (current-time-string) 11 13)))
     (if (and (string-lessp hour "17") (string-greaterp hour "08")
              (display-graphic-p))
-        (setq load-theme-light t))) ;; load-theme-light is a zed-theme var
+        ;; load-theme-light is a zed-theme var
+        (setq load-theme-light t)
+      (when (eq system-type 'darwin)
+        (modify-all-frames-parameters '((ns-appearance . dark))))))
   (load-theme 'zed :no-confirm)
 
   (unless (package-installed-p 'meow)
@@ -1096,7 +1099,7 @@ deleted, kill the pairs around point."
         desktop-files-not-to-save
         (format "%s\\|%s"
                 desktop-files-not-to-save
-                ".*\\.el\\.gz"))
+                ".*\\.el\\.gz\\|inbox.org"))
   (add-hook 'desktop-after-read-hook
             (lambda ()
               (frameset-restore
@@ -1788,6 +1791,8 @@ deleted, kill the pairs around point."
   (dolist (imode '(reb-mode eat-mode shell-mode eshell-mode
                             deft-mode magit-log-edit-mode log-edit-mode))
     (push `(,imode . insert) meow-mode-state-list))
+
+  (add-hook 'ediff-mode-hook #'meow-motion-mode)
   
   (meow-motion-overwrite-define-key
    '("Q" . kill-current-buffer)

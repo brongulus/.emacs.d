@@ -128,6 +128,7 @@
                 (ar/show-welcome-buffer)))))
 
 (when (eq system-type 'darwin)
+  (add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
   (let ((home (getenv "HOME")))
      (setenv "PATH" (concat (getenv "PATH")
                             ":" home "/.nix-profile/bin:/usr/bin"))
