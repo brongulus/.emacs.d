@@ -1671,7 +1671,7 @@ deleted, kill the pairs around point."
 (use-package ox-awesomecv
   :ensure nil
   :disabled t ; installation error
-  :vc (:url "https://gitlab.com/Titan-C/org-cv")
+  :vc (:url "https://gitlab.com/Titan-C/org-cv" :rev "24bcd82")
   :after org)
 
 (use-package org-appear
