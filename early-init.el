@@ -25,7 +25,8 @@
 (setq-default default-frame-alist
               '((menu-bar-lines . 0)
                 (tool-bar-lines . 0)
-                (vertical-scroll-bars))
+                (vertical-scroll-bars)
+                (fullscreen . maximized))
               fringe-indicator-alist
               (assq-delete-all 'truncation fringe-indicator-alist)
               cursor-in-non-selected-windows nil

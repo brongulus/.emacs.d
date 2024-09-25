@@ -1244,7 +1244,7 @@ deleted, kill the pairs around point."
                               "nnimap+personal:sent.2023"
                               "nnimap+personal:[Gmail]/Starred")
                              ("📰 News"
-                              "nnrss:Prot Codelog" "nnrss:HLTV.org"
+                              ;; "nnrss:Prot Codelog" "nnrss:HLTV.org"
                               "gwene.com.blogspot.petr-mitrichev"
                               "gmane.emacs.announce" "gmane.emacs.devel"
                               "gmane.emacs.gnus.general" "gmane.emacs.gnus.user"
