@@ -1674,6 +1674,9 @@ deleted, kill the pairs around point."
   :vc (:url "https://gitlab.com/Titan-C/org-cv" :rev "24bcd82")
   :after org)
 
+(use-package ox-hugo
+  :after ox)
+
 (use-package org-appear
   :hook (org-mode . org-appear-mode)
   :config
@@ -1690,9 +1693,11 @@ deleted, kill the pairs around point."
   :config
   (setq org-modern-star nil
         org-modern-hide-stars nil
-        org-modern-todo nil
-        org-modern-list
-        '((?+ . "◦") (?- . "◦"))))
+        org-modern-todo nil)
+  (if is-android
+      (setq org-modern-list nil)
+    (setq org-modern-list
+          '((?+ . "◦") (?- . "◦")))))
 
 (use-package denote
   :bind (("C-c n n" . denote)
@@ -2080,8 +2085,8 @@ deleted, kill the pairs around point."
             easy-kill eat eldoc-box embark exec-path-from-shell highlight-indent-guides info-colors
             janet-ts-mode kkp macrursors magit markdown-mode meow move-text nerd-icons
             nerd-icons-corfu nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless org-appear
-            org-modern pdf-tools popper puni shr-tag-pre-highlight transpose-frame undo-fu-session
-            vertico writeroom-mode xclip zig-mode))
+            org-modern ox-hugo pdf-tools popper puni shr-tag-pre-highlight transpose-frame
+            undo-fu-session vertico writeroom-mode xclip zig-mode))
  '(package-vc-selected-packages
    '((dired-preview :url "https://github.com/protesilaos/dired-preview")
      (ox-awesomecv :url "https://gitlab.com/Titan-C/org-cv")
