@@ -19,6 +19,10 @@
 
 (setq zed-icons-p t);(require 'nerd-icons nil t))
 
+(setq zed-adjust (if (eq system-type (or 'android 'darwin))
+                     0.2
+                   0.1))
+
 (let ((selection-color (if load-theme-light
                            "#C9D0D9"
                          "#3d4b5c"))
@@ -541,18 +545,18 @@
               `(tab ,tab
                     ,@(if selected-p '(selected t))
                     face ,face
-                    display (raise 0.2)))
+                    display (raise ,zed-adjust)))
        ;; show dot if selected buffer modified else close button
        (when (and selected-p (buffer-modified-p)
                   (or (derived-mode-p 'prog-mode)
                       (derived-mode-p 'text-mode)))
-         (propertize (concat "" (if (and zed-icons-p is-android)
+         (propertize (concat "" (if zed-icons-p
                                     (nerd-icons-codicon "nf-cod-circle_filled")
                                   (make-string 1 #x23fA))
                              "")
                      'face `(:inherit tab-bar-tab
                                       :foreground ,(face-background 'cursor nil t))
-                     'display '(raise 0.2)))
+                     'display '(raise ,zed-adjust)))
        (apply 'propertize
               (if (and selected-p tab-bar-close-button-show
                        (not (buffer-modified-p)))
@@ -561,7 +565,7 @@
               `(tab ,tab
                     ,@(if selected-p '(selected t))
                     face ,face
-                    display (raise 0.2)))
+                    display (raise ,zed-adjust)))
 
        vsep)))
 
@@ -569,7 +573,7 @@
     (concat " "
             ;; (when (project-mode-line-format)
             ;;   (propertize (project-mode-line-format)
-            ;;               'display `((raise 0.2)
+            ;;               'display `((raise ,zed-adjust)
             ;;                          ,(unless (eq major-mode 'org-mode)
             ;;                             '(height 0.8)))))
             (when (bound-and-true-p vc-mode)
@@ -643,9 +647,9 @@
         tab-bar-close-button
         (propertize (concat (make-string 1 #x00D7) " ") 'close-tab t)
         zed-tab-forward-button
-        (propertize "⏵" 'display '(raise 0.2))
+        (propertize "⏵" 'display `(raise ,zed-adjust))
         zed-tab-back-button
-        (propertize "⏴" 'display '(raise 0.2))))
+        (propertize "⏴" 'display `(raise ,zed-adjust))))
 
 ;;;###autoload
 (defun zed-toggle-theme ()

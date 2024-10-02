@@ -36,6 +36,7 @@
 
 ;; Android
 (defconst is-android (eq system-type 'android))
+(defconst is-mac (eq system-type 'darwin))
 
 (when is-android
   (let ((termuxpath "/data/data/com.termux/files/usr/"))
@@ -45,23 +46,27 @@
   (unless (file-directory-p "~/fonts")
     (copy-directory "~/.emacs.d/fonts/" "~/fonts")))
 
-(push '(font . "VictorMono Nerd Font Mono-16:weight=semi-bold") default-frame-alist)
+(if is-mac
+    (push '(font . "VictorMono Nerd Font Mono-16:weight=semi-bold") default-frame-alist)
+  (push '(font . "VictorMono Nerd Font Mono-13:weight=semi-bold") default-frame-alist))
 (if is-android
     (set-face-attribute
      'variable-pitch nil :family "iA Writer Duo S" :weight 'regular :height 170)
   (set-face-attribute
-   'variable-pitch nil :family "iA Writer Duospace" :weight 'regular :height 170))
+   'variable-pitch nil :family "iA Writer Duospace" :weight 'regular :height (if is-mac
+                                                                                 170
+                                                                               130)))
 
 ;; doom
 (setq-default inhibit-redisplay t
               inhibit-message t)
-(advice-add #'tool-bar-setup :override #'ignore)
+;(advice-add #'tool-bar-setup :override #'ignore)
 (add-hook 'after-init-hook
           (lambda nil
             (setq-default inhibit-redisplay nil
                           inhibit-message nil)
-            (redraw-frame)
-            (advice-remove #'tool-bar-setup #'ignore))
+            (redraw-frame))
+ ;           (advice-remove #'tool-bar-setup #'ignore))
           :depth -105)
 ;;
 (fset 'display-startup-echo-area-message 'ignore)
@@ -128,7 +133,7 @@
               (when (display-graphic-p)
                 (ar/show-welcome-buffer)))))
 
-(when (eq system-type 'darwin)
+(when is-mac
   (add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
   (let ((home (getenv "HOME")))
      (setenv "PATH" (concat (getenv "PATH")
@@ -137,7 +142,7 @@
                                "/nix/var/nix/profiles/default/bin")
                              exec-path))))
 
-(if (eq system-type 'darwin)
+(if is-mac
     (setq mac-option-modifier 'meta)
   (setq command-line-ns-option-alist nil))
 (unless (eq system-type 'gnu/linux)

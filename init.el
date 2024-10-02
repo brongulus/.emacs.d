@@ -956,14 +956,21 @@ deleted, kill the pairs around point."
      (lambda (window)
        (when (eq major-mode 'org-mode)
          (let* ((window (selected-window))
+                (lower-limit (if (eq system-type 'darwin)
+                                 170
+                               130))
+                (upper-limit (+ lower-limit 50))
+                (scaling-factor (if (eq system-type 'darwin)
+                                    1.6
+                                  1.4))
                 (width (window-total-width window))
-                (width-ten (* 10 (round (/ (* 1.6 width) 10))))
-                (adaptive-height (min (max 170 width-ten) 220))
+                (width-ten (* 10 (round (/ (* scaling-factor width) 10))))
+                (adaptive-height (min (max lower-limit width-ten) upper-limit))
                 (wheight (window-total-height window)))
            (face-remap-add-relative 'default :height
                                     (if (> wheight 35)
                                         adaptive-height
-                                      160))
+                                      lower-limit))
            (setq-local line-spacing 0.5)))))
     (setq-local mode-line-format nil
                 writeroom-restore-window-config t
@@ -987,11 +994,14 @@ deleted, kill the pairs around point."
   ;; causing issues in emacs -nw
   ;; (when (not (find-font (font-spec :name nerd-icons-font-family)))
   ;;   (nerd-icons-install-fonts t))
-  (when (custom-theme-enabled-p 'zed)
-    (setq zed-tab-back-button
-          (nerd-icons-octicon "nf-oct-arrow_left" :v-adjust 0.2)
-          zed-tab-forward-button
-          (nerd-icons-octicon "nf-oct-arrow_right" :v-adjust 0.2)))
+  (defun my/add-tab-bar-arrow-glyphs (theme)
+    (when (custom-theme-enabled-p 'zed)
+      (setq zed-tab-back-button
+            (nerd-icons-octicon "nf-oct-arrow_left" :v-adjust zed-adjust)
+            zed-tab-forward-button
+            (nerd-icons-octicon "nf-oct-arrow_right" :v-adjust zed-adjust))))
+  (my/add-tab-bar-arrow-glyphs 'theme)
+  (add-hook 'enable-theme-functions 'my/add-tab-bar-arrow-glyphs)
   (push '(eat-mode nerd-icons-devicon "nf-dev-terminal") nerd-icons-mode-icon-alist)
   (use-package nerd-icons-corfu
     :init
