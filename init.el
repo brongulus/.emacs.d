@@ -1266,6 +1266,57 @@ deleted, kill the pairs around point."
                               "gwene.net.lwn.headlines" "gwene.org.quantamagazine"
                               "gwene.org.bitlbee.news.rss")
                              ("Unread")))))
+(use-package erc
+  ;; auth: machine irc.libera.chat login "USER" password PASSWORD
+  :ensure nil
+  :commands my/irc
+  :hook (erc-join . hl-line-mode)
+  :hook (erc-join . (lambda nil
+                      (setq-local erc-fill-column (min (- (window-width) 3) 85))))
+  :hook (erc-kill-server . (lambda nil
+                             (erc-status-sidebar-kill)
+                             (tab-bar-close-tab)))
+  :custom
+  (erc-autojoin-channels-alist '(("libera.chat" "#emacs"))); "##rust")))
+  (erc-default-server "irc.libera.chat")
+  (erc-nick "brongulus")
+  (erc-nickserv-get-password nil)
+  (erc-use-auth-source-for-nickserv-password t)
+  (erc-fill-column (min (- (window-width) 3) 85))
+  (erc-status-side-bar-width 12)
+  (erc-autojoin-timing 'ident)
+  (erc-fill-function 'erc-fill-static)
+  (erc-fill-static-center 14)
+  (erc-format-nick-function 'erc-format-@nick)
+  (erc-header-line-face-method t)
+  (erc-track-position-in-mode-line t)
+  (erc-track-showcount t)
+  (erc-track-shorten-function nil)
+  (erc-track-exclude-server-buffer t)
+  (erc-join-buffer 'bury) ; window
+  (erc-kill-server-buffer-on-quit t)
+  (erc-kill-buffer-on-part t)
+  (erc-hide-list '("JOIN" "PART" "QUIT" "353")) ;; 353 hide names
+  (erc-lurker-hide-list '("JOIN" "PART" "QUIT" "NICK"))
+  (erc-track-exclude-types '("JOIN" "MODE" "NICK" "PART" "QUIT"
+                             "324" "329" "332" "333" "353" "477"))
+  :config
+  (defun my/irc nil
+    "Setup ERC and connect if not already."
+    (interactive)
+    (if (get-buffer "Libera.Chat") ;; ERC already active?
+        (pop-to-buffer "Libera.Chat")
+      (progn
+        (tab-bar-new-tab)
+        (erc :server "irc.libera.chat" :port 6667 :nick "brongulus" :password nil)
+        (erc-track-switch-buffer 1)
+        (erc-status-sidebar-open))))
+  (erc-services-mode 1)
+  (erc-autojoin-mode)
+  (erc-track-mode t)
+  (erc-timestamp-mode -1)
+  (push 'keep-place erc-modules)
+  (erc-update-modules))
 
 (use-package vc
   :defer 1
