@@ -33,13 +33,6 @@
          ("C-a" . (lambda nil (interactive)
                     (if (= (point) (progn (beginning-of-line-text) (point)))
                         (beginning-of-line))))
-         ("C-z C-z" . (lambda () (interactive)
-                        (if (derived-mode-p 'emacs-lisp-mode)
-                            (describe-symbol (symbol-at-point))
-                          (if (and (display-graphic-p)
-                                   (package-installed-p 'eldoc-box))
-                              (eldoc-box-help-at-point)
-                            (eldoc-doc-buffer t)))))
          ("C-o" . other-window)
          ("C-," . scroll-other-window)
          ("C-." . scroll-other-window-down)
@@ -54,6 +47,7 @@
          ("C-M-r" . raise-sexp)
          ("C-x \\" . align-regexp)
          ("C-x C-z" . restart-emacs)
+         ("C-s-f" . toggle-frame-fullscreen) ;; macos
          ("<f7>" . (lambda () (interactive)
                      (hl-line-mode 'toggle)
                      (highlight-indent-guides-mode 'toggle)))
@@ -191,12 +185,14 @@ backwards instead."
      (if mark-active (list (region-beginning) (region-end))
        (list (save-excursion (backward-word 1) (point)) (point)))))
 
-  (dolist (func '(yank yank-pop))
-    (eval
-     `(define-advice ,func (:after (&rest _args) yank-indent) ; src: magnars
-        "Indent yanked text (with prefix arg don't indent)."
-        (let ((transient-mark-mode nil))
-          (indent-region (region-beginning) (region-end) nil)))))
+  ;; (dolist (func '(yank yank-pop))
+  ;;   (eval
+  ;;    `(define-advice ,func (:after (&rest _args) yank-indent) ; src: magnars
+  ;;       "Indent yanked text (with prefix arg don't indent)."
+  ;;       (unless (string-equal (file-name-extension (concat "" buffer-file-name))
+  ;;                             "yaml")
+  ;;         (let ((transient-mark-mode nil))
+  ;;           (indent-region (region-beginning) (region-end) nil))))))
   
   (define-advice term-handle-exit (:after (&rest _args) term-kill-on-exit)
     "Kill the buffer after the term exits."
@@ -276,6 +272,7 @@ backwards instead."
                   (add-hook 'minibuffer-exit-hook (lambda () (electric-pair-mode 1)))
                   (add-hook 'prog-mode-hook (show-paren-mode t))
                   (add-hook 'prog-mode-hook #'display-line-numbers-mode)
+                  (add-hook 'yaml-ts-mode-hook #'display-line-numbers-mode)
                   (add-hook 'conf-mode-hook #'display-line-numbers-mode)
                   (add-to-list 'write-file-functions
                                '(lambda ()
@@ -294,7 +291,7 @@ backwards instead."
                     (xterm-mouse-mode))
                   ;; enable some useful modes
                   (tab-bar-mode +1)
-                  ;; (pixel-scroll-precision-mode 1)) ;; modeline flickering
+                  (pixel-scroll-precision-mode 1) ;; modeline flickering
                   (save-place-mode 1)
                   (when (string> emacs-version "29.4")
                     (which-key-mode 1))
@@ -389,15 +386,17 @@ backwards instead."
   (add-hook 'completion-at-point-functions #'cape-abbrev))
 
 (use-package completion-preview
+  :disabled t
   :if (string> emacs-version "29.4")
   :ensure nil
   :hook ((prog-mode comint-mode eshell-mode)
          . completion-preview-mode)
-  :bind (:map completion-preview-active-mode-map
-              ([tab] . completion-preview-complete)
-              ("TAB" . completion-preview-complete)
-              ("M-i" . completion-at-point)
-              ("C-<return>" . completion-preview-insert))
+  :bind (("M-i" . completion-at-point)
+         :map completion-preview-active-mode-map
+         ([tab] . completion-preview-complete)
+         ("TAB" . completion-preview-complete)
+         ("M-i" . completion-at-point)
+         ("C-<return>" . completion-preview-insert))
   :config
   (push 'org-self-insert-command completion-preview-commands))
 
@@ -414,6 +413,8 @@ backwards instead."
   (dolist (key '("C-f" "C-b" "C-a" "C-e"))
     (define-key corfu-map key nil))
   (keymap-unset corfu-map "<remap> <next-line>")
+  ;; (keymap-unset corfu-map "<remap> <forward-char>")
+  ;; (keymap-unset corfu-map "<remap> <backward-char>")
   (keymap-unset corfu-map "<remap> <previous-line>")
   (add-hook 'eshell-mode #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
   (with-eval-after-load 'savehist
@@ -421,7 +422,7 @@ backwards instead."
     (add-to-list 'savehist-additional-variables 'corfu-history))
   (setq completion-ignore-case t)
   (setq corfu-cycle t
-        corfu-auto nil;t
+        corfu-auto t
         corfu-auto-prefix 2
         corfu-auto-delay 0.1
         corfu-separator 32
@@ -619,7 +620,7 @@ deleted, kill the pairs around point."
 
 (use-package hideshow
   :ensure nil
-  :hook (prog-mode . hs-minor-mode)
+  :hook (emacs-lisp-mode . hs-minor-mode)
   :bind (("C-z a" . hs-global-cycle)
          ("C-z f" . hs-cycle))
   :config
@@ -770,7 +771,7 @@ deleted, kill the pairs around point."
             '("gcc" "-fsyntax-only" "-Wall" "-Wextra"
               "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/x86_64-apple-darwin23"
               "-I/usr/local/Cellar/gcc/13.2.0/include/c++/13/" "-x" "c++" "-"))))
-  (setq flymake-no-changes-timeout nil
+  (setq flymake-no-changes-timeout 2
         flymake-suppress-zero-counters t
         flymake-fringe-indicator-position nil
         flymake-margin-indicator-position nil
@@ -929,24 +930,31 @@ deleted, kill the pairs around point."
 
 (use-package eldoc-box
   :after eldoc
-  :commands eldoc-box-help-at-point
+  :commands eldoc-box-help-at-point my/eldoc-get-help
+  :bind (("s-<mouse-1>" . my/eldoc-get-help)
+         ("C-z C-z" . my/eldoc-get-help))
   :config
-  (setq eldoc-box-max-pixel-width 600
+  (defun my/eldoc-get-help ()
+    (interactive)
+    (if (derived-mode-p 'emacs-lisp-mode)
+        (describe-symbol (symbol-at-point))
+      (if (and (display-graphic-p)
+               (package-installed-p 'eldoc-box))
+          (eldoc-box-help-at-point)
+        (eldoc-doc-buffer t))))
+  (setq eldoc-box-max-pixel-width 800
         eldoc-box-max-pixel-height 700
-        eldoc-box-only-multi-line t))
-
-(use-package sideline-flymake
-  :disabled t
-  :if (string< emacs-version "30.0")
-  :hook (flymake-mode . sideline-mode)
-  :init
-  (setq sideline-flymake-display-mode 'line)
-  (setq sideline-backends-right '(sideline-flymake)
-        sideline-flymake-show-backend-name t))
+        eldoc-box-only-multi-line t)
+  (setq eldoc-doc-buffer-separator
+        (concat "\n"
+                (propertize "-" 'display '(space :align-to right)
+                            'face '(:strike-through t)
+                            'font-lock-face '(:strike-through t))
+                "\n")))
 
 (use-package writeroom-mode
   :bind ("<f9>" . writeroom-mode)
-  :hook ((nov-mode Info-mode Man-mode eww-mode) . writeroom-mode)
+  :hook ((nov-mode markdown-mode Info-mode Man-mode eww-mode) . writeroom-mode)
   :hook (org-mode . org-writer-mode)
   :config
   (defun org-writer-mode nil
@@ -1035,6 +1043,9 @@ deleted, kill the pairs around point."
 (use-package shr-tag-pre-highlight
   ;; FIXME complains if mode isnt available
   :defer 1
+  :init
+  (setq eww-auto-rename-buffer 'title
+        eww-header-line-format nil)
   :config
   (with-eval-after-load 'nov
     (advice-add 'shr--set-target-ids :around
@@ -1046,11 +1057,12 @@ deleted, kill the pairs around point."
     (add-to-list 'nov-shr-rendering-functions
                  '(pre . shr-tag-pre-highlight) t))
   ;; eww
-  (setq eww-auto-rename-buffer 'title)
   (add-to-list 'shr-external-rendering-functions
                '(pre . shr-tag-pre-highlight)))
 
 (use-package highlight-indent-guides
+  :hook (yaml-ts-mode . highlight-indent-guides-mode)
+  :hook (yaml-ts-mode . hl-line-mode)
   :config
   (set-face-attribute 'highlight-indent-guides-character-face nil
                       :inherit 'vertical-border)
@@ -1200,7 +1212,7 @@ deleted, kill the pairs around point."
                                       (t . "%b %d"))
         gnus-topic-line-format (concat "%(%{%n - %A%}%) %v\n")
         gnus-group-uncollapsed-levels 2
-        gnus-group-line-format (concat "%S%2y: %(%-40,40c%)\n") ;; %E (gnus-group-icon-list)
+        gnus-group-line-format (concat "%S%4y: %(%-40,40c%)\n") ;; %E (gnus-group-icon-list)
         ;;  06-Jan   Sender Name    Email Subject
         gnus-summary-line-format (concat " %0{%U%R%}"
                                          "%1{%&user-date;%}" "%3{ %}" " "
@@ -1250,15 +1262,16 @@ deleted, kill the pairs around point."
     (setq gnus-topic-alist '(("📥 Personal" ; the key of topic
                               "nnimap+personal:INBOX"
                               "nnimap+personal:[Gmail]/Sent Mail"
-                              "nnimap+personal:Sent"
-                              "nnimap+personal:sent.2023"
+                              ;; "nnimap+personal:Sent"
+                              ;; "nnimap+personal:sent.2023"
                               "nnimap+personal:[Gmail]/Starred")
                              ("📰 News"
                               ;; "nnrss:Prot Codelog" "nnrss:HLTV.org"
-                              "gwene.com.blogspot.petr-mitrichev"
+                              "gwene.com.blogspot.petr-mitrichev" "gwene.me.tonsky.blog"
                               "gmane.emacs.announce" "gmane.emacs.devel"
                               "gmane.emacs.gnus.general" "gmane.emacs.gnus.user"
-                              "gmane.emacs.tramp" "gmane.emacs.bugs"
+                              "gmane.emacs.tramp" "gmane.emacs.bugs" "gwene.com.iximiuz"
+                              "gwene.com.golangweekly" "gwene.org.golang.blog"
                               "gwene.com.youtube.feeds.videos.xml.user.ethoslab"
                               "gmane.comp.web.qutebrowser" "gmane.comp.web.elinks.user"
                               "gwene.app.rsshub.leetcode.articles"
@@ -1266,6 +1279,7 @@ deleted, kill the pairs around point."
                               "gwene.net.lwn.headlines" "gwene.org.quantamagazine"
                               "gwene.org.bitlbee.news.rss")
                              ("Unread")))))
+
 (use-package erc
   ;; auth: machine irc.libera.chat login "USER" password PASSWORD
   :ensure nil
@@ -1308,7 +1322,7 @@ deleted, kill the pairs around point."
         (pop-to-buffer "Libera.Chat")
       (progn
         (tab-bar-new-tab)
-        (erc :server "irc.libera.chat" :port 6667 :nick "brongulus" :password nil)
+        (erc-tls :server "irc.libera.chat" :port 6667 :nick "brongulus" :password nil)
         (erc-track-switch-buffer 1)
         (erc-status-sidebar-open))))
   (erc-services-mode 1)
@@ -1357,6 +1371,10 @@ deleted, kill the pairs around point."
   :commands (magit magit-file-dispatch magit-log-all magit-ediff-show-unstaged)
   :init
   (setq magit-auto-revert-mode nil)
+  (with-eval-after-load 'project
+    (add-to-list 'project-switch-commands '(magit-status "Magit" ?m)))
+  :bind (:map magit-status-mode-map
+              ("x" . magit-discard))
   :config
   (transient-bind-q-to-quit)
   (setq magit-display-buffer-function
@@ -1388,6 +1406,39 @@ deleted, kill the pairs around point."
       (mapc #'kill-buffer buffers)))
 
   (bind-key "q" #'mu-magit-kill-buffers magit-status-mode-map))
+
+(use-package forge
+  :after magit)
+
+(use-package blamer
+  :ensure t
+  :bind (("s-i" . blamer-show-commit-info)
+         ("C-c i" . blamer-show-posframe-commit-info))
+  :defer 20
+  :custom
+  (blamer-idle-time 0.3)
+  (blamer-min-offset 20)
+  :custom-face
+  (blamer-face ((t :inherit font-lock-comment-face
+                   :italic t)))
+  :config
+  ;; (global-blamer-mode 1)
+  (defun blamer-callback-show-commit-diff (commit-info)
+    (interactive)
+    (let ((commit-hash (plist-get commit-info :commit-hash)))
+      (when commit-hash
+        (magit-show-commit commit-hash))))
+
+  (defun blamer-callback-open-remote (commit-info)
+    (interactive)
+    (let ((commit-hash (plist-get commit-info :commit-hash)))
+      (when commit-hash
+        (message commit-hash)
+        (forge-browse-commit commit-hash))))
+
+  (setq blamer-bindings
+        '(("<mouse-3" . blamer-callback-open-remote) ;; FIXME
+          ("<mouse-1>" . blamer-callback-show-commit-diff))))
 
 (use-package dired
   :ensure nil
@@ -1471,7 +1522,9 @@ deleted, kill the pairs around point."
                ("C-u" . eat-self-input)
                ("C-o" . other-window)
                ("M-j" . popper-toggle)
-               ("M-w" . kill-ring-save)))
+               ("M-`" . popper-toggle-type)
+               ("M-w" . kill-ring-save)
+               ("M-v" . scroll-down-command)))
   :config
   (setq eat-message-handler-alist
         ;; once eat fish-intergration is merged
@@ -1510,6 +1563,13 @@ deleted, kill the pairs around point."
   :mode ("\\.pdf\\'" . pdf-view-mode)
   :hook ((pdf-view-mode . pdf-view-fit-page-to-window)
          (pdf-view-mode . pdf-view-themed-minor-mode))
+  :hook (pdf-view-mode . (lambda nil
+                           (blink-cursor-mode -1)
+                           (when (featurep 'meow)
+                             (setq-local meow-cursor-type-motion nil))
+                           (setq-local mouse-wheel-tilt-scroll t
+                                       mouse-wheel-flip-direction t
+                                       mouse-wheel-scroll-amount-horizontal 2)))
   :config ;; pdf-tools-install
   (add-hook 'pdf-view-mode-hook
             (lambda nil
@@ -1604,6 +1664,7 @@ deleted, kill the pairs around point."
         org-startup-truncated nil
         org-adapt-indentation t
         org-special-ctrl-a/e t
+        org-M-RET-may-split-line '((item . nil))
         org-fold-catch-invisible-edits 'show-and-error
         org-edit-src-content-indentation 0
         org-src-preserve-indentation t
@@ -1736,7 +1797,7 @@ deleted, kill the pairs around point."
   :after org)
 
 (use-package ox-hugo
-  :after ox)
+  :after org)
 
 (use-package org-appear
   :hook (org-mode . org-appear-mode)
@@ -1878,7 +1939,6 @@ deleted, kill the pairs around point."
    '("2" . meow-digit-argument)
    '("1" . meow-digit-argument)
    '("-" . negative-argument)
-   ;; '("C-;" . meow-reverse)
    '(";" . meow-cancel-selection)
    ;; '("'" . meow-reverse)
    '("," . meow-inner-of-thing)
@@ -1901,6 +1961,7 @@ deleted, kill the pairs around point."
    '("E" . meow-next-symbol)
    '("f" . meow-find)
    '("F" . find-file)
+   '("g;" . meow-reverse)
    '("ga" . (lambda nil (interactive)
               (org-agenda nil "n")))
    '("gb" . xref-go-back)
@@ -1912,7 +1973,7 @@ deleted, kill the pairs around point."
    '("gh" . diff-hl-show-hunk)
    '("gk" . beginning-of-buffer)
    '("gj" . end-of-buffer)
-   '("gi" . imenu)
+   '("gi" . eglot-find-implementation)
    '("gs" . scratch-buffer)
    '("gt" . tab-bar-switch-to-next-tab)
    '("gT" . tab-bar-switch-to-prev-tab)
@@ -1927,13 +1988,7 @@ deleted, kill the pairs around point."
              (meow-next 1)
              (delete-indentation)))
    '("k" . meow-prev)
-   '("K" . (lambda () (interactive)
-             (if (derived-mode-p 'emacs-lisp-mode)
-                 (describe-symbol (symbol-at-point))
-               (if (and (display-graphic-p)
-                        (package-installed-p 'eldoc-box))
-                   (eldoc-box-help-at-point)
-                 (eldoc-doc-buffer t)))))
+   '("K" . my/eldoc-get-help)
    '("l" . meow-right)
    '("L" . up-list)
    ;; '("L" . meow-swap-grab)
@@ -2005,6 +2060,10 @@ deleted, kill the pairs around point."
         '((cpp "https://github.com/tree-sitter/tree-sitter-cpp")
           (c "https://github.com/tree-sitter/tree-sitter-c")
           (go "https://github.com/tree-sitter/tree-sitter-go")
+          (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
+          (docker "https://github.com/camdencheek/tree-sitter-dockerfile")
+          (yaml "https://github.com/ikatyang/tree-sitter-yaml")
+          (helm "https://github.com/ngalaiko/tree-sitter-go-template")
           (rust "https://github.com/tree-sitter/tree-sitter-rust")
           (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua")
           (json "https://github.com/tree-sitter/tree-sitter-json")
@@ -2035,6 +2094,7 @@ deleted, kill the pairs around point."
          ("\\.go\\'" . go-ts-mode)
          ("\\.ts\\'" . typescript-ts-mode)
          ("\\.lua\\'" . lua-ts-mode)
+         ("\\.yaml\\'" . yaml-ts-mode)
          ("\\.bin\\'" . hexl-mode)
          ("\\.info\\'" . Info-mode)))
 
@@ -2054,7 +2114,11 @@ deleted, kill the pairs around point."
         eglot-autoshutdown t
         eglot-inlay-hints-mode nil)
   (add-hook 'rust-ts-mode-hook (lambda () (setq-local tab-width 2)))
-  (add-hook 'go-ts-mode-hook (lambda () (setq-local tab-width 4)))
+  (add-hook 'go-ts-mode-hook (lambda () (setq-local tab-width 4)
+                               (hl-line-mode 'toggle)
+                               (highlight-indent-guides-mode 'toggle)))
+
+  (add-to-list 'eglot-server-programs '(helm-ts-mode "helm_ls" "serve"))
 
   (defun my-eglot-organize-imports ()
     (interactive)
@@ -2074,7 +2138,17 @@ deleted, kill the pairs around point."
   (setq eglot-ignored-server-capabilities '(:inlayHintProvider))
   (setq-default eglot-workspace-configuration
                 '((:gopls . ((staticcheck . t)
-                             (matcher . "CaseSensitive")))))
+                             (matcher . "CaseSensitive")))
+                  ;; https://github.com/joaotavora/eglot/discussions/918
+                  ;; https://www.reddit.com/r/emacs/comments/11xjpeq
+                  (:yaml . (:schemaStore
+                            (:enable t :url "https://schemastore.org/api/json/catalog.json")
+                            :format (:enable t :proseWrap t :printWidth 80)
+                            :validate t
+                            :hover t
+                            :completion t
+                            :schemas (:Kubernetes "/*")))))
+  
   (defvar ra-setup
     `(:rust-analyzer
       (:procMacro (:attributes (:enable t)
@@ -2089,6 +2163,9 @@ deleted, kill the pairs around point."
 ;;                                :initializationOptions
 ;;                                ,ra-setup)))
 
+(use-package kubed
+  :bind-keymap ("C-c k" . kubed-prefix-map))
+
 (use-package zig-mode
   :mode ("\\.zig\\'" . zig-mode))
 
@@ -2102,8 +2179,11 @@ deleted, kill the pairs around point."
   (remove-hook 'janet-ts-mode-hook 'treesit-inspect-mode))
 
 (use-package markdown-mode
+  :hook (markdown-mode . visual-line-mode)
+  :hook (markdown-mode . visual-line-mode)
   :config
-  (setq markdown-fontify-code-blocks-natively t))
+  (setq markdown-fontify-code-blocks-natively t
+        markdown-max-image-size '(800 . 800)))
 
 (use-package cdlatex
   :hook (org-mode . turn-on-org-cdlatex))
@@ -2123,6 +2203,10 @@ deleted, kill the pairs around point."
       (c++-ts-mode-hook . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -I/Users/admin/problems/include ")
       ;; (go-ts-mode-hook . "go build -o a.out ")
       ))
+  (defvar foxy-run-commands
+    '((go-ts-mode-hook . "go run ")
+      (janet-ts-mode-hook . "janet ")))
+  
   (dolist (pair foxy-compile-commands)
     (let ((mode (car pair))
           (command (cdr pair)))
@@ -2141,13 +2225,14 @@ deleted, kill the pairs around point."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(erc-speaker-from-channel-member-function 'erc-format-@nick nil nil "Customized with use-package erc")
  '(package-selected-packages
-   '(auctex avy cape cdlatex corfu-terminal deadgrep deft denote-refs devil diff-hl dired-sidebar
-            easy-kill eat eldoc-box embark exec-path-from-shell highlight-indent-guides info-colors
-            janet-ts-mode kkp macrursors magit markdown-mode meow move-text nerd-icons
-            nerd-icons-corfu nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless org-appear
-            org-modern ox-hugo pdf-tools popper puni shr-tag-pre-highlight transpose-frame
-            undo-fu-session vertico writeroom-mode xclip zig-mode))
+   '(auctex avy blamer cape cdlatex corfu-terminal deadgrep deft denote-refs devil diff-hl
+            dired-sidebar easy-kill eat eldoc-box embark exec-path-from-shell forge gptel
+            highlight-indent-guides info-colors janet-ts-mode kkp kubed macrursors meow mermaid-mode
+            move-text nerd-icons-corfu nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless
+            org-appear org-modern ox-hugo pdf-tools popper puni shr-tag-pre-highlight
+            transpose-frame undo-fu-session vertico writeroom-mode xclip zig-mode))
  '(package-vc-selected-packages
    '((dired-preview :url "https://github.com/protesilaos/dired-preview")
      (ox-awesomecv :url "https://gitlab.com/Titan-C/org-cv")

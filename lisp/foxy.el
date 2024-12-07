@@ -227,6 +227,18 @@ Given a step of 1 (the default), will go to the next file.
 ;; (global-set-key (kbd "C-M-l") #'foxy-start-server-with-timer)
 
 ;;;; Snippets
+;;; --Perl----------------------------------------------------------------
+(define-skeleton pl-header "Perl header." ""
+  "#!/usr/bin/env perl\n\n"
+  "use 5.016;\n"
+  "use warnings;\n"
+  "use autodie;\n")
+
+(add-hook 'perl-mode-hook 'abbrev-mode)
+(add-hook 'perl-mode-hook
+          (lambda nil
+            (define-abbrev perl-mode-abbrev-table "plh" "" 'pl-header)))
+
 ;;; --Go------------------------------------------------------------------
 (define-skeleton go-err "Go test check." ""
   "if got != want {\n"
@@ -460,7 +472,7 @@ Given a step of 1 (the default), will go to the next file.
       (delete-window win)
     (persistent-make-buffer)))
 
-(define-key emacs-lisp-mode-map (kbd "<f7>") #'persistent-toggle)
+;; (define-key emacs-lisp-mode-map (kbd "<f7>") #'persistent-toggle)
 
 (defvar test-data)
 

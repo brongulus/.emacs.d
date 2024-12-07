@@ -47,15 +47,16 @@
     (copy-directory "~/.emacs.d/fonts/" "~/fonts")))
 
 (if is-mac
-    (push '(font . "VictorMono Nerd Font Mono-16:weight=semi-bold") default-frame-alist)
+    (push '(font . "VictorMono Nerd Font Mono-15:weight=semi-bold") default-frame-alist)
   (push '(font . "VictorMono Nerd Font Mono-13:weight=semi-bold") default-frame-alist))
 (if is-android
     (set-face-attribute
      'variable-pitch nil :family "iA Writer Duo S" :weight 'regular :height 170)
-  (set-face-attribute
-   'variable-pitch nil :family "iA Writer Duospace" :weight 'regular :height (if is-mac
-                                                                                 170
-                                                                               130)))
+  (if is-mac
+      (set-face-attribute
+       'variable-pitch nil :family "iA Writer Duo V":weight 'regular); :height 170)
+    (set-face-attribute
+     'variable-pitch nil :family "iA Writer Duospace" :weight 'regular :height 130)))
 
 ;; doom
 (setq-default inhibit-redisplay t

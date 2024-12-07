@@ -125,7 +125,9 @@
    `(font-lock-function-name-face ((t (:foreground ,blue-color))))
    `(font-lock-keyword-face ((t (:foreground ,magenta-color))))
    `(font-lock-preprocessor-face ((t (:foreground ,magenta-color))))
-   `(font-lock-property-name-face ((t (:foreground ,yellow-color))))
+   `(font-lock-property-name-face ((t (:foreground ,@(if load-theme-light
+                                                         (list magenta-color)
+                                                       (list yellow-color))))))
    `(font-lock-reference-face ((t (:foreground "#4E279A" :background "#F3F2FF"))))
    `(font-lock-string-face ((t (:foreground ,green-color))))
    `(font-lock-type-face ((t (:foreground ,cyan-color))))
@@ -172,9 +174,9 @@
    `(avy-lead-face-1 ((t (:inherit avy-lead-face))))
    `(avy-lead-face-2 ((t (:inherit avy-lead-face))))
    
-   `(compilation-info ((t (:foreground ,inactive-color))))
-   `(compilation-warning ((t (:foreground ,inactive-color))))
-   `(compilation-error ((t (:foreground ,inactive-color))))
+   `(compilation-info ((t (:foreground ,green-color))))
+   `(compilation-warning ((t (:foreground ,yellow-color))))
+   `(compilation-error ((t (:foreground ,red-color))))
    `(success ((t (:foreground ,green-color))))
    `(warning ((t (:foreground ,yellow-color))))
    `(error ((t (:foreground ,red-color))))
@@ -211,8 +213,10 @@
    `(pulse-highlight-start-face ((t (:background ,light-yellow-color))))
    `(pulse-highlight-face ((t (:background ,light-yellow-color :extend t))))
    `(vertical-border ((t (:foreground ,border-color))))
+   `(whitespace-tab ((t (:inherit font-lock-comment-face))))
    `(whitespace-space ((t (:weight light :inherit font-lock-comment-face))))
-   `(whitespace-line ((t (:inherit font-lock-comment-face))))
+   `(whitespace-line ((t (:foreground ,foreground-color))))
+   `(whitespace-indentation ((t (:foreground ,inactive-color))))
    `(whitespace-newline ((t (:inherit font-lock-comment-face))))
    `(whitespace-trailing ((t (:inherit font-lock-warning-face))))
 
@@ -226,8 +230,14 @@
    `(erc-timestamp-face ((t (:inherit font-lock-comment-face :weight bold))))
    `(erc-header-line ((t (:background ,modeline-color :foreground ,green-color))))
 
-   `(variable-pitch-text ((t (:inherit variable-pitch))))
-   `(shr-code ((t (:inherit default :slant italic))))
+   `(variable-pitch-text ((t (:inherit variable-pitch :height 1.1))))
+   `(shr-code ((t (:inherit variable-pitch-text :background ,subtle-color))))
+   `(shr-h1 ((t (:inherit variable-pitch-text :height 1.2 :weight bold))))
+   `(shr-h2 ((t (:inherit variable-pitch-text :height 1.1 :weight bold))))
+   `(shr-h3 ((t (:inherit variable-pitch-text :height 1.1 :weight bold))))
+   `(shr-h4 ((t (:inherit variable-pitch-text :height 1.1 :weight bold))))
+   `(shr-h5 ((t (:inherit variable-pitch-text :height 1.1 :weight bold))))
+   `(shr-h6 ((t (:inherit variable-pitch-text :height 1.1 :weight bold))))
    `(gnus-group-mail-1 ((t (:foreground ,green-color :weight bold))))
    `(gnus-group-mail-2 ((t (:foreground ,green-color :weight bold))))
    `(gnus-group-mail-3 ((t (:foreground ,green-color :weight bold))))
@@ -274,7 +284,9 @@
      ((t (:foreground ,inactive-color))))
    `(meow-insert-indicator
      ((t (:foreground ,inactive-color))));"black" :background "#00c2ff"))))
-   `(minibuffer-prompt ((t (:foreground ,yellow-color))))
+   `(minibuffer-prompt ((t (:foreground ,@(if load-theme-light
+                                            (list magenta-color)
+                            (list yellow-color))))))
    `(widget-field ((t (:background ,subtle-color :extend t))))
    
    `(org-block ((t (:inherit default :background ,subtle-color :extend t :height 1.0))))
@@ -284,6 +296,7 @@
    `(org-document-info ((t (:height 1.1))))
    `(org-drawer ((t (:inherit shadow))))
    `(org-ellipsis ((t (:inherit shadow))))
+   `(org-quote ((t (:inherit org-block :slant italic))))
    `(org-level-1 ((t (:height 1.1 :weight bold))))
    `(org-level-2 ((t (:height 1.1 :weight bold))))
    `(org-level-3 ((t (:height 1.1 :weight bold))))
@@ -316,6 +329,17 @@
    `(org-habit-overdue-future-face ((t (:foreground ,red-color))))
    `(org-habit-ready-face ((t (:foreground ,green-color))))
    `(org-habit-ready-future-face ((t (:foreground ,green-color))))
+
+   `(markdown-code-face ((t (:background ,subtle-color :extend t))))
+   `(markdown-inline-code-face ((t (:background ,subtle-color))))
+   `(markdown-header-face-1 ((t (:height 1.1 :weight bold :inherit markdown-header-face))))
+   `(markdown-header-face-2 ((t (:height 1.1 :weight bold :inherit markdown-header-face))))
+   `(markdown-header-face-3 ((t (:height 1.1 :weight bold :inherit markdown-header-face))))
+   `(markdown-header-face-4 ((t (:height 1.1 :weight bold :inherit markdown-header-face))))
+   `(markdown-header-face-5 ((t (:height 1.1 :weight bold :inherit markdown-header-face))))
+   `(markdown-header-face-6 ((t (:height 1.1 :weight bold :inherit markdown-header-face))))
+   `(markdown-header-face-7 ((t (:height 1.1 :weight bold :inherit markdown-header-face))))
+   `(markdown-header-face-8 ((t (:height 1.1 :weight bold :inherit markdown-header-face))))
    
    `(tab-bar ((t (:background ,subtle-color :box ,border-color :height 160))))
    `(tab-bar-tab ((t (:inherit default :height 160))))
@@ -335,7 +359,7 @@
    `(eglot-mode-line ((t (:foreground ,yellow-color))))
    `(eldoc-box-border ((t (:inherit child-frame-border))))
    `(eldoc-box-body ((t (:background ,subtle-color))))
-   `(deadgrep-filename-face ((t (:inherit bold :inverse-video t))))
+   `(deadgrep-filename-face ((t (:inherit tab-bar))))
    `(denote-faces-date ((t (:inherit font-lock-comment-face))))
    `(denote-faces-link ((t (:inherit link :background ,subtle-color))))
    ;; `(vertico-posframe ((t (:foreground ,foreground-color :background "#1a1a1a")))
@@ -343,7 +367,8 @@
    `(why-this-face ((t (:inherit font-lock-comment-face))))
    `(which-key-key-face ((t (:inherit default))))
    `(which-key-command-description-face ((t (:inherit font-lock-comment-face :slant italic))))
-   `(which-func ((t (:foreground ,inactive-color))))))
+   `(which-func ((t (:foreground ,inactive-color))))
+   `(xref-file-header ((t (:inherit tab-bar))))))
 
 ;; Mode-line
 ;; (with-eval-after-load 'macrursors
@@ -510,7 +535,7 @@
           (lambda ()
             (font-lock-add-keywords
              nil
-             '(("\\<\\(FIXME\\|HACK\\|TODO\\|BUG\\|DONE\\)"
+             '(("\\<\\(FIXME\\|HACK\\|TODO\\|WIP\\|BUG\\|DONE\\)"
                 1 font-lock-warning-face t)
                (";" . 'font-lock-comment-face)))))
 
@@ -654,6 +679,7 @@
 ;;;###autoload
 (defun zed-toggle-theme ()
   "Toggle between dark and light mode."
+  ;; FIXME: dired-sidebar reload?
   (interactive)
   (if load-theme-light
       (progn
