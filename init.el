@@ -34,8 +34,8 @@
                     (if (= (point) (progn (beginning-of-line-text) (point)))
                         (beginning-of-line))))
          ("C-o" . other-window)
-         ("C-," . scroll-other-window)
-         ("C-." . scroll-other-window-down)
+         ("C-," . my/scroll-other-window)
+         ("C-." . my/scroll-other-window-down)
          ("M-s r" . replace-regexp)
          ("M-s f" . ffap)
          ("C-x C-m" . execute-extended-command)
@@ -53,6 +53,30 @@
                      (highlight-indent-guides-mode 'toggle)))
          ("<f6>" . zed-toggle-theme))
   :config
+  (defun my/scroll-other-window nil
+    (interactive)
+    (let ((mode (with-current-buffer (window-buffer (other-window-for-scrolling))
+                  major-mode)))
+      (with-selected-window (other-window-for-scrolling)
+        (cond
+         ((eq mode 'pdf-view-mode)
+          (pdf-view-scroll-up-or-next-page))
+         ((eq mode 'Info-mode)
+          (Info-scroll-up))
+         (t (scroll-up-command 5))))))
+  
+  (defun my/scroll-other-window-down nil
+    (interactive)
+    (let ((mode (with-current-buffer (window-buffer (other-window-for-scrolling))
+                  major-mode)))
+      (with-selected-window (other-window-for-scrolling)
+        (cond
+         ((eq mode 'pdf-view-mode)
+          (pdf-view-scroll-down-or-previous-page))
+         ((eq mode 'Info-mode)
+          (Info-scroll-down))
+         (t (scroll-down-command 5))))))
+  
   (setq-default line-spacing 3
                 ;; cursor-type 'bar
                 tab-width 2
@@ -69,7 +93,10 @@
                 warning-minimum-level :error
                 display-line-numbers-width 5
                 display-line-numbers-grow-only t
-                delete-pair-blink-delay 0)
+                delete-pair-blink-delay 0
+                mouse-wheel-tilt-scroll t
+                mouse-wheel-flip-direction t
+                mouse-wheel-scroll-amount-horizontal 4)
 
   (setq process-adaptive-read-buffering nil
         kill-do-not-save-duplicates t
@@ -161,10 +188,10 @@ the cursor by ARG lines."
   (set-register ?c `(file . "~/problems/"))
   
   (add-hook 'prog-mode-hook (which-function-mode))
-  ;; load theme based on the time of the day
-  (let ((hour (substring (current-time-string) 11 13)))
-    (if (and (string-lessp hour "17") (string-greaterp hour "08")
-             (display-graphic-p))
+  ;; load theme based on terminal
+  (let ((color (shell-command-to-string
+                "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" get-colors | grep ^background | awk '{printf $2}'")))
+    (if (string= color "#f7f7f7")
         ;; load-theme-light is a zed-theme var
         (setq load-theme-light t)
       (when (eq system-type 'darwin)
@@ -185,14 +212,14 @@ backwards instead."
      (if mark-active (list (region-beginning) (region-end))
        (list (save-excursion (backward-word 1) (point)) (point)))))
 
-  ;; (dolist (func '(yank yank-pop))
-  ;;   (eval
-  ;;    `(define-advice ,func (:after (&rest _args) yank-indent) ; src: magnars
-  ;;       "Indent yanked text (with prefix arg don't indent)."
-  ;;       (unless (string-equal (file-name-extension (concat "" buffer-file-name))
-  ;;                             "yaml")
-  ;;         (let ((transient-mark-mode nil))
-  ;;           (indent-region (region-beginning) (region-end) nil))))))
+  (dolist (func '(yank yank-pop))
+    (eval
+     `(define-advice ,func (:after (&rest _args) yank-indent) ; src: magnars
+        "Indent yanked text (with prefix arg don't indent)."
+        (unless (string-equal (file-name-extension (concat "" buffer-file-name))
+                              "yaml")
+          (let ((transient-mark-mode nil))
+            (indent-region (region-beginning) (region-end) nil))))))
   
   (define-advice term-handle-exit (:after (&rest _args) term-kill-on-exit)
     "Kill the buffer after the term exits."
@@ -288,6 +315,12 @@ backwards instead."
                     (set-display-table-slot standard-display-table
                                             'vertical-border
                                             (make-glyph-code ?│))
+                    (set-display-table-slot standard-display-table
+                                            'truncation
+                                            (make-glyph-code ? ))
+                    (set-display-table-slot standard-display-table
+                                            'wrap
+                                            (make-glyph-code ? ))
                     (xterm-mouse-mode))
                   ;; enable some useful modes
                   (tab-bar-mode +1)
@@ -315,6 +348,7 @@ backwards instead."
     (package-initialize))
   :config
   (push '("melpa" . "https://melpa.org/packages/") package-archives)
+  (push '("melpa-stable" . "https://stable.melpa.org/packages/") package-archives)
   (setq package-native-compile t
         package-install-upgrade-built-in t
         package-check-signature nil))
@@ -410,17 +444,17 @@ backwards instead."
               ("S-TAB" . corfu-previous)
               ([backtab] . corfu-previous))
   :config
-  (dolist (key '("C-f" "C-b" "C-a" "C-e"))
-    (define-key corfu-map key nil))
   (keymap-unset corfu-map "<remap> <next-line>")
-  ;; (keymap-unset corfu-map "<remap> <forward-char>")
-  ;; (keymap-unset corfu-map "<remap> <backward-char>")
+  (keymap-unset corfu-map "<remap> <forward-char>")
+  (keymap-unset corfu-map "<remap> <backward-char>")
   (keymap-unset corfu-map "<remap> <previous-line>")
   (add-hook 'eshell-mode #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
   (with-eval-after-load 'savehist
     (corfu-history-mode 1)
     (add-to-list 'savehist-additional-variables 'corfu-history))
   (setq completion-ignore-case t)
+  (with-eval-after-load 'dabbrev
+    (push 'pdf-view-mode dabbrev-ignored-buffer-modes))
   (setq corfu-cycle t
         corfu-auto t
         corfu-auto-prefix 2
@@ -507,10 +541,6 @@ backwards instead."
     (add-hook 'macrursors-post-finish-hook mode))
   (when (featurep 'meow)
     (add-hook 'macrursors-mode-hook #'meow-insert)))
-
-(use-package move-text
-  :bind (("M-P" . #'move-text-up)
-         ("M-N" . #'move-text-down)))
 
 (use-package puni
   :if (display-graphic-p) ; FIXME puni is messing terminal
@@ -741,7 +771,7 @@ deleted, kill the pairs around point."
       (mapcar
        (lambda (line)
          (let* ((linum (if (and (> occur-engine-prev-linum -1)
-                                (< occur-engine-prev-linum (current-line)))
+                                (< occur-engine-prev-linum (array-current-line)))
                            (+ occur-engine-prev-linum
                               (1+ list-matching-lines-default-context-lines)
                               curr-line)
@@ -752,7 +782,7 @@ deleted, kill the pairs around point."
                                (format "%7d:" linum))))
            (setq curr-line (1+ curr-line))
            (if (> curr-line 0)
-               (setq occur-engine-prev-linum (current-line)))
+               (setq occur-engine-prev-linum (array-current-line)))
            (concat line-prefix line "\n")))
        lines)))
   
@@ -761,7 +791,7 @@ deleted, kill the pairs around point."
 (use-package flymake
   :ensure nil
   :bind ("M-s x" . flymake-show-buffer-diagnostics)
-  :hook (prog-mode . flymake-mode)
+  :hook (emacs-lisp-mode . flymake-mode)
   :hook (cc-mode . check-cc-tramp)
   :config
   (defun check-cc-tramp nil
@@ -775,7 +805,7 @@ deleted, kill the pairs around point."
         flymake-suppress-zero-counters t
         flymake-fringe-indicator-position nil
         flymake-margin-indicator-position nil
-        flymake-show-diagnostics-at-end-of-line t)
+        flymake-show-diagnostics-at-end-of-line 'short)
 
   (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake))
 
@@ -841,7 +871,7 @@ deleted, kill the pairs around point."
          ("M-<left>" . windmove-swap-states-left))
   :config
   (setq windmove-wrap-around t)
-  (windmove-default-keybindings 'none))
+  (windmove-default-keybindings 'shift))
 
 (use-package popper
   :bind (("M-j"   . popper-toggle)
@@ -860,9 +890,9 @@ deleted, kill the pairs around point."
           "\\*vc-change-log\\*" "\\*Deletions\\*"
           "\\*Flymake .\*" "\\*CDLaTex Help\\*"
           "\\*Process List\\*" "\\*Org Select\\*"
-          "^CAPTURE.*" "\\*Org Agenda\\*"
+          "^CAPTURE.*" "\\*Org Agenda\\*" "\\*kubel stderr\\*"
           "\\*Warnings\\*" "\\*Backtrace\\*"
-          help-mode compilation-mode
+          help-mode compilation-mode comint-mode
           "^\\*eshell.*\\*$" eshell-mode
           "^\\*term.*\\*$" term-mode)
         popper-mode-line nil
@@ -1016,29 +1046,9 @@ deleted, kill the pairs around point."
     (with-eval-after-load 'corfu
       (push 'nerd-icons-corfu-formatter corfu-margin-formatters)))
   (use-package nerd-icons-dired
-    :hook (dired-mode . nerd-icons-dired-mode)
-    :config
-    (define-advice nerd-icons-dired--setup
-        (:before (&rest _args) fix-pr22-18)
-      (when (derived-mode-p 'dired-mode)
-        (setq-local tab-width 1)
-        (with-eval-after-load 'dired-subtree
-          (advice-add 'dired-subtree-insert :around #'nerd-icons-dired--refresh-advice)
-          (advice-add 'dired-subtree-remove :around #'nerd-icons-dired--refresh-advice))
-        (with-eval-after-load 'wdired
-          (advice-add 'wdired-abort-changes :around #'nerd-icons-dired--refresh-advice))))
-    (define-advice nerd-icons-dired--teardown
-        (:before (&rest _args) fix-pr22-18)
-      (advice-remove 'dired-subtree-insert #'nerd-icons-dired--refresh-advice)
-      (advice-remove 'dired-subtree-remove #'nerd-icons-dired--refresh-advice)
-      (advice-remove 'wdired-abort-changes #'nerd-icons-dired--refresh-advice)))
+    :hook (dired-mode . nerd-icons-dired-mode))
   (use-package nerd-icons-ibuffer
     :hook (ibuffer-mode . nerd-icons-ibuffer-mode)))
-
-(use-package info-colors
-  :vc (:url "https://github.com/ubolonton/info-colors")
-  :hook
-  (Info-selection . info-colors-fontify-node))
 
 (use-package shr-tag-pre-highlight
   ;; FIXME complains if mode isnt available
@@ -1072,7 +1082,8 @@ deleted, kill the pairs around point."
 
 (use-package diff-hl
   :hook (((prog-mode conf-mode) . turn-on-diff-hl-mode)
-         ((prog-mode conf-mode) . diff-hl-margin-mode))
+         ((prog-mode conf-mode) . diff-hl-margin-mode)
+         (dired-mode . diff-hl-dired-mode))
   :config
   (diff-hl-flydiff-mode t)
   (when (package-installed-p 'magit)
@@ -1280,58 +1291,6 @@ deleted, kill the pairs around point."
                               "gwene.org.bitlbee.news.rss")
                              ("Unread")))))
 
-(use-package erc
-  ;; auth: machine irc.libera.chat login "USER" password PASSWORD
-  :ensure nil
-  :commands my/irc
-  :hook (erc-join . hl-line-mode)
-  :hook (erc-join . (lambda nil
-                      (setq-local erc-fill-column (min (- (window-width) 3) 85))))
-  :hook (erc-kill-server . (lambda nil
-                             (erc-status-sidebar-kill)
-                             (tab-bar-close-tab)))
-  :custom
-  (erc-autojoin-channels-alist '(("libera.chat" "#emacs"))); "##rust")))
-  (erc-default-server "irc.libera.chat")
-  (erc-nick "brongulus")
-  (erc-nickserv-get-password nil)
-  (erc-use-auth-source-for-nickserv-password t)
-  (erc-fill-column (min (- (window-width) 3) 85))
-  (erc-status-side-bar-width 12)
-  (erc-autojoin-timing 'ident)
-  (erc-fill-function 'erc-fill-static)
-  (erc-fill-static-center 14)
-  (erc-format-nick-function 'erc-format-@nick)
-  (erc-header-line-face-method t)
-  (erc-track-position-in-mode-line t)
-  (erc-track-showcount t)
-  (erc-track-shorten-function nil)
-  (erc-track-exclude-server-buffer t)
-  (erc-join-buffer 'bury) ; window
-  (erc-kill-server-buffer-on-quit t)
-  (erc-kill-buffer-on-part t)
-  (erc-hide-list '("JOIN" "PART" "QUIT" "353")) ;; 353 hide names
-  (erc-lurker-hide-list '("JOIN" "PART" "QUIT" "NICK"))
-  (erc-track-exclude-types '("JOIN" "MODE" "NICK" "PART" "QUIT"
-                             "324" "329" "332" "333" "353" "477"))
-  :config
-  (defun my/irc nil
-    "Setup ERC and connect if not already."
-    (interactive)
-    (if (get-buffer "Libera.Chat") ;; ERC already active?
-        (pop-to-buffer "Libera.Chat")
-      (progn
-        (tab-bar-new-tab)
-        (erc-tls :server "irc.libera.chat" :port 6667 :nick "brongulus" :password nil)
-        (erc-track-switch-buffer 1)
-        (erc-status-sidebar-open))))
-  (erc-services-mode 1)
-  (erc-autojoin-mode)
-  (erc-track-mode t)
-  (erc-timestamp-mode -1)
-  (push 'keep-place erc-modules)
-  (erc-update-modules))
-
 (use-package vc
   :defer 1
   :ensure nil
@@ -1410,36 +1369,6 @@ deleted, kill the pairs around point."
 (use-package forge
   :after magit)
 
-(use-package blamer
-  :ensure t
-  :bind (("s-i" . blamer-show-commit-info)
-         ("C-c i" . blamer-show-posframe-commit-info))
-  :defer 20
-  :custom
-  (blamer-idle-time 0.3)
-  (blamer-min-offset 20)
-  :custom-face
-  (blamer-face ((t :inherit font-lock-comment-face
-                   :italic t)))
-  :config
-  ;; (global-blamer-mode 1)
-  (defun blamer-callback-show-commit-diff (commit-info)
-    (interactive)
-    (let ((commit-hash (plist-get commit-info :commit-hash)))
-      (when commit-hash
-        (magit-show-commit commit-hash))))
-
-  (defun blamer-callback-open-remote (commit-info)
-    (interactive)
-    (let ((commit-hash (plist-get commit-info :commit-hash)))
-      (when commit-hash
-        (message commit-hash)
-        (forge-browse-commit commit-hash))))
-
-  (setq blamer-bindings
-        '(("<mouse-3" . blamer-callback-open-remote) ;; FIXME
-          ("<mouse-1>" . blamer-callback-show-commit-diff))))
-
 (use-package dired
   :ensure nil
   :hook ((dired-mode . dired-hide-details-mode)
@@ -1489,6 +1418,7 @@ deleted, kill the pairs around point."
         dired-recursive-copies 'always))
 
 (use-package dired-sidebar
+  :pin melpa-stable
   :bind ("C-x d" . dired-sidebar-toggle-sidebar)
   :bind (:map dired-sidebar-mode-map
               ("C-o" . other-window)
@@ -1585,27 +1515,28 @@ deleted, kill the pairs around point."
 
 ;;; Org
 
-(use-package auctex
-  :config ; ref: tectonic docs
-  (setq TeX-engine-alist '((default
-                            "Tectonic"
-                            "tectonic -X compile -f plain %T"
-                            "tectonic -X watch"
-                            nil)))
-  (setq LaTeX-command-style '(("" "%(latex)"))
-        TeX-process-asynchronous t
-        TeX-check-TeX nil
-        TeX-engine 'default)
-  (let ((tex-list (assoc "TeX" TeX-command-list))
-        (latex-list (assoc "LaTeX" TeX-command-list)))
-    (setf (cadr tex-list) "%(tex)"
-          (cadr latex-list) "%l")))
+(use-package auctex)
+;;   :config ; ref: tectonic docs
+;;   (setq TeX-engine-alist '((default
+;;                             "Tectonic"
+;;                             "tectonic -X compile -f plain %T"
+;;                             "tectonic -X watch"
+;;                             nil)))
+;;   (setq LaTeX-command-style '(("" "%(latex)"))
+;;         TeX-process-asynchronous t
+;;         TeX-check-TeX nil
+;;         TeX-engine 'default)
+;;   (let ((tex-list (assoc "TeX" TeX-command-list))
+;;         (latex-list (assoc "LaTeX" TeX-command-list)))
+;;     (setf (cadr tex-list) "%(tex)"
+;;           (cadr latex-list) "%l")))
 
 (use-package org
   :ensure nil
   :bind (("C-x y" . yank-media)
          :map org-mode-map
-         ("C-'" . avy-goto-char-timer))
+         ("C-'" . avy-goto-char-timer)
+         ("C-," . my/scroll-other-window))
   :hook ((org-mode . visual-line-mode)
          (org-mode . variable-pitch-mode))
   :config
@@ -1853,32 +1784,6 @@ deleted, kill the pairs around point."
         denote-dired-directories
         `(,denote-directory)))
 
-(use-package denote-refs
-  :ensure nil
-  :vc (:url "https://codeberg.org/akib/emacs-denote-refs")
-  :bind ("C-c n b" . denote-refs-mode))
-
-(use-package deft
-  :bind (("<f8>" . deft)
-         ([remap deft-complete] . #'deft-use-denote)
-         :map deft-mode-map
-         ("TAB" . deft-open-file-other-window)
-         ([tab] . deft-open-file-other-window))
-  :config
-  (defun deft-use-denote nil
-    (interactive)
-    (denote (deft-whole-filter-regexp)))
-  
-  (setq deft-use-filename-as-title nil
-        deft-recursive t
-        deft-auto-save-interval -1.0
-        deft-directory (concat dropbox-dir "denote/")
-        deft-strip-summary-regexp
-        (format "%s\\|%s"
-                deft-strip-summary-regexp
-                "^#\\+.*")
-        deft-use-filter-string-for-filename t))
-
 ;;; Meow
 
 (use-package meow
@@ -2113,7 +2018,9 @@ deleted, kill the pairs around point."
   (setq eglot-events-buffer-config 0
         eglot-autoshutdown t
         eglot-inlay-hints-mode nil)
-  (add-hook 'rust-ts-mode-hook (lambda () (setq-local tab-width 2)))
+  (add-hook 'rust-ts-mode-hook (lambda () (setq-local tab-width 2)
+                                 (hl-line-mode 'toggle)
+                                 (highlight-indent-guides-mode 'toggle)))
   (add-hook 'go-ts-mode-hook (lambda () (setq-local tab-width 4)
                                (hl-line-mode 'toggle)
                                (highlight-indent-guides-mode 'toggle)))
@@ -2148,23 +2055,16 @@ deleted, kill the pairs around point."
                             :hover t
                             :completion t
                             :schemas (:Kubernetes "/*")))))
-  
-  (defvar ra-setup
-    `(:rust-analyzer
-      (:procMacro (:attributes (:enable t)
-                               :enable t)
-                  :rootPath ,(file-local-name (file-truename buffer-file-name))
-                  :detachedFiles ,(vector (file-local-name
-                                           (file-truename buffer-file-name)))
-                  :diagnostics (:disabled ["unresolved-proc-macro"
-                                           "unresolved-macro-call"])))))
-;; (add-to-list 'eglot-server-programs ;; standalone r-a support (from rustic)
-;;              `(rust-ts-mode . ("rust-analyzer"
-;;                                :initializationOptions
-;;                                ,ra-setup)))
+  ;; https://gist.github.com/casouri/0ad2c6e58965f6fd2498a91fc9c66501
+  (add-to-list 'eglot-server-programs ;; standalone r-a support (from rustic)
+               `(rust-ts-mode . ("rust-analyzer"
+                                 :initializationOptions
+                                 (:check (:command "clippy"))))))
 
 (use-package kubed
   :bind-keymap ("C-c k" . kubed-prefix-map))
+
+(use-package kubel)
 
 (use-package zig-mode
   :mode ("\\.zig\\'" . zig-mode))
@@ -2225,26 +2125,23 @@ deleted, kill the pairs around point."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(erc-speaker-from-channel-member-function 'erc-format-@nick nil nil "Customized with use-package erc")
  '(package-selected-packages
-   '(auctex avy blamer cape cdlatex corfu-terminal deadgrep deft denote-refs devil diff-hl
-            dired-sidebar easy-kill eat eldoc-box embark exec-path-from-shell forge gptel
-            highlight-indent-guides info-colors janet-ts-mode kkp kubed macrursors meow mermaid-mode
-            move-text nerd-icons-corfu nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless
-            org-appear org-modern ox-hugo pdf-tools popper puni shr-tag-pre-highlight
-            transpose-frame undo-fu-session vertico writeroom-mode xclip zig-mode))
+   '(auctex avy cape cdlatex corfu-terminal deadgrep denote devil diff-hl dired-sidebar easy-kill eat
+            eldoc-box embark exec-path-from-shell forge highlight-indent-guides info-colors
+            janet-ts-mode kkp kubed kubel macrursors meow nerd-icons nerd-icons-corfu
+            nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless org-appear org-modern ox-hugo
+            pdf-tools popper puni shr-tag-pre-highlight transpose-frame undo-fu-session vertico
+            writeroom-mode xclip zig-mode))
  '(package-vc-selected-packages
-   '((dired-preview :url "https://github.com/protesilaos/dired-preview")
-     (ox-awesomecv :url "https://gitlab.com/Titan-C/org-cv")
+   '((ox-awesomecv :url "https://gitlab.com/Titan-C/org-cv")
      (janet-ts-mode :url "https://github.com/sogaiu/janet-ts-mode")
-     (info-colors :url "https://github.com/ubolonton/info-colors")
      (macrursors :url "https://github.com/karthink/macrursors"))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(widget-button ((t (:foreground "white" :background "grey50")))))
+ )
 ;; Local Variables:
 ;; byte-compile-warnings: (not free-vars unresolved)
 ;; End:

@@ -375,8 +375,7 @@ Given a step of 1 (the default), will go to the next file.
                                 :weight semi-bold))
   "Face for Persistent menu headers.")
 
-(custom-set-faces
- `(widget-button ((t (:foreground "white" :background "grey50")))))
+(set-face-attribute 'widget-button nil :foreground "white" :background "grey50")
 
 (defmacro with-visible-org-buffer (body)
   `(if-let

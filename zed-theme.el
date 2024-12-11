@@ -124,7 +124,7 @@
    `(font-lock-doc-string-face ((t (:foreground "#1A93AE" :background "#F4F9FE"))))
    `(font-lock-function-name-face ((t (:foreground ,blue-color))))
    `(font-lock-keyword-face ((t (:foreground ,magenta-color))))
-   `(font-lock-preprocessor-face ((t (:foreground ,magenta-color))))
+   `(font-lock-preprocessor-face ((t (:foreground ,red-color))))
    `(font-lock-property-name-face ((t (:foreground ,@(if load-theme-light
                                                          (list magenta-color)
                                                        (list yellow-color))))))
@@ -186,9 +186,13 @@
    `(diff-hl-insert ((t (:foreground ,green-color))))
    `(diff-hl-change ((t (:foreground ,light-yellow-color))))
    `(diff-hl-delete ((t (:foreground ,red-color))))
+   `(diff-hl-dired-insert ((t (:background ,green-color :foreground ,green-color))))
+   `(diff-hl-dired-change ((t (:background ,light-yellow-color :foreground ,light-yellow-color))))
+   `(diff-hl-dired-delete ((t (:background ,red-color :foreground ,red-color))))
    
    `(completions-highlight ((t (:inherit highlight :extend t))))
-   `(corfu-default ((t (:background ,modeline-color))))
+   ;; `(corfu-default ((t (:background ,modeline-color :foreground ,foreground-color))))
+   ;; `(corfu-border ((t (:inherit corfu-default))))
    `(corfu-current ((t (:background ,selection-color :foreground ,foreground-color))))
    `(dired-directory ((t (:foreground ,yellow-color))))
    `(dired-header ((t (:foreground ,green-color :height 1.2))))
@@ -197,6 +201,7 @@
    `(fixed-pitch ((t (:inherit default))))
    `(fixed-pitch-serif ((t (:inherit default))))
    `(info-menu-star ((t (:foreground ,red-color))))
+   `(info-title-4 ((t (:weight bold :height 1.1 :inherit variable-pitch))))
    `(icomplete-selected-match ((t (:inherit highlight :extend t))))
    `(tty-menu-selected-face ((t (:inherit highlight))))
    `(tty-menu-enabled-face ((t (:background ,modeline-color))))
@@ -603,7 +608,8 @@
             ;;                             '(height 0.8)))))
             (when (bound-and-true-p vc-mode)
               (propertize (replace-regexp-in-string "^.." " " vc-mode)
-                          'face '(:foreground "#f5871f" :weight bold)
+                          'face '(:inherit font-lock-comment-face
+                                           :weight bold)
                           'display `((raise 0.2)
                                      ,(unless (eq major-mode 'org-mode)
                                         '(height 0.8)))))
@@ -621,7 +627,7 @@
                (concat
                 " REC "
                 (number-to-string kmacro-counter)  " ▶ "
-                (when macrursors-mode
+                (when (and (featurep 'macrursors) macrursors-mode)
                   (if macrursors--overlays
                       (format (concat "[%d/%d]" " ")
                               (1+ (cl-count-if (lambda (p) (< p (point))) macrursors--overlays
@@ -683,11 +689,19 @@
   (interactive)
   (if load-theme-light
       (progn
+        (unless (display-graphic-p)
+          (call-process-shell-command
+           "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" set-colors --all --configured ~/.config/kitty/theme.conf"
+           nil 0))
         (when (eq system-type 'darwin)
           ;; modify-all-frames-parameters
           (modify-all-frames-parameters '((ns-appearance . dark))))
         (setq load-theme-light nil))
     (progn
+      (unless (display-graphic-p)
+        (call-process-shell-command
+         "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" set-colors --all --configured ~/.config/kitty/theme-light.conf"
+         nil 0))
       (when (eq system-type 'darwin)
         ;; modify-all-frames-parameters
         (modify-all-frames-parameters '((ns-appearance . light))))
