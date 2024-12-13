@@ -11,7 +11,8 @@
       "/sdcard/Dropbox/"
     "~/Dropbox/"))
 (when is-android
-  (global-set-key (kbd "C-\\") 'term))
+  (global-set-key (kbd "C-\\") (lambda nil (interactive)
+                                 (term "fish"))))
 
 (use-package use-package
   :no-require
