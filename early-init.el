@@ -55,20 +55,20 @@
      'variable-pitch nil :family "iA Writer Duo S" :weight 'regular :height 170)
   (if is-mac
       (set-face-attribute
-       'variable-pitch nil :family "iA Writer Duo V":weight 'regular); :height 170)
+       'variable-pitch nil :family "iA Writer Duo V":weight 'regular)
     (set-face-attribute
      'variable-pitch nil :family "iA Writer Duospace" :weight 'regular :height 130)))
 
 ;; doom
 (setq-default inhibit-redisplay t
               inhibit-message t)
-;(advice-add #'tool-bar-setup :override #'ignore)
+;; (advice-add #'tool-bar-setup :override #'ignore)
 (add-hook 'after-init-hook
           (lambda nil
             (setq-default inhibit-redisplay nil
                           inhibit-message nil)
             (redraw-frame))
- ;           (advice-remove #'tool-bar-setup #'ignore))
+          ;; (advice-remove #'tool-bar-setup #'ignore))
           :depth -105)
 ;;
 (fset 'display-startup-echo-area-message 'ignore)
@@ -138,11 +138,11 @@
 (when is-mac
   (add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
   (let ((home (getenv "HOME")))
-     (setenv "PATH" (concat (getenv "PATH")
-                            ":" home "/.nix-profile/bin:/usr/bin"))
-     (setq exec-path (append `(,(concat home "/.nix-profile/bin")
-                               "/nix/var/nix/profiles/default/bin")
-                             exec-path))))
+    (setenv "PATH" (concat (getenv "PATH")
+                           ":" home "/.nix-profile/bin:/usr/bin"))
+    (setq exec-path (append `(,(concat home "/.nix-profile/bin")
+                              "/nix/var/nix/profiles/default/bin")
+                            exec-path))))
 
 (if is-mac
     (setq mac-option-modifier 'meta)

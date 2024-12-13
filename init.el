@@ -110,6 +110,7 @@
         scroll-conservatively 100
         scroll-preserve-screen-position t
         ;; pixel-scroll-precision-large-scroll-height 35.0
+        vc-follow-symlinks t
         split-height-threshold nil
         split-width-threshold 100
         save-abbrevs nil
@@ -121,7 +122,8 @@
         Info-use-header-line nil
         outline-minor-mode-cycle nil ;t
         tabify-regexp "^\t* [ \t]+"
-        grep-command "grep --color=always -nHi -r --include=*.* -e \"pattern\" ."
+        grep-command "rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)"
+        grep-command-position 27
         electric-pair-skip-self t
         electric-pair-preserve-balance 'electric-pair-inhibit-predicate
         electric-pair-delete-adjacent-pairs t
@@ -186,7 +188,7 @@ the cursor by ARG lines."
 
   (set-register ?f `(file . ,(locate-user-emacs-file "init.el")))
   (set-register ?c `(file . "~/problems/"))
-  
+
   (add-hook 'prog-mode-hook (which-function-mode))
   ;; load theme based on terminal
   (let ((color (shell-command-to-string
@@ -267,7 +269,7 @@ backwards instead."
                                                                     basename)
                                           ".go")
                                 (concat basename "_test.go")))
-                             (t (message "No alternate file for current mode"))))
+                             (t (error "No alternate file for current mode"))))
                            (alternate-buffer (find-file-noselect alternate-file)))
                       (if (file-exists-p alternate-file)
                           (switch-to-buffer alternate-buffer)
@@ -289,6 +291,7 @@ backwards instead."
                   (advice-add 'kill-ring-save :around #'my/kill-pulse-advice)
                   
                   ;; misc modes and hooks
+                  (push "~/.emacs.d/info" Info-directory-list)
                   (put 'narrow-to-region 'disabled nil)
                   (add-hook 'debugger-mode-hook #'visual-line-mode)
                   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
@@ -650,7 +653,7 @@ deleted, kill the pairs around point."
 
 (use-package hideshow
   :ensure nil
-  :hook (emacs-lisp-mode . hs-minor-mode)
+  :hook (prog-mode . hs-minor-mode)
   :bind (("C-z a" . hs-global-cycle)
          ("C-z f" . hs-cycle))
   :config
@@ -893,7 +896,7 @@ deleted, kill the pairs around point."
           "^CAPTURE.*" "\\*Org Agenda\\*" "\\*kubel stderr\\*"
           "\\*Warnings\\*" "\\*Backtrace\\*"
           help-mode compilation-mode comint-mode
-          "^\\*eshell.*\\*$" eshell-mode
+          "^\\*eshell.*\\*$" eshell-mode grep-mode
           "^\\*term.*\\*$" term-mode)
         popper-mode-line nil
         popper-window-height 0.33))
@@ -902,6 +905,8 @@ deleted, kill the pairs around point."
   :after popper
   :ensure nil
   :config
+  ;; (defun popper--delete-popup (win) ;; FIXME
+  ;;   (message "Attempt to delete popper window"))
   ;; cleaner tab-line
   (advice-add 'tab-line-tab-name-buffer :around
               (lambda (orig-fn &rest args)
@@ -947,7 +952,7 @@ deleted, kill the pairs around point."
   :unless (display-graphic-p)
   :init (xclip-mode 1))
 
-(use-package kkp
+(use-package kkp ;; FIXME tmux
   :unless (display-graphic-p)
   :hook (after-init . global-kkp-mode))
 
@@ -1010,9 +1015,9 @@ deleted, kill the pairs around point."
                                         adaptive-height
                                       lower-limit))
            (setq-local line-spacing 0.5)))))
-    (setq-local mode-line-format nil
-                writeroom-restore-window-config t
-                writeroom-maximize-window t)
+    (setq-local ;mode-line-format nil
+     writeroom-restore-window-config t
+     writeroom-maximize-window t)
     (writeroom-mode)
     (setq-local cursor-type 'bar
                 scroll-preserve-screen-position t
@@ -1022,6 +1027,7 @@ deleted, kill the pairs around point."
   
   (setq writeroom-width (min 100 (max 90 (- (window-width) 10)))
         writeroom-mode-line t
+        writeroom-bottom-divider-width 0
         writeroom-restore-window-config t
         writeroom-global-effects nil
         writeroom-maximize-window nil))
@@ -1035,9 +1041,9 @@ deleted, kill the pairs around point."
   (defun my/add-tab-bar-arrow-glyphs (theme)
     (when (custom-theme-enabled-p 'zed)
       (setq zed-tab-back-button
-            (nerd-icons-octicon "nf-oct-arrow_left" :v-adjust zed-adjust)
+            (nerd-icons-octicon "nf-oct-arrow_left" :v-adjust 0.3)
             zed-tab-forward-button
-            (nerd-icons-octicon "nf-oct-arrow_right" :v-adjust zed-adjust))))
+            (nerd-icons-octicon "nf-oct-arrow_right" :v-adjust 0.3))))
   (my/add-tab-bar-arrow-glyphs 'theme)
   (add-hook 'enable-theme-functions 'my/add-tab-bar-arrow-glyphs)
   (push '(eat-mode nerd-icons-devicon "nf-dev-terminal") nerd-icons-mode-icon-alist)
@@ -1082,8 +1088,7 @@ deleted, kill the pairs around point."
 
 (use-package diff-hl
   :hook (((prog-mode conf-mode) . turn-on-diff-hl-mode)
-         ((prog-mode conf-mode) . diff-hl-margin-mode)
-         (dired-mode . diff-hl-dired-mode))
+         ((prog-mode conf-mode) . diff-hl-margin-mode))
   :config
   (diff-hl-flydiff-mode t)
   (when (package-installed-p 'magit)
@@ -1292,7 +1297,7 @@ deleted, kill the pairs around point."
                              ("Unread")))))
 
 (use-package vc
-  :defer 1
+  :defer nil
   :ensure nil
   :bind (("C-x v f" . (lambda () (interactive)
                         (vc-git--pushpull "push" nil '("--force-with-lease"))))
@@ -1301,7 +1306,6 @@ deleted, kill the pairs around point."
   (setq vc-handled-backends '(Git)
         vc-display-status 'no-backend
         vc-find-revision-no-save t
-        vc-follow-symlinks t
         project-vc-merge-submodules nil
         diff-default-read-only t
         vc-annotate-background-mode t)
@@ -1331,7 +1335,7 @@ deleted, kill the pairs around point."
   :init
   (setq magit-auto-revert-mode nil)
   (with-eval-after-load 'project
-    (add-to-list 'project-switch-commands '(magit-status "Magit" ?m)))
+    (add-to-list 'project-switch-commands '(magit-project-status "Magit" ?m)))
   :bind (:map magit-status-mode-map
               ("x" . magit-discard))
   :config
@@ -1408,6 +1412,7 @@ deleted, kill the pairs around point."
   (put 'dired-find-alternate-file 'disabled nil)
   
   (setq dired-dwim-target t
+        dired-omit-verbose nil
         dired-auto-revert-buffer t
         dired-mouse-drag-files t
         dired-use-ls-dired nil
@@ -1594,7 +1599,7 @@ deleted, kill the pairs around point."
         org-startup-indented t
         org-startup-truncated nil
         org-adapt-indentation t
-        org-special-ctrl-a/e t
+        org-special-ctrl-a/e nil
         org-M-RET-may-split-line '((item . nil))
         org-fold-catch-invisible-edits 'show-and-error
         org-edit-src-content-indentation 0
@@ -1911,7 +1916,7 @@ deleted, kill the pairs around point."
    '("p" . meow-yank)
    '("P" . meow-yank-pop)
    '("q" . meow-quit)
-   '("Q" . kill-current-buffer)
+   '("Q" . kill-buffer-and-window)
    '("r" . (lambda nil (interactive)
              (delete-char 1)
              (insert-char (read-char nil t))
@@ -1978,7 +1983,8 @@ deleted, kill the pairs around point."
         treesit-font-lock-level 4))
 
 (setq major-mode-remap-alist '((c++-mode . c++-ts-mode)
-                               (c-mode . c-ts-mode)))
+                               (c-mode . c-ts-mode)
+                               (yaml-mode . yaml-ts-mode)))
 (setq python-indent-guess-indent-offset t
       python-indent-guess-indent-offset-verbose nil)
 
@@ -1999,7 +2005,7 @@ deleted, kill the pairs around point."
          ("\\.go\\'" . go-ts-mode)
          ("\\.ts\\'" . typescript-ts-mode)
          ("\\.lua\\'" . lua-ts-mode)
-         ("\\.yaml\\'" . yaml-ts-mode)
+         ("\\.ya?ml\\'" . yaml-ts-mode)
          ("\\.bin\\'" . hexl-mode)
          ("\\.info\\'" . Info-mode)))
 
@@ -2098,13 +2104,16 @@ deleted, kill the pairs around point."
          ("C-c b" . foxy-run-all-tests))
   :init
   (defvar foxy-compile-commands
-    '((rust-ts-mode-hook . "rustc -o a.out ")
-      (c++-mode-hook . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -I/Users/admin/problems/include ")
-      (c++-ts-mode-hook . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -I/Users/admin/problems/include ")
+    '(;; (rust-ts-mode-hook . "rustc -o a.out ")
+      (c++-mode-hook
+       . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -I/Users/admin/problems/include ")
+      (c++-ts-mode-hook
+       . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -I/Users/admin/problems/include ")
       ;; (go-ts-mode-hook . "go build -o a.out ")
       ))
   (defvar foxy-run-commands
     '((go-ts-mode-hook . "go run ")
+      (rust-ts-mode-hook . "CARGO_TERM_COLOR=always cargo run ")
       (janet-ts-mode-hook . "janet ")))
   
   (dolist (pair foxy-compile-commands)

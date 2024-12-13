@@ -19,9 +19,7 @@
 
 (setq zed-icons-p t);(require 'nerd-icons nil t))
 
-(setq zed-adjust (if (eq system-type (or 'android 'darwin))
-                     0.2
-                   0.1))
+(setq zed-adjust 0.2)
 
 (let ((selection-color (if load-theme-light
                            "#C9D0D9"
@@ -290,8 +288,8 @@
    `(meow-insert-indicator
      ((t (:foreground ,inactive-color))));"black" :background "#00c2ff"))))
    `(minibuffer-prompt ((t (:foreground ,@(if load-theme-light
-                                            (list magenta-color)
-                            (list yellow-color))))))
+                                              (list magenta-color)
+                                            (list yellow-color))))))
    `(widget-field ((t (:background ,subtle-color :extend t))))
    
    `(org-block ((t (:inherit default :background ,subtle-color :extend t :height 1.0))))
@@ -346,13 +344,19 @@
    `(markdown-header-face-7 ((t (:height 1.1 :weight bold :inherit markdown-header-face))))
    `(markdown-header-face-8 ((t (:height 1.1 :weight bold :inherit markdown-header-face))))
    
-   `(tab-bar ((t (:background ,subtle-color :box ,border-color :height 160))))
-   `(tab-bar-tab ((t (:inherit default :height 160))))
+   `(tab-bar ((t (:box ,border-color :height 120
+                       :background
+                       ,@(if (display-graphic-p)
+                             (list subtle-color)
+                           (list modeline-color))))))
+   `(tab-bar-tab ((t (:inherit default :height 150))))
    `(tab-bar-tab-inactive
-     ((t (:background ,subtle-color :foreground ,inactive-color :weight regular :height 160
-                      ,@(when (display-graphic-p)
-                          (list :underline
-                                (list :color border-color :position -1)))))))
+     ((t (:foreground ,inactive-color :weight regular :height 150
+                      ,@(if (display-graphic-p)
+                            (list :background subtle-color
+                                  :underline
+                                  (list :color border-color :position -1))
+                          (list :background modeline-color))))))
 
    `(tab-line ((t (:inherit tab-bar))))
    `(tab-line-tab ((t (:inherit tab-bar-tab))))
@@ -367,6 +371,7 @@
    `(deadgrep-filename-face ((t (:inherit tab-bar))))
    `(denote-faces-date ((t (:inherit font-lock-comment-face))))
    `(denote-faces-link ((t (:inherit link :background ,subtle-color))))
+   `(sh-heredoc ((t (:foreground ,yellow-color))))
    ;; `(vertico-posframe ((t (:foreground ,foreground-color :background "#1a1a1a")))
    `(vertico-posframe-border ((t (:inherit child-frame-border))))
    `(why-this-face ((t (:inherit font-lock-comment-face))))
@@ -551,7 +556,24 @@
         tab-line-left-button zed-tab-back-button
         tab-line-right-button zed-tab-forward-button))
 
+
 (with-eval-after-load 'tab-bar
+  (setq tab-bar-separator nil
+        ;; FIXME auto-width doesnt work with zed-tab-name
+        tab-bar-auto-width t
+        tab-bar-auto-width-max '((120) 16)
+        tab-bar-tab-name-truncated-max 16
+        tab-bar-tab-name-function #'tab-bar-tab-name-truncated
+        tab-bar-tab-name-ellipsis "…"
+        tab-bar-close-button-show 'selected
+        tab-bar-close-last-tab-choice 'tab-bar-mode-disable
+        tab-bar-close-button
+        (propertize (concat (make-string 1 #x00D7) " ") 'close-tab t)
+        zed-tab-forward-button
+        (propertize "⏵" 'display `(raise 0.3))
+        zed-tab-back-button
+        (propertize "⏴ " 'display `(raise 0.3)))
+
   (defun zed-tab-name (tab _i)
     "A cleaner tab name emulating atom one."
     (let* ((selected-p (eq (car tab) 'current-tab))
@@ -561,17 +583,36 @@
                      'tab-bar-tab
                    'tab-bar-tab-inactive))
            (vsep (when (display-graphic-p)
-                   (propertize " " 'face `(:background ,
-                                           (face-foreground 'vertical-border nil t))
+                   (propertize " " 'face '(:inherit child-frame-border)
                                'display '(space :width (1))))))
       (concat
        vsep
+       (apply 'propertize
+              " "
+              `(tab ,tab
+                    ,@(if selected-p '(selected t))
+                    face ,face
+                    display (raise ,zed-adjust)))
+       ;; flymake
+       (when (and selected-p
+                  (bound-and-true-p flymake-mode))
+         (let* ((flymake-mode-line-counter-format
+                 '("" flymake-mode-line-error-counter
+                   flymake-mode-line-warning-counter
+                   flymake-mode-line-note-counter ""))
+                (flymake-str (format-mode-line flymake-mode-line-counters)))
+           (add-face-text-property 0 (length flymake-str)
+                                   '(:inherit tab-bar-tab :box nil
+                                              :height 130 :weight regular)
+                                   t
+                                   flymake-str)
+           (propertize
+            flymake-str
+            'display `(raise 0.25))))
        ;; apply face to buffer name
        (apply 'propertize
-              (concat
-               " "
-               (propertize (string-replace "%" "%%" name) ;; (bug#57848)
-                           'follow-link 'ignore))
+              (propertize (string-replace "%" "%%" name) ;; (bug#57848)
+                          'follow-link 'ignore)
               `(tab ,tab
                     ,@(if selected-p '(selected t))
                     face ,face
@@ -586,7 +627,7 @@
                              "")
                      'face `(:inherit tab-bar-tab
                                       :foreground ,(face-background 'cursor nil t))
-                     'display '(raise ,zed-adjust)))
+                     'display `(raise ,zed-adjust)))
        (apply 'propertize
               (if (and selected-p tab-bar-close-button-show
                        (not (buffer-modified-p)))
@@ -599,51 +640,49 @@
 
        vsep)))
 
-  (defun zed-bar-modeline-format nil ; FIXME
+  (defun zed-bar-modeline-format nil
     (concat " "
-            ;; (when (project-mode-line-format)
-            ;;   (propertize (project-mode-line-format)
-            ;;               'display `((raise ,zed-adjust)
-            ;;                          ,(unless (eq major-mode 'org-mode)
-            ;;                             '(height 0.8)))))
+            ;; LSP
+            (when (and (bound-and-true-p eglot--managed-mode)
+                       (eglot-managed-p))
+              (propertize (truncate-string-to-width (project-mode-line-format) 12)
+                          'face '(:inherit font-lock-comment-face)
+                          'display `((raise ,zed-adjust))))
+            ;; Git
             (when (bound-and-true-p vc-mode)
               (propertize (replace-regexp-in-string "^.." " " vc-mode)
-                          'face '(:inherit font-lock-comment-face
-                                           :weight bold)
-                          'display `((raise 0.2)
-                                     ,(unless (eq major-mode 'org-mode)
-                                        '(height 0.8)))))
+                          'face '(:inherit success :weight bold)
+                          'display `((raise ,zed-adjust))))
+            ;; Progress/Macro
             (propertize
              (cond
               ((eq major-mode 'pdf-view-mode)
-               (format "  %d/%d"
+               (format " %d/%d"
                        (pdf-view-current-page)
                        (pdf-cache-number-of-pages)))
               ((eq major-mode 'nov-mode)
-               (format "  %d/%d"
+               (format "%3d%% %d/%d"
+                       (/ (window-start) 0.01 (point-max))
                        (1+ nov-documents-index)
                        (length nov-documents)))
               ((when (or defining-kbd-macro executing-kbd-macro)
-               (concat
-                " REC "
-                (number-to-string kmacro-counter)  " ▶ "
-                (when (and (featurep 'macrursors) macrursors-mode)
-                  (if macrursors--overlays
-                      (format (concat "[%d/%d]" " ")
-                              (1+ (cl-count-if (lambda (p) (< p (point))) macrursors--overlays
-                                               :key #'overlay-start))
-                              (1+ (length macrursors--overlays)))
-                    (concat "[1/1]" " "))))))
+                 (concat
+                  " REC "
+                  (number-to-string kmacro-counter)  " ▶ "
+                  (when (and (featurep 'macrursors) macrursors-mode)
+                    (if macrursors--overlays
+                        (format (concat "[%d/%d]" " ")
+                                (1+ (cl-count-if (lambda (p) (< p (point))) macrursors--overlays
+                                                 :key #'overlay-start))
+                                (1+ (length macrursors--overlays)))
+                      (concat "[1/1]" " "))))))
               (t (format "%3d%%"
                          (/ (window-start) 0.01 (point-max)))))
-             ;; 'face font-lock-comment-face
-             'display `((raise 0.2)
-                        ,(unless (eq major-mode 'org-mode)
-                           '(height 0.7))))))
+             'display `((raise ,zed-adjust)))))
   
   (defun zed-bar-format-menu-bar ()
     "Produce the Menu button for the tab bar that shows the menu bar."
-    `((menu-bar menu-item ,(propertize " ≡ " 'display '((raise 0.1)))
+    `((menu-bar menu-item ,(propertize " ≡ " 'display `((raise ,zed-adjust)))
                 tab-bar-menu-bar :help "Menu Bar")))
 
   (defun zed-bar-format-history ()
@@ -660,32 +699,23 @@
   
   (setq tab-bar-tab-name-format-function #'zed-tab-name
         tab-bar-format
-        '(zed-bar-format-history
-          tab-bar-format-tabs
+        '(tab-bar-format-tabs
           tab-bar-separator
           tab-bar-format-align-right
           zed-bar-modeline-format
           zed-bar-format-menu-bar))
   
-  (add-hook 'tab-bar-mode-hook #'tab-bar-history-mode)
+  (if (display-graphic-p)
+      (push 'zed-bar-format-history tab-bar-format)
+    (setq tab-bar-separator ""
+          tab-bar-close-button-show nil
+          tab-bar-auto-width nil))
   
-  (setq tab-bar-separator nil
-        tab-bar-tab-name-truncated-max 16
-        tab-bar-tab-name-function #'tab-bar-tab-name-truncated
-        tab-bar-tab-name-ellipsis "…"
-        tab-bar-close-button-show 'selected
-        tab-bar-close-last-tab-choice 'tab-bar-mode-disable
-        tab-bar-close-button
-        (propertize (concat (make-string 1 #x00D7) " ") 'close-tab t)
-        zed-tab-forward-button
-        (propertize "⏵" 'display `(raise ,zed-adjust))
-        zed-tab-back-button
-        (propertize "⏴" 'display `(raise ,zed-adjust))))
+  (add-hook 'tab-bar-mode-hook #'tab-bar-history-mode))
 
 ;;;###autoload
 (defun zed-toggle-theme ()
   "Toggle between dark and light mode."
-  ;; FIXME: dired-sidebar reload?
   (interactive)
   (if load-theme-light
       (progn
@@ -705,8 +735,16 @@
       (when (eq system-type 'darwin)
         ;; modify-all-frames-parameters
         (modify-all-frames-parameters '((ns-appearance . light))))
-    (setq load-theme-light t)))
-  (load-theme 'zed :no-confirm))
+      (setq load-theme-light t)))
+  (load-theme 'zed :no-confirm)
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when (derived-mode-p 'dired-mode)
+        (dolist (face '(default fringe))
+          (face-remap-add-relative
+           face :background (if load-theme-light
+                                "#EEEEEE"
+                              "#30343D")))))))
 
 ;;;###autoload
 (when load-file-name
