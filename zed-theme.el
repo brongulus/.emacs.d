@@ -639,46 +639,6 @@
                     display (raise ,zed-adjust)))
 
        vsep)))
-
-  (defun zed-bar-modeline-format nil
-    (concat " "
-            ;; LSP
-            (when (and (bound-and-true-p eglot--managed-mode)
-                       (eglot-managed-p))
-              (propertize (truncate-string-to-width (project-mode-line-format) 12)
-                          'face '(:inherit font-lock-comment-face)
-                          'display `((raise ,zed-adjust))))
-            ;; Git
-            (when (bound-and-true-p vc-mode)
-              (propertize (replace-regexp-in-string "^.." " " vc-mode)
-                          'face '(:inherit success :weight bold)
-                          'display `((raise ,zed-adjust))))
-            ;; Progress/Macro
-            (propertize
-             (cond
-              ((eq major-mode 'pdf-view-mode)
-               (format " %d/%d"
-                       (pdf-view-current-page)
-                       (pdf-cache-number-of-pages)))
-              ((eq major-mode 'nov-mode)
-               (format "%3d%% %d/%d"
-                       (/ (window-start) 0.01 (point-max))
-                       (1+ nov-documents-index)
-                       (length nov-documents)))
-              ((when (or defining-kbd-macro executing-kbd-macro)
-                 (concat
-                  " REC "
-                  (number-to-string kmacro-counter)  " ▶ "
-                  (when (and (featurep 'macrursors) macrursors-mode)
-                    (if macrursors--overlays
-                        (format (concat "[%d/%d]" " ")
-                                (1+ (cl-count-if (lambda (p) (< p (point))) macrursors--overlays
-                                                 :key #'overlay-start))
-                                (1+ (length macrursors--overlays)))
-                      (concat "[1/1]" " "))))))
-              (t (format "%3d%%"
-                         (/ (window-start) 0.01 (point-max)))))
-             'display `((raise ,zed-adjust)))))
   
   (defun zed-bar-format-menu-bar ()
     "Produce the Menu button for the tab bar that shows the menu bar."
@@ -696,13 +656,86 @@
         (history-forward
          menu-item ,zed-tab-forward-button tab-bar-history-forward
          :help "Click to go forward in tab history"))))
+
+  (defun zed-bar-lsp nil
+    (when (and (bound-and-true-p eglot--managed-mode)
+               (eglot-managed-p)
+               (project-current))
+      `((eglot-menu menu-item
+                    ,(propertize (truncate-string-to-width (project-mode-line-format) 12)
+                                 'face '(:inherit font-lock-comment-face)
+                                 'display `((raise ,zed-adjust)))
+                    (lambda (event)
+                      (interactive "e")
+                      (popup-menu eglot-menu))
+                    :help "Show LSP menu"))))
+
+  (defun zed-bar-vc nil
+    (when (bound-and-true-p vc-mode)
+      `((vc-menu menu-item
+                 ,(propertize (replace-regexp-in-string "^.." " " vc-mode)
+                              'face '(:inherit success :weight bold)
+                              'display `((raise ,zed-adjust)))
+                 (lambda (event)
+                   (interactive "e")
+                   (popup-menu vc-menu-map))
+                 :help "Show vc-menu"))))
+
+  (defun zed-bar-progress nil
+    `((major-mode
+       menu-item
+       ,(propertize
+         (cond
+          ((eq major-mode 'pdf-view-mode)
+           ;; pdf-misc-popup-context-menu
+           (format " %d/%d"
+                   (pdf-view-current-page)
+                   (pdf-cache-number-of-pages)))
+          ((eq major-mode 'nov-mode)
+           (format "%3d%% %d/%d"
+                   (/ (window-start) 0.01 (point-max))
+                   (1+ nov-documents-index)
+                   (length nov-documents)))
+          ((when (or defining-kbd-macro executing-kbd-macro)
+             (concat
+              " REC "
+              (number-to-string kmacro-counter)  " ▶ "
+              (when (and (featurep 'macrursors) macrursors-mode)
+                (if macrursors--overlays
+                    (format (concat "[%d/%d]" " ")
+                            (1+ (cl-count-if (lambda (p) (< p (point))) macrursors--overlays
+                                             :key #'overlay-start))
+                            (1+ (length macrursors--overlays)))
+                  (concat "[1/1]" " "))))))
+          (t (format "%3d%%"
+                     (/ (window-start) 0.01 (point-max)))))
+         'display `((raise ,zed-adjust)))
+       (lambda (event) ;; src: mouse-menu-bar-map
+         (interactive "e")
+         (run-hooks 'activate-menubar-hook 'menu-bar-update-hook)
+         (let* ((local-menu (and (current-local-map)
+                                 (lookup-key (current-local-map) [menu-bar])))
+                (local-title-or-map (and local-menu (cadr local-menu))))
+           (or (null local-menu)
+               (stringp local-title-or-map)
+               (setq local-menu
+                     (cons 'keymap
+                           (cons (concat (format-mode-line mode-name)
+                                         " Mode Menu")
+                                 (cdr local-menu)))))
+           (if local-menu
+               (popup-menu local-menu)
+             (message "No menu found for %s" major-mode))))
+       :help "Show major mode menu")))
   
   (setq tab-bar-tab-name-format-function #'zed-tab-name
         tab-bar-format
         '(tab-bar-format-tabs
           tab-bar-separator
           tab-bar-format-align-right
-          zed-bar-modeline-format
+          zed-bar-lsp
+          zed-bar-vc
+          zed-bar-progress
           zed-bar-format-menu-bar))
   
   (if (display-graphic-p)

@@ -52,7 +52,7 @@
   (push '(font . "VictorMono Nerd Font Mono-13:weight=semi-bold") default-frame-alist))
 (if is-android
     (set-face-attribute
-     'variable-pitch nil :family "iA Writer Duo S" :weight 'regular :height 170)
+     'variable-pitch nil :family "iA Writer Duo S" :weight 'regular)
   (if is-mac
       (set-face-attribute
        'variable-pitch nil :family "iA Writer Duo V":weight 'regular)

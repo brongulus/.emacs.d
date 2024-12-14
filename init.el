@@ -133,6 +133,7 @@
         shell-command-prompt-show-cwd t
         shell-kill-buffer-on-exit t
         set-mark-command-repeat-pop t
+        shell-file-name (car (process-lines "which" "fish"))
         compilation-ask-about-save nil
         compilation-scroll-output 'first-error)
 
@@ -1498,7 +1499,8 @@ deleted, kill the pairs around point."
 (use-package pdf-tools
   :mode ("\\.pdf\\'" . pdf-view-mode)
   :hook ((pdf-view-mode . pdf-view-fit-page-to-window)
-         (pdf-view-mode . pdf-view-themed-minor-mode))
+         (pdf-view-mode . pdf-view-themed-minor-mode)
+         (pdf-view-mode . pdf-outline-minor-mode))
   :hook (pdf-view-mode . (lambda nil
                            (blink-cursor-mode -1)
                            (when (featurep 'meow)
@@ -1628,8 +1630,10 @@ deleted, kill the pairs around point."
 
 (use-package org-agenda
   :ensure nil
-  :bind ("C-c o a" . (lambda nil (interactive)
-                       (org-agenda nil "n")))
+  :bind (("C-c o a" . (lambda nil (interactive)
+                        (org-agenda nil "n")))
+         :map org-agenda-mode-map
+         ("q" . org-agenda-exit))
   :config
   (add-to-list 'display-buffer-alist
                '("\\*Calendar\\*"
