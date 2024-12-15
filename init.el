@@ -1259,21 +1259,7 @@ deleted, kill the pairs around point."
   (add-hook 'gnus-article-mode-hook
             (lambda nil
               (setq left-margin-width 4)))
-  
-  ;; mode-line unread indicator
-  (defun my/gnus-unread-count ()
-    (interactive)
-    (let ((unread-count (cdar gnus-topic-unreads)))
-      (if (or (not unread-count) (eq unread-count 0))
-          ""
-        (propertize (format " Unread:%s " unread-count)
-                    'face 'which-func))))
   (with-eval-after-load 'gnus-topic
-    (setq-local global-mode-string
-                (append global-mode-string
-                        (list '(:eval (propertize
-                                       (my/gnus-unread-count)
-                                       'help-echo "Gnus - Unread")))))
     (setq gnus-topic-topology '(("Unread" visible)
                                 (("📥 Personal" visible nil nil))
                                 (("📰 News" visible nil nil))))
@@ -1482,17 +1468,6 @@ deleted, kill the pairs around point."
   :mode ("\\.epub\\'" . nov-mode)
   :hook (nov-mode . visual-line-mode)
   :config
-  (add-hook 'nov-mode-hook
-            (lambda nil ;; thx teco
-              (setq-local
-               global-mode-string
-               (append global-mode-string
-                       (list '(:eval
-                               (propertize
-                                (format " %d/%d"
-                                        (1+ nov-documents-index)
-                                        (length nov-documents))
-                                'face font-lock-comment-face)))))))
   (setq nov-text-width (min 80 (window-width))
         nov-header-line-format nil))
 
@@ -1507,19 +1482,7 @@ deleted, kill the pairs around point."
                              (setq-local meow-cursor-type-motion nil))
                            (setq-local mouse-wheel-tilt-scroll t
                                        mouse-wheel-flip-direction t
-                                       mouse-wheel-scroll-amount-horizontal 2)))
-  :config ;; pdf-tools-install
-  (add-hook 'pdf-view-mode-hook
-            (lambda nil
-              (setq-local
-               global-mode-string
-               (append global-mode-string
-                       (list '(:eval
-                               (propertize
-                                (format " %d/%d"
-                                        (pdf-view-current-page)
-                                        (pdf-cache-number-of-pages))
-                                'face font-lock-comment-face))))))))
+                                       mouse-wheel-scroll-amount-horizontal 2))))
 
 ;;; Org
 
@@ -2108,6 +2071,7 @@ deleted, kill the pairs around point."
                       (foxy-cycle-files -1)))
          ("C-c b" . foxy-run-all-tests))
   :init
+  ;; FIXME generalise it outside of foxy, set default compile-command
   (defvar foxy-compile-commands
     '(;; (rust-ts-mode-hook . "rustc -o a.out ")
       (c++-mode-hook

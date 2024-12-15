@@ -687,7 +687,6 @@
        ,(propertize
          (cond
           ((eq major-mode 'pdf-view-mode)
-           ;; pdf-misc-popup-context-menu
            (format " %d/%d"
                    (pdf-view-current-page)
                    (pdf-cache-number-of-pages)))
@@ -696,6 +695,14 @@
                    (/ (window-start) 0.01 (point-max))
                    (1+ nov-documents-index)
                    (length nov-documents)))
+          ((memq major-mode '(gnus-summary-mode gnus-article-mode))
+           (format "%s %3d%%"
+                   (let ((unread-count (cdar gnus-topic-unreads)))
+                     (if (or (not unread-count) (eq unread-count 0))
+                         ""
+                       (propertize (format "Unread: %d" unread-count)
+                                   'face '(:inherit font-lock-comment-face))))
+                   (/ (window-start) 0.01 (point-max))))
           ((when (or defining-kbd-macro executing-kbd-macro)
              (concat
               " REC "
