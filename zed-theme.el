@@ -198,8 +198,9 @@
    `(fill-column-indicator ((t (:inherit font-lock-comment-face :height 1.1))))
    `(fixed-pitch ((t (:inherit default))))
    `(fixed-pitch-serif ((t (:inherit default))))
+   `(help-key-binding ((t (:background ,subtle-color))))
    `(info-menu-star ((t (:foreground ,red-color))))
-   `(info-title-4 ((t (:weight bold :height 1.1 :inherit variable-pitch))))
+   `(info-title-4 ((t (:weight medium :height 1.1 :inherit variable-pitch))))
    `(icomplete-selected-match ((t (:inherit highlight :extend t))))
    `(tty-menu-selected-face ((t (:inherit highlight))))
    `(tty-menu-enabled-face ((t (:background ,modeline-color))))
@@ -300,14 +301,14 @@
    `(org-drawer ((t (:inherit shadow))))
    `(org-ellipsis ((t (:inherit shadow))))
    `(org-quote ((t (:inherit org-block :slant italic))))
-   `(org-level-1 ((t (:height 1.1 :weight bold))))
-   `(org-level-2 ((t (:height 1.1 :weight bold))))
-   `(org-level-3 ((t (:height 1.1 :weight bold))))
-   `(org-level-4 ((t (:height 1.1 :weight bold))))
-   `(org-level-5 ((t (:height 1.1 :weight bold))))
-   `(org-level-6 ((t (:height 1.1 :weight bold))))
-   `(org-level-7 ((t (:height 1.1 :weight bold))))
-   `(org-level-8 ((t (:height 1.1 :weight bold))))
+   `(org-level-1 ((t (:height 1.1 :weight regular))))
+   `(org-level-2 ((t (:height 1.1 :weight regular))))
+   `(org-level-3 ((t (:height 1.1 :weight regular))))
+   `(org-level-4 ((t (:height 1.1 :weight regular))))
+   `(org-level-5 ((t (:height 1.1 :weight regular))))
+   `(org-level-6 ((t (:height 1.1 :weight regular))))
+   `(org-level-7 ((t (:height 1.1 :weight regular))))
+   `(org-level-8 ((t (:height 1.1 :weight regular))))
    `(org-agenda-structure ((t (:foreground ,magenta-color :height 1.1))))
    `(org-agenda-structure-filter ((t (:inherit org-agenda-structure))))
    `(org-agenda-date ((t (:foreground ,blue-color))))
@@ -609,6 +610,15 @@
            (propertize
             flymake-str
             'display `(raise 0.25))))
+       ;; in case the buffer is narrowed
+       (when (and selected-p (buffer-narrowed-p)
+                  (not (or (derived-mode-p 'Info-mode)
+                           (derived-mode-p 'nov-mode))))
+         (propertize " [N]"
+                     'face `(:inherit tab-bar-tab
+                                      :foreground ,(face-background 'cursor nil t))
+                     'display `(raise 0.1)))
+
        ;; apply face to buffer name
        (apply 'propertize
               (propertize (string-replace "%" "%%" name) ;; (bug#57848)
@@ -621,10 +631,7 @@
        (when (and selected-p (buffer-modified-p)
                   (or (derived-mode-p 'prog-mode)
                       (derived-mode-p 'text-mode)))
-         (propertize (concat "" (if zed-icons-p
-                                    (nerd-icons-codicon "nf-cod-circle_filled")
-                                  (make-string 1 #x23fA))
-                             "")
+         (propertize (make-string 1 #x23fA)
                      'face `(:inherit tab-bar-tab
                                       :foreground ,(face-background 'cursor nil t))
                      'display `(raise ,zed-adjust)))

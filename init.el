@@ -92,6 +92,7 @@
                 use-short-answers t
                 ;; debug-on-error t ; issues w/ completion in :bind
                 warning-minimum-level :error
+                delete-by-moving-to-trash t ; never change this :'(
                 display-line-numbers-width 5
                 display-line-numbers-grow-only t
                 delete-pair-blink-delay 0
@@ -311,8 +312,6 @@ backwards instead."
                                   (when (eq major-mode 'emacs-lisp-mode)
                                     (check-parens))
                                   nil))
-                  (add-hook 'help-fns-describe-function-functions
-                            #'shortdoc-help-fns-examples-function)
                   (with-eval-after-load 'whitespace
                     (add-to-list 'whitespace-display-mappings
                                  '(newline-mark ?\n [8626 ?\n]) t))
@@ -390,10 +389,18 @@ backwards instead."
   (vertico-multiform-categories
    '((command flat)
      (buffer flat)
-     (project-file flat)
-     (file flat)))
+     (project-file flat)))
   :config
   (vertico-multiform-mode)
+
+  (defun crm-indicator (args)
+    (cons (format "[CRM%s] %s"
+                  (replace-regexp-in-string
+                   "\\`\\[.*?]\\*\\|\\[.*?]\\*\\'" ""
+                   crm-separator)
+                  (car args))
+          (cdr args)))
+  (advice-add #'completing-read-multiple :filter-args #'crm-indicator)
   
   (setq vertico-scroll-margin 0
         vertico-resize nil
@@ -640,7 +647,6 @@ deleted, kill the pairs around point."
         xref-show-xrefs-function 'xref-show-definitions-buffer-at-bottom))
 
 (use-package ediff
-  :defer 1
   :ensure nil
   :hook ((ediff-before-setup . tab-bar-new-tab)
          (ediff-quit . (lambda nil
@@ -738,25 +744,6 @@ deleted, kill the pairs around point."
         list-matching-lines-prefix-face 'vertical-border
         list-matching-lines-default-context-lines 2)
 
-  (defun noccur-project (regexp &optional nlines directory-to-search) ;; src: noccur (async?)
-    (interactive (occur-read-primary-args))
-    (let* ((default-directory
-            (or directory-to-search (read-directory-name "Search in directory: ")))
-           (files (mapcar #'find-file-noselect
-                          (noccur--find-files regexp))))
-      (when (package-installed-p 'diff-hl)
-        (let ((diff-hl-flydiff-mode -1))
-          (multi-occur files regexp nlines)))))
-
-  (defun noccur--find-files (regexp)
-    (let* ((listing-command (if (locate-dominating-file default-directory ".git")
-                                "git ls-files -z"
-                              "find . -type f -print0"))
-           (command (format "%s | xargs -0 rg -l \"%s\""
-                            listing-command
-                            regexp)))
-      (split-string (shell-command-to-string command) "\n")))
-  
   (defun clean-occur-context-line (orig-fun &rest args) ; src: GPT
     "Advice for `occur-context-lines` to change the separator."
     (let ((result (apply orig-fun args)))
@@ -821,6 +808,16 @@ deleted, kill the pairs around point."
         eldoc-idle-delay 0.3
         eldoc-echo-area-use-multiline-p nil
         eldoc-echo-area-display-truncation-message nil))
+
+(use-package help-fns.el
+  :ensure nil
+  :config
+  (add-hook 'help-fns-describe-function-functions
+            #'shortdoc-help-fns-examples-function)
+  :config
+  (put 'help-fns-edit-variable 'disabled nil)
+  :custom
+  (help-enable-variable-value-editing t))
 
 (use-package recentf
   :ensure nil
@@ -887,6 +884,13 @@ deleted, kill the pairs around point."
   :hook ((after-init . popper-mode)
          (after-init . popper-tab-line-mode))
   :init
+  (setq display-buffer-alist
+        `(;; no window
+          ("\\`\\*Async Shell Command\\*\\'"
+           (display-buffer-no-window))
+          ("\\`\\*\\(Warnings\\|Compile-Log\\|Org Links\\)\\*\\'"
+           (display-buffer-no-window)
+           (allow-no-window . t))))
   (setq popper-reference-buffers
         '("\\*Messages\\*" "Output\\*$" "\\*xref\\*"
           "\\*Async Shell Command\\*" "\\*shell.\*"
@@ -896,7 +900,7 @@ deleted, kill the pairs around point."
           "\\*Flymake .\*" "\\*CDLaTex Help\\*"
           "\\*Process List\\*" "\\*Org Select\\*"
           "^CAPTURE.*" "\\*Org Agenda\\*" "\\*kubel stderr\\*"
-          "\\*Warnings\\*" "\\*Backtrace\\*"
+          "\\*Warnings\\*" "\\*Backtrace\\*" "\\*edit .\*"
           help-mode compilation-mode comint-mode
           "^\\*eshell.*\\*$" eshell-mode grep-mode
           "^\\*term.*\\*$" term-mode)
@@ -1017,9 +1021,6 @@ deleted, kill the pairs around point."
                                         adaptive-height
                                       lower-limit))
            (setq-local line-spacing 0.5)))))
-    (setq-local ;mode-line-format nil
-     writeroom-restore-window-config t
-     writeroom-maximize-window t)
     (writeroom-mode)
     (setq-local cursor-type 'bar
                 scroll-preserve-screen-position t
@@ -1027,7 +1028,7 @@ deleted, kill the pairs around point."
                 maximum-scroll-margin 0.5
                 scroll-margin 28))
   
-  (setq writeroom-width (min 100 (max 90 (- (window-width) 10)))
+  (setq writeroom-width 0.85;(min 100 (max 90 (- (window-width) 10)))
         writeroom-mode-line t
         writeroom-bottom-divider-width 0
         writeroom-restore-window-config t
@@ -1035,7 +1036,7 @@ deleted, kill the pairs around point."
         writeroom-maximize-window nil))
 
 (use-package nerd-icons
-  :defer 0.2
+  :commands nerd-icons-octicon nerd-icons-codicon
   :config
   ;; causing issues in emacs -nw
   ;; (when (not (find-font (font-spec :name nerd-icons-font-family)))
@@ -1048,19 +1049,19 @@ deleted, kill the pairs around point."
             (nerd-icons-octicon "nf-oct-arrow_right" :v-adjust 0.3))))
   (my/add-tab-bar-arrow-glyphs 'theme)
   (add-hook 'enable-theme-functions 'my/add-tab-bar-arrow-glyphs)
-  (push '(eat-mode nerd-icons-devicon "nf-dev-terminal") nerd-icons-mode-icon-alist)
-  (use-package nerd-icons-corfu
-    :init
-    (with-eval-after-load 'corfu
-      (push 'nerd-icons-corfu-formatter corfu-margin-formatters)))
-  (use-package nerd-icons-dired
-    :hook (dired-mode . nerd-icons-dired-mode))
-  (use-package nerd-icons-ibuffer
-    :hook (ibuffer-mode . nerd-icons-ibuffer-mode)))
+  (push '(eat-mode nerd-icons-devicon "nf-dev-terminal") nerd-icons-mode-icon-alist))
+
+(use-package nerd-icons-corfu
+  :init
+  (with-eval-after-load 'corfu
+    (push 'nerd-icons-corfu-formatter corfu-margin-formatters)))
+(use-package nerd-icons-dired
+  :hook (dired-mode . nerd-icons-dired-mode))
+(use-package nerd-icons-ibuffer
+  :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
 
 (use-package shr-tag-pre-highlight
   ;; FIXME complains if mode isnt available
-  :defer 1
   :init
   (setq eww-auto-rename-buffer 'title
         eww-header-line-format nil)
@@ -1285,7 +1286,7 @@ deleted, kill the pairs around point."
                              ("Unread")))))
 
 (use-package vc
-  :defer nil
+  ;; :defer nil
   :ensure nil
   :bind (("C-x v f" . (lambda () (interactive)
                         (vc-git--pushpull "push" nil '("--force-with-lease"))))
@@ -1411,7 +1412,6 @@ deleted, kill the pairs around point."
         dired-recursive-copies 'always))
 
 (use-package dired-sidebar
-  :pin melpa-stable
   :bind ("C-x d" . dired-sidebar-toggle-sidebar)
   :bind (:map dired-sidebar-mode-map
               ("C-o" . other-window)
@@ -1419,6 +1419,8 @@ deleted, kill the pairs around point."
               ("\\" . dired-sidebar-up-directory))
   :config
   (setq dired-sidebar-window-fixed nil
+        dired-sidebar-use-omit-mode-integration nil ;; t breaks
+        dired-sidebar-theme 'nerd-icons
         dired-sidebar-mode-line-format
         '("%e" mode-line-buffer-identification)))
 
@@ -1511,6 +1513,7 @@ deleted, kill the pairs around point."
   :hook ((org-mode . visual-line-mode)
          (org-mode . variable-pitch-mode))
   :config
+  (setq org-modules '(ol-info ol-eww org-habit))
   ;; Taken from rougier: org-outer-indent
   (defun org-outer-indent--compute-prefixes ()
     "Compute prefix strings for regular text and headlines."
@@ -1545,7 +1548,6 @@ deleted, kill the pairs around point."
   (advice-add 'org-indent--compute-prefixes :override
               #'org-outer-indent--compute-prefixes)
 
-  (push 'org-habit org-modules)
   ;; configure <s template for org-src-blocks
   (require 'org-tempo)
   (add-hook 'org-mode-hook
@@ -1604,6 +1606,9 @@ deleted, kill the pairs around point."
                  (window-parameters (height . 0.33))))
 
   (setq org-agenda-files (list org-directory)
+        org-agenda-ignore-properties '(effort appt stats category)
+        org-agenda-dim-blocked-tasks nil
+        org-agenda-use-tag-inheritance nil
         org-agenda-inhibit-startup t
         org-agenda-window-setup 'current-window
         org-agenda-restore-windows-after-quit t
@@ -1933,22 +1938,33 @@ deleted, kill the pairs around point."
 
 (use-package treesit
   :ensure nil
+  :hook (prog-mode . my/setup-install-grammars)
   :config
-  (setq treesit-language-source-alist ;; treesit-install-language-grammar
-        '((cpp "https://github.com/tree-sitter/tree-sitter-cpp")
-          (c "https://github.com/tree-sitter/tree-sitter-c")
-          (go "https://github.com/tree-sitter/tree-sitter-go")
-          (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
-          (docker "https://github.com/camdencheek/tree-sitter-dockerfile")
-          (yaml "https://github.com/ikatyang/tree-sitter-yaml")
-          (helm "https://github.com/ngalaiko/tree-sitter-go-template")
-          (rust "https://github.com/tree-sitter/tree-sitter-rust")
-          (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua")
-          (json "https://github.com/tree-sitter/tree-sitter-json")
-          (janet-simple "https://github.com/sogaiu/tree-sitter-janet-simple")
-          (typescript "https://github.com/tree-sitter/tree-sitter-typescript"
-                      "master" "typescript/src"))
-        treesit-font-lock-level 4))
+  (defun my/setup-install-grammars ()
+    "Install Tree-sitter grammars if they are absent."
+    (interactive)
+    (dolist (grammar
+             '((cpp "https://github.com/tree-sitter/tree-sitter-cpp")
+               (c "https://github.com/tree-sitter/tree-sitter-c")
+               (go "https://github.com/tree-sitter/tree-sitter-go")
+               (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
+               (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
+               (yaml "https://github.com/ikatyang/tree-sitter-yaml")
+               (helm "https://github.com/ngalaiko/tree-sitter-go-template"
+                     "master" "dialects/helm/src")
+               (gotmpl "https://github.com/ngalaiko/tree-sitter-go-template")
+               (rust "https://github.com/tree-sitter/tree-sitter-rust")
+               (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua")
+               (json "https://github.com/tree-sitter/tree-sitter-json")
+               (janet-simple "https://github.com/sogaiu/tree-sitter-janet-simple")
+               (typescript "https://github.com/tree-sitter/tree-sitter-typescript"
+                           "master" "typescript/src")))
+      (add-to-list 'treesit-language-source-alist grammar)
+      (unless (treesit-language-available-p (car grammar))
+        (treesit-install-language-grammar (car grammar)))))
+  (setq treesit-font-lock-level 4))
+
+;; (load "~/.emacs.d/lisp/helm-ts-mode.el")
 
 (setq major-mode-remap-alist '((c++-mode . c++-ts-mode)
                                (c-mode . c-ts-mode)
@@ -1974,37 +1990,41 @@ deleted, kill the pairs around point."
          ("\\.ts\\'" . typescript-ts-mode)
          ("\\.lua\\'" . lua-ts-mode)
          ("\\.ya?ml\\'" . yaml-ts-mode)
+         ("\\Dockerfile\\'" . dockerfile-ts-mode)
+         ("\\.dockerignore\\'" . dockerfile-ts-mode)
          ("\\.bin\\'" . hexl-mode)
          ("\\.info\\'" . Info-mode)))
 
 (use-package eglot
   :bind ("M-+" . eglot-code-actions)
-  ;; :bind (:map meow-normal-state-keymap
-  ;;             ("gr" . eglot-rename)
-  ;;             ("gF" . eglot-format))
-  :hook (((rust-ts-mode go-ts-mode) . eglot-ensure)
-         (eglot-managed-mode . (lambda ()
-                                 (setq eldoc-documentation-strategy
-                                       'eldoc-documentation-compose-eagerly))))
+  :bind (:map meow-normal-state-keymap
+              ("gr" . eglot-rename)
+              ("gF" . eglot-format))
+  :hook ((rust-ts-mode go-ts-mode yaml-ts-mode) . eglot-ensure)
+  :hook ((rust-ts-mode go-ts-mode)
+         . (lambda ()
+             (setq-local tab-width 4)
+             (hl-line-mode t)
+             (highlight-indent-guides-mode t)))
   ;; :init (setq eglot-stay-out-of '(flymake))
   :config
+  (with-eval-after-load 'project
+    (setq project-vc-extra-root-markers '("go.mod" "Cargo.toml")))
+  
   (fset #'jsonrpc--log-event #'ignore)
   (setq eglot-events-buffer-config 0
         eglot-autoshutdown t
-        eglot-inlay-hints-mode nil)
-  (add-hook 'rust-ts-mode-hook (lambda () (setq-local tab-width 2)
-                                 (hl-line-mode 'toggle)
-                                 (highlight-indent-guides-mode 'toggle)))
-  (add-hook 'go-ts-mode-hook (lambda () (setq-local tab-width 4)
-                               (hl-line-mode 'toggle)
-                               (highlight-indent-guides-mode 'toggle)))
-
+        eglot-inlay-hints-mode nil
+        go-ts-mode-indent-offset 4
+        eglot-ignored-server-capabilities '(:inlayHintProvider))
+  
   (add-to-list 'eglot-server-programs '(helm-ts-mode "helm_ls" "serve"))
 
   (defun my-eglot-organize-imports ()
     (interactive)
     (ignore-errors
       (eglot-code-actions nil nil "source.organizeImports" t)))
+  
   (defun my-eglot-setup ()
     (interactive)
     (when (not (eq major-mode 'sql-mode))
@@ -2013,10 +2033,11 @@ deleted, kill the pairs around point."
   
   (add-hook 'eglot-managed-mode-hook
             (lambda nil
+              (setq eldoc-documentation-strategy
+                    'eldoc-documentation-compose-eagerly)
               (setq-local flymake-cc-command nil)
               (my-eglot-setup)))
-  (setq go-ts-mode-indent-offset 4)
-  (setq eglot-ignored-server-capabilities '(:inlayHintProvider))
+  
   (setq-default eglot-workspace-configuration
                 '((:gopls . ((staticcheck . t)
                              (matcher . "CaseSensitive")))
@@ -2024,6 +2045,7 @@ deleted, kill the pairs around point."
                   ;; https://www.reddit.com/r/emacs/comments/11xjpeq
                   (:yaml . (:schemaStore
                             (:enable t :url "https://schemastore.org/api/json/catalog.json")
+                            ;; (:enable t :url "https://json.schemastore.org/chart.json")
                             :format (:enable t :proseWrap t :printWidth 80)
                             :validate t
                             :hover t

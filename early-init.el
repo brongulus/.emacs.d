@@ -23,7 +23,7 @@
                 #'gc-on-last-frame-out-of-focus))
 
 (setq-default default-frame-alist
-              '(;(alpha . 95)
+              '((alpha . 95)
                 (menu-bar-lines . 0)
                 (tool-bar-lines . 0)
                 (vertical-scroll-bars)
@@ -55,7 +55,7 @@
      'variable-pitch nil :family "iA Writer Duo S" :weight 'regular)
   (if is-mac
       (set-face-attribute
-       'variable-pitch nil :family "iA Writer Duo V":weight 'regular)
+       'variable-pitch nil :family "Input Mono Narrow" :weight 'light)
     (set-face-attribute
      'variable-pitch nil :family "iA Writer Duospace" :weight 'regular :height 140)))
 
@@ -126,14 +126,15 @@
 
 (add-hook 'window-setup-hook
           (lambda ()
-            (if (file-exists-p (locate-user-emacs-file ".emacs.desktop"))
-                (message (format "%d packages loaded in %s"
-                                 (length package-activated-list)
-                                 (format "%.2f seconds"
-                                         (float-time
-                                          (time-subtract after-init-time before-init-time)))))
-              (when (display-graphic-p)
-                (ar/show-welcome-buffer)))))
+            (message (format "%d packages loaded in %s"
+                             (length package-activated-list)
+                             (format "%.2f seconds"
+                                     (float-time
+                                      (time-subtract after-init-time before-init-time)))))
+            (when (and (not (file-exists-p (locate-user-emacs-file ".emacs.desktop")))
+                       (display-graphic-p))
+              (ar/show-welcome-buffer)))
+          1000)
 
 (when is-mac
   (add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
