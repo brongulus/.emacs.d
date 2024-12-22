@@ -12,6 +12,7 @@ tree-sitter/
 tutorial/
 undo-fu-session/
 url/
+.DS_Store
 forge-database.sqlite
 history
 ido.last

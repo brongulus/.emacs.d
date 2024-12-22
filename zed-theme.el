@@ -17,6 +17,10 @@
   :type 'boolean
   :group 'zed)
 
+(defface zed-sans-font
+  '((t (:font "Fira Sans")))
+  "Font used by sans faces.")
+
 (setq zed-icons-p t);(require 'nerd-icons nil t))
 
 (setq zed-adjust 0.2)
@@ -57,9 +61,9 @@
       (red-color (if load-theme-light
                      "#c56655"
                    "#c47779"))
-      (orange-color "#f5871f")
+      (orange-color "#dd5b4f")
       (magenta-color (if load-theme-light
-                         "#875faf"
+                         "#7646c1"
                        "#b294bb"))
       (yellow-color (if load-theme-light
                         "#bb9200"
@@ -99,9 +103,7 @@
    `(show-paren-mismatch ((t (:foreground ,foreground-color :background ,red-color))))
 
    ;; Highlighting
-   `(hl-line ((t (:background ,@(if load-theme-light
-                                    (list "#dcdcdd")
-                                  (list "#2D323B"))))))
+   `(hl-line ((t (:background ,modeline-color))))
    `(highline-face ((t (:background ,subtle-color))))
    `(highlight ((t (:background ,selection-color))))
    `(highlight-symbol-face ((t (:background ,secondary-color))))
@@ -122,7 +124,7 @@
    `(font-lock-doc-string-face ((t (:foreground "#1A93AE" :background "#F4F9FE"))))
    `(font-lock-function-name-face ((t (:foreground ,blue-color))))
    `(font-lock-keyword-face ((t (:foreground ,magenta-color))))
-   `(font-lock-preprocessor-face ((t (:foreground ,red-color))))
+   `(font-lock-preprocessor-face ((t (:foreground ,orange-color))))
    `(font-lock-property-name-face ((t (:foreground ,@(if load-theme-light
                                                          (list magenta-color)
                                                        (list yellow-color))))))
@@ -209,9 +211,9 @@
    `(link-visited ((t (:foreground ,blue-color))))
    `(line-number ((t (:inherit font-lock-comment-face))))
    `(line-number-current-line ((t (:inherit hl-line :foreground ,foreground-color))))
-   `(orderless-match-face-0 ((t (:foreground ,blue-color :weight bold))))
-   `(orderless-match-face-1 ((t (:foreground ,yellow-color :weight bold))))
-   `(orderless-match-face-2 ((t (:foreground ,green-color :weight bold))))
+   `(orderless-match-face-0 ((t (:foreground ,magenta-color :weight bold))))
+   `(orderless-match-face-1 ((t (:foreground ,green-color :weight bold))))
+   `(orderless-match-face-2 ((t (:foreground ,yellow-color :weight bold))))
    `(orderless-match-face-3 ((t (:foreground ,red-color :weight bold))))
    `(popper-echo-area ((t (:inherit mode-line))))
    `(pulse-highlight-start-face ((t (:background ,light-yellow-color))))
@@ -242,31 +244,38 @@
    `(shr-h4 ((t (:inherit variable-pitch-text :height 1.1 :weight bold))))
    `(shr-h5 ((t (:inherit variable-pitch-text :height 1.1 :weight bold))))
    `(shr-h6 ((t (:inherit variable-pitch-text :height 1.1 :weight bold))))
-   `(gnus-group-mail-1 ((t (:foreground ,green-color :weight bold))))
-   `(gnus-group-mail-2 ((t (:foreground ,green-color :weight bold))))
-   `(gnus-group-mail-3 ((t (:foreground ,green-color :weight bold))))
-   `(gnus-group-mail-low ((t (:foreground ,green-color :weight bold))))
+   `(gnus-cite-1 ((t (:foreground ,cyan-color))))
+   `(gnus-cite-2 ((t (:foreground ,yellow-color))))
+   `(gnus-cite-3 ((t (:foreground ,green-color))))
+   `(gnus-cite-4 ((t (:foreground ,orange-color))))
+   `(gnus-cite-5 ((t (:foreground ,red-color))))
+   `(gnus-cite-6 ((t (:foreground ,magenta-color))))
+   `(gnus-cite-7 ((t (:foreground ,blue-color))))
+   `(gnus-group-mail-1 ((t (:foreground ,blue-color :weight bold))))
+   `(gnus-group-mail-2 ((t (:foreground ,blue-color :weight bold))))
+   `(gnus-group-mail-3 ((t (:foreground ,blue-color :weight bold))))
+   `(gnus-group-mail-low ((t (:foreground ,blue-color :weight bold))))
    `(gnus-group-mail-1-empty ((t (:foreground "#5e636e"))))
    `(gnus-group-mail-2-empty ((t (:foreground "#5e636e"))))
    `(gnus-group-mail-3-empty ((t (:foreground "#5e636e"))))
    `(gnus-group-mail-low-empty ((t (:foreground "#5e636e"))))
-   `(gnus-group-news-1 ((t (:foreground ,green-color :weight bold))))
-   `(gnus-group-news-2 ((t (:foreground ,green-color :weight bold))))
-   `(gnus-group-news-3 ((t (:foreground ,green-color :weight bold))))
-   `(gnus-group-news-low ((t (:foreground ,green-color :weight bold))))
+   `(gnus-group-news-1 ((t (:foreground ,blue-color :weight bold))))
+   `(gnus-group-news-2 ((t (:foreground ,blue-color :weight bold))))
+   `(gnus-group-news-3 ((t (:foreground ,blue-color :weight bold))))
+   `(gnus-group-news-low ((t (:foreground ,blue-color :weight bold))))
    `(gnus-group-news-1-empty ((t (:foreground "#5e636e"))))
    `(gnus-group-news-2-empty ((t (:foreground "#5e636e"))))
    `(gnus-group-news-3-empty ((t (:foreground "#5e636e"))))
    `(gnus-group-news-low-empty ((t (:foreground "#5e636e"))))
    `(gnus-header ((t (:inherit default))))
    `(gnus-header-content ((t (:foreground ,inactive-color))))
-   `(gnus-header-from ((t (:foreground ,inactive-color))))
-   `(gnus-header-subject ((t (:foreground ,inactive-color))))
-   `(gnus-header-name ((t (:foreground ,green-color :weight bold))))
+   `(gnus-header-from ((t (:foreground ,foreground-color :weight bold))))
+   `(gnus-header-subject ((t (:foreground ,foreground-color :weight bold))))
+   `(gnus-header-name ((t (:foreground ,yellow-color :weight bold))))
    `(gnus-header-newsgroups ((t (:foreground ,green-color :weight bold))))
    `(gnus-summary-selected ((t (:background ,modeline-color))))
    `(gnus-summary-normal-ticked ((t (:foreground ,yellow-color))))
-   `(gnus-summary-normal-unread ((t (:foreground ,blue-color :weight bold))))
+   `(gnus-summary-normal-unread ((t (:foreground ,green-color :weight bold))))
    `(gnus-summary-normal-read ((t (:foreground ,inactive-color))))
    `(gnus-summary-normal-ancient ((t (:foreground ,inactive-color))))
    
@@ -334,7 +343,8 @@
    `(org-habit-ready-face ((t (:foreground ,green-color))))
    `(org-habit-ready-future-face ((t (:foreground ,green-color))))
 
-   `(markdown-code-face ((t (:background ,subtle-color :extend t))))
+   `(markdown-code-face ((t (:background ,subtle-color :extend t :weight semi-bold
+                                         :font ,(face-attribute 'default :family)))))
    `(markdown-inline-code-face ((t (:background ,subtle-color))))
    `(markdown-header-face-1 ((t (:height 1.1 :weight bold :inherit markdown-header-face))))
    `(markdown-header-face-2 ((t (:height 1.1 :weight bold :inherit markdown-header-face))))
@@ -350,7 +360,7 @@
                        ,@(if (display-graphic-p)
                              (list subtle-color)
                            (list modeline-color))))))
-   `(tab-bar-tab ((t (:inherit default :height 150))))
+   `(tab-bar-tab ((t (:inherit default :weight regular :height 150))))
    `(tab-bar-tab-inactive
      ((t (:foreground ,inactive-color :weight regular :height 150
                       ,@(if (display-graphic-p)
@@ -368,11 +378,14 @@
 
    `(eglot-mode-line ((t (:foreground ,yellow-color))))
    `(eldoc-box-border ((t (:inherit child-frame-border))))
-   `(eldoc-box-body ((t (:background ,subtle-color))))
+   `(eldoc-box-body ((t (:inherit zed-sans-font :weight regular :background ,subtle-color))))
    `(deadgrep-filename-face ((t (:inherit tab-bar))))
    `(denote-faces-date ((t (:inherit font-lock-comment-face))))
    `(denote-faces-link ((t (:inherit link :background ,subtle-color))))
    `(sh-heredoc ((t (:foreground ,yellow-color))))
+   `(completions-annotations ((t (:foreground ,blue-color))))
+   `(completions-common-part ((t (:foreground ,blue-color))))
+   `(vertico-current ((t (:foreground ,blue-color :inverse-video t :extend t))))
    ;; `(vertico-posframe ((t (:foreground ,foreground-color :background "#1a1a1a")))
    `(vertico-posframe-border ((t (:inherit child-frame-border))))
    `(why-this-face ((t (:inherit font-lock-comment-face))))
@@ -594,7 +607,25 @@
                     ,@(if selected-p '(selected t))
                     face ,face
                     display (raise ,zed-adjust)))
-       ;; flymake
+       ;; flymake/compile error
+       (when (and selected-p
+                  (eq major-mode 'compilation-mode))
+         (let* ((error (unless (zerop compilation-num-errors-found)
+                        (propertize (concat (int-to-string compilation-num-errors-found) " ")
+                                    'face 'compilation-error)))
+               (warning (unless (zerop compilation-num-warnings-found)
+                        (propertize (concat (int-to-string compilation-num-warnings-found) " ")
+                                    'face 'compilation-warning)))
+               (info (unless (zerop compilation-num-infos-found)
+                        (propertize (concat (int-to-string compilation-num-infos-found) " ")
+                                    'face 'compilation-info)))
+               (compilation-str (concat " " error warning info)))
+           (add-face-text-property 0 (length compilation-str)
+                                   '(:inherit tab-bar-tab :box nil
+                                              :height 120 :weight regular)
+                                   t
+                                   compilation-str)
+           (propertize compilation-str 'display '(raise 0.20))))
        (when (and selected-p
                   (bound-and-true-p flymake-mode))
          (let* ((flymake-mode-line-counter-format
@@ -604,12 +635,10 @@
                 (flymake-str (format-mode-line flymake-mode-line-counters)))
            (add-face-text-property 0 (length flymake-str)
                                    '(:inherit tab-bar-tab :box nil
-                                              :height 130 :weight regular)
+                                              :height 120 :weight regular)
                                    t
                                    flymake-str)
-           (propertize
-            flymake-str
-            'display `(raise 0.25))))
+           (propertize flymake-str 'display `(raise 0.20))))
        ;; in case the buffer is narrowed
        (when (and selected-p (buffer-narrowed-p)
                   (not (or (derived-mode-p 'Info-mode)
@@ -625,7 +654,7 @@
                           'follow-link 'ignore)
               `(tab ,tab
                     ,@(if selected-p '(selected t))
-                    face ,face
+                    face (:inherit ,face :inherit zed-sans-font)
                     display (raise ,zed-adjust)))
        ;; show dot if selected buffer modified else close button
        (when (and selected-p (buffer-modified-p)
@@ -643,8 +672,7 @@
               `(tab ,tab
                     ,@(if selected-p '(selected t))
                     face ,face
-                    display (raise ,zed-adjust)))
-
+                    display (raise 0.15)))
        vsep)))
   
   (defun zed-bar-format-menu-bar ()
@@ -665,24 +693,30 @@
          :help "Click to go forward in tab history"))))
 
   (defun zed-bar-lsp nil
-    (when (and (bound-and-true-p eglot--managed-mode)
-               (eglot-managed-p)
-               (project-current))
+    (when (or (derived-mode-p 'prog-mode)
+              (eq major-mode 'org-mode))
       `((eglot-menu menu-item
-                    ,(propertize (truncate-string-to-width (project-mode-line-format) 12)
-                                 'face '(:inherit font-lock-comment-face)
-                                 'display `((raise ,zed-adjust)))
+                    ,(propertize (string-replace "%" "%%"
+                                                 (or (gethash (selected-window)
+                                                              which-func-table)
+                                                     ""))
+                                 'face '(:inherit font-lock-comment-face
+                                                  :inherit zed-sans-font :height 130)
+                                 'display `((raise 0.2)))
                     (lambda (event)
                       (interactive "e")
-                      (popup-menu eglot-menu))
+                      (when (and (bound-and-true-p eglot--managed-mode)
+                                 (eglot-managed-p)
+                                 (project-current))
+                        (popup-menu eglot-menu)))
                     :help "Show LSP menu"))))
 
   (defun zed-bar-vc nil
     (when (bound-and-true-p vc-mode)
       `((vc-menu menu-item
                  ,(propertize (replace-regexp-in-string "^.." " " vc-mode)
-                              'face '(:inherit success :weight bold)
-                              'display `((raise ,zed-adjust)))
+                              'face '(:inherit success :inherit zed-sans-font :height 130)
+                              'display `((raise 0.2)))
                  (lambda (event)
                    (interactive "e")
                    (popup-menu vc-menu-map))
@@ -698,12 +732,12 @@
                    (pdf-view-current-page)
                    (pdf-cache-number-of-pages)))
           ((eq major-mode 'nov-mode)
-           (format "%3d%% %d/%d"
+           (format "%d%% %d/%d"
                    (/ (window-start) 0.01 (point-max))
                    (1+ nov-documents-index)
                    (length nov-documents)))
           ((memq major-mode '(gnus-summary-mode gnus-article-mode))
-           (format "%s %3d%%"
+           (format "%s %d%%"
                    (let ((unread-count (cdar gnus-topic-unreads)))
                      (if (or (not unread-count) (eq unread-count 0))
                          ""
@@ -721,7 +755,7 @@
                                              :key #'overlay-start))
                             (1+ (length macrursors--overlays)))
                   (concat "[1/1]" " "))))))
-          (t (format "%3d%%"
+          (t (format " %d%%"
                      (/ (window-start) 0.01 (point-max)))))
          'display `((raise ,zed-adjust)))
        (lambda (event) ;; src: mouse-menu-bar-map
@@ -771,7 +805,6 @@
            "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" set-colors --all --configured ~/.config/kitty/theme.conf"
            nil 0))
         (when (eq system-type 'darwin)
-          ;; modify-all-frames-parameters
           (modify-all-frames-parameters '((ns-appearance . dark))))
         (setq load-theme-light nil))
     (progn
@@ -780,7 +813,6 @@
          "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" set-colors --all --configured ~/.config/kitty/theme-light.conf"
          nil 0))
       (when (eq system-type 'darwin)
-        ;; modify-all-frames-parameters
         (modify-all-frames-parameters '((ns-appearance . light))))
       (setq load-theme-light t)))
   (load-theme 'zed :no-confirm)
@@ -789,9 +821,7 @@
       (when (derived-mode-p 'dired-mode)
         (dolist (face '(default fringe))
           (face-remap-add-relative
-           face :background (if load-theme-light
-                                "#EEEEEE"
-                              "#30343D")))))))
+					 face :background (face-background 'help-key-binding)))))))
 
 ;;;###autoload
 (when load-file-name

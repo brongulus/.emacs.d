@@ -37,6 +37,8 @@
          ("C-o" . other-window)
          ("C-," . my/scroll-other-window)
          ("C-." . my/scroll-other-window-down)
+         ("C-<" . my/xref-other-go-back)
+         ("C->" . my/xref-other-go-fwd)
          ("M-s r" . replace-regexp)
          ("M-s f" . ffap)
          ("C-x C-m" . execute-extended-command)
@@ -77,6 +79,16 @@
          ((eq mode 'Info-mode)
           (Info-scroll-down))
          (t (scroll-down-command 5))))))
+
+  (defun my/xref-other-go-back nil
+    (interactive)
+    (with-selected-window (other-window-for-scrolling)
+      (xref-go-back)))
+  
+  (defun my/xref-other-go-fwd nil
+    (interactive)
+    (with-selected-window (other-window-for-scrolling)
+      (call-interactively 'xref-find-definitions)))
   
   (setq-default line-spacing 3
                 ;; cursor-type 'bar
@@ -196,11 +208,11 @@ the cursor by ARG lines."
   ;; load theme based on terminal
   (let ((color (shell-command-to-string
                 "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" get-colors | grep ^background | awk '{printf $2}'")))
-    (if (string= color "#f7f7f7")
-        ;; load-theme-light is a zed-theme var
-        (setq load-theme-light t)
+    (when (string= color "#f7f7f7")
+      ;; load-theme-light is a zed-theme var
+      (setq load-theme-light t)
       (when (eq system-type 'darwin)
-        (modify-all-frames-parameters '((ns-appearance . dark))))))
+        (modify-all-frames-parameters '((ns-appearance . light))))))
   (load-theme 'zed :no-confirm)
 
   (unless (package-installed-p 'meow)
@@ -295,6 +307,7 @@ backwards instead."
                   
                   ;; misc modes and hooks
                   (push "~/.emacs.d/info" Info-directory-list)
+                  (put 'help-fns-edit-variable 'disabled nil) ;; FIXME
                   (put 'narrow-to-region 'disabled nil)
                   (add-hook 'debugger-mode-hook #'visual-line-mode)
                   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
@@ -431,6 +444,24 @@ backwards instead."
   (add-hook 'completion-at-point-functions #'cape-file)
   (add-hook 'completion-at-point-functions #'cape-abbrev))
 
+(use-package consult
+  :bind (("C-x b" . consult-buffer)
+         ([remap project-find-regexp] . consult-ripgrep)
+         ([remap project-find-file] . consult-find)
+         ([remap flymake-show-buffer-diagnostics] . consult-flymake))
+  :config
+  (with-eval-after-load 'project
+    (add-to-list 'project-switch-commands '(consult-ripgrep "Ripgrep" ?g))
+    (map-delete project-switch-commands 'project-find-regexp))
+
+  (setq xref-show-xrefs-function #'consult-xref
+        xref-show-definitions-function #'consult-xref))
+
+(use-package consult-eglot
+  :hook (eglot-managed-mode
+         . (lambda nil
+             (local-set-key (kbd "C-M-.") #'consult-eglot-symbols))))
+
 (use-package completion-preview
   :disabled t
   :if (string> emacs-version "29.4")
@@ -470,7 +501,7 @@ backwards instead."
   (setq corfu-cycle t
         corfu-auto t
         corfu-auto-prefix 2
-        corfu-auto-delay 0.1
+        corfu-auto-delay 0.3
         corfu-separator 32
         corfu-max-width 80
         corfu-preselect 'prompt
@@ -661,7 +692,9 @@ deleted, kill the pairs around point."
 
 (use-package hideshow
   :ensure nil
-  :hook (prog-mode . hs-minor-mode)
+  :hook (prog-mode . (lambda nil
+                       (unless (eq major-mode 'templ-ts-mode)
+                         (hs-minor-mode))))
   :bind (("C-z a" . hs-global-cycle)
          ("C-z f" . hs-cycle))
   :config
@@ -809,15 +842,13 @@ deleted, kill the pairs around point."
         eldoc-echo-area-use-multiline-p nil
         eldoc-echo-area-display-truncation-message nil))
 
-(use-package help-fns.el
-  :ensure nil
-  :config
-  (add-hook 'help-fns-describe-function-functions
-            #'shortdoc-help-fns-examples-function)
-  :config
-  (put 'help-fns-edit-variable 'disabled nil)
-  :custom
-  (help-enable-variable-value-editing t))
+;; (use-package help-fns ;; FIXME
+;;   :ensure nil
+;;   :config
+;;   (add-hook 'help-fns-describe-function-functions
+;;             #'shortdoc-help-fns-examples-function)
+;;   :custom
+;;   (help-enable-variable-value-editing t))
 
 (use-package recentf
   :ensure nil
@@ -973,7 +1004,10 @@ deleted, kill the pairs around point."
   :after eldoc
   :commands eldoc-box-help-at-point my/eldoc-get-help
   :bind (("s-<mouse-1>" . my/eldoc-get-help)
-         ("C-z C-z" . my/eldoc-get-help))
+         ("C-z C-z" . my/eldoc-get-help)
+         (:map eglot-mode-map
+               ("M-j" . eldoc-box-scroll-up)
+               ("M-k" . eldoc-box-scroll-down)))
   :config
   (defun my/eldoc-get-help ()
     (interactive)
@@ -1015,13 +1049,14 @@ deleted, kill the pairs around point."
                 (width (window-total-width window))
                 (width-ten (* 10 (round (/ (* scaling-factor width) 10))))
                 (adaptive-height (min (max lower-limit width-ten) upper-limit))
-                (wheight (window-total-height window)))
+                (wheight (window-total-height window))
+                (writeroom-width (min 100 (max 90 (- (window-width) 10)))))
+           (writeroom-mode)
            (face-remap-add-relative 'default :height
                                     (if (> wheight 35)
                                         adaptive-height
                                       lower-limit))
-           (setq-local line-spacing 0.5)))))
-    (writeroom-mode)
+           (setq-local line-spacing 0.6)))))
     (setq-local cursor-type 'bar
                 scroll-preserve-screen-position t
                 scroll-conservatively 101
@@ -1062,6 +1097,7 @@ deleted, kill the pairs around point."
 
 (use-package shr-tag-pre-highlight
   ;; FIXME complains if mode isnt available
+  :defer 1
   :init
   (setq eww-auto-rename-buffer 'title
         eww-header-line-format nil)
@@ -1090,6 +1126,7 @@ deleted, kill the pairs around point."
         highlight-indent-guides-responsive nil))
 
 (use-package diff-hl
+  :defer 1
   :hook (((prog-mode conf-mode) . turn-on-diff-hl-mode)
          ((prog-mode conf-mode) . diff-hl-margin-mode))
   :config
@@ -1220,6 +1257,9 @@ deleted, kill the pairs around point."
         gnus-replied-mark 32
         gnus-cached-mark 32
         gnus-ticked-mark ?!
+        ;; see (info "(gnus) Summary Score Commands")
+        gnus-use-adaptive-scoring t
+        gnus-summary-expunge-below 0
         gnus-sum-thread-tree-false-root ""
         gnus-sum-thread-tree-indent " "
         gnus-sum-thread-tree-root ""
@@ -1234,6 +1274,7 @@ deleted, kill the pairs around point."
         gnus-group-line-format (concat "%S%4y: %(%-40,40c%)\n") ;; %E (gnus-group-icon-list)
         ;;  06-Jan   Sender Name    Email Subject
         gnus-summary-line-format (concat " %0{%U%R%}"
+                                         ;; "%1{%-4,4i%}" " "
                                          "%1{%&user-date;%}" "%3{ %}" " "
                                          "%4{%-16,16f%}" " "
                                          "%3{ %}" " "
@@ -1275,11 +1316,14 @@ deleted, kill the pairs around point."
                               "gwene.com.blogspot.petr-mitrichev" "gwene.me.tonsky.blog"
                               "gmane.emacs.announce" "gmane.emacs.devel"
                               "gmane.emacs.gnus.general" "gmane.emacs.gnus.user"
-                              "gmane.emacs.tramp" "gmane.emacs.bugs" "gwene.com.iximiuz"
+                              "gmane.emacs.tramp" "gmane.emacs.bugs"
+                              "gmane.comp.lang.go.general" "gwene.com.iximiuz"
                               "gwene.com.golangweekly" "gwene.org.golang.blog"
+                              "gwene.com.thisweekinrust" "gwene.org.rust-lang.blog"
                               "gwene.com.youtube.feeds.videos.xml.user.ethoslab"
                               "gmane.comp.web.qutebrowser" "gmane.comp.web.elinks.user"
                               "gwene.app.rsshub.leetcode.articles"
+                              "gwene.org.hnrss.newest.points"
                               "gwene.com.arcan-fe" "gwene.io.github.matklad"
                               "gwene.net.lwn.headlines" "gwene.org.quantamagazine"
                               "gwene.org.bitlbee.news.rss")
@@ -1288,6 +1332,10 @@ deleted, kill the pairs around point."
 (use-package vc
   ;; :defer nil
   :ensure nil
+  ;; :hook (log-edit . log-edit-show-diff) ;; FIXME
+  :hook (log-edit-done . (lambda nil
+                           (when-let ((buf (get-buffer "*vc-diff*")))
+                             (kill-buffer buf))))
   :bind (("C-x v f" . (lambda () (interactive)
                         (vc-git--pushpull "push" nil '("--force-with-lease"))))
          ("C-x v e" . vc-ediff))
@@ -1382,13 +1430,6 @@ deleted, kill the pairs around point."
               ("z" . find-grep-dired))
   :config
   (define-key dired-mode-map "?" dired-mode-map) ;src: amno1
-  (add-hook 'dired-mode-hook ;; solaire
-            (lambda nil
-              (dolist (face '(default fringe))
-                (face-remap-add-relative
-                 face :background (if load-theme-light
-                                      "#EEEEEE"
-                                    "#30343D")))))
   (when (eq system-type 'darwin)
     (require 'ls-lisp)
     (setq ls-lisp-use-insert-directory-program nil
@@ -1417,7 +1458,20 @@ deleted, kill the pairs around point."
               ("C-o" . other-window)
               ("l" . windmove-right)
               ("\\" . dired-sidebar-up-directory))
+  :hook (dired-sidebar-mode . (lambda nil
+                                (setq-local meow-cursor-type-motion nil)))
   :config
+  (add-hook 'dired-sidebar-mode-hook
+            (lambda nil
+              (setq-local line-spacing 5)
+              (hl-line-mode t)
+              (dolist (face '(default fringe))
+                (face-remap-add-relative
+                 face :background (face-background 'help-key-binding)
+                 :family "Fira Sans" :weight 'regular))))
+
+  (when (display-graphic-p)
+    (setq dired-sidebar-subtree-line-prefix "    "))
   (setq dired-sidebar-window-fixed nil
         dired-sidebar-use-omit-mode-integration nil ;; t breaks
         dired-sidebar-theme 'nerd-icons
@@ -1808,7 +1862,6 @@ deleted, kill the pairs around point."
    '("Q" . kill-current-buffer)
    '("j" . meow-next)
    '("k" . meow-prev)
-   '("/" . meow-visit)
    '("<escape>" . ignore))
   (meow-normal-define-key
    '("0" . meow-digit-argument)
@@ -1952,6 +2005,7 @@ deleted, kill the pairs around point."
                (yaml "https://github.com/ikatyang/tree-sitter-yaml")
                (helm "https://github.com/ngalaiko/tree-sitter-go-template"
                      "master" "dialects/helm/src")
+               (templ "https://github.com/vrischmann/tree-sitter-templ")
                (gotmpl "https://github.com/ngalaiko/tree-sitter-go-template")
                (rust "https://github.com/tree-sitter/tree-sitter-rust")
                (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua")
@@ -1995,6 +2049,41 @@ deleted, kill the pairs around point."
          ("\\.bin\\'" . hexl-mode)
          ("\\.info\\'" . Info-mode)))
 
+;; compile commands
+(defvar compile-commands
+  '((go-ts-mode-hook . "go run ")
+    ;; (go-ts-mode-hook . "go build -o a.out ")
+    ;; (rust-ts-mode-hook . "rustc -o a.out ")
+    (c++-mode-hook
+     . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion \
+ -O2 -I/Users/admin/problems/include ")
+    (c++-ts-mode-hook
+     . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion \
+ -O2 -I/Users/admin/problems/include ")
+    ))
+(defvar run-commands
+  '((rust-ts-mode-hook . "cargo run ")
+    (janet-ts-mode-hook . "janet ")))
+
+(dolist (pair compile-commands)
+  (let ((mode (car pair))
+        (command (cdr pair)))
+    (add-hook mode
+              (lambda nil
+                (setq-local compile-command (concat command
+                                                    buffer-file-name
+                                                    " && ./a.out"))
+                (setq-local foxy-compile-command command)))))
+
+(dolist (pair run-commands)
+  (let ((mode (car pair))
+        (command (cdr pair)))
+    (add-hook mode
+              (lambda nil
+                (setq-local compile-command command)
+                (setq-local foxy-compile-command command)))))
+
+
 (use-package eglot
   :bind ("M-+" . eglot-code-actions)
   :bind (:map meow-normal-state-keymap
@@ -2006,6 +2095,8 @@ deleted, kill the pairs around point."
              (setq-local tab-width 4)
              (hl-line-mode t)
              (highlight-indent-guides-mode t)))
+  :hook (rust-ts-mode . (lambda nil
+                          (add-to-list 'process-environment "CARGO_TERM_COLOR=always" :append)))
   ;; :init (setq eglot-stay-out-of '(flymake))
   :config
   (with-eval-after-load 'project
@@ -2039,7 +2130,8 @@ deleted, kill the pairs around point."
               (my-eglot-setup)))
   
   (setq-default eglot-workspace-configuration
-                '((:gopls . ((staticcheck . t)
+                '((:gopls . ((staticcheck . t) ; go install staticcheck
+                             (linksInHover . :json-false)
                              (matcher . "CaseSensitive")))
                   ;; https://github.com/joaotavora/eglot/discussions/918
                   ;; https://www.reddit.com/r/emacs/comments/11xjpeq
@@ -2068,16 +2160,25 @@ deleted, kill the pairs around point."
 (use-package nix-mode
   :mode ("\\.nix\\'" . nix-mode))
 
+(use-package fish-mode
+  :mode ("\\.fish\\'" . fish-mode))
+
 (use-package janet-ts-mode
   :vc (:url "https://github.com/sogaiu/janet-ts-mode")
   :mode ("\\.janet\\'" . janet-ts-mode)
   :config
   (remove-hook 'janet-ts-mode-hook 'treesit-inspect-mode))
 
+;; (use-package templ-ts-mode
+;;   :vc (:url "https://github.com/danderson/templ-ts-mode")
+;;   :mode ("\\.tpl\\'" . templ-ts-mode))
+
 (use-package markdown-mode
   :hook (markdown-mode . visual-line-mode)
-  :hook (markdown-mode . visual-line-mode)
   :config
+  (add-hook 'markdown-mode-hook #'(lambda nil
+                                    (when (display-graphic-p)
+                                      (markdown-toggle-inline-images))))
   (setq markdown-fontify-code-blocks-natively t
         markdown-max-image-size '(800 . 800)))
 
@@ -2091,31 +2192,7 @@ deleted, kill the pairs around point."
          ("C-c ]" . foxy-cycle-files)
          ("C-c [" . (lambda nil (interactive)
                       (foxy-cycle-files -1)))
-         ("C-c b" . foxy-run-all-tests))
-  :init
-  ;; FIXME generalise it outside of foxy, set default compile-command
-  (defvar foxy-compile-commands
-    '(;; (rust-ts-mode-hook . "rustc -o a.out ")
-      (c++-mode-hook
-       . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -I/Users/admin/problems/include ")
-      (c++-ts-mode-hook
-       . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -I/Users/admin/problems/include ")
-      ;; (go-ts-mode-hook . "go build -o a.out ")
-      ))
-  (defvar foxy-run-commands
-    '((go-ts-mode-hook . "go run ")
-      (rust-ts-mode-hook . "CARGO_TERM_COLOR=always cargo run ")
-      (janet-ts-mode-hook . "janet ")))
-  
-  (dolist (pair foxy-compile-commands)
-    (let ((mode (car pair))
-          (command (cdr pair)))
-      (add-hook mode
-                (lambda ()
-                  (setq-local compile-command (concat command
-                                                      buffer-file-name
-                                                      " && ./a.out"))
-                  (setq-local foxy-compile-command command))))))
+         ("C-c b" . foxy-run-all-tests)))
 
 (provide 'init)
 ;;; init.el ends here
