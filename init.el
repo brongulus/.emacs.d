@@ -228,8 +228,8 @@ backwards instead."
     (eval
      `(define-advice ,func (:after (&rest _args) yank-indent) ; src: magnars
         "Indent yanked text (with prefix arg don't indent)."
-        (unless (string-equal (file-name-extension (concat "" buffer-file-name))
-                              "yaml")
+        (when (and (derived-mode-p 'prog-mode)
+                   (not (eq major-mode 'yaml-ts-mode)))
           (let ((transient-mark-mode nil))
             (indent-region (region-beginning) (region-end) nil))))))
   
