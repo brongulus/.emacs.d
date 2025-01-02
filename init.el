@@ -143,12 +143,7 @@
         electric-pair-delete-adjacent-pairs t
         ;; electric-pair-open-newline-between-pairs nil
         electric-pair-skip-whitespace nil
-        shell-command-prompt-show-cwd t
-        shell-kill-buffer-on-exit t
-        set-mark-command-repeat-pop t
-        shell-file-name (car (process-lines "which" "fish"))
-        compilation-ask-about-save nil
-        compilation-scroll-output 'first-error)
+        set-mark-command-repeat-pop t)
 
   ;; surround
   (defvar insert-pair-map ;; src: oantolin
@@ -249,10 +244,7 @@ backwards instead."
          ("<f5>" . my-switch-to-alternate-file))
   :bind (:map special-mode-map
               ("Q" . (lambda nil (interactive)
-                       (quit-window t)))
-              :map prog-mode-map
-              ("C-c C-c" . compile)
-              ("C-c C-r" . recompile))
+                       (quit-window t))))
   :defer 2
   :hook
   (after-init . (lambda nil
@@ -311,8 +303,6 @@ backwards instead."
                   (put 'narrow-to-region 'disabled nil)
                   (add-hook 'debugger-mode-hook #'visual-line-mode)
                   (add-hook 'emacs-lisp-mode-hook #'outline-minor-mode)
-                  (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
-                  (add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
                   (add-hook 'prog-mode-hook (electric-pair-mode t))
                   (add-hook 'minibuffer-setup-hook (lambda () (electric-pair-mode 0)))
                   (add-hook 'minibuffer-exit-hook (lambda () (electric-pair-mode 1)))
@@ -372,6 +362,71 @@ backwards instead."
 
 ;;; Completion
 
+(use-package compile
+  :ensure nil
+  :defer 1
+  :bind (:map prog-mode-map
+              ("C-c C-c" . compile)
+              ("C-c C-r" . recompile))
+  :hook ((compilation-filter . ansi-color-compilation-filter)
+         (compilation-filter . ansi-osc-compilation-filter))
+  :hook (compilation-mode .
+                          (lambda nil
+                            (comint-mode)
+                            (setq-local buffer-read-only nil)))
+  :config
+  ;; completing-read for compile
+  (defun compilation-read-command-with-autocomplete (command)
+    "Use `completing-read` to add autocomplete powers to compilation read"
+    (completing-read "Compile command: " compile-history
+                     nil nil command
+                     (if (equal (car compile-history) command)
+                         '(compile-history . 1)
+                       'compile-history)))
+  (advice-add
+   #'compilation-read-command
+   :override #'compilation-read-command-with-autocomplete)
+  
+  :init
+  (setq shell-command-prompt-show-cwd t
+        shell-kill-buffer-on-exit t
+        shell-file-name (car (process-lines "which" "fish"))
+        compilation-ask-about-save nil
+        compilation-scroll-output 'first-error)
+  ;; compile commands
+  (defvar compile-commands
+    '((go-ts-mode-hook . "go run ")
+      ;; (go-ts-mode-hook . "go build -o a.out ")
+      ;; (rust-ts-mode-hook . "rustc -o a.out ")
+      (c++-mode-hook
+       . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion \
+ -O2 -I/Users/admin/problems/include ")
+      (c++-ts-mode-hook
+       . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion \
+ -O2 -I/Users/admin/problems/include ")
+      ))
+  (defvar run-commands
+    '((rust-ts-mode-hook . "cargo run ")
+      (janet-ts-mode-hook . "janet ")))
+
+  (dolist (pair compile-commands)
+    (let ((mode (car pair))
+          (command (cdr pair)))
+      (add-hook mode
+                (lambda nil
+                  (setq-local compile-command (concat command
+                                                      buffer-file-name
+                                                      " && ./a.out"))
+                  (setq-local foxy-compile-command command)))))
+
+  (dolist (pair run-commands)
+    (let ((mode (car pair))
+          (command (cdr pair)))
+      (add-hook mode
+                (lambda nil
+                  (setq-local compile-command command)
+                  (setq-local foxy-compile-command command))))))
+  
 (use-package orderless
   :after minibuffer
   :hook (completion-in-region-mode . (lambda nil
@@ -447,7 +502,7 @@ backwards instead."
 (use-package consult
   :bind (("C-x b" . consult-buffer)
          ([remap project-find-regexp] . consult-ripgrep)
-         ([remap project-find-file] . consult-find)
+         ;; ([remap project-find-file] . consult-find)
          ([remap flymake-show-buffer-diagnostics] . consult-flymake))
   :config
   (with-eval-after-load 'project
@@ -589,7 +644,9 @@ backwards instead."
   :if (display-graphic-p) ; FIXME puni is messing terminal
   ;; TODO: https://karthinks.com/software/a-consistent-structural-editing-interface/
   ;; https://countvajhula.com/2021/09/25/the-animated-guide-to-symex/
-  :hook ((emacs-lisp-mode go-ts-mode tex-mode eval-expression-minibuffer-setup) . puni-mode)
+  :hook ((emacs-lisp-mode go-ts-mode rust-ts-mode
+                          tex-mode eval-expression-minibuffer-setup)
+         . puni-mode)
   :bind (("C-=" . puni-expand-region)
          :map puni-mode-map
          ("C-w" . nil) ;delete-backword
@@ -1004,10 +1061,7 @@ deleted, kill the pairs around point."
   :after eldoc
   :commands eldoc-box-help-at-point my/eldoc-get-help
   :bind (("s-<mouse-1>" . my/eldoc-get-help)
-         ("C-z C-z" . my/eldoc-get-help)
-         (:map eglot-mode-map
-               ("M-j" . eldoc-box-scroll-up)
-               ("M-k" . eldoc-box-scroll-down)))
+         ("C-z C-z" . my/eldoc-get-help))
   :config
   (defun my/eldoc-get-help ()
     (interactive)
@@ -1213,7 +1267,8 @@ deleted, kill the pairs around point."
                   (nnimap-stream ssl)
                   (nnir-search-engine imap)
                   (nnmail-expiry-target "nnimap+personal:[Imap]/Trash")
-                  (nnmail-expiry-wait 'immediate)))
+                  (nnmail-expiry-wait 'immediate))
+          (nnrss ""))
         ;; opts
         gnus-check-new-newsgroups nil ;; disable first time you use gnus
         gnus-asynchronous t
@@ -1257,6 +1312,7 @@ deleted, kill the pairs around point."
         gnus-replied-mark 32
         gnus-cached-mark 32
         gnus-ticked-mark ?!
+        gnus-low-score-mark #x2193 ;; down arrow
         ;; see (info "(gnus) Summary Score Commands")
         gnus-use-adaptive-scoring t
         gnus-summary-expunge-below 0
@@ -1322,11 +1378,11 @@ deleted, kill the pairs around point."
                               "gwene.com.thisweekinrust" "gwene.org.rust-lang.blog"
                               "gwene.com.youtube.feeds.videos.xml.user.ethoslab"
                               "gmane.comp.web.qutebrowser" "gmane.comp.web.elinks.user"
-                              "gwene.app.rsshub.leetcode.articles"
-                              "gwene.org.hnrss.newest.points"
+                              "gwene.io.kubernetes" "gwene.app.rsshub.leetcode.articles"
+                              "gwene.rs.lobste" "gwene.org.hnrss.newest.points"
                               "gwene.com.arcan-fe" "gwene.io.github.matklad"
                               "gwene.net.lwn.headlines" "gwene.org.quantamagazine"
-                              "gwene.org.bitlbee.news.rss")
+                              "gwene.com.tedinski" "gwene.org.bitlbee.news.rss")
                              ("Unread")))))
 
 (use-package vc
@@ -1852,7 +1908,7 @@ deleted, kill the pairs around point."
   (define-key meow-normal-state-keymap (kbd "m s") insert-pair-map)
   (define-key meow-normal-state-keymap (kbd "m d") delete-pair-map)
   
-  (dolist (imode '(reb-mode eat-mode shell-mode eshell-mode
+  (dolist (imode '(reb-mode eat-mode shell-mode eshell-mode term-mode comint-mode
                             deft-mode magit-log-edit-mode log-edit-mode))
     (push `(,imode . insert) meow-mode-state-list))
 
@@ -2049,41 +2105,6 @@ deleted, kill the pairs around point."
          ("\\.bin\\'" . hexl-mode)
          ("\\.info\\'" . Info-mode)))
 
-;; compile commands
-(defvar compile-commands
-  '((go-ts-mode-hook . "go run ")
-    ;; (go-ts-mode-hook . "go build -o a.out ")
-    ;; (rust-ts-mode-hook . "rustc -o a.out ")
-    (c++-mode-hook
-     . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion \
- -O2 -I/Users/admin/problems/include ")
-    (c++-ts-mode-hook
-     . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion \
- -O2 -I/Users/admin/problems/include ")
-    ))
-(defvar run-commands
-  '((rust-ts-mode-hook . "cargo run ")
-    (janet-ts-mode-hook . "janet ")))
-
-(dolist (pair compile-commands)
-  (let ((mode (car pair))
-        (command (cdr pair)))
-    (add-hook mode
-              (lambda nil
-                (setq-local compile-command (concat command
-                                                    buffer-file-name
-                                                    " && ./a.out"))
-                (setq-local foxy-compile-command command)))))
-
-(dolist (pair run-commands)
-  (let ((mode (car pair))
-        (command (cdr pair)))
-    (add-hook mode
-              (lambda nil
-                (setq-local compile-command command)
-                (setq-local foxy-compile-command command)))))
-
-
 (use-package eglot
   :bind ("M-+" . eglot-code-actions)
   :bind (:map meow-normal-state-keymap
@@ -2097,6 +2118,8 @@ deleted, kill the pairs around point."
              (highlight-indent-guides-mode t)))
   :hook (rust-ts-mode . (lambda nil
                           (add-to-list 'process-environment "CARGO_TERM_COLOR=always" :append)))
+  :custom
+  (eglot-sync-connect nil) ;; speeds up file opening
   ;; :init (setq eglot-stay-out-of '(flymake))
   :config
   (with-eval-after-load 'project
@@ -2104,6 +2127,7 @@ deleted, kill the pairs around point."
   
   (fset #'jsonrpc--log-event #'ignore)
   (setq eglot-events-buffer-config 0
+        eglot-events-buffer-size 0
         eglot-autoshutdown t
         eglot-inlay-hints-mode nil
         go-ts-mode-indent-offset 4
@@ -2148,6 +2172,8 @@ deleted, kill the pairs around point."
                `(rust-ts-mode . ("rust-analyzer"
                                  :initializationOptions
                                  (:check (:command "clippy"))))))
+
+(load-file "~/.emacs.d/lisp/snippets.el")
 
 (use-package kubed
   :bind-keymap ("C-c k" . kubed-prefix-map))
@@ -2194,31 +2220,12 @@ deleted, kill the pairs around point."
                       (foxy-cycle-files -1)))
          ("C-c b" . foxy-run-all-tests)))
 
+(setq custom-file (expand-file-name "custom.el" user-emacs-directory))
+(when (file-exists-p custom-file)
+  (load custom-file))
+
 (provide 'init)
 ;;; init.el ends here
-
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(package-selected-packages
-   '(auctex avy cape cdlatex corfu-terminal deadgrep denote devil diff-hl dired-sidebar easy-kill eat
-            eldoc-box embark exec-path-from-shell forge highlight-indent-guides info-colors
-            janet-ts-mode kkp kubed kubel macrursors meow nerd-icons nerd-icons-corfu
-            nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless org-appear org-modern ox-hugo
-            pdf-tools popper puni shr-tag-pre-highlight transpose-frame undo-fu-session vertico
-            writeroom-mode xclip zig-mode))
- '(package-vc-selected-packages
-   '((ox-awesomecv :url "https://gitlab.com/Titan-C/org-cv")
-     (janet-ts-mode :url "https://github.com/sogaiu/janet-ts-mode")
-     (macrursors :url "https://github.com/karthink/macrursors"))))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
 ;; Local Variables:
 ;; byte-compile-warnings: (not free-vars unresolved)
 ;; End:

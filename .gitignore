@@ -6,12 +6,15 @@ eln-cache/
 elpa/
 eshell/
 gnus/cache/
+multisession/
 org-persist/
 transient/
 tree-sitter/
 tutorial/
 undo-fu-session/
 url/
+*.ADAPT
+*.SCORE
 .DS_Store
 forge-database.sqlite
 history
