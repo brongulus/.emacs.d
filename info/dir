@@ -14,6 +14,9 @@ File: dir,	Node: Top	This is the top of the INFO tree
 
 * Menu:
 
+Miscellaneous
+* Tempo: (tempo).               Tempo templating system for Emacs
+
 The Algorithmic Language Scheme
 * SICP: (sicp).                 Structure and Interpretation of Computer 
                                   Programs
