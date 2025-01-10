@@ -105,7 +105,8 @@
                                  (length package-activated-list)
                                  (format "%.2f seconds"
                                          (float-time
-                                          (time-subtract after-init-time before-init-time))))))
+                                          (time-subtract (current-time)
+                                                         before-init-time))))))
       (erase-buffer)
       (setq mode-line-format nil)
       (goto-char (point-min))
@@ -130,7 +131,7 @@
                              (length package-activated-list)
                              (format "%.2f seconds"
                                      (float-time
-                                      (time-subtract after-init-time before-init-time)))))
+                                      (time-subtract (current-time) before-init-time)))))
             (when (and (not (file-exists-p (locate-user-emacs-file ".emacs.desktop")))
                        (display-graphic-p))
               (ar/show-welcome-buffer)))

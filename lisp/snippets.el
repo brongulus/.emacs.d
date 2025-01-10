@@ -1,4 +1,9 @@
 ;;;; Snippets
+
+;; Check (info "(autotype) Skeleton Language")
+;; https://www.lysator.liu.se/~davidk/elisp/tempo-examples.html
+;; https://www.lysator.liu.se/~davidk/elisp/
+
 ;;; --Perl----------------------------------------------------------------
 (define-skeleton pl-header "Perl header." ""
   "#!/usr/bin/env perl\n\n"
@@ -14,15 +19,11 @@
 ;;; --Go------------------------------------------------------------------
 (define-skeleton go-err "Go test check." ""
   > "if got != want {\n"
-  > "t.Errorf(\"got %d want %d given, %v\", got, want, " _ ")\n}"
-  > (indent-according-to-mode)
-  > (delete-char -1))
+  > "t.Errorf(\"got %d want %d given, %v\", got, want, " _ ")\n}" >)
 
 (define-skeleton errnil "Go check err." ""
   > "if err != nil {\n"
-  >  _ "\n}"
-  > (indent-according-to-mode)
-  > (delete-char -1))
+  >  _ "\n}" >)
 
 (add-hook 'go-ts-mode-hook 'abbrev-mode)
 (add-hook 'go-ts-mode-hook
@@ -33,6 +34,9 @@
 ;;; --Rust------------------------------------------------------------------
 (define-skeleton rs-print "Faster println! call." ""
   "println!(\"" _ "\");")
+
+(define-skeleton rs-dbg "Faster dbg! call." ""
+  "dbg!(\"" _ "\");")
 
 (define-skeleton rs-header "Base rust template for competitive programming." ""
   "use std::io::{self, prelude::*};\n\n"
@@ -83,11 +87,11 @@
   "}")
 
 (add-hook 'rust-ts-mode-hook 'abbrev-mode)
-(add-hook 'rust-ts-mode-hook (lambda ()
-                               (define-abbrev rust-ts-mode-abbrev-table
-                                 "gtc" "" 'rs-header)
-                               (define-abbrev rust-ts-mode-abbrev-table
-                                 "pln" "" 'rs-print)))
+(add-hook 'rust-ts-mode-hook
+          (lambda ()
+            (define-abbrev rust-ts-mode-abbrev-table "gtc" "" 'rs-header)
+            (define-abbrev rust-ts-mode-abbrev-table "pln" "" 'rs-print)
+            (define-abbrev rust-ts-mode-abbrev-table "dbg" "" 'rs-dbg)))
 
 ;;; --C++------------------------------------------------------------------
 (define-skeleton cpp-header "Base c++ template for competitive programming." ""
@@ -99,18 +103,16 @@
   "#define debug(...) 42\n"
   "#endif\n"
   "\nint main () {\n"
-  "  ios::sync_with_stdio(0);\n"
-  "  cin.tie(0);\n"
-  "  " _ "\n"
+  "\tios::sync_with_stdio(0);\n"
+  "\tcin.tie(0);\n"
+  "\t" _ "\n"
   "}")
 
 (define-skeleton cpp-for-loop
   "Insert a C++ for loop with user-defined iterator and termination variable." ""
   > "for (int " (setq iterator (read-char "Iterator variable: ")) " = 0; " iterator " < "
-  > (read-char "Termination: ") "; " iterator "++) {\n\t\t"
-  > _ "\n}"
-  > (indent-according-to-mode)
-  > (delete-char -1))
+  > (read-char "Termination: ") "; " iterator "++) {\n"
+  > _ "\n}" >)
 
 (define-skeleton sortl "Sort with custom comparator." ""
   > "std::sort(v.begin(), v.end(), [](auto &left, auto &right) {\n\t"
@@ -120,12 +122,10 @@
 (define-skeleton cpp-tests "Run multiple testcases." ""
   > "int tt = 0; cin >> tt;\n\t"
   > "while(tt--) {\n\t\t"
-  > _ "\n}"
-  > (indent-according-to-mode)
-  > (delete-char -1))
+  > _ "\n}" >)
 
 (define-skeleton cpp-all "Run from beginning to end of iterator." ""
-  > (setq var (read-from-minibuffer "")) ".begin(), " var ".end()"
+  > (setq var (skeleton-read "Iterator variable: ")) ".begin(), " var ".end()"
   > (forward-char)
   > _)
 

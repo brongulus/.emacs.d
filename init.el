@@ -50,6 +50,7 @@
          ("C-M-r" . raise-sexp)
          ("C-x \\" . align-regexp)
          ("C-x C-z" . restart-emacs)
+         ("C-z C-s" . suspend-frame)
          ("C-s-f" . toggle-frame-fullscreen) ;; macos
          ("<f7>" . (lambda () (interactive)
                      (hl-line-mode 'toggle)
@@ -121,12 +122,12 @@
         undo-outer-limit 1006632960
         enable-local-variables :safe
         scroll-margin 0
-        scroll-conservatively 100
+        scroll-conservatively 101
         scroll-preserve-screen-position t
         ;; pixel-scroll-precision-large-scroll-height 35.0
         vc-follow-symlinks t
         split-height-threshold nil
-        split-width-threshold 100
+        split-width-threshold 120
         save-abbrevs nil
         make-backup-files nil
         create-lockfiles nil
@@ -232,6 +233,11 @@ backwards instead."
                    (not (eq major-mode 'yaml-ts-mode)))
           (let ((transient-mark-mode nil))
             (indent-region (region-beginning) (region-end) nil))))))
+
+  (define-advice rectangle--default-line-number-format
+      (:filter-return (str) rect-number-period)
+    "Add a period after the inserted number"
+    (replace-regexp-in-string " $" ". " str))
   
   (define-advice term-handle-exit (:after (&rest _args) term-kill-on-exit)
     "Kill the buffer after the term exits."
@@ -298,6 +304,7 @@ backwards instead."
                   (advice-add 'kill-ring-save :around #'my/kill-pulse-advice)
                   
                   ;; misc modes and hooks
+                  ;; install-info --dir-file=./dir --info-file=
                   (push "~/.emacs.d/info" Info-directory-list)
                   (put 'help-fns-edit-variable 'disabled nil) ;; FIXME
                   (put 'narrow-to-region 'disabled nil)
@@ -331,7 +338,7 @@ backwards instead."
                     (xterm-mouse-mode))
                   ;; enable some useful modes
                   (tab-bar-mode +1)
-                  (pixel-scroll-precision-mode 1) ;; modeline flickering
+                  ;; (pixel-scroll-precision-mode 1) ;using ultra-scroll-mode instead
                   (save-place-mode 1)
                   (when (string> emacs-version "29.4")
                     (which-key-mode 1))
@@ -343,7 +350,7 @@ backwards instead."
                   (context-menu-mode 1)
                   (savehist-mode 1)
                   (blink-cursor-mode 1)
-                  (setq blink-cursor-interval 0.7)
+                  (setq blink-cursor-interval 0.8)
                   (tooltip-mode -1))))
 
 (use-package package
@@ -372,8 +379,18 @@ backwards instead."
          (compilation-filter . ansi-osc-compilation-filter))
   :hook (compilation-mode .
                           (lambda nil
+                            "Enable comint mode to allow for providing program input."
                             (comint-mode)
                             (setq-local buffer-read-only nil)))
+  :hook (compilation-finish-functions
+         .
+         (lambda (buffer status)
+           "Reset comint mode so that we get the compilation-mode goodness."
+           ;; (message "Compilation finished with status: %s" status)
+           (setq-local buffer-read-only t)
+           (compilation-minor-mode)
+           (when (featurep 'meow)
+             (meow-motion-mode t))))
   :config
   ;; completing-read for compile
   (defun compilation-read-command-with-autocomplete (command)
@@ -387,7 +404,7 @@ backwards instead."
    #'compilation-read-command
    :override #'compilation-read-command-with-autocomplete)
   
-  :init
+  :init ;TODO
   (setq shell-command-prompt-show-cwd t
         shell-kill-buffer-on-exit t
         shell-file-name (car (process-lines "which" "fish"))
@@ -426,7 +443,7 @@ backwards instead."
                 (lambda nil
                   (setq-local compile-command command)
                   (setq-local foxy-compile-command command))))))
-  
+
 (use-package orderless
   :after minibuffer
   :hook (completion-in-region-mode . (lambda nil
@@ -438,42 +455,28 @@ backwards instead."
   :custom
   (completion-styles '(orderless basic)))
 
-(use-package vertico
-  :hook (after-init . vertico-mode)
-  :hook (rfn-eshadow-update-overlay . vertico-directory-tidy)
-  :bind (:map vertico-map
-              ("<escape>" . minibuffer-keyboard-quit)
-              ("<backspace>" . vertico-directory-delete-char)
-              ("RET" . vertico-directory-enter)
-              ("C-<return>" . vertico-exit-input)
-              ("M-`" . vertico-multiform-vertical)
-              ("TAB" . vertico-next)
-              ("<backtab>" . vertico-previous)
-              ("S-TAB" . vertico-previous)
-              ("M-TAB" . vertico-previous)
-              ("C-j" . vertico-next)
-              ("C-k" . vertico-previous))
-  :custom
-  (vertico-multiform-categories
-   '((command flat)
-     (buffer flat)
-     (project-file flat)))
+(use-package icomplete
+  :ensure nil
+  :init (fido-vertical-mode)
+  :bind (:map icomplete-fido-mode-map
+              ("TAB" . icomplete-forward-completions)
+              ("<backtab>" . icomplete-backward-completions)
+              ("<escape>" . minibuffer-keyboard-quit))
+  :hook (icomplete-minibuffer-setup . (lambda nil
+                                        (setq-local truncate-lines t
+                                                    line-spacing nil)))
   :config
-  (vertico-multiform-mode)
-
   (defun crm-indicator (args)
-    (cons (format "[CRM%s] %s"
-                  (replace-regexp-in-string
-                   "\\`\\[.*?]\\*\\|\\[.*?]\\*\\'" ""
-                   crm-separator)
+    (cons (format "%s %s"
+                  (propertize (format "[CRM%s]"
+                                      (replace-regexp-in-string
+                                       "\\`\\[.*?]\\*\\|\\[.*?]\\*\\'" ""
+                                       crm-separator))
+                              'face 'success)
                   (car args))
           (cdr args)))
   (advice-add #'completing-read-multiple :filter-args #'crm-indicator)
   
-  (setq vertico-scroll-margin 0
-        vertico-resize nil
-        vertico-cycle t)
-
   (setq tab-always-indent 'complete
         tab-first-completion 'word-or-paren
         completions-group t
@@ -481,19 +484,21 @@ backwards instead."
         completions-detailed t))
 
 (use-package cape
-  :hook (eglot-managed-mode . (lambda nil
-                                (setq-local completion-at-point-functions
-                                            (list (cape-capf-super
-                                                   #'eglot-completion-at-point
-                                                   #'cape-abbrev
-                                                   #'cape-file
-                                                   #'cape-dabbrev)))))
-  :hook (emacs-lisp-mode . (lambda nil
-                             (setq-local completion-at-point-functions
-                                         (list (cape-capf-super
-                                                #'elisp-completion-at-point
-                                                #'cape-dabbrev)
-                                               #'cape-file))))
+  :hook (eglot-managed-mode
+         . (lambda nil
+             (setq-local completion-at-point-functions
+                         (list (cape-capf-super
+                                #'eglot-completion-at-point
+                                #'cape-abbrev
+                                #'cape-file
+                                #'cape-dabbrev)))))
+  :hook (emacs-lisp-mode
+         . (lambda nil
+             (setq-local completion-at-point-functions
+                         (list (cape-capf-super
+                                #'elisp-completion-at-point
+                                #'cape-dabbrev)
+                               #'cape-file))))
   :init
   (add-hook 'completion-at-point-functions #'cape-dabbrev)
   (add-hook 'completion-at-point-functions #'cape-file)
@@ -501,6 +506,7 @@ backwards instead."
 
 (use-package consult
   :bind (("C-x b" . consult-buffer)
+         ("C-t" . consult-line)
          ([remap project-find-regexp] . consult-ripgrep)
          ;; ([remap project-find-file] . consult-find)
          ([remap flymake-show-buffer-diagnostics] . consult-flymake))
@@ -583,7 +589,8 @@ backwards instead."
   :init
   (define-prefix-command 'macrursors-mark-map)
   :bind-keymap ("C-;" . macrursors-mark-map)
-  :bind (("M-d" . (lambda nil ; mark-word-then-select-next
+  :bind (("M-d" . (lambda nil
+                    "Macrurors mark word if no selection, otherwise select next."
                     (interactive)
                     (if (or (use-region-p)
                             defining-kbd-macro)
@@ -596,7 +603,8 @@ backwards instead."
                           (backward-word)))
                       (mark-word))))
          ("M-'" . macrursors-mark-all-instances-of)
-         ("M-\\" . (lambda nil (interactive) ; toggle secondary selection
+         ("M-\\" . (lambda nil (interactive)
+                     "Macrursors toggle secondary selection."
                      (if (secondary-selection-exist-p)
                          (macrursors-select-clear)
                        (macrursors-select))))
@@ -604,7 +612,8 @@ backwards instead."
          ("M-<up>" . macrursors-mark-previous-line)
          ("M-n" . macrursors-mark-next-instance-of)
          ("M-p" . macrursors-mark-previous-instance-of)
-         ("M-u" . (lambda nil ; macrursors-undo-last
+         ("M-u" . (lambda nil
+                    "Macrursors undo last cursor."
                     (interactive)
                     (and macrursors--overlays
                          (delete-overlay (car macrursors--overlays)))
@@ -719,6 +728,12 @@ deleted, kill the pairs around point."
   (setq embark-prompter 'embark-completing-read-prompter
         embark-keymap-prompter-key "'"
         embark-indicators (delete 'embark-mixed-indicator embark-indicators)))
+
+(use-package ultra-scroll
+  :vc (:url "https://github.com/jdtsmith/ultra-scroll")
+  :hook (after-init . ultra-scroll-mode)
+  :config
+  (pixel-scroll-precision-mode -1))
 
 ;;; Built-ins
 
@@ -889,6 +904,10 @@ deleted, kill the pairs around point."
         flymake-margin-indicator-position nil
         flymake-show-diagnostics-at-end-of-line 'short)
 
+  (add-hook 'yaml-ts-mode-hook
+            (lambda nil
+              (setq-local flymake-show-diagnostics-at-end-of-line nil)))
+
   (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake))
 
 (use-package eldoc
@@ -976,13 +995,13 @@ deleted, kill the pairs around point."
         `(;; no window
           ("\\`\\*Async Shell Command\\*\\'"
            (display-buffer-no-window))
-          ("\\`\\*\\(Warnings\\|Compile-Log\\|Org Links\\)\\*\\'"
+          ("\\`\\*\\(Warnings\\|Compile-Log\\|Org Links\\|diff-hl-show-.*\\)\\*\\'"
            (display-buffer-no-window)
            (allow-no-window . t))))
   (setq popper-reference-buffers
-        '("\\*Messages\\*" "Output\\*$" "\\*xref\\*"
+        '("\\*Messages\\*" "\\*(?!EGLOT).*Output\\*$" "\\*xref\\*"
           "\\*Async Shell Command\\*" "\\*shell.\*"
-          "magit:.\*" "\\*pabbrev suggestions\\*"
+          "\\*pabbrev suggestions\\*" ;"magit:.\*"
           ".*-eat\\*" "\\*eldoc\\*" "vc-git :.\*"
           "\\*vc-change-log\\*" "\\*Deletions\\*"
           "\\*Flymake .\*" "\\*CDLaTex Help\\*"
@@ -1044,7 +1063,7 @@ deleted, kill the pairs around point."
 
 (use-package xclip
   :unless (display-graphic-p)
-  :init (xclip-mode 1))
+  :hook (after-init . xclip-mode))
 
 (use-package kkp ;; FIXME tmux
   :unless (display-graphic-p)
@@ -1126,6 +1145,7 @@ deleted, kill the pairs around point."
 
 (use-package nerd-icons
   :commands nerd-icons-octicon nerd-icons-codicon
+  :defer 1
   :config
   ;; causing issues in emacs -nw
   ;; (when (not (find-font (font-spec :name nerd-icons-font-family)))
@@ -1182,8 +1202,23 @@ deleted, kill the pairs around point."
 (use-package diff-hl
   :defer 1
   :hook (((prog-mode conf-mode) . turn-on-diff-hl-mode)
-         ((prog-mode conf-mode) . diff-hl-margin-mode))
+         ((prog-mode conf-mode) . diff-hl-margin-mode)
+         ((prog-mode conf-mode) . diff-hl-show-hunk-mouse-mode))
   :config
+  (define-key diff-hl-inline-popup-transient-mode-map
+              (kbd "q")
+              (lambda nil
+                "Clean up the littering diff-hl does by leaving its buffers after quitting."
+                (interactive)
+                (diff-hl-inline-popup-hide)
+                (let ((diff-hl-buffers
+                       (seq-filter
+                        (lambda (buf)
+                          (with-current-buffer buf
+                            (and (eq major-mode 'diff-mode)
+                                 (string-match-p "*diff-hl-.*" (buffer-name buf)))))
+                        (buffer-list))))
+                  (mapc #'kill-buffer diff-hl-buffers))))
   (diff-hl-flydiff-mode t)
   (when (package-installed-p 'magit)
     (add-hook 'magit-pre-refresh-hook  #'diff-hl-magit-pre-refresh)
@@ -1436,10 +1471,10 @@ deleted, kill the pairs around point."
   (setq magit-display-buffer-function
         (lambda (buffer) ;; display diffs to the left, easier to use scroll-other-window
           (with-current-buffer buffer
-            (if (eq major-mode 'magit-diff-mode)
-                (display-buffer buffer
-                                '(display-buffer-in-direction
-                                  (direction . leftmost)))
+            (if (eq major-mode 'magit-status-mode)
+                (progn
+                  (tab-bar-new-tab)
+                  (display-buffer buffer '(display-buffer-same-window)))
               (magit-display-buffer-traditional buffer))))
         magit-refresh-status-buffer nil
         magit-diff-refine-hunk t
@@ -1454,16 +1489,29 @@ deleted, kill the pairs around point."
   (when (featurep 'meow)
     (add-hook 'git-commit-mode-hook #'meow-insert))
   
-  (defun mu-magit-kill-buffers () ;src: manuel-uberti
-    "Restore window configuration and kill all Magit buffers."
+  (defun magit-forge-kill-buffers () ;src: manuel-uberti
+    "Restore window configuration and kill all Magit & Forge buffers."
     (interactive)
-    (let ((buffers (magit-mode-get-buffers)))
+    (let ((buffers (magit-mode-get-buffers))
+          (forge-buffers
+           (seq-filter (lambda (buf)
+                         (with-current-buffer buf
+                           (member major-mode '(forge-pullreq-mode
+                                                forge-issue-mode
+                                                forge-topics-mode
+                                                forge-post-mode
+                                                forge-motifications-mode
+                                                forge-repository-list-mode))))
+                       (buffer-list))))
       (magit-restore-window-configuration)
-      (mapc #'kill-buffer buffers)))
+      (mapc #'kill-buffer buffers)
+      (mapc #'kill-buffer forge-buffers))
+    (tab-bar-close-tab))
 
-  (bind-key "q" #'mu-magit-kill-buffers magit-status-mode-map))
+  (bind-key "q" #'magit-forge-kill-buffers magit-status-mode-map))
 
 (use-package forge
+  ;; remember to generate auth-token (info "(forge) Setup for Githubcom")
   :after magit)
 
 (use-package dired
@@ -1514,8 +1562,6 @@ deleted, kill the pairs around point."
               ("C-o" . other-window)
               ("l" . windmove-right)
               ("\\" . dired-sidebar-up-directory))
-  :hook (dired-sidebar-mode . (lambda nil
-                                (setq-local meow-cursor-type-motion nil)))
   :config
   (add-hook 'dired-sidebar-mode-hook
             (lambda nil
@@ -1797,6 +1843,8 @@ deleted, kill the pairs around point."
               (setq-local header-line-format nil)))
   (setq org-capture-file
         (concat org-directory "/inbox.org")
+        org-joural-file
+        (concat org-directory "/journal.org")
         org-capture-templates
         '(("t" "TODO" entry
            (file+headline org-capture-file "Tasks")
@@ -1804,6 +1852,10 @@ deleted, kill the pairs around point."
           ("n" "Note" entry
            (file+headline org-capture-file "Notes")
            "* %?\n%i %a" :prepend t)
+          ;; https://www.twelvety.net/2024/12/styling-a-markdown-one-line-journal-in-emacs
+          ("j" "Journal" plain
+           (file+datetree org-joural-file)
+           "%<%d %b, %a> | %?" :tree-type month :empty-lines 1)
           ("h" "Habit" entry
            (file+headline org-capture-file "Habit")
            "* TODO %?\n:PROPERTIES:\n:STYLE: habit\n:END:"
@@ -2127,11 +2179,12 @@ deleted, kill the pairs around point."
   
   (fset #'jsonrpc--log-event #'ignore)
   (setq eglot-events-buffer-config 0
-        eglot-events-buffer-size 0
         eglot-autoshutdown t
         eglot-inlay-hints-mode nil
         go-ts-mode-indent-offset 4
-        eglot-ignored-server-capabilities '(:inlayHintProvider))
+        eglot-ignored-server-capabilities '(:inlayHintProvider
+                                            :colorProvider
+                                            :foldingRangeProvider))
   
   (add-to-list 'eglot-server-programs '(helm-ts-mode "helm_ls" "serve"))
 
@@ -2173,7 +2226,7 @@ deleted, kill the pairs around point."
                                  :initializationOptions
                                  (:check (:command "clippy"))))))
 
-(load-file "~/.emacs.d/lisp/snippets.el")
+(load "~/.emacs.d/lisp/snippets" nil :no-message)
 
 (use-package kubed
   :bind-keymap ("C-c k" . kubed-prefix-map))
@@ -2222,7 +2275,7 @@ deleted, kill the pairs around point."
 
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 (when (file-exists-p custom-file)
-  (load custom-file))
+  (load custom-file nil :no-message))
 
 (provide 'init)
 ;;; init.el ends here

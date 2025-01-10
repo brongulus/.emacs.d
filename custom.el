@@ -5,14 +5,15 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(auctex avy cape cdlatex corfu-terminal deadgrep denote devil diff-hl dired-sidebar easy-kill eat
-            eldoc-box embark exec-path-from-shell forge highlight-indent-guides info-colors
-            janet-ts-mode kkp kubed kubel macrursors meow nerd-icons nerd-icons-corfu
-            nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless org-appear org-modern ox-hugo
-            pdf-tools popper puni shr-tag-pre-highlight transpose-frame undo-fu-session vertico
-            writeroom-mode xclip zig-mode))
+   '(auctex avy cape cdlatex consult consult-eglot corfu-terminal deadgrep denote devil diff-hl
+            dired-sidebar easy-kill eat eldoc-box embark exec-path-from-shell fish-mode forge
+            highlight-indent-guides info-colors janet-ts-mode kkp kubed kubel macrursors meow
+            nerd-icons nerd-icons-corfu nerd-icons-dired nerd-icons-ibuffer nix-mode nov orderless
+            org-appear org-modern ox-hugo pdf-tools popper puni shr-tag-pre-highlight
+            transpose-frame ultra-scroll undo-fu-session writeroom-mode xclip zig-mode))
  '(package-vc-selected-packages
-   '((eglot-booster :url "https://github.com/jdtsmith/eglot-booster")
+   '((ultra-scroll :url "https://github.com/jdtsmith/ultra-scroll")
+     (eglot-booster :url "https://github.com/jdtsmith/eglot-booster")
      (ox-awesomecv :url "https://gitlab.com/Titan-C/org-cv")
      (janet-ts-mode :url "https://github.com/sogaiu/janet-ts-mode")
      (macrursors :url "https://github.com/karthink/macrursors"))))

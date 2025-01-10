@@ -61,7 +61,9 @@
       (red-color (if load-theme-light
                      "#c56655"
                    "#c47779"))
-      (orange-color "#dd5b4f")
+      (orange-color (if load-theme-light
+                        "#eb9350"
+                      "#f3a171"))
       (magenta-color (if load-theme-light
                          "#7646c1"
                        "#b294bb"))
@@ -103,7 +105,9 @@
    `(show-paren-mismatch ((t (:foreground ,foreground-color :background ,red-color))))
 
    ;; Highlighting
-   `(hl-line ((t (:background ,modeline-color))))
+   `(hl-line ((t (:background ,@(if load-theme-light
+                                    (list "#f0f0f0")
+                                  (list "#21242b"))))))
    `(highline-face ((t (:background ,subtle-color))))
    `(highlight ((t (:background ,selection-color))))
    `(highlight-symbol-face ((t (:background ,secondary-color))))
@@ -124,7 +128,7 @@
    `(font-lock-doc-string-face ((t (:foreground "#1A93AE" :background "#F4F9FE"))))
    `(font-lock-function-name-face ((t (:foreground ,blue-color))))
    `(font-lock-keyword-face ((t (:foreground ,magenta-color))))
-   `(font-lock-preprocessor-face ((t (:foreground ,yellow-color))))
+   `(font-lock-preprocessor-face ((t (:foreground ,orange-color))))
    `(font-lock-property-name-face ((t (:foreground ,@(if load-theme-light
                                                          (list magenta-color)
                                                        (list yellow-color))))))
@@ -146,13 +150,17 @@
    `(ediff-even-diff-B ((t (:inherit secondary-selection :extend t))))
    `(ediff-even-diff-C ((t (:inherit secondary-selection :extend t))))
    
-   ;; Magit (Not using)
+   ;; Magit
+   `(magit-section-highlight ((t (:inherit hl-line))))
+   `(magit-section-heading ((t (:foreground ,yellow-color :extend t))))
    `(magit-diff-file-header ((t (:bold t :inherit diff-header))))
    `(magit-diff-hunk-header ((t (:inherit diff-header))))
    `(magit-diff-add ((t (:inherit diff-added :foreground "grey20"))))
    `(magit-diff-del ((t (:inherit diff-removed :foreground "grey20"))))
    `(magit-diff-none ((t (:inherit diff-context :foreground "grey20"))))
    `(magit-item-highlight ((t (:background nil :foreground ,foreground-color))))
+   `(magit-log-author ((t (:foreground ,orange-color))))
+   `(forge-pullreq-open ((t (:foreground ,green-color))))
 
    ;; Custom
    `(ansi-color-bright-green ((t (:foreground ,green-color :background ,green-color))))
@@ -220,8 +228,8 @@
    `(pulse-highlight-face ((t (:background ,light-yellow-color :extend t))))
    `(vertical-border ((t (:foreground ,border-color))))
    `(whitespace-tab ((t (:inherit font-lock-comment-face))))
-   `(whitespace-space ((t (:weight light :inherit font-lock-comment-face))))
-   `(whitespace-line ((t (:foreground ,foreground-color))))
+   `(whitespace-space ((t (:weight light :foreground ,background-color))))
+   `(whitespace-line ((t (:background ,background-color))))
    `(whitespace-indentation ((t (:foreground ,inactive-color))))
    `(whitespace-newline ((t (:inherit font-lock-comment-face))))
    `(whitespace-trailing ((t (:inherit font-lock-warning-face))))
@@ -283,7 +291,6 @@
    `(solaire-fringe-face ((t (:inherit fringe :background ,subtle-color))))
    `(solaire-header-line-face ((t (:inherit header-line :background ,subtle-color))))
 
-   `(magit-section-highlight ((t (:inherit hl-line))))
    `(Man-overstrike ((t (:inherit font-lock-constant-face :bold t))))
    `(Man-underline ((t (:inherit font-lock-keyword-face :bold t))))
    
@@ -379,6 +386,7 @@
    `(eglot-mode-line ((t (:foreground ,yellow-color))))
    `(eldoc-box-border ((t (:inherit child-frame-border))))
    `(eldoc-box-body ((t (:inherit zed-sans-font :weight regular :background ,subtle-color))))
+   `(eglot-highlight-symbol-face ((t (:background ,secondary-color))))
    `(deadgrep-filename-face ((t (:inherit tab-bar))))
    `(denote-faces-date ((t (:inherit font-lock-comment-face))))
    `(denote-faces-link ((t (:inherit link :background ,subtle-color))))
@@ -644,9 +652,9 @@
                   (not (or (derived-mode-p 'Info-mode)
                            (derived-mode-p 'nov-mode))))
          (propertize " [N]"
-                     'face `(:inherit tab-bar-tab
+                     'face `(:inherit tab-bar-tab :inherit zed-sans-font
                                       :foreground ,(face-background 'cursor nil t))
-                     'display `(raise 0.1)))
+                     'display `(raise ,zed-adjust)))
 
        ;; apply face to buffer name
        (apply 'propertize
