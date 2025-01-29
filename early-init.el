@@ -7,11 +7,12 @@
       load-prefer-newer noninteractive
       garbage-collection-messages nil)
 
-(add-hook 'emacs-startup-hook ; hook run after loading init files
-          #'(lambda ()
-              (setq gc-cons-threshold (* 16 1024 1024)
-                    gc-cons-percentage 0.1
-                    file-name-handler-alist my/saved-file-name-handler-alist)))
+(run-with-idle-timer 10 nil
+                     #'(lambda ()
+                         (setq gc-cons-threshold (* 64 1024 1024)
+                               gc-cons-percentage 0.1
+                               file-name-handler-alist my/saved-file-name-handler-alist)
+                         (garbage-collect)))
 
 ;; src: skangas
 (when (>= emacs-major-version 27)
@@ -34,6 +35,10 @@
               bidi-display-reordering 'left-to-right
               bidi-inhibit-bpa t
               bidi-paragraph-direction 'left-to-right)
+
+(setq menu-bar-mode nil
+      tool-bar-mode nil
+      scroll-bar-mode nil)
 
 ;; Android
 (defconst is-android (eq system-type 'android))
@@ -62,13 +67,11 @@
 ;; doom
 (setq-default inhibit-redisplay t
               inhibit-message t)
-;; (advice-add #'tool-bar-setup :override #'ignore)
 (add-hook 'after-init-hook
           (lambda nil
             (setq-default inhibit-redisplay nil
                           inhibit-message nil)
             (redraw-frame))
-          ;; (advice-remove #'tool-bar-setup #'ignore))
           :depth -105)
 ;;
 (fset 'display-startup-echo-area-message 'ignore)

@@ -149,6 +149,17 @@
    `(ediff-even-diff-A ((t (:inherit secondary-selection :extend t))))
    `(ediff-even-diff-B ((t (:inherit secondary-selection :extend t))))
    `(ediff-even-diff-C ((t (:inherit secondary-selection :extend t))))
+
+   ;; howm
+   `(action-lock-face ((t (:inherit button))))
+   `(howm-mode-keyword-face ((t (:foreground ,blue-color :underline t))))
+   `(howm-mode-title-face ((t (:weight bold :foreground ,yellow-color))))
+   `(howm-mode-ref-face ((t (:inherit howm-mode-keyword-face))))
+   `(howm-reminder-today-face ((t (:foreground ,orange-color))))
+   `(howm-reminder-normal-face ((t (:foreground ,red-color))))
+   `(howm-view-empty-face ((t ())))
+   `(howm-view-hilit-face ((t (:inherit match))))
+   `(howm-view-name-face ((t (:inherit font-lock-comment-face))))
    
    ;; Magit
    `(magit-section-highlight ((t (:inherit hl-line))))
@@ -391,6 +402,7 @@
    `(denote-faces-date ((t (:inherit font-lock-comment-face))))
    `(denote-faces-link ((t (:inherit link :background ,subtle-color))))
    `(sh-heredoc ((t (:foreground ,yellow-color))))
+   `(sh-quoted-exec ((t (:foreground ,cyan-color))))
    `(completions-annotations ((t (:foreground ,blue-color))))
    `(completions-common-part ((t (:foreground ,blue-color))))
    `(vertico-current ((t (:foreground ,blue-color :inverse-video t :extend t))))
@@ -619,15 +631,15 @@
        (when (and selected-p
                   (eq major-mode 'compilation-mode))
          (let* ((error (unless (zerop compilation-num-errors-found)
-                        (propertize (concat (int-to-string compilation-num-errors-found) " ")
-                                    'face 'compilation-error)))
-               (warning (unless (zerop compilation-num-warnings-found)
-                        (propertize (concat (int-to-string compilation-num-warnings-found) " ")
-                                    'face 'compilation-warning)))
-               (info (unless (zerop compilation-num-infos-found)
+                         (propertize (concat (int-to-string compilation-num-errors-found) " ")
+                                     'face 'compilation-error)))
+                (warning (unless (zerop compilation-num-warnings-found)
+                           (propertize (concat (int-to-string compilation-num-warnings-found) " ")
+                                       'face 'compilation-warning)))
+                (info (unless (zerop compilation-num-infos-found)
                         (propertize (concat (int-to-string compilation-num-infos-found) " ")
                                     'face 'compilation-info)))
-               (compilation-str (concat " " error warning info)))
+                (compilation-str (concat " " error warning info)))
            (add-face-text-property 0 (length compilation-str)
                                    '(:inherit tab-bar-tab :box nil
                                               :height 120 :weight regular)
@@ -838,6 +850,9 @@
 
 (provide-theme 'zed)
 ;;; zed-theme.el ends here
+
+;;; Brutalist
+;; type: underline, keyword: bold
 
 ;; Local Variables:
 ;; byte-compile-warnings: (not free-vars unresolved)

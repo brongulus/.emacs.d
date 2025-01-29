@@ -1,0 +1,699 @@
+\input texinfo  @c -*-texinfo-*-
+@setfilename RubyIntro
+@settitle Ruby in Twenty Minutes
+
+@direntry
+* RubyIntro: (RubyIntro). Ruby in Twenty Minutes
+@end direntry
+
+@c I don't like the abundance of _ in generated file
+@c so I use the subtle ' instead
+@macro emph{term}
+@code{\term\}
+@end macro
+
+@node Top, Ruby in Twenty Minutes, (dir), (dir)
+@top Top
+
+@ifinfo
+
+@heading Ruby in Twenty Minutes
+
+@end ifinfo
+
+@menu
+* Ruby in Twenty Minutes::
+* Step 1::
+* Step 2::
+* Step 3::
+
+@detailmenu
+ --- The Detailed Node Listing ---
+
+Ruby in Twenty Minutes
+
+* Step 1::
+* Step 2::
+* Step 3::
+
+Step 1
+
+* Introduction::
+* Interactive Ruby::
+* Ruby Obeyed You::
+* Your Free Calculator is Here::
+* Modules Group Code by Topic::
+
+Step 2
+
+* The Brief Repetitive Lives of a Method::
+* Holding Spots in a String::
+* Evolving Into a Greeter::
+
+Step 3
+
+* Under the Object's Skin::
+* Altering Classes---It's Never Too Late::
+* Greeting Anything and Everything MegaGreeter Neglects None::
+* Cycling and Looping---aka Iteration::
+* Blocks the Highly Sparkling Glint on the Edge of Ruby::
+* Kicking Off the Script::
+* Consider Yourself Introduced::
+
+@end detailmenu
+@end menu
+
+@node Ruby in Twenty Minutes
+@chapter Ruby in Twenty Minutes
+
+@menu
+* Step 1::
+* Step 2::
+* Step 3::
+@end menu
+
+@node Step 1
+@chapter Step 1
+
+@menu
+* Introduction::
+* Interactive Ruby::
+* Ruby Obeyed You::
+* Your Free Calculator is Here::
+* Modules Group Code by Topic::
+@end menu
+
+@node Introduction
+@section Introduction
+
+This is a small Ruby tutorial that should take no more than 20 minutes
+to complete. It makes the assumption that you already have Ruby
+installed. (If you do not have Ruby on your computer install it before
+you get started.)
+
+@node Interactive Ruby
+@section Interactive Ruby
+
+Ruby comes with a program that will show the results of any Ruby
+statements you feed it. Playing with Ruby code in interactive sessions
+like this is a terrific way to learn the language.
+
+Open up IRB (which stands for Interactive Ruby).
+
+@itemize
+@item
+If you're using @strong{macOS} open up @code{Terminal} and type
+@code{irb}, then hit enter.
+@item
+If you're using @strong{Linux}, open up a shell and type @code{irb} and
+hit enter.
+@item
+If you're using @strong{Windows}, open @code{Interactive Ruby} from the
+Ruby section of your Start Menu. ^
+@end itemize
+
+@verbatim
+irb(main):001:0>
+@end verbatim
+
+Ok, so it's open. Now what?
+
+Type this: @code{"Hello World"}
+
+@verbatim
+irb(main):001:0> "Hello World"
+=> "Hello World"
+@end verbatim
+
+@node Ruby Obeyed You
+@section Ruby Obeyed You
+
+What just happened? Did we just write the world's shortest ``Hello
+World'' program? Not exactly. The second line is just IRB's way of
+telling us the result of the last expression it evaluated. If we want to
+print out ``Hello World'' we need a bit more:
+
+@verbatim
+irb(main):002:0> puts "Hello World"
+Hello World
+=> nil
+@end verbatim
+
+@code{puts} is the basic command to print something out in Ruby. But
+then what's the @code{=> nil} bit? That's the result of the expression.
+@code{puts} always returns nil, which is Ruby's
+absolutely-positively-nothing value.
+
+@node Your Free Calculator is Here
+@section Your Free Calculator is Here
+
+Already, we have enough to use IRB as a basic calculator:
+
+@verbatim
+irb(main):003:0> 3+2
+=> 5
+@end verbatim
+
+Three plus two. Easy enough. What about three @emph{times} two? You
+could type it in, it's short enough, but you may also be able to go up
+and change what you just entered. Try hitting the @strong{up-arrow} on
+your keyboard and see if it brings up the line with @code{3+2} on it. If
+it does, you can use the left arrow key to move just after the @code{+}
+sign and then use backspace to change it to a @code{*} sign.
+
+@verbatim
+irb(main):004:0> 3*2
+=> 6
+@end verbatim
+
+Next, let's try three squared:
+
+@verbatim
+irb(main):005:0> 3**2
+=> 9
+@end verbatim
+
+In Ruby @code{**} is the way you say ``to the power of''. But what if
+you want to go the other way and find the square root of something?
+
+@verbatim
+irb(main):006:0> Math.sqrt(9)
+=> 3.0
+@end verbatim
+
+Ok, wait, what was that last one? If you guessed, ``it was figuring out
+the square root of nine,'' you're right. But let's take a closer look at
+things. First of all, what's @code{Math}?
+
+@node Modules Group Code by Topic
+@section Modules Group Code by Topic
+
+@code{Math} is a built-in module for mathematics. Modules serve two
+roles in Ruby. This shows one role: grouping similar methods together
+under a familiar name. @code{Math} also contains methods like
+@code{sin()} and @code{tan()}.
+
+Next is a dot. What does the dot do? The dot is how you identify the
+receiver of a message. What's the message? In this case it's
+@code{sqrt(9)}, which means call the method @code{sqrt}, shorthand for
+``square root'' with the parameter of @code{9}.
+
+The result of this method call is the value @code{3.0}. You might notice
+it's not just @code{3}. That's because most of the time the square root
+of a number won't be an integer, so the method always returns a
+floating-point number.
+
+What if we want to remember the result of some of this math? Assign the
+result to a variable.
+
+@verbatim
+irb(main):007:0> a = 3 ** 2
+=> 9
+irb(main):008:0> b = 4 ** 2
+=> 16
+irb(main):009:0> Math.sqrt(a+b)
+=> 5.0
+@end verbatim
+
+As great as this is for a calculator, we're getting away from the
+traditional @code{Hello World} message that beginning tutorials are
+supposed to focus on@dots{} so let's go back to that.
+
+@node Step 2
+@chapter Step 2
+
+What if we want to say ``Hello'' a lot without getting our fingers all
+tired? We need to define a method!
+
+@verbatim
+irb(main):010:0> def hi
+irb(main):011:1> puts "Hello World!"
+irb(main):012:1> end
+=> :hi
+@end verbatim
+
+The code @code{def hi} starts the definition of the method. It tells
+Ruby that we're defining a method, that its name is @code{hi}. The next
+line is the body of the method, the same line we saw earlier:
+@code{puts "Hello World"}. Finally, the last line @code{end} tells Ruby
+we're done defining the method. Ruby's response @code{=> :hi} tells us
+that it knows we're done defining the method. This response could be
+@code{=> nil} for Ruby 2.0 and earlier versions. But, it's not important
+here, so let's go on.
+
+@menu
+* The Brief Repetitive Lives of a Method::
+* Holding Spots in a String::
+* Evolving Into a Greeter::
+@end menu
+
+@node The Brief Repetitive Lives of a Method
+@section The Brief, Repetitive Lives of a Method
+
+Now let's try running that method a few times:
+
+@verbatim
+irb(main):013:0> hi
+Hello World!
+=> nil
+irb(main):014:0> hi()
+Hello World!
+=> nil
+@end verbatim
+
+Well, that was easy. Calling a method in Ruby is as easy as just
+mentioning its name to Ruby. If the method doesn't take parameters
+that's all you need. You can add empty parentheses if you'd like, but
+they're not needed.
+
+What if we want to say hello to one person, and not the whole world?
+Just redefine @code{hi} to take a name as a parameter.
+
+@verbatim
+irb(main):015:0> def hi(name)
+irb(main):016:1> puts "Hello #{name}!"
+irb(main):017:1> end
+=> :hi
+irb(main):018:0> hi("Matz")
+Hello Matz!
+=> nil
+@end verbatim
+
+So it works@dots{} but let's take a second to see what's going on here.
+
+@node Holding Spots in a String
+@section Holding Spots in a String
+
+What's the @code{#@{name@}} bit? That's Ruby's way of inserting
+something into a string. The bit between the braces is turned into a
+string (if it isn't one already) and then substituted into the outer
+string at that point. You can also use this to make sure that someone's
+name is properly capitalized:
+
+@verbatim
+irb(main):019:0> def hi(name = "World")
+irb(main):020:1> puts "Hello #{name.capitalize}!"
+irb(main):021:1> end
+=> :hi
+irb(main):022:0> hi "chris"
+Hello Chris!
+=> nil
+irb(main):023:0> hi
+Hello World!
+=> nil
+@end verbatim
+
+A couple of other tricks to spot here. One is that we're calling the
+method without parentheses again. If it's obvious what you're doing, the
+parentheses are optional. The other trick is the default parameter
+@code{World}. What this is saying is ``If the name isn't supplied, use
+the default name of @code{"World"}''.
+
+@node Evolving Into a Greeter
+@section Evolving Into a Greeter
+What if we want a real greeter around, one that remembers your name and
+welcomes you and treats you always with respect. You might want to use
+an object for that. Let's create a ``Greeter'' class.
+
+@verbatim
+irb(main):024:0> class Greeter
+irb(main):025:1>   def initialize(name = "World")
+irb(main):026:2>     @name = name
+irb(main):027:2>   end
+irb(main):028:1>   def say_hi
+irb(main):029:2>     puts "Hi #{@name}!"
+irb(main):030:2>   end
+irb(main):031:1>   def say_bye
+irb(main):032:2>     puts "Bye #{@name}, come back soon."
+irb(main):033:2>   end
+irb(main):034:1> end
+=> :say_bye
+@end verbatim
+
+The new keyword here is @code{class}. This defines a new class called
+Greeter and a bunch of methods for that class. Also notice
+@code{@@name}. This is an instance variable, and is available to all the
+methods of the class. As you can see it's used by @code{say_hi} and
+@code{say_bye}.
+
+So how do we get this Greeter class set in motion? Create an object.
+
+@node Step 3
+@chapter Step 3
+
+Now let's create a greeter object and use it:
+
+@verbatim
+irb(main):035:0> greeter = Greeter.new("Pat")
+=> #<Greeter:0x16cac @name="Pat">
+irb(main):036:0> greeter.say_hi
+Hi Pat!
+=> nil
+irb(main):037:0> greeter.say_bye
+Bye Pat, come back soon.
+=> nil
+@end verbatim
+
+Once the @code{greeter} object is created, it remembers that the name is
+Pat. Hmm, what if we want to get at the name directly?
+
+@verbatim
+irb(main):038:0> greeter.@name
+SyntaxError: (irb):38: syntax error, unexpected tIVAR, expecting '('
+@end verbatim
+
+Nope, can't do it.
+
+@menu
+* Under the Object's Skin::
+* Altering Classes---It's Never Too Late::
+* Greeting Anything and Everything MegaGreeter Neglects None::
+* Cycling and Looping---aka Iteration::
+* Blocks the Highly Sparkling Glint on the Edge of Ruby::
+* Kicking Off the Script::
+* Consider Yourself Introduced::
+@end menu
+
+@node Under the Object's Skin
+@section Under the Object's Skin
+
+Instance variables are hidden away inside the object. They're not
+terribly hidden, you see them whenever you inspect the object, and there
+are other ways of accessing them, but Ruby uses the good object-oriented
+approach of keeping data sort-of hidden away.
+
+So what methods do exist for Greeter objects?
+
+@verbatim
+irb(main):039:0> Greeter.instance_methods
+=> [:say_hi, :say_bye, :instance_of?, :public_send,
+    :instance_variable_get, :instance_variable_set,
+    :instance_variable_defined?, :remove_instance_variable,
+    :private_methods, :kind_of?, :instance_variables, :tap,
+    :is_a?, :extend, :define_singleton_method, :to_enum,
+    :enum_for, :<=>, :===, :=~, :!~, :eql?, :respond_to?,
+    :freeze, :inspect, :display, :send, :object_id, :to_s,
+    :method, :public_method, :singleton_method, :nil?, :hash,
+    :class, :singleton_class, :clone, :dup, :itself, :taint,
+    :tainted?, :untaint, :untrust, :trust, :untrusted?, :methods,
+    :protected_methods, :frozen?, :public_methods, :singleton_methods,
+    :!, :==, :!=, :__send__, :equal?, :instance_eval, :instance_exec, :__id__]
+@end verbatim
+
+Whoa. That's a lot of methods. We only defined two methods. What's going
+on here? Well this is @strong{all} of the methods for Greeter objects, a
+complete list, including ones defined by ancestor classes. If we want to
+just list methods defined for Greeter we can tell it to not include
+ancestors by passing it the parameter @code{false}, meaning we don't
+want methods defined by ancestors.
+
+@verbatim
+irb(main):040:0> Greeter.instance_methods(false)
+=> [:say_hi, :say_bye]
+@end verbatim
+
+Ah, that's more like it. So let's see which methods our greeter object
+responds to:
+
+@verbatim
+irb(main):041:0> greeter.respond_to?("name")
+=> false
+irb(main):042:0> greeter.respond_to?("say_hi")
+=> true
+irb(main):043:0> greeter.respond_to?("to_s")
+=> true
+@end verbatim
+
+So, it knows @code{say_hi}, and @code{to_s} (meaning convert something
+to a string, a method that's defined by default for every object), but
+it doesn't know @code{name}.
+
+@node Altering Classes---It's Never Too Late
+@section Altering Classes---It's Never Too Late
+
+But what if you want to be able to view or change the name? Ruby
+provides an easy way of providing access to an object's variables.
+
+@verbatim
+irb(main):044:0> class Greeter
+irb(main):045:1>   attr_accessor :name
+irb(main):046:1> end
+=> nil
+@end verbatim
+
+In Ruby, you can open a class up again and modify it. The changes will
+be present in any new objects you create and even available in existing
+objects of that class. So, let's create a new object and play with its
+@code{@@name} property.
+
+@verbatim
+irb(main):047:0> greeter = Greeter.new("Andy")
+=> #<Greeter:0x3c9b0 @name="Andy">
+irb(main):048:0> greeter.respond_to?("name")
+=> true
+irb(main):049:0> greeter.respond_to?("name=")
+=> true
+irb(main):050:0> greeter.say_hi
+Hi Andy!
+=> nil
+irb(main):051:0> greeter.name="Betty"
+=> "Betty"
+irb(main):052:0> greeter
+=> #<Greeter:0x3c9b0 @name="Betty">
+irb(main):053:0> greeter.name
+=> "Betty"
+irb(main):054:0> greeter.say_hi
+Hi Betty!
+=> nil
+@end verbatim
+
+Using @code{attr_accessor} defined two new methods for us, @code{name}
+to get the value, and @code{name=} to set it.
+
+@node Greeting Anything and Everything MegaGreeter Neglects None
+@section Greeting Anything and Everything, MegaGreeter Neglects None
+
+This greeter isn't all that interesting though, it can only deal with
+one person at a time. What if we had some kind of MegaGreeter that could
+either greet the world, one person, or a whole list of people?
+
+Let's write this one in a file instead of directly in the interactive
+Ruby interpreter IRB.
+
+To quit IRB, type ``quit'', ``exit'' or just hit Control-D.
+
+@verbatim
+#!/usr/bin/env ruby
+
+class MegaGreeter
+  attr_accessor :names
+
+  # Create the object
+  def initialize(names = "World")
+    @names = names
+  end
+
+  # Say hi to everybody
+  def say_hi
+    if @names.nil?
+      puts "..."
+    elsif @names.respond_to?("each")
+      # @names is a list of some kind, iterate!
+      @names.each do |name|
+        puts "Hello #{name}!"
+      end
+    else
+      puts "Hello #{@names}!"
+    end
+  end
+
+  # Say bye to everybody
+  def say_bye
+    if @names.nil?
+      puts "..."
+    elsif @names.respond_to?("join")
+      # Join the list elements with commas
+      puts "Goodbye #{@names.join(", ")}.  Come back soon!"
+    else
+      puts "Goodbye #{@names}.  Come back soon!"
+    end
+  end
+end
+
+
+if __FILE__ == $0
+  mg = MegaGreeter.new
+  mg.say_hi
+  mg.say_bye
+
+  # Change name to be "Zeke"
+  mg.names = "Zeke"
+  mg.say_hi
+  mg.say_bye
+
+  # Change the name to an array of names
+  mg.names = ["Albert", "Brenda", "Charles",
+              "Dave", "Engelbert"]
+  mg.say_hi
+  mg.say_bye
+
+  # Change to nil
+  mg.names = nil
+  mg.say_hi
+  mg.say_bye
+end
+@end verbatim
+
+Save this file as ``ri20min.rb'', and run it as ``ruby ri20min.rb''. The
+output should be:
+
+@verbatim
+Hello World!
+Goodbye World.  Come back soon!
+Hello Zeke!
+Goodbye Zeke.  Come back soon!
+Hello Albert!
+Hello Brenda!
+Hello Charles!
+Hello Dave!
+Hello Engelbert!
+Goodbye Albert, Brenda, Charles, Dave, Engelbert.  Come
+back soon!
+...
+...
+@end verbatim
+
+There are a lot of new things thrown into this final example that we can
+take a deeper look at.
+
+So, looking deeper at our new program, notice the initial lines, which
+begin with a hash mark (#). In Ruby, anything on a line after a hash
+mark is a comment and is ignored by the interpreter. The first line of
+the file is a special case, and under a Unix-like operating system tells
+the shell how to run the file. The rest of the comments are there just
+for clarity.
+
+Our @code{say_hi} method has become a bit trickier:
+
+@verbatim
+# Say hi to everybody
+def say_hi
+  if @names.nil?
+    puts "..."
+  elsif @names.respond_to?("each")
+    # @names is a list of some kind, iterate!
+    @names.each do |name|
+      puts "Hello #{name}!"
+    end
+  else
+    puts "Hello #{@names}!"
+  end
+end
+@end verbatim
+
+It now looks at the @code{@@names} instance variable to make decisions.
+If it's nil, it just prints out three dots. No point greeting nobody,
+right?
+
+@node Cycling and Looping---aka Iteration
+@section Cycling and Looping---a.k.a. Iteration
+
+If the @code{@@names} object responds to @code{each}, it is something
+that you can iterate over, so iterate over it and greet each person in
+turn. Finally, if @code{@@names} is anything else, just let it get
+turned into a string automatically and do the default greeting.
+
+Let's look at that iterator in more depth:
+
+@verbatim
+@names.each do |name|
+  puts "Hello #{name}!"
+end
+@end verbatim
+
+@code{each} is a method that accepts a block of code then runs that
+block of code for every element in a list, and the bit between @code{do}
+and @code{end} is just such a block. A block is like an anonymous
+function or @code{lambda}. The variable between pipe characters is the
+parameter for this block.
+
+What happens here is that for every entry in a list, @code{name} is
+bound to that list element, and then the expression
+@code{puts "Hello #@{name@}!"} is run with that name.
+
+Most other programming languages handle going over a list using the
+@code{for} loop, which in C looks something like:
+
+@verbatim
+for (i=0; i<number_of_elements; i++)
+{
+  do_something_with(element[i]);
+}
+@end verbatim
+
+This works, but isn't very elegant. You need a throw-away variable like
+@code{i}, have to figure out how long the list is, and have to explain
+how to walk over the list. The Ruby way is much more elegant, all the
+housekeeping details are hidden within the @code{each} method, all you
+need to do is to tell it what to do with each element. Internally, the
+@code{each} method will essentially call @code{yield "Albert"}, then
+@code{yield "Brenda"} and then @code{yield "Charles"}, and so on.
+
+@node Blocks the Highly Sparkling Glint on the Edge of Ruby
+@section Blocks, the Highly Sparkling Glint on the Edge of Ruby
+
+The real power of blocks is when dealing with things that are more
+complicated than lists. Beyond handling simple housekeeping details
+within the method, you can also handle setup, teardown, and errors---all
+hidden away from the cares of the user.
+
+@verbatim
+# Say bye to everybody
+def say_bye
+  if @names.nil?
+    puts "..."
+  elsif @names.respond_to?("join")
+    # Join the list elements with commas
+    puts "Goodbye #{@names.join(", ")}.  Come back soon!"
+  else
+    puts "Goodbye #{@names}.  Come back soon!"
+  end
+end
+@end verbatim
+
+The @code{say_bye} method doesn't use @code{each}, instead it checks to
+see if @code{@@names} responds to the @code{join} method, and if so,
+uses it. Otherwise, it just prints out the variable as a string. This
+method of not caring about the actual @emph{type} of a variable, just
+relying on what methods it supports is known as ``Duck Typing'', as in
+``if it walks like a duck and quacks like a duck@dots{}''. The benefit
+of this is that it doesn't unnecessarily restrict the types of variables
+that are supported. If someone comes up with a new kind of list class,
+as long as it implements the @code{join} method with the same semantics
+as other lists, everything will work as planned.
+
+@node Kicking Off the Script
+@section Kicking Off the Script
+
+So, that's the MegaGreeter class, the rest of the file just calls
+methods on that class. There's one final trick to notice, and that's the
+line:
+
+@verbatim
+if __FILE__ == $0
+@end verbatim
+
+@code{__FILE__} is the magic variable that contains the name of the
+current file. @code{$0} is the name of the file used to start the
+program. This check says ``If this is the main file being used@dots{}''
+This allows a file to be used as a library, and not to execute code in
+that context, but if the file is being used as an executable, then
+execute that code.
+
+@node Consider Yourself Introduced
+@section Consider Yourself Introduced
+
+So that's it for the quick tour of Ruby. There's a lot more to explore,
+the different control structures that Ruby offers; the use of blocks and
+@code{yield}; modules as mixins; and more. I hope this taste of Ruby has
+left you wanting to learn more.

@@ -4,6 +4,7 @@
 ;; https://www.lysator.liu.se/~davidk/elisp/tempo-examples.html
 ;; https://www.lysator.liu.se/~davidk/elisp/
 
+;; (define-abbrev global-abbrev-table "shbng" "#!/usr/bin/env ")
 ;;; --Perl----------------------------------------------------------------
 (define-skeleton pl-header "Perl header." ""
   "#!/usr/bin/env perl\n\n"

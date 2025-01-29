@@ -4,6 +4,7 @@
 ;;; Code:
 
 ;;; Bootstrap
+(load "~/.emacs.d/lisp/benchmarking" nil :no-message)
 
 (define-key global-map (kbd "C-z") (make-sparse-keymap))
 (defconst dropbox-dir
@@ -11,6 +12,7 @@
       "/sdcard/Dropbox/"
     "~/Dropbox/"))
 (when is-android
+  (setq touch-screen-precision-scroll t)
   (global-set-key (kbd "C-\\") (lambda nil (interactive)
                                  (term "fish"))))
 
@@ -130,6 +132,7 @@
         split-width-threshold 120
         save-abbrevs nil
         make-backup-files nil
+        backup-directory-alist `(("." . "~/.emacs.d/backup/"))
         create-lockfiles nil
         uniquify-buffer-name-style 'forward
         auto-revert-verbose nil
@@ -247,6 +250,7 @@ backwards instead."
   :no-require
   :ensure nil
   :bind (("C-x w w" . my-min-max-window)
+         ("M-#" . mac-dict)
          ("<f5>" . my-switch-to-alternate-file))
   :bind (:map special-mode-map
               ("Q" . (lambda nil (interactive)
@@ -255,6 +259,14 @@ backwards instead."
   :hook
   (after-init . (lambda nil
                   ;; random functions
+                  (defun mac-dict (beg end)
+                    "Look up a word in macOS Dictionary.app"
+                    (interactive "r")
+                    (thread-last (buffer-substring-no-properties beg end)
+                                 url-hexify-string
+                                 (concat "dict:///")
+                                 browse-url))
+                  
                   (defvar my-min-max-window nil)
                   (defun my-min-max-window()
                     "Toggle full view of selected window."
@@ -367,11 +379,11 @@ backwards instead."
         package-install-upgrade-built-in t
         package-check-signature nil))
 
+(setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 ;;; Completion
 
 (use-package compile
   :ensure nil
-  :defer 1
   :bind (:map prog-mode-map
               ("C-c C-c" . compile)
               ("C-c C-r" . recompile))
@@ -386,12 +398,13 @@ backwards instead."
          .
          (lambda (buffer status)
            "Reset comint mode so that we get the compilation-mode goodness."
-           ;; (message "Compilation finished with status: %s" status)
            (setq-local buffer-read-only t)
            (compilation-minor-mode)
            (when (featurep 'meow)
              (meow-motion-mode t))))
   :config
+  (with-eval-after-load 'sh-script
+    (define-key sh-mode-map (kbd "C-c C-c") #'executable-interpret))
   ;; completing-read for compile
   (defun compilation-read-command-with-autocomplete (command)
     "Use `completing-read` to add autocomplete powers to compilation read"
@@ -410,33 +423,28 @@ backwards instead."
         shell-file-name (car (process-lines "which" "fish"))
         compilation-ask-about-save nil
         compilation-scroll-output 'first-error)
+  (with-eval-after-load 'executable ; src: eshel
+    (define-advice executable-interpret (:before (&rest _) ensure-executable)
+      (unless (file-exists-p buffer-file-name)
+        (basic-save-buffer))
+      (executable-make-buffer-file-executable-if-script-p)))
   ;; compile commands
   (defvar compile-commands
-    '((go-ts-mode-hook . "go run ")
-      ;; (go-ts-mode-hook . "go build -o a.out ")
+    '(;; (go-ts-mode-hook . "go build -o a.out ")
       ;; (rust-ts-mode-hook . "rustc -o a.out ")
       (c++-mode-hook
-       . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion \
- -O2 -I/Users/admin/problems/include ")
+       . (concat "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion \
+ -O2 -I/Users/admin/problems/include " buffer-file-name " && ./a.out"))
       (c++-ts-mode-hook
-       . "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion \
- -O2 -I/Users/admin/problems/include ")
-      ))
-  (defvar run-commands
-    '((rust-ts-mode-hook . "cargo run ")
-      (janet-ts-mode-hook . "janet ")))
+       . (concat "g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion \
+ -O2 -I/Users/admin/problems/include " buffer-file-name " && ./a.out"))
+      (go-ts-mode-hook . (concat "go run " buffer-file-name))
+      (rust-ts-mode-hook . "cargo run ")
+      (janet-ts-mode-hook . (concat "janet " buffer-file-name))
+      (ruby-mode-hook . (concat "ruby " buffer-file-name))
+      (sh-mode-hook . (concat "." buffer-file-name))))
 
   (dolist (pair compile-commands)
-    (let ((mode (car pair))
-          (command (cdr pair)))
-      (add-hook mode
-                (lambda nil
-                  (setq-local compile-command (concat command
-                                                      buffer-file-name
-                                                      " && ./a.out"))
-                  (setq-local foxy-compile-command command)))))
-
-  (dolist (pair run-commands)
     (let ((mode (car pair))
           (command (cdr pair)))
       (add-hook mode
@@ -459,6 +467,7 @@ backwards instead."
   :ensure nil
   :init (fido-vertical-mode)
   :bind (:map icomplete-fido-mode-map
+              ("C-<return>" . icomplete-fido-exit)
               ("TAB" . icomplete-forward-completions)
               ("<backtab>" . icomplete-backward-completions)
               ("<escape>" . minibuffer-keyboard-quit))
@@ -507,6 +516,7 @@ backwards instead."
 (use-package consult
   :bind (("C-x b" . consult-buffer)
          ("C-t" . consult-line)
+         ("M-s i" . consult-imenu)
          ([remap project-find-regexp] . consult-ripgrep)
          ;; ([remap project-find-file] . consult-find)
          ([remap flymake-show-buffer-diagnostics] . consult-flymake))
@@ -588,6 +598,8 @@ backwards instead."
             :rev :newest)
   :init
   (define-prefix-command 'macrursors-mark-map)
+  (when (featurep 'meow) ;; FIXME
+    (add-hook 'macrursors-mode-hook #'meow-insert))
   :bind-keymap ("C-;" . macrursors-mark-map)
   :bind (("M-d" . (lambda nil
                     "Macrurors mark word if no selection, otherwise select next."
@@ -645,9 +657,7 @@ backwards instead."
                       :inverse-video nil :inherit 'cursor)
   (dolist (mode '(corfu-mode beacon-mode))
     (add-hook 'macrursors-pre-finish-hook mode)
-    (add-hook 'macrursors-post-finish-hook mode))
-  (when (featurep 'meow)
-    (add-hook 'macrursors-mode-hook #'meow-insert)))
+    (add-hook 'macrursors-post-finish-hook mode)))
 
 (use-package puni
   :if (display-graphic-p) ; FIXME puni is messing terminal
@@ -696,8 +706,14 @@ deleted, kill the pairs around point."
   :bind ("C-'" . avy-goto-char-timer)
   :bind (:map isearch-mode-map
               ("M-s M-s" . avy-isearch))
-  :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer)
+  :commands (avy-goto-word-1 avy-goto-char-2 avy-goto-char-timer avy-parens-jump)
   :config
+  (defun avy-parens-jump () ; src: elken
+    "Jump to parens inside a defun."
+    (interactive)
+    (pcase-let ((`(,beg . ,end) (bounds-of-thing-at-point 'defun)))
+      (avy-jump "(+" :beg beg :end end)))
+  
   (defun avy-action-add-cursor (pt) ; src: karthik
     (require 'macrursors)
     (unwind-protect
@@ -731,9 +747,7 @@ deleted, kill the pairs around point."
 
 (use-package ultra-scroll
   :vc (:url "https://github.com/jdtsmith/ultra-scroll")
-  :hook (after-init . ultra-scroll-mode)
-  :config
-  (pixel-scroll-precision-mode -1))
+  :hook (after-init . ultra-scroll-mode))
 
 ;;; Built-ins
 
@@ -956,7 +970,7 @@ deleted, kill the pairs around point."
         recentf-auto-cleanup 'never))
 
 (use-package tramp
-  :hook (minibuffer-mode . tramp-cleanup-all-connections)
+  ;; :hook (minibuffer-mode . tramp-cleanup-all-connections)
   :config
   (setq tramp-ssh-controlmaster-options
         (concat
@@ -974,10 +988,13 @@ deleted, kill the pairs around point."
 ;;; Window Management
 
 (use-package windmove
-  :defer 1
   :ensure nil
   :bind (("M-<right>" . windmove-swap-states-right)
-         ("M-<left>" . windmove-swap-states-left))
+         ("M-<left>" . windmove-swap-states-left)
+         ("S-<left>" . windmove-left)
+         ("S-<right>" . windmove-right)
+         ("S-<down>" . windmove-down)
+         ("S-<up>" . windmove-up))
   :config
   (setq windmove-wrap-around t)
   (windmove-default-keybindings 'shift))
@@ -989,7 +1006,7 @@ deleted, kill the pairs around point."
          :repeat-map popper-repeat-map
          ("`"     . popper-cycle))
   :hook ((after-init . popper-mode)
-         (after-init . popper-tab-line-mode))
+         (popper-mode . popper-tab-line-mode))
   :init
   (setq display-buffer-alist
         `(;; no window
@@ -1145,7 +1162,6 @@ deleted, kill the pairs around point."
 
 (use-package nerd-icons
   :commands nerd-icons-octicon nerd-icons-codicon
-  :defer 1
   :config
   ;; causing issues in emacs -nw
   ;; (when (not (find-font (font-spec :name nerd-icons-font-family)))
@@ -1171,11 +1187,24 @@ deleted, kill the pairs around point."
 
 (use-package shr-tag-pre-highlight
   ;; FIXME complains if mode isnt available
-  :defer 1
   :init
   (setq eww-auto-rename-buffer 'title
         eww-header-line-format nil)
   :config
+  ;; Add advice to indent code blocks (claude)
+  (advice-add 'shr-tag-pre-highlight :around
+              (lambda (orig-fun &rest args)
+                "Advice to indent pre blocks by 2 spaces."
+                (let ((start (point)))
+                  (apply orig-fun args)
+                  (save-excursion
+                    (goto-char start)
+                    (while (< (point) (point-max))
+                      (unless (looking-at-p "^$") ; Skip empty lines
+                        (insert "  "))
+                      (forward-line 1))))))
+  
+  ;; use highlight in nov mode as well!
   (with-eval-after-load 'nov
     (advice-add 'shr--set-target-ids :around
                 (lambda (orig-fn &rest args)
@@ -1200,25 +1229,28 @@ deleted, kill the pairs around point."
         highlight-indent-guides-responsive nil))
 
 (use-package diff-hl
-  :defer 1
   :hook (((prog-mode conf-mode) . turn-on-diff-hl-mode)
          ((prog-mode conf-mode) . diff-hl-margin-mode)
          ((prog-mode conf-mode) . diff-hl-show-hunk-mouse-mode))
   :config
-  (define-key diff-hl-inline-popup-transient-mode-map
-              (kbd "q")
-              (lambda nil
-                "Clean up the littering diff-hl does by leaving its buffers after quitting."
-                (interactive)
-                (diff-hl-inline-popup-hide)
-                (let ((diff-hl-buffers
-                       (seq-filter
-                        (lambda (buf)
-                          (with-current-buffer buf
-                            (and (eq major-mode 'diff-mode)
-                                 (string-match-p "*diff-hl-.*" (buffer-name buf)))))
-                        (buffer-list))))
-                  (mapc #'kill-buffer diff-hl-buffers))))
+  (dolist (pair '(("q" . diff-hl-inline-popup-hide)
+                  ("r" . diff-hl-show-hunk-revert-hunk)))
+    (let ((key (car pair))
+          (fn (cdr pair)))
+      (define-key diff-hl-inline-popup-transient-mode-map
+                  (kbd key)
+                  (lambda nil
+                    "Clean up the littering diff-hl does by leaving its buffers after quitting."
+                    (interactive)
+                    (funcall fn)
+                    (let ((diff-hl-buffers
+                           (seq-filter
+                            (lambda (buf)
+                              (with-current-buffer buf
+                                (and (eq major-mode 'diff-mode)
+                                     (string-match-p "*diff-hl-.*" (buffer-name buf)))))
+                            (buffer-list))))
+                      (mapc #'kill-buffer diff-hl-buffers))))))
   (diff-hl-flydiff-mode t)
   (when (package-installed-p 'magit)
     (add-hook 'magit-pre-refresh-hook  #'diff-hl-magit-pre-refresh)
@@ -1407,7 +1439,8 @@ deleted, kill the pairs around point."
                               "gwene.com.blogspot.petr-mitrichev" "gwene.me.tonsky.blog"
                               "gmane.emacs.announce" "gmane.emacs.devel"
                               "gmane.emacs.gnus.general" "gmane.emacs.gnus.user"
-                              "gmane.emacs.tramp" "gmane.emacs.bugs"
+                              "gmane.emacs.tramp" "gmane.emacs.bugs" "gwene.com.rubyweekly"
+                              "gwene.org.perlmonks.headlines" "gwene.com.perlweekly.perlweekly"
                               "gmane.comp.lang.go.general" "gwene.com.iximiuz"
                               "gwene.com.golangweekly" "gwene.org.golang.blog"
                               "gwene.com.thisweekinrust" "gwene.org.rust-lang.blog"
@@ -1415,7 +1448,7 @@ deleted, kill the pairs around point."
                               "gmane.comp.web.qutebrowser" "gmane.comp.web.elinks.user"
                               "gwene.io.kubernetes" "gwene.app.rsshub.leetcode.articles"
                               "gwene.rs.lobste" "gwene.org.hnrss.newest.points"
-                              "gwene.com.arcan-fe" "gwene.io.github.matklad"
+                              "gwene.com.arcan-fe" "gwene.io.github.matklad" "gwene.net.openmymind"
                               "gwene.net.lwn.headlines" "gwene.org.quantamagazine"
                               "gwene.com.tedinski" "gwene.org.bitlbee.news.rss")
                              ("Unread")))))
@@ -1461,7 +1494,6 @@ deleted, kill the pairs around point."
 (use-package magit
   :commands (magit magit-file-dispatch magit-log-all magit-ediff-show-unstaged)
   :init
-  (setq magit-auto-revert-mode nil)
   (with-eval-after-load 'project
     (add-to-list 'project-switch-commands '(magit-project-status "Magit" ?m)))
   :bind (:map magit-status-mode-map
@@ -1511,7 +1543,16 @@ deleted, kill the pairs around point."
   (bind-key "q" #'magit-forge-kill-buffers magit-status-mode-map))
 
 (use-package forge
+  ;; run `forge-pull' before!
   ;; remember to generate auth-token (info "(forge) Setup for Githubcom")
+  ;; src: karthik
+  ;; `magit-clone' or 'git clone' a repo. The remote is named origin.
+  ;; Add it to forge's database, pulling individual or all topics (N a)
+  ;; Contribute to or create issues with forge. (N f t, then C-c C-r or C-c C-e to reply.)
+  ;; Fork the repo to my account with `forge-fork'. My 'fork to' should be
+  ;; username to fork to and remote is named copy, or fork.
+  ;; Work on the local repo as usual, push to copy/fork.
+  ;; Create a PR using forge. (source is fork, target is origin/master)
   :after magit)
 
 (use-package dired
@@ -1577,6 +1618,7 @@ deleted, kill the pairs around point."
   (setq dired-sidebar-window-fixed nil
         dired-sidebar-use-omit-mode-integration nil ;; t breaks
         dired-sidebar-theme 'nerd-icons
+        dired-sidebar-use-custom-modeline nil
         dired-sidebar-mode-line-format
         '("%e" mode-line-buffer-identification)))
 
@@ -1604,6 +1646,7 @@ deleted, kill the pairs around point."
                ("C-o" . other-window)
                ("M-j" . popper-toggle)
                ("M-`" . popper-toggle-type)
+               ("C-`" . popper-cycle)
                ("M-w" . kill-ring-save)
                ("M-v" . scroll-down-command)))
   :config
@@ -1629,18 +1672,20 @@ deleted, kill the pairs around point."
   (setq nov-text-width (min 80 (window-width))
         nov-header-line-format nil))
 
-(use-package pdf-tools
-  :mode ("\\.pdf\\'" . pdf-view-mode)
-  :hook ((pdf-view-mode . pdf-view-fit-page-to-window)
-         (pdf-view-mode . pdf-view-themed-minor-mode)
-         (pdf-view-mode . pdf-outline-minor-mode))
-  :hook (pdf-view-mode . (lambda nil
-                           (blink-cursor-mode -1)
-                           (when (featurep 'meow)
-                             (setq-local meow-cursor-type-motion nil))
-                           (setq-local mouse-wheel-tilt-scroll t
-                                       mouse-wheel-flip-direction t
-                                       mouse-wheel-scroll-amount-horizontal 2))))
+;; (use-package pdf-tools
+;;   :if (display-graphic-p)
+;;   :mode ("\\.pdf\\'" . pdf-view-mode)
+;;   :magic ("%PDF" . pdf-view-mode)
+;;   :hook ((pdf-view-mode . pdf-view-fit-page-to-window)
+;;          (pdf-view-mode . pdf-view-themed-minor-mode)
+;;          (pdf-view-mode . pdf-outline-minor-mode))
+;;   :hook (pdf-view-mode . (lambda nil
+;;                            (blink-cursor-mode -1)
+;;                            (when (featurep 'meow)
+;;                              (setq-local meow-cursor-type-motion nil))
+;;                            (setq-local mouse-wheel-tilt-scroll t
+;;                                        mouse-wheel-flip-direction t
+;;                                        mouse-wheel-scroll-amount-horizontal 2))))
 
 ;;; Org
 
@@ -1924,6 +1969,42 @@ deleted, kill the pairs around point."
         denote-dired-directories
         `(,denote-directory)))
 
+(use-package howm
+  :init
+  (define-key global-map (kbd "C-x ;") (make-sparse-keymap))
+  (setq howm-directory "~/Dropbox/denote"
+        howm-home-directory howm-directory
+        howm-file-name-format "%Y%m%dT%H%M%S.org"
+        howm-view-title-header "*"
+        howm-prefix (kbd "C-x ;"))
+  :bind* ("C-x ; ;" . howm-menu)
+  :bind (:map howm-menu-mode-local-map
+              ("<backtab>" . action-lock-goto-previous-link)
+              :map howm-view-summary-mode-map
+              ("<backtab>" . howm-view-summary-previous-section))
+  :hook ((howm-menu howm-view-summary-mode) . meow-motion-mode)
+  :config
+  (setq howm-view-summary-sep "│"
+        howm-menu-reminder-format "❱ %s │ %s")
+  (advice-add 'howm-menu-copy-skel
+              :filter-args
+              (lambda (args)
+                (message "Hi")
+                (list
+                 (replace-regexp-in-string
+                  "^-\\{2,\\}$"
+                  "─────────────────────────────────────────────────"
+                  (car args)))))
+  (setq howm-menu-list-format
+        (let* ((path (format-time-string howm-file-name-format))
+               (width (length (file-name-sans-extension
+                               (file-name-nondirectory path)))))
+          (concat "❱ %-" (format "%s" width) "s │ %s"))))
+;; howm-template "* %title%cursor\n%date %file\n\n"
+;; howm-view-title-regexp "^\\(\\*+\\|#\\+title:\\)\\( +\\(.*\\)\\|\\)$"
+;; howm-view-title-regexp-grep  "^\\(\\*+\\|#\\+title:\\) +"))
+
+
 ;;; Meow
 
 (use-package meow
@@ -2014,6 +2095,7 @@ deleted, kill the pairs around point."
    '("gd" . xref-find-definitions)
    '("gf" . ffap)
    '("gg" . avy-goto-char-timer)
+   '("gp" . avy-parens-jump)
    '("gh" . diff-hl-show-hunk)
    '("gk" . beginning-of-buffer)
    '("gj" . end-of-buffer)
@@ -2149,6 +2231,7 @@ deleted, kill the pairs around point."
 (nconc auto-mode-alist
        '(("\\.rs\\'" . rust-ts-mode)
          ("\\.go\\'" . go-ts-mode)
+         ("\\go\\.mod\\'"  . go-mod-ts-mode)
          ("\\.ts\\'" . typescript-ts-mode)
          ("\\.lua\\'" . lua-ts-mode)
          ("\\.ya?ml\\'" . yaml-ts-mode)
@@ -2239,6 +2322,20 @@ deleted, kill the pairs around point."
 (use-package nix-mode
   :mode ("\\.nix\\'" . nix-mode))
 
+(use-package direnv
+  :hook (prog-mode. direnv-mode)
+  :config
+  (setq direnv-always-show-summary nil)
+  (push 'comint-mode direnv-non-file-modes))
+
+(use-package flymake-golangci
+  :vc (:url "https://github.com/storvik/flymake-golangci")
+  :hook ((eglot-managed-mode . (lambda ()
+                                 (when (derived-mode-p '(go-mode go-ts-mode))
+                                   (flymake-golangci-load))))
+         (go-mode . flymake-golangci-load)
+         (go-ts-mode . flymake-golangci-load)))
+
 (use-package fish-mode
   :mode ("\\.fish\\'" . fish-mode))
 
@@ -2273,7 +2370,6 @@ deleted, kill the pairs around point."
                       (foxy-cycle-files -1)))
          ("C-c b" . foxy-run-all-tests)))
 
-(setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 (when (file-exists-p custom-file)
   (load custom-file nil :no-message))
 
@@ -2282,3 +2378,12 @@ deleted, kill the pairs around point."
 ;; Local Variables:
 ;; byte-compile-warnings: (not free-vars unresolved)
 ;; End:
+
+;;; Overlay testing
+;; (let* ((str (format-mode-line "%b"))
+;;        (len (length str))
+;;        (tr (- (nth 2 (window-body-edges)) 1)) ; FIXME
+
+;;        (ovl (make-overlay tr tr)))
+;;   (overlay-put ovl 'before-string str)
+;;   (overlay-put ovl 'face 'tab-bar))
