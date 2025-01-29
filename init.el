@@ -329,6 +329,7 @@ backwards instead."
                   (add-hook 'prog-mode-hook #'display-line-numbers-mode)
                   (add-hook 'yaml-ts-mode-hook #'display-line-numbers-mode)
                   (add-hook 'conf-mode-hook #'display-line-numbers-mode)
+                  ;; (add-hook 'tab-bar-mode-hook #'tab-bar-history-mode) ;; slows init
                   (add-to-list 'write-file-functions
                                '(lambda ()
                                   (when (eq major-mode 'emacs-lisp-mode)

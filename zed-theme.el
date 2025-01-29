@@ -25,6 +25,12 @@
 
 (setq zed-adjust 0.2)
 
+(setq zed-tab-forward-button
+      (propertize "⏵" 'display `(raise 0.3))
+      zed-tab-back-button
+      (propertize "⏴ " 'display `(raise 0.3)))
+
+
 (let ((selection-color (if load-theme-light
                            "#C9D0D9"
                          "#3d4b5c"))
@@ -602,11 +608,7 @@
         tab-bar-close-button-show 'selected
         tab-bar-close-last-tab-choice 'tab-bar-mode-disable
         tab-bar-close-button
-        (propertize (concat (make-string 1 #x00D7) " ") 'close-tab t)
-        zed-tab-forward-button
-        (propertize "⏵" 'display `(raise 0.3))
-        zed-tab-back-button
-        (propertize "⏴ " 'display `(raise 0.3)))
+        (propertize (concat (make-string 1 #x00D7) " ") 'close-tab t))
 
   (defun zed-tab-name (tab _i)
     "A cleaner tab name emulating atom one."
@@ -810,9 +812,7 @@
       (push 'zed-bar-format-history tab-bar-format)
     (setq tab-bar-separator ""
           tab-bar-close-button-show nil
-          tab-bar-auto-width nil))
-  
-  (add-hook 'tab-bar-mode-hook #'tab-bar-history-mode))
+          tab-bar-auto-width nil)))
 
 ;;;###autoload
 (defun zed-toggle-theme ()
