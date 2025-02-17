@@ -1,0 +1,440 @@
+;; nano-emacs.el --- NANO Emacs (minimal version)     -*- lexical-binding: t -*-
+
+;; Copyright (c) 2025  Nicolas P. Rougier
+;; Released under the GNU General Public License 3.0
+;; Author: Nicolas P. Rougier <nicolas.rougier@inria.fr>
+;; URL: https://github.com/rougier/nano-emacs
+
+;; This is NANO Emacs in 256 lines, without any dependency
+;; Usage (command line):  emacs -Q -l nano.el -[light|dark]
+
+;; --- Speed benchmarking -----------------------------------------------------
+(setq init-start-time (current-time))
+
+;; --- Typography stack -------------------------------------------------------
+(set-face-attribute 'default nil
+                    :height 140 :weight 'light :family "Input Mono Narrow")
+(set-face-attribute 'bold nil :weight 'regular)
+(set-face-attribute 'bold-italic nil :weight 'regular)
+(set-display-table-slot standard-display-table 'truncation (make-glyph-code ?…))
+(set-display-table-slot standard-display-table 'wrap (make-glyph-code ?–))
+(set-display-table-slot standard-display-table 'vertical-border (make-glyph-code ?│))
+
+;; --- Frame / windows layout & behavior --------------------------------------
+(setq default-frame-alist
+      '((height . 44) (width  . 81) (left-fringe . 0) (right-fringe . 0)
+        (internal-border-width . 32) (vertical-scroll-bars . nil)
+        (bottom-divider-width . 0) (right-divider-width . 0)
+        (undecorated-round . t)))
+(modify-frame-parameters nil default-frame-alist)
+(setq-default pop-up-windows nil)
+(setq-default mode-line-format "")
+
+;; --- Activate / Deactivate modes --------------------------------------------
+(tool-bar-mode -1) (menu-bar-mode -1) (blink-cursor-mode -1)
+(global-hl-line-mode 1) (icomplete-vertical-mode 1)
+(pixel-scroll-precision-mode 1)
+
+;; --- Minimal NANO (not a real) theme ----------------------------------------
+(defface nano-default '((t)) "")   (defface nano-default-i '((t)) "")
+(defface nano-highlight '((t)) "") (defface nano-highlight-i '((t)) "")
+(defface nano-subtle '((t)) "")    (defface nano-subtle-i '((t)) "")
+(defface nano-faded '((t)) "")     (defface nano-faded-i '((t)) "")
+(defface nano-salient '((t)) "")   (defface nano-salient-i '((t)) "")
+(defface nano-popout '((t)) "")    (defface nano-popout-i '((t)) "")
+(defface nano-strong '((t)) "")    (defface nano-strong-i '((t)) "")
+(defface nano-critical '((t)) "")  (defface nano-critical-i '((t)) "")
+
+(defun nano-set-face (name &optional foreground background weight)
+  "Set NAME and NAME-i faces with given FOREGROUND, BACKGROUND and WEIGHT."
+  (apply #'set-face-attribute `(,name nil
+                                      ,@(when foreground `(:foreground ,foreground))
+                                      ,@(when background `(:background ,background))
+                                      ,@(when weight `(:weight ,weight))))
+  (apply #'set-face-attribute `(,(intern (concat (symbol-name name) "-i")) nil
+                                :foreground ,(face-background 'nano-default)
+                                ,@(when foreground `(:background ,foreground))
+                                :weight regular)))
+
+(defun nano-link-face (sources faces &optional attributes)
+  "Make FACES to inherit from SOURCES faces and unspecify ATTRIBUTES."
+
+  (let ((attributes (or attributes
+                        '( :foreground :background :family :weight
+                           :height :slant :overline :underline :box))))
+    (dolist (face (seq-filter #'facep faces))
+      (dolist (attribute attributes)
+        (set-face-attribute face nil attribute 'unspecified))
+      (set-face-attribute face nil :inherit sources))))
+
+(defun nano-install-theme ()
+  "Install THEME."
+  (set-face-attribute 'default nil
+                      :foreground (face-foreground 'nano-default)
+                      :background (face-background 'nano-default))
+  (dolist (item '((nano-default .  (variable-pitch variable-pitch-text
+                                                   fixed-pitch fixed-pitch-serif))
+                  (nano-highlight . (hl-line highlight))
+                  (nano-subtle .    (match region
+                                           lazy-highlight widget-field))
+                  (nano-faded .     (shadow
+                                     font-lock-comment-face
+                                     font-lock-doc-face
+                                     icomplete-section
+                                     completions-annotations))
+                  (nano-popout .    (warning
+                                     font-lock-string-face))
+                  (nano-salient .   (success link
+                                             help-argument-name
+                                             custom-visibility
+                                             font-lock-type-face
+                                             font-lock-keyword-face
+                                             font-lock-builtin-face
+                                             completions-common-part))
+                  (nano-strong .    (font-lock-function-name-face
+                                     font-lock-variable-name-face
+                                     icomplete-first-match
+                                     minibuffer-prompt))
+                  (nano-critical .  (error
+                                     completions-first-difference))
+                  (nano-faded-i .   (help-key-binding))
+                  (nano-default-i . (custom-button-mouse
+                                     isearch))
+                  (nano-critical-i . (isearch-fail))
+                  ((nano-subtle nano-strong) . (custom-button
+                                                icomplete-selected-match))
+                  ((nano-faded-i nano-strong) . (show-paren-match))))
+    (nano-link-face (car item) (cdr item)))
+
+  ;; Mode & header lines
+  (set-face-attribute 'header-line nil
+                      :background 'unspecified
+                      :underline nil
+                      :box `( :line-width 1
+                              :color ,(face-background 'nano-default))
+                      :inherit 'nano-subtle)
+  (set-face-attribute 'mode-line nil
+                      :background (face-background 'default)
+                      :underline (face-foreground 'nano-faded)
+                      :height 40 :overline nil :box nil)
+  (set-face-attribute 'mode-line-inactive nil
+                      :background (face-background 'default)
+                      :underline (face-foreground 'nano-faded)
+                      :height 40 :overline nil :box nil))
+
+(defun nano-light (&rest args)
+  "NANO light theme (based on material colors)."
+  (interactive)
+  (nano-set-face 'nano-default "#37474F" "#F7F7F7") ;; Blue Grey / L800
+  (nano-set-face 'nano-strong "#000000" nil 'regular) ;; Black
+  (nano-set-face 'nano-highlight nil "#F0F0F0") ;; Very Light Grey
+  (nano-set-face 'nano-subtle nil "#ECEFF1") ;; Blue Grey / L50
+  (nano-set-face 'nano-faded "#90A4AE") ;; Blue Grey / L300
+  (nano-set-face 'nano-salient "#673AB7") ;; Deep Purple / L500
+  (nano-set-face 'nano-popout "#FFAB91") ;; Deep Orange / L200
+  (nano-set-face 'nano-critical "#FF6F00") ;; Amber / L900
+  (nano-install-theme))
+
+(defun nano-dark (&rest args)
+  "NANO dark theme (based on nord colors)."
+  (interactive)
+  (nano-set-face 'nano-default "#ECEFF4" "#282C33") ;; Snow Storm 3 
+  (nano-set-face 'nano-strong "#ECEFF4" nil 'regular) ;; Polar Night 0
+  (nano-set-face 'nano-highlight nil "#3B4252")  ;; Polar Night 1
+  (nano-set-face 'nano-subtle nil "#434C5E") ;; Polar Night 2 
+  (nano-set-face 'nano-faded "#677691") ;; 
+  (nano-set-face 'nano-salient "#81A1C1")  ;; Frost 2
+  (nano-set-face 'nano-popout "#D08770") ;; Aurora 1
+  (nano-set-face 'nano-critical "#EBCB8B") ;; Aurora 2
+  (nano-install-theme))
+
+(set-face-attribute 'vertical-border nil :underline nil)
+
+;; --- Command line theme chooser ---------------------------------------------
+(add-to-list 'command-switch-alist '("-dark"  . nano-dark))
+(add-to-list 'command-switch-alist '("-light" . nano-light))
+(if (member "-dark" command-line-args) (nano-dark) (nano-light))
+
+;; --- Minibuffer completion --------------------------------------------------
+(setq tab-always-indent 'complete
+      icomplete-delay-completions-threshold 0
+      icomplete-compute-delay 0
+      icomplete-show-matches-on-no-input t
+      icomplete-hide-common-prefix nil
+      icomplete-prospects-height 9
+      icomplete-separator " . "
+      icomplete-with-completion-tables t
+      icomplete-in-buffer t
+      icomplete-max-delay-chars 0
+      icomplete-scroll t
+      resize-mini-windows 'grow-only
+      icomplete-matches-format nil)
+(bind-key "TAB" #'icomplete-forward-completions icomplete-minibuffer-map)
+(bind-key "<backtab>" #'icomplete-backward-completions icomplete-minibuffer-map)
+(bind-key "RET" #'icomplete-fido-ret icomplete-minibuffer-map)
+(bind-key "<escape>" #'minibuffer-keyboard-quit icomplete-minibuffer-map)
+(bind-key "DEL" #'icomplete-fido-backward-updir icomplete-minibuffer-map)
+
+;; --- Minimal key bindings ---------------------------------------------------
+(defun nano-quit ()
+  "Quit minibuffer from anywhere (code from Protesilaos Stavrou)."
+  (interactive)
+  (cond ((region-active-p) (keyboard-quit))
+        ((derived-mode-p 'completion-list-mode) (delete-completion-window))
+        ((> (minibuffer-depth) 0) (abort-recursive-edit))
+        (t (keyboard-quit))))
+
+(defun nano-kill ()
+  "Delete frame or kill Emacs if there is only one frame left."
+  (interactive)
+  (condition-case nil
+      (delete-frame)
+    (error (save-buffers-kill-terminal))))
+
+(bind-key "C-x C-m" #'execute-extended-command)
+(bind-key "C-o" #'other-window)
+(bind-key "C-\\" (lambda nil (interactive)
+                   (term "fish")))
+(bind-key "C-h ." (lambda nil (interactive)
+                    (if (derived-mode-p 'emacs-lisp-mode)
+                        (describe-symbol (symbol-at-point))
+                      (eldoc-doc-buffer t))))
+(bind-key "M-s r" #'replace-regexp)
+(bind-key "C-x k" #'kill-current-buffer)
+(bind-key "C-x C-c" #'nano-kill)
+(bind-key "C-x f" #'recentf-open)
+(bind-key "C-g" #'nano-quit)
+;; (bind-key "M-n" #'make-frame)
+(bind-key "C-z"  nil) ;; No suspend frame
+(bind-key "C-<wheel-up>" nil) ;; No text resize via mouse scroll
+(bind-key "C-<wheel-down>" nil) ;; No text resize via mouse scroll
+
+;; --- Sane settings ----------------------------------------------------------
+(set-default-coding-systems 'utf-8)
+(setq-default tab-width 4
+              indent-tabs-mode nil
+              ring-bell-function 'ignore
+              select-enable-clipboard t
+              uniquify-buffer-name-style 'forward)
+
+(add-hook 'after-init-hook #'repeat-mode)
+(add-hook 'dired-mode-hook #'dired-hide-details-mode)
+(add-hook 'dired-mode-hook #'dired-omit-mode)
+(add-hook 'prog-mode-hook (electric-pair-mode t))
+(add-hook 'prog-mode-hook #'display-line-numbers-mode)
+(add-hook 'prog-mode-hook #'completion-preview-mode)
+
+(save-place-mode 1)(global-subword-mode 1)
+(savehist-mode 1) (which-key-mode 1)
+
+(setq compilation-ask-about-save nil
+      completion-ignore-case t
+      dired-dwim-target t
+      dired-omit-verbose nil
+      dired-use-ls-dired nil
+      dired-kill-when-opening-new-dired-buffer t
+      dired-recursive-copies 'always
+      dired-recursive-deletes 'always
+      ediff-split-window-function 'split-window-horizontally
+      ediff-window-split-function 'ediff-setup-windows-plain
+      ediff-diff-options "-w"
+      eldoc-echo-area-prefer-doc-buffer t
+      eldoc-idle-delay 0.3
+      eldoc-echo-area-use-multiline-p nil
+      eldoc-echo-area-display-truncation-message nil
+      flymake-no-changes-timeout 2
+      flymake-show-diagnostics-at-end-of-line 'short
+      recentf-max-menu-items 25
+      recentf-max-saved-items 200
+      recentf-auto-cleanup 'never
+      save-interprogram-paste-before-kill t
+      shell-command-prompt-show-cwd t
+      shell-kill-buffer-on-exit t
+      shell-file-name (car (process-lines "which" "fish"))
+      tab-bar-show nil
+      vc-follow-symlinks t
+      xref-auto-jump-to-first-xref nil ; 'move
+      xref-show-definitions-function 'xref-show-definitions-buffer-at-bottom
+      xref-show-xrefs-function 'xref-show-definitions-buffer-at-bottom)
+
+(setq isearch-wrap-pause 'no
+      isearch-lazy-count t
+      isearch-allow-scroll 'unlimited
+      isearch-regexp-lax-whitespace t
+      search-whitespace-regexp ".*?")
+
+(with-eval-after-load 'dired
+  (bind-key "\\" #'dired-up-directory dired-mode-map))
+
+(dolist (pops '(("^\\*term.*\\*$" . -1)
+                ("^\\*compilatio.*\\*$" . -1)
+                ("\\*eldoc\\*" . 0)
+                ("\\*log-edit-files\\*" . 0)
+                ("\\*Help\\*" . 1)))
+  (add-to-list 'display-buffer-alist
+               `(,(car pops)
+                 display-buffer-in-side-window
+                 (side . bottom)
+                 (slot . ,(cdr pops))
+                 (window-height . 0.30))))
+
+(bind-key "M-j" #'window-toggle-side-windows)
+
+;; (add-hook 'eldoc-mode-hook '(lambda nil (switch-to-buffer-other-window "*eldoc*")))
+;; (add-hook 'help-mode-hook (lambda nil (switch-to-buffer-other-window "*Help*")))
+
+(define-advice term-handle-exit (:after (&rest _args) term-kill-on-exit)
+  (kill-buffer-and-window))
+
+(add-hook 'compilation-mode-hook
+          (lambda nil
+            "Enable comint mode to allow for providing program input."
+            (comint-mode)
+            (setq-local buffer-read-only nil)))
+
+(add-hook 'compilation-finish-functions
+          (lambda (buffer status)
+            "Reset comint mode so that we get the compilation-mode goodness."
+            (setq-local buffer-read-only t)
+            (compilation-minor-mode)))
+
+(unless (display-graphic-p)
+  (bind-key "M-c" (lambda ()
+                    (interactive)
+                    (when (use-region-p)
+                      (let ((copy-cmd (cond
+                                       ((string-equal system-type "darwin") "pbcopy")
+                                       ((string-equal system-type "gnu/linux") "xclip -selection clipboard")
+                                       ((string-equal system-type "windows-nt") "clip")
+                                       (t nil))))
+                        (when copy-cmd
+                          (call-process-region (region-beginning) (region-end) copy-cmd)
+                          (deactivate-mark))))))
+  (xterm-mouse-mode))
+
+;; --- Programming ------------------------------------------------------------
+(bind-key "C-c C-c" #'compile prog-mode-map)
+(bind-key "C-c C-r" #'recompile prog-mode-map)
+
+(with-eval-after-load 'treesit
+  (defun my/setup-install-grammars ()
+    "Install Tree-sitter grammars if they are absent."
+    (interactive)
+    (dolist (grammar
+             '((cpp "https://github.com/tree-sitter/tree-sitter-cpp")
+               (c "https://github.com/tree-sitter/tree-sitter-c")
+               (go "https://github.com/tree-sitter/tree-sitter-go")
+               (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
+               (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
+               (yaml "https://github.com/ikatyang/tree-sitter-yaml")
+               (helm "https://github.com/ngalaiko/tree-sitter-go-template"
+                     "master" "dialects/helm/src")
+               (templ "https://github.com/vrischmann/tree-sitter-templ")
+               (gotmpl "https://github.com/ngalaiko/tree-sitter-go-template")
+               (rust "https://github.com/tree-sitter/tree-sitter-rust")
+               (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua")
+               (json "https://github.com/tree-sitter/tree-sitter-json")
+               (janet-simple "https://github.com/sogaiu/tree-sitter-janet-simple")
+               (typescript "https://github.com/tree-sitter/tree-sitter-typescript"
+                           "master" "typescript/src")))
+      (add-to-list 'treesit-language-source-alist grammar)
+      (unless (treesit-language-available-p (car grammar))
+        (treesit-install-language-grammar (car grammar)))))
+
+  (add-hook 'prog-mode-hook #'my/setup-install-grammars)
+  (setq go-ts-mode-indent-offset 4))
+
+(nconc auto-mode-alist
+       '(("\\.rs\\'" . rust-ts-mode)
+         ("\\.go\\'" . go-ts-mode)
+         ("\\go\\.mod\\'"  . go-mod-ts-mode)
+         ("\\.ts\\'" . typescript-ts-mode)
+         ("\\.lua\\'" . lua-ts-mode)
+         ("\\.ya?ml\\'" . yaml-ts-mode)
+         ("\\Dockerfile\\'" . dockerfile-ts-mode)
+         ("\\.dockerignore\\'" . dockerfile-ts-mode)
+         ("\\.bin\\'" . hexl-mode)
+         ("\\.info\\'" . Info-mode)))
+
+(add-hook 'rust-ts-mode-hook #'eglot-ensure)
+(add-hook 'go-ts-mode-hook #'eglot-ensure)
+
+(with-eval-after-load 'project
+  (setq project-vc-extra-root-markers '("go.mod" "Cargo.toml"))
+  (setq project-vc-ignores '("**/vendor/**")))
+
+(with-eval-after-load 'eglot
+  (fset #'jsonrpc--log-event #'ignore)
+  (setq eglot-events-buffer-config 0
+        eglot-autoshutdown t
+        eglot-inlay-hints-mode nil)
+  
+  (defun my-eglot-organize-imports ()
+    (interactive)
+    (ignore-errors
+      (eglot-code-actions nil nil "source.organizeImports" t)))
+  
+  (defun my-eglot-setup ()
+    (interactive)
+    (when (not (eq major-mode 'sql-mode))
+      (add-hook 'before-save-hook 'my-eglot-organize-imports nil t)
+      (add-hook 'before-save-hook 'eglot-format-buffer nil t))))
+
+;; --- OSX Specific -----------------------------------------------------------
+(when (eq system-type 'darwin)
+  (select-frame-set-input-focus (selected-frame))
+  (setq mac-option-modifier 'meta
+        ns-function-modifier 'super
+        mac-right-option-modifier 'alt
+        mac-command-modifier 'hyper))
+
+;; --- Header & mode lines ----------------------------------------------------
+(setq-default header-line-format
+              '(:eval
+                (let ((prefix (cond (buffer-read-only     '("RO" . nano-default-i))
+                                    ((buffer-modified-p)  '("**" . nano-critical-i))
+                                    (t                    '("RW" . nano-faded-i))))
+                      (mode (concat "(" (downcase (cond ((consp mode-name) (car mode-name))
+                                                        ((stringp mode-name) mode-name)
+                                                        (t "unknow")))
+                                    " mode)"))
+                      (coords (format-mode-line "%c:%l "))
+                      (tabs (let* ((tabs (length (tab-bar-tabs)))
+                                   (active-tab (tab-bar--current-tab-index)))
+                              (if (<= tabs 1)
+                                  ""
+                                (let ((result '()))
+                                  (dotimes (i tabs)
+                                    (if (= i active-tab)
+                                        (push (format "'%d'" (1+ i)) result)
+                                      (push (format "%d" (1+ i)) result)))
+                                  (concat "[" (mapconcat 'identity (reverse result) " ") "]"))))))
+                  (list
+                   (propertize " " 'face (cdr prefix)  'display '(raise -0.25))
+                   (propertize (car prefix) 'face (cdr prefix))
+                   (propertize " " 'face (cdr prefix) 'display '(raise +0.25))
+                   (propertize (format-mode-line " %b ") 'face 'nano-strong)
+                   (propertize mode 'face 'header-line)
+                   (propertize " " 'display `(space :align-to (- right ,(+ (length coords) (length tabs)))))
+                   (propertize coords 'face 'nano-faded)
+                   (propertize tabs 'face 'nano-faded)))))
+
+;; --- Minibuffer setup -------------------------------------------------------
+(defun nano-minibuffer--setup ()
+  (set-window-margins nil 3 0)
+  (let ((inhibit-read-only t))
+    (add-text-properties (point-min) (+ (point-min) 1)
+                         `(display ((margin left-margin)
+                                    ,(format "# %s" (substring (minibuffer-prompt) 0 1))))))
+  (setq truncate-lines t))
+(add-hook 'minibuffer-setup-hook #'nano-minibuffer--setup)
+
+;; --- Speed benchmarking -----------------------------------------------------
+(let ((init-time (float-time (time-subtract (current-time) init-start-time)))
+      (total-time (string-to-number (emacs-init-time "%f"))))
+  (message (concat
+            (propertize "Startup time: " 'face 'bold)
+            (format "%.2fs " init-time)
+            (propertize (format "(+ %.2fs system time)"
+                                (- total-time init-time))
+                        'face 'shadow))))
