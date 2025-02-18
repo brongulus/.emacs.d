@@ -1,4 +1,4 @@
-;; nano-emacs.el --- NANO Emacs (minimal version)     -*- lexical-binding: t -*-
+;; nano-emacs.el --- NANO Emacs (minimal version)  -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2025  Nicolas P. Rougier
 ;; Released under the GNU General Public License 3.0
@@ -8,19 +8,19 @@
 ;; This is NANO Emacs in 256 lines, without any dependency
 ;; Usage (command line):  emacs -Q -l nano.el -[light|dark]
 
-;; --- Speed benchmarking -----------------------------------------------------
+;; --- Speed benchmarking ---------------------------------------------------
 (setq init-start-time (current-time))
 
-;; --- Typography stack -------------------------------------------------------
+;; --- Typography stack -----------------------------------------------------
 (set-face-attribute 'default nil
-                    :height 140 :weight 'light :family "Input Mono Narrow")
+                    :height 160 :weight 'light :family "Input Mono Narrow")
 (set-face-attribute 'bold nil :weight 'regular)
 (set-face-attribute 'bold-italic nil :weight 'regular)
 (set-display-table-slot standard-display-table 'truncation (make-glyph-code ?…))
-(set-display-table-slot standard-display-table 'wrap (make-glyph-code ?–))
+(set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
 (set-display-table-slot standard-display-table 'vertical-border (make-glyph-code ?│))
 
-;; --- Frame / windows layout & behavior --------------------------------------
+;; --- Frame / windows layout & behavior ------------------------------------
 (setq default-frame-alist
       '((height . 44) (width  . 81) (left-fringe . 0) (right-fringe . 0)
         (internal-border-width . 32) (vertical-scroll-bars . nil)
@@ -30,12 +30,12 @@
 (setq-default pop-up-windows nil)
 (setq-default mode-line-format "")
 
-;; --- Activate / Deactivate modes --------------------------------------------
+;; --- Activate / Deactivate modes ------------------------------------------
 (tool-bar-mode -1) (menu-bar-mode -1) (blink-cursor-mode -1)
 (global-hl-line-mode 1) (icomplete-vertical-mode 1)
 (pixel-scroll-precision-mode 1)
 
-;; --- Minimal NANO (not a real) theme ----------------------------------------
+;; --- Minimal NANO (not a real) theme --------------------------------------
 (defface nano-default '((t)) "")   (defface nano-default-i '((t)) "")
 (defface nano-highlight '((t)) "") (defface nano-highlight-i '((t)) "")
 (defface nano-subtle '((t)) "")    (defface nano-subtle-i '((t)) "")
@@ -82,8 +82,8 @@
                                      font-lock-doc-face
                                      icomplete-section
                                      completions-annotations))
-                  (nano-popout .    (warning
-                                     font-lock-string-face))
+                  (nano-popout .    (warning))
+                  (nano-default .   (font-lock-string-face))
                   (nano-salient .   (success link
                                              help-argument-name
                                              custom-visibility
@@ -106,6 +106,8 @@
                   ((nano-faded-i nano-strong) . (show-paren-match))))
     (nano-link-face (car item) (cdr item)))
 
+  (set-face-attribute 'font-lock-string-face nil
+                      :slant 'italic :weight 'regular)
   ;; Mode & header lines
   (set-face-attribute 'header-line nil
                       :background 'unspecified
@@ -127,8 +129,8 @@
   (interactive)
   (nano-set-face 'nano-default "#37474F" "#F7F7F7") ;; Blue Grey / L800
   (nano-set-face 'nano-strong "#000000" nil 'regular) ;; Black
-  (nano-set-face 'nano-highlight nil "#F0F0F0") ;; Very Light Grey
-  (nano-set-face 'nano-subtle nil "#ECEFF1") ;; Blue Grey / L50
+  (nano-set-face 'nano-highlight nil "#EEEEEE") ;; Very Light Grey
+  (nano-set-face 'nano-subtle nil "#C9D0D9") ;; Blue Grey / L50
   (nano-set-face 'nano-faded "#90A4AE") ;; Blue Grey / L300
   (nano-set-face 'nano-salient "#673AB7") ;; Deep Purple / L500
   (nano-set-face 'nano-popout "#FFAB91") ;; Deep Orange / L200
@@ -148,14 +150,14 @@
   (nano-set-face 'nano-critical "#EBCB8B") ;; Aurora 2
   (nano-install-theme))
 
-(set-face-attribute 'vertical-border nil :underline nil)
+(set-face-attribute 'vertical-border nil :inherit 'nano-faded)
 
-;; --- Command line theme chooser ---------------------------------------------
+;; --- Command line theme chooser -------------------------------------------
 (add-to-list 'command-switch-alist '("-dark"  . nano-dark))
 (add-to-list 'command-switch-alist '("-light" . nano-light))
 (if (member "-dark" command-line-args) (nano-dark) (nano-light))
 
-;; --- Minibuffer completion --------------------------------------------------
+;; --- Minibuffer completion ------------------------------------------------
 (setq tab-always-indent 'complete
       icomplete-delay-completions-threshold 0
       icomplete-compute-delay 0
@@ -175,7 +177,7 @@
 (bind-key "<escape>" #'minibuffer-keyboard-quit icomplete-minibuffer-map)
 (bind-key "DEL" #'icomplete-fido-backward-updir icomplete-minibuffer-map)
 
-;; --- Minimal key bindings ---------------------------------------------------
+;; --- Minimal key bindings -------------------------------------------------
 (defun nano-quit ()
   "Quit minibuffer from anywhere (code from Protesilaos Stavrou)."
   (interactive)
@@ -199,6 +201,17 @@
                     (if (derived-mode-p 'emacs-lisp-mode)
                         (describe-symbol (symbol-at-point))
                       (eldoc-doc-buffer t))))
+(bind-key "C-," (lambda nil (interactive)
+                  (with-selected-window (other-window-for-scrolling)
+                    (scroll-up-command 5))))
+(bind-key "C-." (lambda nil (interactive)
+                  (with-selected-window (other-window-for-scrolling)
+                    (scroll-down-command 5))))
+(bind-key "C-x v e" #'vc-ediff)
+(bind-key "C-x v f" (lambda () (interactive)
+                      (vc-git--pushpull "push" nil '("--force-with-lease"))))
+(bind-key "C-<tab>" #'tab-next)
+(bind-key "C-S-<tab>" #'tab-previous)
 (bind-key "M-s r" #'replace-regexp)
 (bind-key "C-x k" #'kill-current-buffer)
 (bind-key "C-x C-c" #'nano-kill)
@@ -209,12 +222,13 @@
 (bind-key "C-<wheel-up>" nil) ;; No text resize via mouse scroll
 (bind-key "C-<wheel-down>" nil) ;; No text resize via mouse scroll
 
-;; --- Sane settings ----------------------------------------------------------
+;; --- Sane settings --------------------------------------------------------
 (set-default-coding-systems 'utf-8)
 (setq-default tab-width 4
               indent-tabs-mode nil
               ring-bell-function 'ignore
               select-enable-clipboard t
+              use-short-answers t
               uniquify-buffer-name-style 'forward)
 
 (add-hook 'after-init-hook #'repeat-mode)
@@ -224,10 +238,15 @@
 (add-hook 'prog-mode-hook #'display-line-numbers-mode)
 (add-hook 'prog-mode-hook #'completion-preview-mode)
 
-(save-place-mode 1)(global-subword-mode 1)
-(savehist-mode 1) (which-key-mode 1)
+(save-place-mode 1) (global-subword-mode 1)
+(savehist-mode 1) (which-key-mode 1) (delete-selection-mode 1)
 
-(setq compilation-ask-about-save nil
+(setq auto-save-file-name-transforms `((".*" "~/.emacs.d/backup/" t))
+      backup-directory-alist `(("." . "~/.emacs.d/backup/"))
+      lock-file-name-transforms '(("\\`/.*/\\([^/]+\\)\\'" "/var/tmp/\\1" t))
+      ;; ^^ https://emacs.stackexchange.com/a/81518/28970
+      comint-prompt-read-only t
+      compilation-ask-about-save nil
       completion-ignore-case t
       dired-dwim-target t
       dired-omit-verbose nil
@@ -235,9 +254,6 @@
       dired-kill-when-opening-new-dired-buffer t
       dired-recursive-copies 'always
       dired-recursive-deletes 'always
-      ediff-split-window-function 'split-window-horizontally
-      ediff-window-split-function 'ediff-setup-windows-plain
-      ediff-diff-options "-w"
       eldoc-echo-area-prefer-doc-buffer t
       eldoc-idle-delay 0.3
       eldoc-echo-area-use-multiline-p nil
@@ -266,8 +282,16 @@
 (with-eval-after-load 'dired
   (bind-key "\\" #'dired-up-directory dired-mode-map))
 
+(with-eval-after-load 'ediff
+  (setq ediff-split-window-function 'split-window-horizontally
+        ediff-window-setup-function 'ediff-setup-windows-plain
+        ediff-diff-options "-w"))
+
+(bind-key "C-x t t" #'tab-switcher)
+
 (dolist (pops '(("^\\*term.*\\*$" . -1)
-                ("^\\*compilatio.*\\*$" . -1)
+                ("^\\*compilation.*\\*$" . -1)
+                ("^\\*shell.*\\*$" . -1)
                 ("\\*eldoc\\*" . 0)
                 ("\\*log-edit-files\\*" . 0)
                 ("\\*Help\\*" . 1)))
@@ -312,7 +336,9 @@
                           (deactivate-mark))))))
   (xterm-mouse-mode))
 
-;; --- Programming ------------------------------------------------------------
+;; --- Programming ----------------------------------------------------------
+(add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
+(add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
 (bind-key "C-c C-c" #'compile prog-mode-map)
 (bind-key "C-c C-r" #'recompile prog-mode-map)
 
@@ -345,7 +371,9 @@
   (setq go-ts-mode-indent-offset 4))
 
 (nconc auto-mode-alist
-       '(("\\.rs\\'" . rust-ts-mode)
+       '(("\\.zig\\'" . c-mode) ;; Until zig-ts-mode is core
+         ("\\.zig\\.zon\\'" . js-json-mode)
+         ("\\.rs\\'" . rust-ts-mode)
          ("\\.go\\'" . go-ts-mode)
          ("\\go\\.mod\\'"  . go-mod-ts-mode)
          ("\\.ts\\'" . typescript-ts-mode)
@@ -363,6 +391,10 @@
   (setq project-vc-extra-root-markers '("go.mod" "Cargo.toml"))
   (setq project-vc-ignores '("**/vendor/**")))
 
+(with-eval-after-load 'eww
+  (setq eww-header-line-format nil)
+  (setq eww-auto-rename-buffer 'title))
+
 (with-eval-after-load 'eglot
   (fset #'jsonrpc--log-event #'ignore)
   (setq eglot-events-buffer-config 0
@@ -378,9 +410,11 @@
     (interactive)
     (when (not (eq major-mode 'sql-mode))
       (add-hook 'before-save-hook 'my-eglot-organize-imports nil t)
-      (add-hook 'before-save-hook 'eglot-format-buffer nil t))))
+      (add-hook 'before-save-hook 'eglot-format-buffer nil t)))
 
-;; --- OSX Specific -----------------------------------------------------------
+  (add-hook 'eglot-managed-mode-hook #'my-eglot-setup))
+
+;; --- OSX Specific ---------------------------------------------------------
 (when (eq system-type 'darwin)
   (select-frame-set-input-focus (selected-frame))
   (setq mac-option-modifier 'meta
@@ -388,7 +422,8 @@
         mac-right-option-modifier 'alt
         mac-command-modifier 'hyper))
 
-;; --- Header & mode lines ----------------------------------------------------
+;; --- Header & mode lines --------------------------------------------------
+;; TODO: git and which-func
 (setq-default header-line-format
               '(:eval
                 (let ((prefix (cond (buffer-read-only     '("RO" . nano-default-i))
@@ -396,9 +431,13 @@
                                     (t                    '("RW" . nano-faded-i))))
                       (mode (concat "(" (downcase (cond ((consp mode-name) (car mode-name))
                                                         ((stringp mode-name) mode-name)
-                                                        (t "unknow")))
+                                                        (t "unknown")))
                                     " mode)"))
-                      (coords (format-mode-line "%c:%l "))
+                      (coords (concat
+                               ;; (which-function-mode
+                               ;;  (which-func-mode
+                               ;;   ("" which-func-format " ")))
+                               (format-mode-line "%c:%l ")))
                       (tabs (let* ((tabs (length (tab-bar-tabs)))
                                    (active-tab (tab-bar--current-tab-index)))
                               (if (<= tabs 1)
@@ -406,9 +445,9 @@
                                 (let ((result '()))
                                   (dotimes (i tabs)
                                     (if (= i active-tab)
-                                        (push (format "'%d'" (1+ i)) result)
+                                        (push (format "[%d]" (1+ i)) result)
                                       (push (format "%d" (1+ i)) result)))
-                                  (concat "[" (mapconcat 'identity (reverse result) " ") "]"))))))
+                                  (concat " " (mapconcat 'identity (reverse result) " ") " "))))))
                   (list
                    (propertize " " 'face (cdr prefix)  'display '(raise -0.25))
                    (propertize (car prefix) 'face (cdr prefix))
@@ -417,9 +456,9 @@
                    (propertize mode 'face 'header-line)
                    (propertize " " 'display `(space :align-to (- right ,(+ (length coords) (length tabs)))))
                    (propertize coords 'face 'nano-faded)
-                   (propertize tabs 'face 'nano-faded)))))
+                   (propertize tabs 'face 'nano-faded-i)))))
 
-;; --- Minibuffer setup -------------------------------------------------------
+;; --- Minibuffer setup -----------------------------------------------------
 (defun nano-minibuffer--setup ()
   (set-window-margins nil 3 0)
   (let ((inhibit-read-only t))
@@ -429,7 +468,7 @@
   (setq truncate-lines t))
 (add-hook 'minibuffer-setup-hook #'nano-minibuffer--setup)
 
-;; --- Speed benchmarking -----------------------------------------------------
+;; --- Speed benchmarking ---------------------------------------------------
 (let ((init-time (float-time (time-subtract (current-time) init-start-time)))
       (total-time (string-to-number (emacs-init-time "%f"))))
   (message (concat
