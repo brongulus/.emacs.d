@@ -23,10 +23,12 @@
 (setq inhibit-startup-screen t)
 
 ;; --- Typography stack -----------------------------------------------------
-(set-face-attribute 'default nil
-                    :height 160 :weight 'light :family "Input Mono Narrow")
-(set-face-attribute 'bold nil :weight 'regular)
-(set-face-attribute 'bold-italic nil :weight 'regular)
+;; (set-face-attribute 'default nil :height 160 :weight 'light :family "Input Mono Narrow")
+;; (set-face-attribute 'bold nil :weight 'regular)
+;; (set-face-attribute 'bold-italic nil :weight 'regular)
+(set-face-attribute 'default nil :height 140 :weight 'regular :family "VictorMono Nerd Font Mono")
+(set-face-attribute 'bold nil :weight 'semi-bold)
+(set-face-attribute 'bold-italic nil :weight 'semi-bold)
 (set-display-table-slot standard-display-table 'truncation (make-glyph-code ?…))
 (set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
 (set-display-table-slot standard-display-table 'vertical-border (make-glyph-code ?│))
@@ -55,6 +57,7 @@
 (defface nano-popout '((t)) "")    (defface nano-popout-i '((t)) "")
 (defface nano-strong '((t)) "")    (defface nano-strong-i '((t)) "")
 (defface nano-critical '((t)) "")  (defface nano-critical-i '((t)) "")
+(defface nano-string '((t)) "")    (defface nano-string-i '((t)) "")
 
 (defun nano-set-face (name &optional foreground background weight)
   "Set NAME and NAME-i faces with given FOREGROUND, BACKGROUND and WEIGHT."
@@ -94,7 +97,7 @@
                                      icomplete-section
                                      completions-annotations))
                   (nano-popout .    (warning help-key-binding))
-                  (nano-default .   (font-lock-string-face))
+                  (nano-string .   (font-lock-string-face))
                   (nano-salient .   (success link
                                              help-argument-name
                                              custom-visibility
@@ -116,14 +119,13 @@
                   ((nano-faded-i nano-strong) . (show-paren-match))))
     (nano-link-face (car item) (cdr item)))
 
-  (set-face-attribute 'font-lock-string-face nil
-                      :slant 'italic :weight 'regular)
+  (set-face-attribute 'font-lock-string-face nil :slant 'italic)
   ;; Mode & header lines
   (set-face-attribute 'header-line nil
                       :background 'unspecified
                       :underline nil
                       :box `(:line-width 1
-                             :color ,(face-background 'nano-default))
+                                         :color ,(face-background 'nano-default))
                       :inherit 'nano-subtle)
   (set-face-attribute 'mode-line nil
                       :background (face-background 'default)
@@ -145,6 +147,7 @@
   (nano-set-face 'nano-salient "#673AB7") ;; Deep Purple / L500
   (nano-set-face 'nano-popout "#FFAB91") ;; Deep Orange / L200
   (nano-set-face 'nano-critical "#FF6F00") ;; Amber / L900
+  (nano-set-face 'nano-string "grey50")
   (nano-install-theme))
 
 (defun nano-dark (&rest args)
@@ -158,6 +161,7 @@
   (nano-set-face 'nano-salient "#81A1C1")  ;; Frost 2
   (nano-set-face 'nano-popout "#D08770") ;; Aurora 1
   (nano-set-face 'nano-critical "#EBCB8B") ;; Aurora 2
+  (nano-set-face 'nano-string "grey70")
   (nano-install-theme))
 
 (set-face-attribute 'vertical-border nil :inherit 'nano-faded)
@@ -239,6 +243,7 @@
 (setq-default tab-width 4
               completion-styles
               '(basic partial-completion substring flex emacs22)
+              line-spacing 3
               abbrev-mode t
               indent-tabs-mode nil
               mouse-wheel-tilt-scroll t
@@ -253,6 +258,7 @@
 (add-hook 'dired-mode-hook #'dired-omit-mode)
 (add-hook 'prog-mode-hook (electric-pair-mode t))
 (add-hook 'prog-mode-hook #'display-line-numbers-mode)
+(add-hook 'conf-mode-hook #'display-line-numbers-mode)
 (add-hook 'prog-mode-hook #'completion-preview-mode)
 
 (save-place-mode 1) (global-subword-mode 1) (winner-mode 1)
@@ -291,6 +297,7 @@
       shell-file-name (car (process-lines "which" "fish"))
       tab-bar-show nil
       vc-follow-symlinks t
+      which-func-unknown ""
       xref-auto-jump-to-first-xref nil ; 'move
       xref-show-definitions-function 'xref-show-definitions-buffer-at-bottom
       xref-show-xrefs-function 'xref-show-definitions-buffer-at-bottom)
@@ -324,16 +331,25 @@
 
 (dolist (pops '(("^\\*term.*\\*$" . -1)
                 ("^\\*compilation.*\\*$" . -1)
+                ("vc-git :.\*" . 0)
+                ("\\*vc.\*-log\\*" . 0)
+                ("\\*log-edit-files\\*" . 1)
                 ("\\*eldoc\\*" . 0)
-                ("\\*log-edit-files\\*" . 0)
-                ("\\*Help\\*" . 1)))
+                ("\\*Help\\*" . 0)
+                ("\\*Occur.*\\*$" . 1)
+                ("\\*grep.*\\*$" . 1)))
   (add-to-list 'display-buffer-alist
                `(,(car pops)
                  display-buffer-in-side-window
                  (body-function . select-window)
                  (side . bottom)
                  (slot . ,(cdr pops))
-                 (window-height . 0.30))))
+                 (window-height . 0.33))))
+
+(dolist (modes '(help-mode-hook vc-git-log-edit-mode-hook
+                 compilation-mode-hook term-mode-hook
+                 occur-hook grep-mode-hook special-mode-hook))
+  (add-hook modes (lambda () (setq-local header-line-format nil))))
 
 (setopt switch-to-buffer-obey-display-actions t)
 (bind-key "M-j" #'window-toggle-side-windows)
@@ -357,17 +373,29 @@
             (setq-local buffer-read-only t)
             (compilation-minor-mode)))
 
+(add-hook 'term-mode-hook
+          (lambda ()
+            (term-set-escape-char ?\C-x)
+            (define-key term-raw-map "\C-o" 'other-window)
+            (define-key term-raw-map "\M-y" 'yank-pop)
+            (define-key term-raw-map "\M-w" 'kill-ring-save)
+            (define-key term-raw-map "\M-j" 'window-toggle-side-windows)))
+
 (unless (display-graphic-p)
   (bind-key "M-c" (lambda ()
                     (interactive)
                     (when (use-region-p)
-                      (let ((copy-cmd (cond
-                                       ((string-equal system-type "darwin") "pbcopy")
-                                       ((string-equal system-type "gnu/linux") "xclip -selection clipboard")
-                                       ((string-equal system-type "windows-nt") "clip")
-                                       (t nil))))
+                      (let* ((clipboard-commands
+                              '(("darwin" . "pbcopy")
+                                ("gnu/linux" . "xclip -selection clipboard")
+                                ("windows-nt" . "clip")))
+                             (copy-cmd (or (cdr
+                                            (assoc (symbol-name system-type)
+                                                   clipboard-commands))
+                                           nil)))
                         (when copy-cmd
-                          (call-process-region (region-beginning) (region-end) copy-cmd)
+                          (call-process-region
+                           (region-beginning) (region-end) copy-cmd)
                           (deactivate-mark))))))
   (xterm-mouse-mode))
 
@@ -409,6 +437,7 @@
        '(("\\.zig\\'" . c-mode) ;; Until zig-ts-mode is core
          ("\\.zig\\.zon\\'" . js-json-mode)
          ("\\.nix\\'" . js-json-mode)
+         ("\\.fish\\'" . conf-mode)
          ("\\.rs\\'" . rust-ts-mode)
          ("\\.go\\'" . go-ts-mode)
          ("\\go\\.mod\\'"  . go-mod-ts-mode)
@@ -459,7 +488,7 @@
 
 (load "~/.emacs.d/lisp/snippets" :noerr :no-message)
 ;; --- Misc functions -------------------------------------------------------
-(setq-default fill-column 80)
+(setq-default fill-column 100)
 (defun toggle-centered-buffer ()
   "Toggle center alignment of the buffer. Source: jamesdyer"
   (interactive)
@@ -522,7 +551,8 @@
     (add-text-properties (point-min) (+ (point-min) 1)
                          `(display ((margin left-margin)
                                     ,(format "# %s" (substring (minibuffer-prompt) 0 1))))))
-  (setq truncate-lines t))
+  (setq truncate-lines t)
+  (setq-local line-spacing nil))
 (add-hook 'minibuffer-setup-hook #'nano-minibuffer--setup)
 
 ;; --- Speed benchmarking ---------------------------------------------------
