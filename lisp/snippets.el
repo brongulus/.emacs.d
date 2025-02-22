@@ -5,6 +5,27 @@
 ;; https://www.lysator.liu.se/~davidk/elisp/
 
 ;; (define-abbrev global-abbrev-table "shbng" "#!/usr/bin/env ")
+
+;;; --Eshell-------------------------------------------------------------
+(with-eval-after-load 'tempo
+  (setq tempo-interactive nil)
+  (tempo-define-template "eshell-for"
+                         '("for f in" p " { " p " \"$f\"; }")
+                         "for"
+                         "Insert an Eshell for loop")
+  (defun elisp-tempo-tab nil (interactive)
+         (unless (tempo-forward-mark)
+           (completion-at-point))))
+
+(with-eval-after-load 'em-cmpl
+  (bind-key "TAB" #'elisp-tempo-tab eshell-cmpl-mode-map)
+  (bind-key "<backtab>" #'tempo-backward-mark eshell-cmpl-mode-map))
+
+(add-hook 'eshell-mode-hook
+          (lambda nil
+            (require 'tempo)
+            (define-abbrev eshell-mode-abbrev-table "for" "" 'tempo-template-eshell-for)))
+
 ;;; --Perl----------------------------------------------------------------
 (define-skeleton pl-header "Perl header." ""
   "#!/usr/bin/env perl\n\n"
@@ -144,4 +165,3 @@
 (add-hook 'c++-ts-mode-hook 'abbrev-mode)
 (add-hook 'c++-mode-hook 'init-c++-abbrevs)
 (add-hook 'c++-ts-mode-hook 'init-c++-ts-abbrevs)
-

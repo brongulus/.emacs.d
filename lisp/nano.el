@@ -13,11 +13,8 @@
 
 (setq init-start-time (current-time))
 (setq gc-cons-threshold most-positive-fixnum)
-
-;; Lower threshold back to 16 MiB (default is 800kB)
 (add-hook 'emacs-startup-hook
           (lambda () (setq gc-cons-threshold (* 1024 1024 16))))
-
 (run-with-idle-timer 2 t #'garbage-collect)
 
 (setq inhibit-startup-screen t)
@@ -72,10 +69,9 @@
 
 (defun nano-link-face (sources faces &optional attributes)
   "Make FACES to inherit from SOURCES faces and unspecify ATTRIBUTES."
-
   (let ((attributes (or attributes
-                        '( :foreground :background :family :weight
-                           :height :slant :overline :underline :box))))
+                        '(:foreground :background :family :weight
+                          :height :slant :overline :underline :box))))
     (dolist (face (seq-filter #'facep faces))
       (dolist (attribute attributes)
         (set-face-attribute face nil attribute 'unspecified))
@@ -120,12 +116,13 @@
     (nano-link-face (car item) (cdr item)))
 
   (set-face-attribute 'font-lock-string-face nil :slant 'italic)
+  (set-face-attribute 'link nil :underline t)
+  (set-face-attribute 'vertical-border nil :inherit 'nano-faded)
   ;; Mode & header lines
   (set-face-attribute 'header-line nil
                       :background 'unspecified
                       :underline nil
-                      :box `(:line-width 1
-                                         :color ,(face-background 'nano-default))
+                      :box `(:line-width 1 :color ,(face-background 'nano-default))
                       :inherit 'nano-subtle)
   (set-face-attribute 'mode-line nil
                       :background (face-background 'default)
@@ -153,18 +150,16 @@
 (defun nano-dark (&rest args)
   "NANO dark theme (based on nord colors)."
   (interactive)
-  (nano-set-face 'nano-default "#ECEFF4" "#282C33") ;; Snow Storm 3 
+  (nano-set-face 'nano-default "#ECEFF4" "#282C33") ;; Snow Storm 3
   (nano-set-face 'nano-strong "#ECEFF4" nil 'regular) ;; Polar Night 0
   (nano-set-face 'nano-highlight nil "#3B4252")  ;; Polar Night 1
-  (nano-set-face 'nano-subtle nil "#434C5E") ;; Polar Night 2 
+  (nano-set-face 'nano-subtle nil "#434C5E") ;; Polar Night 2
   (nano-set-face 'nano-faded "#677691") ;; 
   (nano-set-face 'nano-salient "#81A1C1")  ;; Frost 2
   (nano-set-face 'nano-popout "#D08770") ;; Aurora 1
   (nano-set-face 'nano-critical "#EBCB8B") ;; Aurora 2
   (nano-set-face 'nano-string "grey70")
   (nano-install-theme))
-
-(set-face-attribute 'vertical-border nil :inherit 'nano-faded)
 
 ;; --- Command line theme chooser -------------------------------------------
 (add-to-list 'command-switch-alist '("-dark"  . nano-dark))
@@ -209,10 +204,9 @@
     (error (save-buffers-kill-terminal))))
 
 (bind-key "C-x C-m" #'execute-extended-command)
+(bind-key "C-x m" #'execute-extended-command)
 (bind-key "C-o" #'other-window)
 (bind-key "C-x ;" #'comment-line)
-(bind-key "C-\\" (lambda nil (interactive)
-                   (term "fish")))
 (bind-key "C-h ." (lambda nil (interactive)
                     (if (derived-mode-p 'emacs-lisp-mode)
                         (describe-symbol (symbol-at-point))
@@ -235,7 +229,7 @@
 (bind-key "C-x f" #'recentf-open)
 (bind-key "C-g" #'nano-quit)
 ;; (bind-key "M-n" #'make-frame)
-(bind-key "C-z"  nil) ;; No suspend frame
+(bind-key "C-z"  #'restart-emacs)
 (bind-key "C-<wheel-up>" nil) ;; No text resize via mouse scroll
 (bind-key "C-<wheel-down>" nil) ;; No text resize via mouse scroll
 
@@ -244,7 +238,10 @@
 (setq-default tab-width 4
               completion-styles
               '(basic partial-completion substring flex emacs22)
+              completion-cycle-threshold t
+              cursor-type '(bar . 3)
               line-spacing 3
+              initial-scratch-message nil
               abbrev-mode t
               indent-tabs-mode nil
               mouse-wheel-tilt-scroll t
@@ -265,6 +262,8 @@
 (save-place-mode 1) (global-subword-mode 1) (winner-mode 1)
 (savehist-mode 1) (which-key-mode 1) (delete-selection-mode 1)
 (global-auto-revert-mode 1) (which-function-mode 1)
+(require 'server)
+(unless (server-running-p) (server-start))
 
 (setq auto-save-file-name-transforms `((".*" "~/.emacs.d/backup/" t))
       backup-directory-alist `(("." . "~/.emacs.d/backup/"))
@@ -331,12 +330,14 @@
 (push "~/.emacs.d/info" Info-default-directory-list)
 
 (dolist (pops '(("^\\*term.*\\*$" . -1)
+                ("\\*eshell-pop\\*" . -1)
                 ("^\\*compilation.*\\*$" . -1)
                 ("vc-git :.\*" . 0)
                 ("\\*vc.\*-log\\*" . 0)
-                ("\\*log-edit-files\\*" . 1)
                 ("\\*eldoc\\*" . 0)
                 ("\\*Help\\*" . 0)
+                ("\\*Warnings\\*" . 1)
+                ("\\*log-edit-files\\*" . 1)
                 ("\\*Occur.*\\*$" . 1)
                 ("\\*grep.*\\*$" . 1)))
   (add-to-list 'display-buffer-alist
@@ -348,8 +349,8 @@
                  (window-height . 0.33))))
 
 (dolist (modes '(help-mode-hook vc-git-log-edit-mode-hook
-                 compilation-mode-hook term-mode-hook
-                 occur-hook grep-mode-hook special-mode-hook))
+                                compilation-mode-hook term-mode-hook eshell-mode-hook
+                                occur-hook grep-mode-hook special-mode-hook))
   (add-hook modes (lambda () (setq-local header-line-format nil))))
 
 (bind-key "q" #'kill-buffer-and-window occur-mode-map)
@@ -366,6 +367,7 @@
   "Discard all themes before loading new."
   (mapc #'disable-theme custom-enabled-themes))
 
+;; --- Shell/term/compile ---------------------------------------------------
 (define-advice term-handle-exit (:after (&rest _args) term-kill-on-exit)
   (kill-buffer-and-window))
 
@@ -389,9 +391,86 @@
             (define-key term-raw-map "\M-w" 'kill-ring-save)
             (define-key term-raw-map "\M-j" 'window-toggle-side-windows)))
 
+;; Eshell refs:
+;; https://github.com/howardabrams/dot-files/blob/master/emacs-eshell.org
+;; https://www.masteringemacs.org/article/complete-guide-mastering-eshell
+(bind-key "C-\\" (lambda nil (interactive)
+                   (defvar eshell-buffer-name)
+                   (let ((eshell-buffer-name "*eshell-pop*"))
+                     (eshell))))
+(setq eshell-aliases-file "~/.config/alias"
+      eshell-scroll-to-bottom-on-input 'all
+      eshell-hist-ignoredups t
+      eshell-history-size 20000
+      eshell-save-history-on-exit t
+      eshell-glob-case-insensitive t)
+
+(defun my-eshell-read-aliases-list ()
+  "Read in an aliases list from `eshell-aliases-file' using bash format."
+  (interactive)
+  (when (and eshell-aliases-file
+             (file-readable-p eshell-aliases-file))
+    (setq eshell-command-aliases-list
+          (with-temp-buffer
+            (let (eshell-command-aliases-list)
+              (insert-file-contents eshell-aliases-file)
+              (while (not (eobp))
+                (if (re-search-forward
+                     "^alias\\s-+\\(\\S-+\\)=\"\\(.+\\)\"$")
+                    (setq eshell-command-aliases-list
+                          (cons (list (match-string 1)
+                                      (concat (match-string 2) " $1"))
+                                eshell-command-aliases-list)))
+                (forward-line 1))
+              eshell-command-aliases-list)))))
+(advice-add 'eshell-read-aliases-list :override #'my-eshell-read-aliases-list)
+
+(defun eshell-insert-history () ; src: howard abrams
+  "Displays the eshell history to select and insert back into your eshell."
+  (interactive)
+  (insert (completing-read "Eshell history: "
+                           (delete-dups
+                            (ring-elements eshell-history-ring)))))
+
+(defun my-eshell-narrow-to-prompt ()
+  "Narrow buffer to prompt at point. src: ambrevar"
+  (interactive)
+  (narrow-to-region
+   (save-excursion
+     (forward-line)
+     (call-interactively #'eshell-previous-prompt)
+     (beginning-of-line)
+     (point))
+   (save-excursion
+     (forward-line)
+     (call-interactively #'eshell-next-prompt)
+     (re-search-backward eshell-prompt-regexp nil t)
+     (when (and (require 'eshell-prompt-extras nil 'noerror)
+                (eq eshell-prompt-function #'epe-theme-multiline-with-status))
+       (previous-line))
+     (point))))
+
+(with-eval-after-load 'em-term
+  (dolist (cmd '("fzf" "yazi" "mpv" "emacsclient"))
+    (add-to-list 'eshell-visual-commands cmd))
+  (add-to-list 'eshell-visual-options '("git" "--help" "--paginate" "--patch"))
+  (add-to-list 'eshell-visual-subcommands '("git" "log" "diff" "show")))
+
+;; (with-eval-after-load 'eshell
+;;   (add-to-list 'eshell-modules-list 'eshell-rebind)
+;;   (add-to-list 'eshell-modules-list 'eshell-smart))
+(add-hook 'eshell-mode-hook
+          #'(lambda ()
+              (goto-address-mode)
+              (setq-local global-hl-line-mode nil)
+              (setenv "TERM" "xterm-256color")
+              (keymap-unset eshell-hist-mode-map "<up>" t)
+              (keymap-unset eshell-hist-mode-map "<down>" t)
+              (bind-key "C-x n d" #'my-eshell-narrow-to-prompt eshell-mode-map)
+              (bind-key "C-r" #'eshell-insert-history eshell-hist-mode-map)))
+
 (unless (display-graphic-p)
-  (bind-key "M-c" (lambda ()
-                    (interactive)
+  (bind-key "M-c" (lambda () (interactive)
                     (when (use-region-p)
                       (let* ((clipboard-commands
                               '(("darwin" . "pbcopy")
@@ -407,6 +486,13 @@
                           (deactivate-mark))))))
   (xterm-mouse-mode))
 
+(add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
+(add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
+
+;; --- Programming ----------------------------------------------------------
+(bind-key "C-c C-c" #'compile prog-mode-map)
+(bind-key "C-c C-r" #'recompile prog-mode-map)
+
 (add-hook 'prog-mode-hook
           (lambda ()
             (font-lock-add-keywords
@@ -414,12 +500,6 @@
              '(("\\<\\(FIXME\\|HACK\\|TODO\\|WIP\\|BUG\\|DONE\\)"
                 1 font-lock-warning-face t)
                (";" . 'font-lock-comment-face)))))
-
-;; --- Programming ----------------------------------------------------------
-(add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
-(add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
-(bind-key "C-c C-c" #'compile prog-mode-map)
-(bind-key "C-c C-r" #'recompile prog-mode-map)
 
 (with-eval-after-load 'treesit
   (defun my/setup-install-grammars ()
@@ -529,14 +609,25 @@
       (insert initial-key))))
 
 ;; mini meow
+(define-global-minor-mode global-view-mode view-mode
+  (lambda () ; src: xenodium
+    (when (and (not (minibufferp)) (not noninteractive)
+               (derived-mode-p 'prog-mode 'conf-mode 'special-mode 'outline-mode))
+      (view-mode 1))))
+(global-view-mode 1)
+(add-hook 'view-mode-hook
+          (lambda nil (setq cursor-type (if view-mode 'box 'bar))))
 (bind-key "j" (lambda nil (interactive)
                 (my-chord ?j ?k 'view-mode)))
 (with-eval-after-load 'view
+  (bind-key "a" #'move-beginning-of-line view-mode-map)
+  (bind-key "e" #'move-end-of-line view-mode-map)
   (bind-key "h" #'backward-char view-mode-map)
   (bind-key "j" #'next-line view-mode-map)
   (bind-key "k" #'previous-line view-mode-map)
   (bind-key "l" #'forward-char view-mode-map)
   (bind-key "i" #'View-exit view-mode-map)
+  (bind-key "y" #'kill-ring-save view-mode-map)
   (bind-key ";" #'keyboard-quit view-mode-map)
   (bind-key "SPC" ctl-x-map view-mode-map))
 
