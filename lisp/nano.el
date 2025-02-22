@@ -210,6 +210,7 @@
 
 (bind-key "C-x C-m" #'execute-extended-command)
 (bind-key "C-o" #'other-window)
+(bind-key "C-x ;" #'comment-line)
 (bind-key "C-\\" (lambda nil (interactive)
                    (term "fish")))
 (bind-key "C-h ." (lambda nil (interactive)
@@ -351,8 +352,15 @@
                  occur-hook grep-mode-hook special-mode-hook))
   (add-hook modes (lambda () (setq-local header-line-format nil))))
 
+(bind-key "q" #'kill-buffer-and-window occur-mode-map)
+(with-eval-after-load 'help-mode
+  (define-key help-mode-map "q" #'kill-buffer-and-window))
+
 (setopt switch-to-buffer-obey-display-actions t)
 (bind-key "M-j" #'window-toggle-side-windows)
+
+(bind-key "C-o" #'other-window occur-mode-map)
+(bind-key "TAB" #'occur-mode-display-occurrence occur-mode-map)
 
 (define-advice load-theme (:before (&rest _args) theme-dont-propagate)
   "Discard all themes before loading new."
@@ -398,6 +406,14 @@
                            (region-beginning) (region-end) copy-cmd)
                           (deactivate-mark))))))
   (xterm-mouse-mode))
+
+(add-hook 'prog-mode-hook
+          (lambda ()
+            (font-lock-add-keywords
+             nil
+             '(("\\<\\(FIXME\\|HACK\\|TODO\\|WIP\\|BUG\\|DONE\\)"
+                1 font-lock-warning-face t)
+               (";" . 'font-lock-comment-face)))))
 
 ;; --- Programming ----------------------------------------------------------
 (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
@@ -501,6 +517,29 @@
     (set-window-margins nil margin margin)))
 (bind-key "<f9>" #'toggle-centered-buffer)
 
+(defun my-chord (initial-key final-key fn) ;; src: wasamasa
+  (interactive)
+  (let* ((timeout 0.4)
+         (event (read-event nil nil timeout)))
+    (if event ;; timeout met
+        (if (and (characterp event) (= event final-key))
+            (funcall fn)
+          (insert initial-key)
+          (push event unread-command-events))
+      (insert initial-key))))
+
+;; mini meow
+(bind-key "j" (lambda nil (interactive)
+                (my-chord ?j ?k 'view-mode)))
+(with-eval-after-load 'view
+  (bind-key "h" #'backward-char view-mode-map)
+  (bind-key "j" #'next-line view-mode-map)
+  (bind-key "k" #'previous-line view-mode-map)
+  (bind-key "l" #'forward-char view-mode-map)
+  (bind-key "i" #'View-exit view-mode-map)
+  (bind-key ";" #'keyboard-quit view-mode-map)
+  (bind-key "SPC" ctl-x-map view-mode-map))
+
 ;; --- OSX Specific ---------------------------------------------------------
 (when (eq system-type 'darwin)
   (select-frame-set-input-focus (selected-frame))
@@ -512,9 +551,10 @@
 ;; --- Header & mode lines --------------------------------------------------
 (setq-default header-line-format
               '(:eval
-                (let ((prefix (cond (buffer-read-only     '("RO" . nano-default-i))
-                                    ((buffer-modified-p)  '("**" . nano-critical-i))
-                                    (t                    '("%p" . nano-faded-i))))
+                (let ((prefix (cond (view-mode            '("[N]" . nano-string-i))
+                                    (buffer-read-only     '("RO"  . nano-default-i))
+                                    ((buffer-modified-p)  '("**"  . nano-critical-i))
+                                    (t                    '("%p"  . nano-faded-i))))
                       (box-face '(:line-width 4 :style flat-button))
                       (coords (concat
                                (truncate-string-to-width
