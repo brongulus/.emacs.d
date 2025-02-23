@@ -9,11 +9,7 @@
 ;; Usage (command line):  emacs -Q -l nano.el -[light|dark]
 
 ;; --- Speed benchmarking ---------------------------------------------------
-(load "~/.emacs.d/lisp/benchmarking" :noerr :no-message)
-
-;; Place at the very start of init.el
-;; (require 'profiler)
-;; (profiler-start 'cpu)
+;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
 
 (setq init-start-time (current-time))
 (setq inhibit-startup-screen t)
@@ -314,7 +310,6 @@
               line-spacing 3
               imenu-flatten t
               initial-scratch-message nil
-              abbrev-mode t
               indent-tabs-mode nil
               mouse-wheel-tilt-scroll t
               mouse-wheel-flip-direction t
@@ -333,10 +328,18 @@
 (add-hook 'conf-mode-hook #'display-line-numbers-mode)
 
 (save-place-mode 1) (global-subword-mode 1) (winner-mode 1)
-(savehist-mode 1) (which-key-mode 1) (delete-selection-mode 1)
+
+(defun my/lazy-load-savehist ()
+  "Enable `savehist-mode` only when the minibuffer is first used."
+  (savehist-mode 1)
+  (remove-hook 'minibuffer-setup-hook #'my/lazy-load-savehist))
+(add-hook 'minibuffer-setup-hook #'my/lazy-load-savehist)
+
+(which-key-mode 1) (delete-selection-mode 1)
 (global-auto-revert-mode 1) (which-function-mode 1)
-(require 'server)
-(unless (server-running-p) (server-start))
+(run-with-idle-timer 1 nil
+                     #'(lambda nil (require 'server)
+                         (unless (server-running-p) (server-start))))
 
 (setq auto-save-file-name-transforms `((".*" "~/.emacs.d/backup/" t))
       backup-directory-alist `(("." . "~/.emacs.d/backup/"))
@@ -420,6 +423,13 @@
 
 ;; install-info --dir-file=./dir --info-file=
 (push "~/.emacs.d/info" Info-default-directory-list)
+
+(defun silent-command (fn &rest args)
+  "Used to suppress output of FN."
+  (let ((inhibit-message t)
+        (message-log-max nil)
+        (save-silently t))
+    (apply fn args)))
 
 (dolist (pops '(("^\\*term.*\\*$" . -1) ("\\*eshell-pop\\*" . -1)
                 ("^\\*compilation.*\\*$" . -1)
@@ -511,7 +521,7 @@
             (lambda nil (interactive)
               (defvar eshell-buffer-name)
               (let ((eshell-buffer-name "*eshell-pop*"))
-                (eshell))))
+                (silent-command 'eshell))))
 (setq eshell-aliases-file "~/.config/alias"
       eshell-scroll-to-bottom-on-input 'all
       eshell-hist-ignoredups t
@@ -546,6 +556,12 @@
                            (delete-dups
                             (ring-elements eshell-history-ring)))))
 
+(with-eval-after-load 'em-term
+  (dolist (cmd '("fzf" "yazi" "mpv" "emacsclient" "bat"))
+    (add-to-list 'eshell-visual-commands cmd))
+  (add-to-list 'eshell-visual-options '("git" "--help" "--paginate" "--patch"))
+  (add-to-list 'eshell-visual-subcommands '("git" "log" "diff" "show")))
+
 (defun my-eshell-narrow-to-prompt ()
   "Narrow buffer to prompt at point. src: ambrevar."
   (interactive)
@@ -563,12 +579,6 @@
                 (eq eshell-prompt-function #'epe-theme-multiline-with-status))
        (previous-line))
      (point))))
-
-(with-eval-after-load 'em-term
-  (dolist (cmd '("fzf" "yazi" "mpv" "emacsclient" "bat"))
-    (add-to-list 'eshell-visual-commands cmd))
-  (add-to-list 'eshell-visual-options '("git" "--help" "--paginate" "--patch"))
-  (add-to-list 'eshell-visual-subcommands '("git" "log" "diff" "show")))
 
 (with-eval-after-load 'eshell
   (add-hook 'eshell-mode-hook #'completion-preview-mode)
@@ -600,6 +610,7 @@
                       (call-process-region
                        (region-beginning) (region-end) copy-cmd)
                       (deactivate-mark))))))
+  (menu-bar-mode -1)
   (xterm-mouse-mode))
 
 (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
@@ -822,6 +833,3 @@
             (propertize (format "(+ %.2fs system time)"
                                 (- total-time init-time))
                         'face 'shadow))))
-
-;; (profiler-report)
-;; (profiler-stop)
