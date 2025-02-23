@@ -2,6 +2,7 @@
 .doom.d/webkit/cookies
 .doom.d/webkit/history
 auto-save-list/
+backup/
 eln-cache/
 elpa/
 eshell/

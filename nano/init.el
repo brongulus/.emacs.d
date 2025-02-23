@@ -1,4 +1,4 @@
-;; nano-emacs.el --- NANO Emacs (minimal version)  -*- lexical-binding: t -*-
+;; init.el --- NANO Emacs (minimal version)  -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2025  Nicolas P. Rougier
 ;; Released under the GNU General Public License 3.0
@@ -9,14 +9,13 @@
 ;; Usage (command line):  emacs -Q -l nano.el -[light|dark]
 
 ;; --- Speed benchmarking ---------------------------------------------------
-(load "~/.emacs.d/lisp/benchmarking" t :no-message)
+(load "~/.emacs.d/lisp/benchmarking" :noerr :no-message)
+
+;; Place at the very start of init.el
+;; (require 'profiler)
+;; (profiler-start 'cpu)
 
 (setq init-start-time (current-time))
-(setq gc-cons-threshold most-positive-fixnum)
-(add-hook 'emacs-startup-hook
-          (lambda () (setq gc-cons-threshold (* 1024 1024 16))))
-(run-with-idle-timer 2 t #'garbage-collect)
-
 (setq inhibit-startup-screen t)
 
 ;; --- Typography stack -----------------------------------------------------
@@ -32,20 +31,18 @@
 
 ;; --- Frame / windows layout & behavior ------------------------------------
 (setq default-frame-alist
-      '((height . 44) (width  . 81) (left-fringe . 0) (right-fringe . 0)
-        (internal-border-width . 20) (vertical-scroll-bars . nil)
-        (bottom-divider-width . 0) (right-divider-width . 0)
-        (undecorated-round . t)))
+      '((left-fringe . 0) (right-fringe . 0) (internal-border-width . 20)
+        (bottom-divider-width . 0) (right-divider-width . 0) (undecorated-round . t)))
 (modify-frame-parameters nil default-frame-alist)
 (setq-default pop-up-windows nil)
 (setq-default mode-line-format "")
 
 ;; --- Activate / Deactivate modes ------------------------------------------
-(tool-bar-mode -1) (menu-bar-mode -1) (blink-cursor-mode -1)
-(global-hl-line-mode 1) (icomplete-vertical-mode 1)
-(pixel-scroll-precision-mode 1)
+(blink-cursor-mode -1) (global-hl-line-mode 1)
+(icomplete-vertical-mode 1) (pixel-scroll-precision-mode 1)
 
 ;; --- Minimal NANO (not a real) theme --------------------------------------
+(defvar nano-current-theme 'dark "Current nano variant being used.")
 (defface nano-default '((t)) ".")   (defface nano-default-i '((t)) ".")
 (defface nano-highlight '((t)) ".") (defface nano-highlight-i '((t)) ".")
 (defface nano-subtle '((t)) ".")    (defface nano-subtle-i '((t)) ".")
@@ -114,10 +111,33 @@
                   ((nano-faded-i nano-strong) . (show-paren-match))))
     (nano-link-face (car item) (cdr item)))
 
-  (set-face-attribute 'font-lock-string-face nil :slant 'italic)
+  (set-face-attribute 'font-lock-string-face nil :slant 'italic :weight 'semi-bold)
   (set-face-attribute 'link nil :underline t)
   (set-face-attribute 'vertical-border nil :inherit 'nano-faded)
-  (set-face-attribute 'eglot-highlight-symbol-face nil :inverse-video t)
+
+  (when (eq system-type 'darwin)
+    (modify-all-frames-parameters `((ns-appearance . ,nano-current-theme))))
+  
+  (with-eval-after-load 'ansi-color
+    (let* ((color-themes ;; ansi-colors
+            '((black . ((dark . "#30343d") (light . "#EEEEEE")))
+              (red . ((dark . "#c47779") (light . "#c56655")))
+              (green . ((dark . "#a7bf87") (light . "#5f8700")))
+              (yellow . ((dark . "#d9c18c") (light . "#bb9200")))
+              (blue . ((dark . "#81a2be") (light . "#6079db")))
+              (magenta . ((dark . "#b294bb") (light . "#7646c1")))
+              (cyan . ((dark . "#7b2bd") (light . "#6594bd")))
+              (white . ((dark . "#cccccc") (light . "#1a1a1a")))))
+           (theme-variant (if (eq nano-current-theme 'light) 'light 'dark)))
+      (dolist (color-def color-themes)
+        (let* ((color-name (car color-def))
+               (color-value (alist-get theme-variant (cdr color-def))))
+          (set-face-attribute
+           (intern (format "ansi-color-%s" color-name))
+           nil
+           :foreground color-value
+           :background color-value)))))
+  
   ;; Mode & header lines
   (set-face-attribute 'header-line nil
                       :background 'unspecified
@@ -145,6 +165,7 @@
   (nano-set-face 'nano-popout "#FFAB91") ;; Deep Orange / L200
   (nano-set-face 'nano-critical "#FF6F00") ;; Amber / L900
   (nano-set-face 'nano-string "grey50")
+  (setq nano-current-theme 'light)
   (nano-install-theme))
 
 (defun nano-dark (&rest args)
@@ -152,19 +173,57 @@
   (interactive)
   (nano-set-face 'nano-default "#ECEFF4" "#282C33") ;; Snow Storm 3
   (nano-set-face 'nano-strong "#ECEFF4" nil 'regular) ;; Polar Night 0
-  (nano-set-face 'nano-highlight nil "#3B4252")  ;; Polar Night 1
+  (nano-set-face 'nano-highlight nil "#21242b")  ;; Polar Night 1
   (nano-set-face 'nano-subtle nil "#434C5E") ;; Polar Night 2
   (nano-set-face 'nano-faded "#677691") ;; 
   (nano-set-face 'nano-salient "#81A1C1")  ;; Frost 2
   (nano-set-face 'nano-popout "#D08770") ;; Aurora 1
   (nano-set-face 'nano-critical "#EBCB8B") ;; Aurora 2
   (nano-set-face 'nano-string "grey70")
+  (setq nano-current-theme 'dark)
   (nano-install-theme))
 
 ;; --- Command line theme chooser -------------------------------------------
 (add-to-list 'command-switch-alist '("-dark"  . nano-dark))
 (add-to-list 'command-switch-alist '("-light" . nano-light))
 (if (member "-dark" command-line-args) (nano-dark) (nano-light))
+
+;; --- Header & mode lines --------------------------------------------------
+(setq nano-header-line
+      '(:eval
+        (let ((prefix (cond ((buffer-modified-p)  '("**"  . nano-critical-i))
+                            (view-mode            '("[N]" . nano-string-i))
+                            (buffer-read-only     '("RO"  . nano-default-i))
+                            (t                    '("%p"  . nano-faded-i))))
+              (box-face '(:line-width 4 :style flat-button))
+              (coords (concat
+                       (truncate-string-to-width
+                        (format-mode-line
+                         (when which-function-mode
+                           which-func-current))
+                        20 nil nil t)
+                       (format-mode-line " %c:%l ")))
+              (tabs (let* ((tabs (length (tab-bar-tabs)))
+                           (active-tab (tab-bar--current-tab-index)))
+                      (if (<= tabs 1)
+                          ""
+                        (let ((result '()))
+                          (dotimes (i tabs)
+                            (if (= i active-tab)
+                                (push (format "[%d]" (1+ i)) result)
+                              (push (format "%d" (1+ i)) result)))
+                          (concat " " (mapconcat 'identity (reverse result) " ") " "))))))
+          (list
+           (propertize (concat " " (car prefix) " ")
+                       'face `(,(cdr prefix) :box ,box-face))
+           (propertize (format-mode-line " %b") 'face `(nano-strong :box ,box-face))
+           (propertize (format-mode-line vc-mode)
+                       'face `(:foreground "dark cyan" :box ,box-face))
+           (propertize " " 'face `(:box ,box-face)
+                       'display `(space :align-to (- right ,(+ (length coords) (length tabs)))))
+           (propertize coords 'face `(nano-faded :box ,box-face))
+           (propertize tabs 'face `(nano-faded-i :box ,box-face))))))
+(setq-default header-line-format nano-header-line)
 
 ;; --- Minibuffer completion ------------------------------------------------
 (setq tab-always-indent 'complete
@@ -179,13 +238,22 @@
       icomplete-in-buffer t
       icomplete-max-delay-chars 0
       icomplete-scroll t
-      resize-mini-windows 'grow-only
-      icomplete-matches-format nil)
-(bind-key "TAB" #'icomplete-forward-completions icomplete-minibuffer-map)
-(bind-key "<backtab>" #'icomplete-backward-completions icomplete-minibuffer-map)
-(bind-key "RET" #'icomplete-fido-ret icomplete-minibuffer-map)
-(bind-key "<escape>" #'minibuffer-keyboard-quit icomplete-minibuffer-map)
-(bind-key "DEL" #'icomplete-fido-backward-updir icomplete-minibuffer-map)
+      resize-mini-windows 'grow-only)
+(with-eval-after-load 'icomplete
+  (define-key icomplete-minibuffer-map (kbd "TAB") #'icomplete-forward-completions)
+  (define-key icomplete-minibuffer-map (kbd "<backtab>") #'icomplete-backward-completions)
+  (define-key icomplete-minibuffer-map (kbd "RET") #'icomplete-fido-ret)
+  (define-key icomplete-minibuffer-map (kbd "<escape>") #'minibuffer-keyboard-quit)
+  (define-key icomplete-minibuffer-map (kbd "DEL") #'icomplete-fido-backward-updir))
+
+(defun file-capf ()
+  "File completion at point function. src: eshelyaron."
+  (pcase (bounds-of-thing-at-point 'filename)
+    (`(,beg . ,end)
+     (list beg end #'completion-file-name-table
+           :annotation-function (lambda (_) " File")
+           :exclusive 'no))))
+(add-hook 'completion-at-point-functions #'file-capf)
 
 ;; --- Minimal key bindings -------------------------------------------------
 (defun nano-quit ()
@@ -208,33 +276,33 @@
        (with-selected-window (other-window-for-scrolling)
          (scroll-down-command 5)))
 
-(bind-key "C-x C-m" #'execute-extended-command)
-(bind-key "C-x m" #'execute-extended-command)
-(bind-key "C-x x b" #'ibuffer)
-(bind-key "C-x x c" #'save-buffers-kill-emacs)
-(bind-key "C-x x e" #'eval-last-sexp)
-(bind-key "C-x x f" #'find-file)
-(bind-key "C-x x s" #'save-buffer)
-(bind-key "C-x x z" #'restart-emacs)
-(bind-key "C-o" #'other-window)
-(bind-key "C-x ;" #'comment-line)
-(bind-key "C-h ." #'my-goto-doc)
-(bind-key "C-h '" #'describe-face)
-(bind-key "C-," #'my-scroll-other-down)
-(bind-key "C-." #'my-scroll-other-up)
-(bind-key "C-x v e" #'vc-ediff)
-(bind-key "C-x v f" (lambda () (interactive)
-                      (vc-git--pushpull "push" nil '("--force-with-lease"))))
-(bind-key "C-<tab>" #'tab-next)
-(bind-key "C-S-<tab>" #'tab-previous)
-(bind-key "C-x C-b" #'ibuffer)
-(bind-key "M-s r" #'replace-regexp)
-(bind-key "C-x k" #'kill-current-buffer)
-(bind-key "C-x f" #'recentf-open)
-(bind-key "C-g" #'nano-quit)
-(bind-key "C-z"  #'restart-emacs)
-(bind-key "C-<wheel-up>" nil) ;; No text resize via mouse scroll
-(bind-key "C-<wheel-down>" nil) ;; No text resize via mouse scroll
+(define-key (current-global-map) (kbd "C-x C-m") #'execute-extended-command)
+(define-key (current-global-map) (kbd "C-x m") #'execute-extended-command)
+(define-key (current-global-map) (kbd "C-x x b") #'ibuffer)
+(define-key (current-global-map) (kbd "C-x x c") #'save-buffers-kill-emacs)
+(define-key (current-global-map) (kbd "C-x x e") #'eval-last-sexp)
+(define-key (current-global-map) (kbd "C-x x f") #'find-file)
+(define-key (current-global-map) (kbd "C-x x s") #'save-buffer)
+(define-key (current-global-map) (kbd "C-x x z") #'restart-emacs)
+(define-key (current-global-map) (kbd "C-o") #'other-window)
+(define-key (current-global-map) (kbd "C-x ;") #'comment-line)
+(define-key (current-global-map) (kbd "C-h .") #'my-goto-doc)
+(define-key (current-global-map) (kbd "C-h '") #'describe-face)
+(define-key (current-global-map) (kbd "C-,") #'my-scroll-other-down)
+(define-key (current-global-map) (kbd "C-.") #'my-scroll-other-up)
+(define-key (current-global-map) (kbd "C-x v e") #'vc-ediff)
+(define-key (current-global-map) (kbd "C-x v f")
+            (lambda () (interactive) (vc-git--pushpull "push" nil '("--force-with-lease"))))
+(define-key (current-global-map) (kbd "C-<tab>") #'tab-next)
+(define-key (current-global-map) (kbd "C-S-<tab>") #'tab-previous)
+(define-key (current-global-map) (kbd "C-x C-b") #'ibuffer)
+(define-key (current-global-map) (kbd "M-s r") #'replace-regexp)
+(define-key (current-global-map) (kbd "C-x k") #'kill-current-buffer)
+(define-key (current-global-map) (kbd "C-x f") #'recentf-open)
+(define-key (current-global-map) (kbd "C-g") #'nano-quit)
+(define-key (current-global-map) (kbd "C-z")  #'restart-emacs)
+(define-key (current-global-map) (kbd "C-<wheel-up>") nil) ;; No text resize via mouse scroll
+(define-key (current-global-map) (kbd "C-<wheel-down>") nil) ;; No text resize via mouse scroll
 
 ;; --- Sane settings --------------------------------------------------------
 (set-default-coding-systems 'utf-8)
@@ -277,7 +345,7 @@
       comint-prompt-read-only t
       compilation-ask-about-save nil
       completion-ignore-case t
-      completion-auto-help nil
+      completion-auto-help 'lazy;nil
       confirm-kill-emacs 'yes-or-no-p
       dired-dwim-target t
       dired-omit-verbose nil
@@ -321,15 +389,20 @@
       sentence-end-double-space nil)
 
 (with-eval-after-load 'isearch
-  (bind-key "TAB" #'isearch-repeat-forward isearch-mode-map)
-  (bind-key "<backtab>" #'isearch-repeat-backward isearch-mode-map))
+  (define-key isearch-mode-map (kbd "TAB") #'isearch-repeat-forward)
+  (define-key isearch-mode-map (kbd "<backtab>") #'isearch-repeat-backward))
+
+(with-eval-after-load 'completion-preview
+  (define-key completion-preview-active-mode-map (kbd "M-n") #'completion-preview-next-candidate)
+  (define-key completion-preview-active-mode-map (kbd "M-p") #'completion-preview-prev-candidate))
 
 (with-eval-after-load 'dired
+  (set-face-attribute 'dired-directory nil :slant 'italic)
   (put 'dired-find-alternate-file 'disabled nil)
-  (bind-key "\\" #'dired-up-directory dired-mode-map)
-  (bind-key "q" #'kill-current-buffer dired-mode-map)
-  (bind-key "RET" #'dired-find-alternate-file dired-mode-map)
-  (bind-key "C-o" #'other-window dired-mode-map))
+  (define-key dired-mode-map (kbd "\\") #'dired-up-directory)
+  (define-key dired-mode-map (kbd "q") #'kill-current-buffer)
+  (define-key dired-mode-map (kbd "RET") #'dired-find-alternate-file)
+  (define-key dired-mode-map (kbd "C-o") #'other-window))
 
 (with-eval-after-load 'eww
   (setq eww-header-line-format nil)
@@ -364,20 +437,37 @@
                  (slot . ,(cdr pops))
                  (window-height . 0.33))))
 
+(defun toggle-side-normal-window ()
+  "Toggle the current window between a side window and a normal window."
+  (interactive)
+  (let* ((window (selected-window))
+         (buffer (window-buffer window))
+         (side (window-parameter window 'window-side)))
+    (delete-window window)
+    (if side
+        (let ((display-buffer-overriding-action '((display-buffer-pop-up-window))))
+          (pop-to-buffer buffer)
+          (setq-local header-line-format nano-header-line))
+      (progn
+        (display-buffer buffer)
+        (setq-local header-line-format nil)))))
+
+(define-key (current-global-map) (kbd "<f10>") #'toggle-side-normal-window)
+
 (dolist (modes '(help-mode-hook vc-git-log-edit-mode-hook
                                 compilation-mode-hook term-mode-hook eshell-mode-hook
                                 occur-hook grep-mode-hook special-mode-hook))
   (add-hook modes (lambda () (setq-local header-line-format nil))))
 
-(bind-key "q" #'kill-buffer-and-window occur-mode-map)
 (with-eval-after-load 'help-mode
   (define-key help-mode-map "q" #'kill-buffer-and-window))
 
 (setopt switch-to-buffer-obey-display-actions t)
-(bind-key "M-j" #'window-toggle-side-windows)
+(define-key (current-global-map) (kbd "M-j") #'window-toggle-side-windows)
 
-(bind-key "C-o" #'other-window occur-mode-map)
-(bind-key "TAB" #'occur-mode-display-occurrence occur-mode-map)
+(define-key occur-mode-map (kbd "q") #'kill-buffer-and-window)
+(define-key occur-mode-map (kbd "C-o") #'other-window)
+(define-key occur-mode-map (kbd "TAB") #'occur-mode-display-occurrence)
 
 (define-advice load-theme (:before (&rest _args) theme-dont-propagate)
   "Discard all themes before loading new."
@@ -385,7 +475,12 @@
 
 ;; --- Shell/term/compile ---------------------------------------------------
 (define-advice term-handle-exit (:after (&rest _args) term-kill-on-exit)
-  (kill-buffer-and-window))
+  (kill-buffer))
+
+(with-eval-after-load 'comint
+  (add-hook 'comint-mode-hook #'completion-preview-mode))
+(with-eval-after-load 'comint
+  (add-hook 'comint-mode-hook #'completion-preview-mode))
 
 (add-hook 'compilation-mode-hook
           (lambda nil
@@ -401,19 +496,22 @@
 
 (add-hook 'term-mode-hook
           (lambda ()
+            (setq-local global-hl-line-mode nil)
             (term-set-escape-char ?\C-x)
             (define-key term-raw-map "\C-o" 'other-window)
             (define-key term-raw-map "\M-y" 'yank-pop)
+            (define-key term-raw-map "\C-y" 'yank)
             (define-key term-raw-map "\M-w" 'kill-ring-save)
             (define-key term-raw-map "\M-j" 'window-toggle-side-windows)))
 
 ;; Eshell refs:
 ;; https://github.com/howardabrams/dot-files/blob/master/emacs-eshell.org
 ;; https://www.masteringemacs.org/article/complete-guide-mastering-eshell
-(bind-key "C-\\" (lambda nil (interactive)
-                   (defvar eshell-buffer-name)
-                   (let ((eshell-buffer-name "*eshell-pop*"))
-                     (eshell))))
+(define-key (current-global-map) (kbd "C-\\")
+            (lambda nil (interactive)
+              (defvar eshell-buffer-name)
+              (let ((eshell-buffer-name "*eshell-pop*"))
+                (eshell))))
 (setq eshell-aliases-file "~/.config/alias"
       eshell-scroll-to-bottom-on-input 'all
       eshell-hist-ignoredups t
@@ -432,7 +530,7 @@
               (insert-file-contents eshell-aliases-file)
               (while (not (eobp))
                 (if (re-search-forward
-                     "^alias\\s-+\\(\\S-+\\)=\"\\(.+\\)\"$")
+                     "^alias\\s-+\\(\\S-+\\)=\'\\(.+\\)\'$")
                     (setq eshell-command-aliases-list
                           (cons (list (match-string 1)
                                       (concat (match-string 2) " $1"))
@@ -467,12 +565,14 @@
      (point))))
 
 (with-eval-after-load 'em-term
-  (dolist (cmd '("fzf" "yazi" "mpv" "emacsclient"))
+  (dolist (cmd '("fzf" "yazi" "mpv" "emacsclient" "bat"))
     (add-to-list 'eshell-visual-commands cmd))
   (add-to-list 'eshell-visual-options '("git" "--help" "--paginate" "--patch"))
   (add-to-list 'eshell-visual-subcommands '("git" "log" "diff" "show")))
 
-;; (with-eval-after-load 'eshell
+(with-eval-after-load 'eshell
+  (add-hook 'eshell-mode-hook #'completion-preview-mode)
+  (push 'file-capf completion-at-point-functions))
 ;;   (add-to-list 'eshell-modules-list 'eshell-rebind)
 ;;   (add-to-list 'eshell-modules-list 'eshell-smart))
 (add-hook 'eshell-mode-hook
@@ -482,31 +582,32 @@
               (setenv "TERM" "xterm-256color")
               (keymap-unset eshell-hist-mode-map "<up>" t)
               (keymap-unset eshell-hist-mode-map "<down>" t)
-              (bind-key "C-x n d" #'my-eshell-narrow-to-prompt eshell-mode-map)
-              (bind-key "C-r" #'eshell-insert-history eshell-hist-mode-map)))
+              (define-key eshell-mode-map (kbd "C-x n d") #'my-eshell-narrow-to-prompt)
+              (define-key eshell-hist-mode-map (kbd "C-r") #'eshell-insert-history)))
 
 (unless (display-graphic-p)
-  (bind-key "M-c" (lambda () (interactive)
-                    (when (use-region-p)
-                      (let* ((clipboard-commands
-                              '(("darwin" . "pbcopy")
-                                ("gnu/linux" . "xclip -selection clipboard")
-                                ("windows-nt" . "clip")))
-                             (copy-cmd (or (cdr (assoc (symbol-name system-type)
-                                                       clipboard-commands))
-                                           nil)))
-                        (when copy-cmd
-                          (call-process-region
-                           (region-beginning) (region-end) copy-cmd)
-                          (deactivate-mark))))))
+  (define-key (current-global-map) (kbd "M-w")
+              (lambda () (interactive)
+                (when (use-region-p)
+                  (let* ((clipboard-commands
+                          '(("darwin" . "pbcopy")
+                            ("gnu/linux" . "xclip -selection clipboard")
+                            ("windows-nt" . "clip")))
+                         (copy-cmd (or (cdr (assoc (symbol-name system-type)
+                                                   clipboard-commands))
+                                       nil)))
+                    (when copy-cmd
+                      (call-process-region
+                       (region-beginning) (region-end) copy-cmd)
+                      (deactivate-mark))))))
   (xterm-mouse-mode))
 
 (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
 (add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
 
 ;; --- Programming ----------------------------------------------------------
-(bind-key "C-c C-c" #'compile prog-mode-map)
-(bind-key "C-c C-r" #'recompile prog-mode-map)
+(define-key prog-mode-map (kbd "C-c C-c") #'compile)
+(define-key prog-mode-map (kbd "C-c C-r") #'recompile)
 
 (add-hook 'prog-mode-hook
           (lambda ()
@@ -600,6 +701,7 @@
   (add-hook 'eglot-managed-mode-hook #'my-eglot-setup))
 
 (load "~/.emacs.d/lisp/snippets" :noerr :no-message)
+
 ;; --- Misc functions -------------------------------------------------------
 (setq-default fill-column 100)
 (defun toggle-centered-buffer ()
@@ -612,7 +714,7 @@
                    0)))
     (visual-line-mode 1)
     (set-window-margins nil margin margin)))
-(bind-key "<f9>" #'toggle-centered-buffer)
+(define-key (current-global-map) (kbd "<f9>") #'toggle-centered-buffer)
 
 (defun match-pair nil
   (interactive)
@@ -662,8 +764,7 @@
   (View-exit) (ignore-errors (call-interactively fn)) (view-mode 1))
 (add-hook 'view-mode-hook
           (lambda nil (meow--set-cursor-type (if view-mode 'box 'bar))))
-(bind-key "j" (lambda nil (interactive)
-                (my-chord ?j ?k 'view-mode)))
+(define-key (current-global-map) (kbd "j") (lambda nil (interactive) (my-chord ?j ?k 'view-mode)))
 (with-eval-after-load 'view
   ;; normal binds
   (dolist (pair '(("\\" . dired-jump) ("A" . move-beginning-of-line) ("E" . move-end-of-line)
@@ -680,9 +781,9 @@
                   ("*" . isearch-forward-symbol-at-point) ("`" . window-toggle-side-windows)
                   ("Z" . pop-to-mark-command) ("I" . eglot-find-implementation)
                   ("K" . my-goto-doc) ("G" . xref-find-definitions) ("B" . xref-go-back)
-                  ("F" . flymake-show-buffer-diagnostics) ("=" . mark-sexp)
+                  ("!" . flymake-show-buffer-diagnostics) ("=" . mark-sexp)
                   ("?" . xref-find-references)))
-    (bind-key (car pair) (cdr pair) view-mode-map))
+    (define-key view-mode-map (kbd (car pair)) (cdr pair)))
   ;; buffer modifying binds
   (dolist (pair '(("d" . kill-region) ("p" . yank) ("P" . yank-pop) ("r" . eglot-rename)
                   ("DEL" . backward-delete-char-untabify) ("&" . align-regexp)
@@ -691,12 +792,11 @@
                   ("J" . delete-indentation) ("C-k" . kill-line) ("C-/" . undo-only)
                   ("f" . hs-toggle-hiding) ("c" . hs-hide-all) ("g" . hs-show-all)
                   ("C" . string-rectangle) ("TAB" . indent-for-tab-command)))
-    (bind-key (car pair)
-              #'(lambda nil (interactive)
-                  (view-mode-edit-command (cdr pair)))
-              view-mode-map))
-  (bind-key "H" help-map view-mode-map)
-  (bind-key "SPC" ctl-x-map view-mode-map))
+    (define-key view-mode-map (kbd (car pair))
+                #'(lambda nil (interactive)
+                    (view-mode-edit-command (cdr pair)))))
+  (define-key view-mode-map (kbd "H") help-map)
+  (define-key view-mode-map (kbd "SPC") ctl-x-map))
 
 ;; --- OSX Specific ---------------------------------------------------------
 (when (eq system-type 'darwin)
@@ -706,49 +806,9 @@
         mac-right-option-modifier 'alt
         mac-command-modifier 'hyper))
 
-;; --- Header & mode lines --------------------------------------------------
-(setq-default header-line-format
-              '(:eval
-                (let ((prefix (cond ((buffer-modified-p)  '("**"  . nano-critical-i))
-                                    (view-mode            '("[N]" . nano-string-i))
-                                    (buffer-read-only     '("RO"  . nano-default-i))
-                                    (t                    '("%p"  . nano-faded-i))))
-                      (box-face '(:line-width 4 :style flat-button))
-                      (coords (concat
-                               (truncate-string-to-width
-                                (format-mode-line
-                                 (when which-function-mode
-                                   which-func-current))
-                                20 nil nil t)
-                               (format-mode-line " %c:%l ")))
-                      (tabs (let* ((tabs (length (tab-bar-tabs)))
-                                   (active-tab (tab-bar--current-tab-index)))
-                              (if (<= tabs 1)
-                                  ""
-                                (let ((result '()))
-                                  (dotimes (i tabs)
-                                    (if (= i active-tab)
-                                        (push (format "[%d]" (1+ i)) result)
-                                      (push (format "%d" (1+ i)) result)))
-                                  (concat " " (mapconcat 'identity (reverse result) " ") " "))))))
-                  (list
-                   (propertize (concat " " (car prefix) " ")
-                               'face `(,(cdr prefix) :box ,box-face))
-                   (propertize (format-mode-line " %b") 'face `(nano-strong :box ,box-face))
-                   (propertize (format-mode-line vc-mode)
-                               'face `(:foreground "dark cyan" :box ,box-face))
-                   (propertize " " 'face `(:box ,box-face)
-                               'display `(space :align-to (- right ,(+ (length coords) (length tabs)))))
-                   (propertize coords 'face `(nano-faded :box ,box-face))
-                   (propertize tabs 'face `(nano-faded-i :box ,box-face))))))
-
 ;; --- Minibuffer setup -----------------------------------------------------
 (defun nano-minibuffer--setup ()
-  (set-window-margins nil 3 0)
-  (let ((inhibit-read-only t))
-    (add-text-properties (point-min) (+ (point-min) 1)
-                         `(display ((margin left-margin)
-                                    ,(format "# %s" (substring (minibuffer-prompt) 0 1))))))
+  ;;(set-window-margins nil 3 0)
   (setq truncate-lines t)
   (setq-local line-spacing nil))
 (add-hook 'minibuffer-setup-hook #'nano-minibuffer--setup)
@@ -762,3 +822,6 @@
             (propertize (format "(+ %.2fs system time)"
                                 (- total-time init-time))
                         'face 'shadow))))
+
+;; (profiler-report)
+;; (profiler-stop)
