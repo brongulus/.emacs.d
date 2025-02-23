@@ -9,7 +9,7 @@
 ;; Usage (command line):  emacs -Q -l nano.el -[light|dark]
 
 ;; --- Speed benchmarking ---------------------------------------------------
-;; (load "~/.emacs.d/lisp/benchmarking" t :no-message)
+(load "~/.emacs.d/lisp/benchmarking" t :no-message)
 
 (setq init-start-time (current-time))
 (setq gc-cons-threshold most-positive-fixnum)
@@ -46,15 +46,15 @@
 (pixel-scroll-precision-mode 1)
 
 ;; --- Minimal NANO (not a real) theme --------------------------------------
-(defface nano-default '((t)) "")   (defface nano-default-i '((t)) "")
-(defface nano-highlight '((t)) "") (defface nano-highlight-i '((t)) "")
-(defface nano-subtle '((t)) "")    (defface nano-subtle-i '((t)) "")
-(defface nano-faded '((t)) "")     (defface nano-faded-i '((t)) "")
-(defface nano-salient '((t)) "")   (defface nano-salient-i '((t)) "")
-(defface nano-popout '((t)) "")    (defface nano-popout-i '((t)) "")
-(defface nano-strong '((t)) "")    (defface nano-strong-i '((t)) "")
-(defface nano-critical '((t)) "")  (defface nano-critical-i '((t)) "")
-(defface nano-string '((t)) "")    (defface nano-string-i '((t)) "")
+(defface nano-default '((t)) ".")   (defface nano-default-i '((t)) ".")
+(defface nano-highlight '((t)) ".") (defface nano-highlight-i '((t)) ".")
+(defface nano-subtle '((t)) ".")    (defface nano-subtle-i '((t)) ".")
+(defface nano-faded '((t)) ".")     (defface nano-faded-i '((t)) ".")
+(defface nano-salient '((t)) ".")   (defface nano-salient-i '((t)) ".")
+(defface nano-popout '((t)) ".")    (defface nano-popout-i '((t)) ".")
+(defface nano-strong '((t)) ".")    (defface nano-strong-i '((t)) ".")
+(defface nano-critical '((t)) ".")  (defface nano-critical-i '((t)) ".")
+(defface nano-string '((t)) ".")    (defface nano-string-i '((t)) ".")
 
 (defun nano-set-face (name &optional foreground background weight)
   "Set NAME and NAME-i faces with given FOREGROUND, BACKGROUND and WEIGHT."
@@ -71,14 +71,13 @@
   "Make FACES to inherit from SOURCES faces and unspecify ATTRIBUTES."
   (let ((attributes (or attributes
                         '(:foreground :background :family :weight
-                          :height :slant :overline :underline :box))))
+                                      :height :slant :overline :underline :box))))
     (dolist (face (seq-filter #'facep faces))
       (dolist (attribute attributes)
         (set-face-attribute face nil attribute 'unspecified))
       (set-face-attribute face nil :inherit sources))))
 
 (defun nano-install-theme ()
-  "Install THEME."
   (set-face-attribute 'default nil
                       :foreground (face-foreground 'nano-default)
                       :background (face-background 'nano-default))
@@ -118,6 +117,7 @@
   (set-face-attribute 'font-lock-string-face nil :slant 'italic)
   (set-face-attribute 'link nil :underline t)
   (set-face-attribute 'vertical-border nil :inherit 'nano-faded)
+  (set-face-attribute 'eglot-highlight-symbol-face nil :inverse-video t)
   ;; Mode & header lines
   (set-face-attribute 'header-line nil
                       :background 'unspecified
@@ -196,27 +196,32 @@
         ((> (minibuffer-depth) 0) (abort-recursive-edit))
         (t (keyboard-quit))))
 
-(defun nano-kill ()
-  "Delete frame or kill Emacs if there is only one frame left."
-  (interactive)
-  (condition-case nil
-      (delete-frame)
-    (error (save-buffers-kill-terminal))))
+(defun my-goto-doc nil (interactive)
+       (if (derived-mode-p 'emacs-lisp-mode)
+           (describe-symbol (symbol-at-point))
+         (eldoc-doc-buffer t)))
+
+(defun my-scroll-other-down nil (interactive)
+       (with-selected-window (other-window-for-scrolling)
+         (scroll-up-command 5)))
+(defun my-scroll-other-up nil (interactive)
+       (with-selected-window (other-window-for-scrolling)
+         (scroll-down-command 5)))
 
 (bind-key "C-x C-m" #'execute-extended-command)
 (bind-key "C-x m" #'execute-extended-command)
+(bind-key "C-x x b" #'ibuffer)
+(bind-key "C-x x c" #'save-buffers-kill-emacs)
+(bind-key "C-x x e" #'eval-last-sexp)
+(bind-key "C-x x f" #'find-file)
+(bind-key "C-x x s" #'save-buffer)
+(bind-key "C-x x z" #'restart-emacs)
 (bind-key "C-o" #'other-window)
 (bind-key "C-x ;" #'comment-line)
-(bind-key "C-h ." (lambda nil (interactive)
-                    (if (derived-mode-p 'emacs-lisp-mode)
-                        (describe-symbol (symbol-at-point))
-                      (eldoc-doc-buffer t))))
-(bind-key "C-," (lambda nil (interactive)
-                  (with-selected-window (other-window-for-scrolling)
-                    (scroll-up-command 5))))
-(bind-key "C-." (lambda nil (interactive)
-                  (with-selected-window (other-window-for-scrolling)
-                    (scroll-down-command 5))))
+(bind-key "C-h ." #'my-goto-doc)
+(bind-key "C-h '" #'describe-face)
+(bind-key "C-," #'my-scroll-other-down)
+(bind-key "C-." #'my-scroll-other-up)
 (bind-key "C-x v e" #'vc-ediff)
 (bind-key "C-x v f" (lambda () (interactive)
                       (vc-git--pushpull "push" nil '("--force-with-lease"))))
@@ -225,10 +230,8 @@
 (bind-key "C-x C-b" #'ibuffer)
 (bind-key "M-s r" #'replace-regexp)
 (bind-key "C-x k" #'kill-current-buffer)
-(bind-key "C-x C-c" #'nano-kill)
 (bind-key "C-x f" #'recentf-open)
 (bind-key "C-g" #'nano-quit)
-;; (bind-key "M-n" #'make-frame)
 (bind-key "C-z"  #'restart-emacs)
 (bind-key "C-<wheel-up>" nil) ;; No text resize via mouse scroll
 (bind-key "C-<wheel-down>" nil) ;; No text resize via mouse scroll
@@ -239,8 +242,9 @@
               completion-styles
               '(basic partial-completion substring flex emacs22)
               completion-cycle-threshold t
-              cursor-type '(bar . 3)
+              cursor-type 'bar
               line-spacing 3
+              imenu-flatten t
               initial-scratch-message nil
               abbrev-mode t
               indent-tabs-mode nil
@@ -251,13 +255,14 @@
               use-short-answers t
               uniquify-buffer-name-style 'forward)
 
-(add-hook 'after-init-hook #'repeat-mode)
+;;(add-hook 'after-init-hook #'repeat-mode)
 (add-hook 'dired-mode-hook #'dired-hide-details-mode)
 (add-hook 'dired-mode-hook #'dired-omit-mode)
 (add-hook 'prog-mode-hook (electric-pair-mode t))
+(add-hook 'prog-mode-hook #'completion-preview-mode)
+(add-hook 'prog-mode-hook #'hs-minor-mode)
 (add-hook 'prog-mode-hook #'display-line-numbers-mode)
 (add-hook 'conf-mode-hook #'display-line-numbers-mode)
-(add-hook 'prog-mode-hook #'completion-preview-mode)
 
 (save-place-mode 1) (global-subword-mode 1) (winner-mode 1)
 (savehist-mode 1) (which-key-mode 1) (delete-selection-mode 1)
@@ -296,11 +301,17 @@
       shell-kill-buffer-on-exit t
       shell-file-name (car (process-lines "which" "fish"))
       tab-bar-show nil
+      vc-display-status 'no-backend
       vc-follow-symlinks t
       which-func-unknown ""
+      xref-search-program (if (executable-find "rg") 'ripgrep 'grep)
       xref-auto-jump-to-first-xref nil ; 'move
       xref-show-definitions-function 'xref-show-definitions-buffer-at-bottom
       xref-show-xrefs-function 'xref-show-definitions-buffer-at-bottom)
+
+(when (executable-find "rg")
+  (setq grep-command "rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)"
+        grep-command-position 27))
 
 (setq isearch-wrap-pause 'no
       isearch-lazy-count t
@@ -309,8 +320,16 @@
       search-whitespace-regexp ".*?"
       sentence-end-double-space nil)
 
+(with-eval-after-load 'isearch
+  (bind-key "TAB" #'isearch-repeat-forward isearch-mode-map)
+  (bind-key "<backtab>" #'isearch-repeat-backward isearch-mode-map))
+
 (with-eval-after-load 'dired
-  (bind-key "\\" #'dired-up-directory dired-mode-map))
+  (put 'dired-find-alternate-file 'disabled nil)
+  (bind-key "\\" #'dired-up-directory dired-mode-map)
+  (bind-key "q" #'kill-current-buffer dired-mode-map)
+  (bind-key "RET" #'dired-find-alternate-file dired-mode-map)
+  (bind-key "C-o" #'other-window dired-mode-map))
 
 (with-eval-after-load 'eww
   (setq eww-header-line-format nil)
@@ -329,13 +348,10 @@
 ;; install-info --dir-file=./dir --info-file=
 (push "~/.emacs.d/info" Info-default-directory-list)
 
-(dolist (pops '(("^\\*term.*\\*$" . -1)
-                ("\\*eshell-pop\\*" . -1)
+(dolist (pops '(("^\\*term.*\\*$" . -1) ("\\*eshell-pop\\*" . -1)
                 ("^\\*compilation.*\\*$" . -1)
-                ("vc-git :.\*" . 0)
-                ("\\*vc.\*-log\\*" . 0)
-                ("\\*eldoc\\*" . 0)
-                ("\\*Help\\*" . 0)
+                ("vc-git :.\*" . 0) ("\\*vc.\*-log\\*" . 0)
+                ("\\*eldoc\\*" . 0) ("\\*Help\\*" . 0)
                 ("\\*Warnings\\*" . 1)
                 ("\\*log-edit-files\\*" . 1)
                 ("\\*Occur.*\\*$" . 1)
@@ -433,7 +449,7 @@
                             (ring-elements eshell-history-ring)))))
 
 (defun my-eshell-narrow-to-prompt ()
-  "Narrow buffer to prompt at point. src: ambrevar"
+  "Narrow buffer to prompt at point. src: ambrevar."
   (interactive)
   (narrow-to-region
    (save-excursion
@@ -476,9 +492,8 @@
                               '(("darwin" . "pbcopy")
                                 ("gnu/linux" . "xclip -selection clipboard")
                                 ("windows-nt" . "clip")))
-                             (copy-cmd (or (cdr
-                                            (assoc (symbol-name system-type)
-                                                   clipboard-commands))
+                             (copy-cmd (or (cdr (assoc (symbol-name system-type)
+                                                       clipboard-commands))
                                            nil)))
                         (when copy-cmd
                           (call-process-region
@@ -547,6 +562,8 @@
 
 (dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook))
   (add-hook mode #'eglot-ensure))
+(add-hook 'rust-ts-mode-hook
+          (lambda nil (add-to-list 'process-environment "CARGO_TERM_COLOR=always" :append)))
 
 (setq-default c-basic-offset 4)
 (add-hook 'c-mode-hook (lambda () (c-toggle-comment-style -1)))
@@ -586,7 +603,7 @@
 ;; --- Misc functions -------------------------------------------------------
 (setq-default fill-column 100)
 (defun toggle-centered-buffer ()
-  "Toggle center alignment of the buffer. Source: jamesdyer"
+  "Toggle center alignment of the buffer. Source: jamesdyer."
   (interactive)
   (let* ((current-margins (window-margins))
          (margin (if (or (equal current-margins '(0 . 0))
@@ -597,8 +614,25 @@
     (set-window-margins nil margin margin)))
 (bind-key "<f9>" #'toggle-centered-buffer)
 
-(defun my-chord (initial-key final-key fn) ;; src: wasamasa
+(defun match-pair nil
   (interactive)
+  (if (nth 3 (syntax-ppss))
+      (backward-up-list 1 t t)
+    (cond ((looking-at "\\s\(\\|\{") (forward-list 1) (backward-char 1))
+          ((looking-at "\\s\)\\|\}") (forward-char 1) (backward-list 1))
+          (t (backward-up-list 1 t t)))))
+
+(defun my/select-fwd-line (arg)
+  "Select ARG lines from current line and move cursor. src: Kaushal Modi."
+  (interactive "p")
+  (or arg (setq arg 1))
+  (when (not (use-region-p))
+    (forward-line 0)
+    (set-mark-command nil))
+  (forward-line arg))
+
+(defun my-chord (initial-key final-key fn)
+  (interactive) ;; src: wasamasa
   (let* ((timeout 0.4)
          (event (read-event nil nil timeout)))
     (if event ;; timeout met
@@ -608,27 +642,60 @@
           (push event unread-command-events))
       (insert initial-key))))
 
-;; mini meow
+;; --- Mini Meow ------------------------------------------------------------
 (define-global-minor-mode global-view-mode view-mode
   (lambda () ; src: xenodium
-    (when (and (not (minibufferp)) (not noninteractive)
-               (derived-mode-p 'prog-mode 'conf-mode 'special-mode 'outline-mode))
+    (when (and (not (minibufferp)) (not noninteractive) ; 'special-mode
+               (derived-mode-p 'messages-buffer-mode 'prog-mode 'conf-mode 'outline-mode))
       (view-mode 1))))
 (global-view-mode 1)
+(defun meow--set-cursor-type (type)
+  (if (display-graphic-p)
+      (setq cursor-type type)
+    (let* ((shape (or (car-safe type) type))
+           (param (cond ((eq shape 'bar) "6")
+                        ((eq shape 'hbar) "4")
+                        (t "2"))))
+      (send-string-to-terminal (concat "\e[" param " q")))))
+(defun view-mode-edit-command (fn)
+  (interactive)
+  (View-exit) (ignore-errors (call-interactively fn)) (view-mode 1))
 (add-hook 'view-mode-hook
-          (lambda nil (setq cursor-type (if view-mode 'box 'bar))))
+          (lambda nil (meow--set-cursor-type (if view-mode 'box 'bar))))
 (bind-key "j" (lambda nil (interactive)
                 (my-chord ?j ?k 'view-mode)))
 (with-eval-after-load 'view
-  (bind-key "a" #'move-beginning-of-line view-mode-map)
-  (bind-key "e" #'move-end-of-line view-mode-map)
-  (bind-key "h" #'backward-char view-mode-map)
-  (bind-key "j" #'next-line view-mode-map)
-  (bind-key "k" #'previous-line view-mode-map)
-  (bind-key "l" #'forward-char view-mode-map)
-  (bind-key "i" #'View-exit view-mode-map)
-  (bind-key "y" #'kill-ring-save view-mode-map)
-  (bind-key ";" #'keyboard-quit view-mode-map)
+  ;; normal binds
+  (dolist (pair '(("\\" . dired-jump) ("A" . move-beginning-of-line) ("E" . move-end-of-line)
+                  ("a" . back-to-indentation) ("e" . forward-word) ("b" . backward-word)
+                  ("v" . set-mark-command) ("h" . backward-char) ("j" . next-line)
+                  ("k" . previous-line) ("l" . forward-char) ("i" . View-exit)
+                  ("y" . kill-ring-save) ("%" . match-pair) ("o" . other-window)
+                  ("D" . View-scroll-half-page-forward) ("U" . View-scroll-half-page-backward)
+                  ("[" . tab-bar-switch-to-prev-tab) ("]" . tab-bar-switch-to-next-tab)
+                  ("x" . my/select-fwd-line) ("X" . exchange-point-and-mark) ("O" . occur)
+                  ("w" . mark-word) ("," . my-scroll-other-down) ("M-h" . mark-paragraph)
+                  ("M-j" . window-toggle-side-windows) ("C-M-h" . mark-defun)
+                  ("." . my-scroll-other-up) (";" . keyboard-quit) ("F" . ffap)
+                  ("*" . isearch-forward-symbol-at-point) ("`" . window-toggle-side-windows)
+                  ("Z" . pop-to-mark-command) ("I" . eglot-find-implementation)
+                  ("K" . my-goto-doc) ("G" . xref-find-definitions) ("B" . xref-go-back)
+                  ("F" . flymake-show-buffer-diagnostics) ("=" . mark-sexp)
+                  ("?" . xref-find-references)))
+    (bind-key (car pair) (cdr pair) view-mode-map))
+  ;; buffer modifying binds
+  (dolist (pair '(("d" . kill-region) ("p" . yank) ("P" . yank-pop) ("r" . eglot-rename)
+                  ("DEL" . backward-delete-char-untabify) ("&" . align-regexp)
+                  ("z" . undo-redo) ("u" . undo-only) ("R" . replace-regexp)
+                  ("C-x ;" . comment-line) ("C-x C-;" . comment-line)
+                  ("J" . delete-indentation) ("C-k" . kill-line) ("C-/" . undo-only)
+                  ("f" . hs-toggle-hiding) ("c" . hs-hide-all) ("g" . hs-show-all)
+                  ("C" . string-rectangle) ("TAB" . indent-for-tab-command)))
+    (bind-key (car pair)
+              #'(lambda nil (interactive)
+                  (view-mode-edit-command (cdr pair)))
+              view-mode-map))
+  (bind-key "H" help-map view-mode-map)
   (bind-key "SPC" ctl-x-map view-mode-map))
 
 ;; --- OSX Specific ---------------------------------------------------------
@@ -642,9 +709,9 @@
 ;; --- Header & mode lines --------------------------------------------------
 (setq-default header-line-format
               '(:eval
-                (let ((prefix (cond (view-mode            '("[N]" . nano-string-i))
+                (let ((prefix (cond ((buffer-modified-p)  '("**"  . nano-critical-i))
+                                    (view-mode            '("[N]" . nano-string-i))
                                     (buffer-read-only     '("RO"  . nano-default-i))
-                                    ((buffer-modified-p)  '("**"  . nano-critical-i))
                                     (t                    '("%p"  . nano-faded-i))))
                       (box-face '(:line-width 4 :style flat-button))
                       (coords (concat
@@ -669,7 +736,7 @@
                                'face `(,(cdr prefix) :box ,box-face))
                    (propertize (format-mode-line " %b") 'face `(nano-strong :box ,box-face))
                    (propertize (format-mode-line vc-mode)
-                               'face `(:foreground ,(face-background 'nano-default) :box ,box-face))
+                               'face `(:foreground "dark cyan" :box ,box-face))
                    (propertize " " 'face `(:box ,box-face)
                                'display `(space :align-to (- right ,(+ (length coords) (length tabs)))))
                    (propertize coords 'face `(nano-faded :box ,box-face))
