@@ -1,16 +1,9 @@
 ;; init.el --- NANO Emacs (minimal version)  -*- lexical-binding: t -*-
-
-;; Copyright (c) 2025  Nicolas P. Rougier
-;; Released under the GNU General Public License 3.0
-;; Author: Nicolas P. Rougier <nicolas.rougier@inria.fr>
+;; Originally themed by: Nicolas P. Rougier <nicolas.rougier@inria.fr>
 ;; URL: https://github.com/rougier/nano-emacs
-
-;; This is NANO Emacs in 256 lines, without any dependency
-;; Usage (command line):  emacs -Q -l nano.el -[light|dark]
 
 ;; --- Speed benchmarking ---------------------------------------------------
 ;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
-
 (setq init-start-time (current-time))
 (setq inhibit-startup-screen t)
 
@@ -31,7 +24,6 @@
         (bottom-divider-width . 0) (right-divider-width . 0) (undecorated-round . t)))
 (modify-frame-parameters nil default-frame-alist)
 (setq-default pop-up-windows nil)
-(setq-default mode-line-format "")
 
 ;; --- Activate / Deactivate modes ------------------------------------------
 (blink-cursor-mode -1) (global-hl-line-mode 1)
@@ -138,16 +130,22 @@
   (set-face-attribute 'header-line nil
                       :background 'unspecified
                       :underline nil
-                      :box `(:line-width 1 :color ,(face-background 'nano-default))
-                      :inherit 'nano-subtle)
+                      :overline (face-foreground 'nano-faded))
   (set-face-attribute 'mode-line nil
-                      :background (face-background 'default)
-                      :underline (face-foreground 'nano-faded)
-                      :height 40 :overline nil :box nil)
+                      :foreground (face-foreground 'default)
+                      :background 'unspecified
+                      :box '(:line-width 1 :style flat-button)
+                      :overline (face-foreground 'nano-faded))
   (set-face-attribute 'mode-line-inactive nil
-                      :background (face-background 'default)
-                      :underline (face-foreground 'nano-faded)
-                      :height 40 :overline nil :box nil))
+                      :foreground (face-foreground 'nano-faded)
+                      :background 'unspecified
+                      :box '(:line-width 1 :style flat-button)
+                      :inverse-video (not (display-graphic-p))
+                      :overline (face-foreground 'nano-faded))
+  (unless (display-graphic-p)
+    (set-face-attribute 'mode-line-active nil
+                        :foreground (face-background 'default)
+                        :background (face-foreground 'nano-salient))))
 
 (defun nano-light (&rest args)
   "NANO light theme (based on material colors)."
@@ -158,8 +156,8 @@
   (nano-set-face 'nano-subtle nil "#C9D0D9") ;; Blue Grey / L50
   (nano-set-face 'nano-faded "#90A4AE") ;; Blue Grey / L300
   (nano-set-face 'nano-salient "#673AB7") ;; Deep Purple / L500
-  (nano-set-face 'nano-popout "#FFAB91") ;; Deep Orange / L200
-  (nano-set-face 'nano-critical "#FF6F00") ;; Amber / L900
+  (nano-set-face 'nano-critical "#eb9250" nil 'bold) ;; Deep Orange / L200
+  (nano-set-face 'nano-popout "#c56655") ;; Amber / L900
   (nano-set-face 'nano-string "grey50")
   (setq nano-current-theme 'light)
   (nano-install-theme))
@@ -173,8 +171,8 @@
   (nano-set-face 'nano-subtle nil "#434C5E") ;; Polar Night 2
   (nano-set-face 'nano-faded "#677691") ;; 
   (nano-set-face 'nano-salient "#81A1C1")  ;; Frost 2
-  (nano-set-face 'nano-popout "#D08770") ;; Aurora 1
-  (nano-set-face 'nano-critical "#EBCB8B") ;; Aurora 2
+  (nano-set-face 'nano-critical "#f3a171" nil 'bold) ;; Aurora 1
+  (nano-set-face 'nano-popout "#c47779") ;; Aurora 2
   (nano-set-face 'nano-string "grey70")
   (setq nano-current-theme 'dark)
   (nano-install-theme))
@@ -185,41 +183,57 @@
 (if (member "-dark" command-line-args) (nano-dark) (nano-light))
 
 ;; --- Header & mode lines --------------------------------------------------
-(setq nano-header-line
-      '(:eval
-        (let ((prefix (cond ((buffer-modified-p)  '("**"  . nano-critical-i))
-                            (view-mode            '("[N]" . nano-string-i))
-                            (buffer-read-only     '("RO"  . nano-default-i))
-                            (t                    '("%p"  . nano-faded-i))))
-              (box-face '(:line-width 4 :style flat-button))
-              (coords (concat
-                       (truncate-string-to-width
-                        (format-mode-line
-                         (when which-function-mode
-                           which-func-current))
-                        20 nil nil t)
-                       (format-mode-line " %c:%l ")))
-              (tabs (let* ((tabs (length (tab-bar-tabs)))
-                           (active-tab (tab-bar--current-tab-index)))
-                      (if (<= tabs 1)
-                          ""
-                        (let ((result '()))
-                          (dotimes (i tabs)
-                            (if (= i active-tab)
-                                (push (format "[%d]" (1+ i)) result)
-                              (push (format "%d" (1+ i)) result)))
-                          (concat " " (mapconcat 'identity (reverse result) " ") " "))))))
-          (list
-           (propertize (concat " " (car prefix) " ")
-                       'face `(,(cdr prefix) :box ,box-face))
-           (propertize (format-mode-line " %b") 'face `(nano-strong :box ,box-face))
-           (propertize (format-mode-line vc-mode)
-                       'face `(:foreground "dark cyan" :box ,box-face))
-           (propertize " " 'face `(:box ,box-face)
-                       'display `(space :align-to (- right ,(+ (length coords) (length tabs)))))
-           (propertize coords 'face `(nano-faded :box ,box-face))
-           (propertize tabs 'face `(nano-faded-i :box ,box-face))))))
-(setq-default header-line-format nano-header-line)
+(setq-default flymake-mode-line-counter-format
+              '("" flymake-mode-line-error-counter
+                flymake-mode-line-warning-counter
+                flymake-mode-line-note-counter " ")
+              flymake-mode-line-format
+			  '(" " flymake-mode-line-exception flymake-mode-line-counters)
+			  global-mode-string nil)
+(setq-default mode-line-end-spaces '((:eval (propertize ;(truncate-string-to-width
+                                             (format-mode-line
+                                              (when which-function-mode
+                                                which-func-current))))
+                                        ;20 nil nil t)))
+                                     (:eval (when (or (eq major-mode 'compilation-mode)
+                                                      (eq major-mode 'comint-mode))
+                                              compilation-mode-line-errors))
+                                     (:eval (when (bound-and-true-p flymake-mode)
+						                      flymake-mode-line-format))
+                                     " "))
+(setq-default mode-line-format
+			  '("%e"
+                (:eval (when (mode-line-window-selected-p)
+                         (let ((tabs (let* ((tabs (length (tab-bar-tabs)))
+                                            (active-tab (tab-bar--current-tab-index)))
+                                       (if (<= tabs 1)
+                                           ""
+                                         (let ((result '()))
+                                           (dotimes (i tabs)
+                                             (if (= i active-tab)
+                                                 (push (format "[%d]" (1+ i)) result)
+                                               (push (format "%d" (1+ i)) result)))
+                                           (concat " " (mapconcat 'identity (reverse result) " ")
+                                                   " "))))))
+                           (propertize tabs 'face 'bold))))
+                (:eval (when (and (buffer-narrowed-p)
+                                  (not (derived-mode-p 'Info-mode)))
+                         (propertize " (N)" 'face font-lock-constant-face)))
+                (:eval (propertize " %b" 'face (if (buffer-modified-p) 'bold-italic 'bold)
+                                   'help-echo (buffer-file-name)))
+                (:eval (propertize (string-trim-left
+                                    (format-mode-line vc-mode))
+                                   'face '(:weight light :slant italic)))
+                (:eval (let ((prefix (cond
+                                      ((or defining-kbd-macro executing-kbd-macro) "▶▶")
+                                      (view-mode            "%p")
+                                      ((buffer-modified-p)  "**")
+                                      (buffer-read-only     "RO")
+                                      (t                    "--"))))
+                         (propertize (concat "   " prefix " "))))
+                mode-line-format-right-align
+                (:eval (when (mode-line-window-selected-p)
+                         mode-line-end-spaces))))
 
 ;; --- Minibuffer completion ------------------------------------------------
 (setq tab-always-indent 'complete
@@ -319,6 +333,7 @@
               uniquify-buffer-name-style 'forward)
 
 ;;(add-hook 'after-init-hook #'repeat-mode)
+(add-hook 'after-init-hook #'global-goto-address-mode)
 (add-hook 'dired-mode-hook #'dired-hide-details-mode)
 (add-hook 'dired-mode-hook #'dired-omit-mode)
 (add-hook 'prog-mode-hook (electric-pair-mode t))
@@ -328,6 +343,7 @@
 (add-hook 'conf-mode-hook #'display-line-numbers-mode)
 
 (save-place-mode 1) (global-subword-mode 1) (winner-mode 1)
+(put 'narrow-to-region 'disabled nil)
 
 (defun my/lazy-load-savehist ()
   "Enable `savehist-mode` only when the minibuffer is first used."
@@ -360,6 +376,7 @@
       eldoc-idle-delay 0.3
       eldoc-echo-area-use-multiline-p nil
       eldoc-echo-area-display-truncation-message nil
+      flymake-suppress-zero-counters t
       flymake-no-changes-timeout 2
       flymake-show-diagnostics-at-end-of-line 'short
       help-window-select t
@@ -368,6 +385,7 @@
       recentf-auto-cleanup 'never
       save-abbrevs nil
       save-interprogram-paste-before-kill t
+      set-mark-command-repeat-pop t
       shell-command-prompt-show-cwd t
       shell-kill-buffer-on-exit t
       shell-file-name (car (process-lines "which" "fish"))
@@ -425,6 +443,7 @@
 
 ;; install-info --dir-file=./dir --info-file=
 (push "~/.emacs.d/info" Info-default-directory-list)
+(setq Info-use-header-line nil)
 
 (defun silent-command (fn &rest args)
   "Used to suppress output of FN."
@@ -433,21 +452,24 @@
         (save-silently t))
     (apply fn args)))
 
-(dolist (pops '(("^\\*term.*\\*$" . -1) ("\\*eshell-pop\\*" . -1)
-                ("^\\*compilation.*\\*$" . -1)
+(dolist (pops '(("\\*eshell-pop\\*" . -2 ) ;; <-- prima donna
+                ("^\\*term.*\\*$" . -1) ("^\\*compilation.*\\*$" . -1)
                 ("vc-git :.\*" . 0) ("\\*vc.\*-log\\*" . 0)
                 ("\\*eldoc\\*" . 0) ("\\*Help\\*" . 0)
-                ("\\*Warnings\\*" . 1)
-                ("\\*log-edit-files\\*" . 1)
-                ("\\*Occur.*\\*$" . 1)
-                ("\\*grep.*\\*$" . 1)))
+                ("\\*Warnings\\*" . 1) ("\\*log-edit-files\\*" . 1)
+                ("\\*Occur.*\\*$" . 1) ("\\*grep.*\\*$" . 1)))
   (add-to-list 'display-buffer-alist
                `(,(car pops)
                  display-buffer-in-side-window
                  (body-function . select-window)
                  (side . bottom)
                  (slot . ,(cdr pops))
-                 (window-height . 0.33))))
+                 (window-height . 0.33)
+                 ,(when (display-graphic-p)
+                    `(window-parameters . ((header-line-format . "")
+                                           ,(unless (string= (car pops)
+                                                             "^\\*compilation.*\\*$")
+                                              '(mode-line-format . ""))))))))
 
 (defun toggle-side-normal-window ()
   "Toggle the current window between a side window and a normal window."
@@ -458,11 +480,9 @@
     (delete-window window)
     (if side
         (let ((display-buffer-overriding-action '((display-buffer-pop-up-window))))
-          (pop-to-buffer buffer)
-          (setq-local header-line-format nano-header-line))
+          (pop-to-buffer buffer))
       (progn
-        (display-buffer buffer)
-        (setq-local header-line-format nil)))))
+        (display-buffer buffer)))))
 
 (define-key (current-global-map) (kbd "<f10>") #'toggle-side-normal-window)
 
@@ -532,6 +552,7 @@
       eshell-glob-case-insensitive t)
 
 (defun my-eshell-only-aliases () ; create aliases that shouldn't be exported to common file
+  (push '("k" "kubecolor $*") eshell-command-aliases-list)
   (push '("d" "dired-other-window $1") eshell-command-aliases-list)
   (push '("dired" "dired $1") eshell-command-aliases-list)
   (push '("ee" "find-file-other-window $1") eshell-command-aliases-list)
@@ -600,6 +621,7 @@
      (point))))
 
 (with-eval-after-load 'eshell
+  ;; (add-to-list 'eshell-modules-list 'eshell-smart)
   (add-hook 'eshell-mode-hook #'completion-preview-mode)
   (add-hook 'eshell-mode-hook
             (lambda nil (add-to-list 'process-environment "KUBECTX_IGNORE_FZF=1" :append)))
@@ -638,7 +660,8 @@
 
   (defun get-k8s-context-and-namespace ()
     (when-let* ((context (get-kubectl-output "config current-context"))
-                ((not (string-empty-p context))))
+                ((not (string-empty-p context)))
+                ((not (string-match "error" context))))
       (let* ((ns-cmd (format "config view -o 'jsonpath={.contexts[?(@.name==\"%s\")].context.namespace}'"
                              context))
              (namespace (or (get-kubectl-output ns-cmd) "default")))
@@ -674,8 +697,6 @@
           (format " (%s)" output)
         ""))))
 
-;;   (add-to-list 'eshell-modules-list 'eshell-rebind)
-;;   (add-to-list 'eshell-modules-list 'eshell-smart))
 (add-hook 'eshell-mode-hook
           #'(lambda ()
               (goto-address-mode)
@@ -683,6 +704,9 @@
               (setenv "TERM" "xterm-256color")
               (keymap-unset eshell-hist-mode-map "<up>" t)
               (keymap-unset eshell-hist-mode-map "<down>" t)
+              (define-key eshell-mode-map (kbd "C-x n d") #'my-eshell-narrow-to-prompt)
+              (define-key eshell-mode-map (kbd "C-u") (lambda nil (interactive) (kill-line 0)))
+              (define-key eshell-mode-map (kbd "C-w") #'backward-kill-word)
               (define-key eshell-mode-map (kbd "C-x n d") #'my-eshell-narrow-to-prompt)
               (define-key eshell-hist-mode-map (kbd "C-r") #'eshell-insert-history)))
 
@@ -913,7 +937,7 @@
 
 ;; --- Minibuffer setup -----------------------------------------------------
 (defun nano-minibuffer--setup ()
-  ;;(set-window-margins nil 3 0)
+  ;; (set-window-margins nil 3 0)
   (setq truncate-lines t)
   (setq-local line-spacing nil))
 (add-hook 'minibuffer-setup-hook #'nano-minibuffer--setup)
