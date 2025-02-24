@@ -86,13 +86,12 @@
                                      completions-annotations))
                   (nano-popout .    (warning help-key-binding))
                   (nano-string .   (font-lock-string-face))
-                  (nano-salient .   (success link
-                                             help-argument-name
-                                             custom-visibility
-                                             font-lock-type-face
-                                             font-lock-keyword-face
-                                             font-lock-builtin-face
-                                             completions-common-part))
+                  (nano-salient .   (link custom-visibility
+                                          help-argument-name
+                                          font-lock-type-face
+                                          font-lock-keyword-face
+                                          font-lock-builtin-face
+                                          completions-common-part))
                   (nano-strong .    (font-lock-function-name-face
                                      font-lock-variable-name-face
                                      icomplete-first-match
@@ -109,6 +108,7 @@
 
   (set-face-attribute 'font-lock-string-face nil :slant 'italic :weight 'semi-bold)
   (set-face-attribute 'link nil :underline t)
+  (set-face-attribute 'success nil :inherit font-lock-constant-face)
   (set-face-attribute 'vertical-border nil :inherit 'nano-faded)
 
   (when (eq system-type 'darwin)
@@ -543,7 +543,7 @@
                      "^alias\\s-+\\(\\S-+\\)=\'\\(.+\\)\'$")
                     (setq eshell-command-aliases-list
                           (cons (list (match-string 1)
-                                      (concat (match-string 2) " $1"))
+                                      (concat (match-string 2) " $*"))
                                 eshell-command-aliases-list)))
                 (forward-line 1))
               eshell-command-aliases-list)))))
@@ -559,8 +559,10 @@
 (with-eval-after-load 'em-term
   (dolist (cmd '("fzf" "yazi" "mpv" "emacsclient" "bat"))
     (add-to-list 'eshell-visual-commands cmd))
-  (add-to-list 'eshell-visual-options '("git" "--help" "--paginate" "--patch"))
-  (add-to-list 'eshell-visual-subcommands '("git" "log" "diff" "show")))
+  (setq eshell-visual-options '(("git" "--help" "--paginate" "--patch")))
+  ;; ("gardenctl" "--garden" "--project" "--shoot"))) ;; output issues
+  (setq eshell-visual-subcommands '(("git" "log" "diff" "show"))))
+;; ("gardenctl" "target")))) ;; output issues
 
 (defun my-eshell-narrow-to-prompt ()
   "Narrow buffer to prompt at point. src: ambrevar."
@@ -582,7 +584,79 @@
 
 (with-eval-after-load 'eshell
   (add-hook 'eshell-mode-hook #'completion-preview-mode)
-  (push 'file-capf completion-at-point-functions))
+  (add-hook 'eshell-mode-hook
+            (lambda nil (add-to-list 'process-environment "KUBECTX_IGNORE_FZF=1" :append)))
+  (push 'file-capf completion-at-point-functions)
+  ;; src: Kathink (& doom)
+  (setq eshell-prompt-regexp "^.* λ "
+        eshell-prompt-function #'my/eshell-default-prompt-fn)
+
+  (setq eshell-banner-message
+        '(format "%s %s\n"
+                 (propertize (format " %s " (string-trim (buffer-name)))
+                             'face 'mode-line-highlight)
+                 (propertize (current-time-string)
+                             'face 'error)))
+
+  (defun pwd-shorten-dirs (pwd)
+    "Shorten all directory names in PWD except the last two."
+    (let* ((dirs (split-string pwd "/"))
+           (shortened-dirs
+            (append
+             (mapcar (lambda (dir)
+                       (cond
+                        ((string-empty-p dir) "")
+                        ((string-prefix-p "." dir) (substring dir 0 2))
+                        (t (substring dir 0 1))))
+                     (butlast dirs))
+             (last dirs))))
+      (string-join shortened-dirs "/")))
+
+  (defun get-kubectl-output (cmd)
+    (when-let* ((kubeconfig (getenv "KUBECONFIG"))
+                ((not (string-empty-p (string-trim kubeconfig))))
+                (result (eshell-command-result 
+                         (concat "kubectl --kubeconfig=" kubeconfig " " cmd))))
+      (string-trim result)))
+
+  (defun get-k8s-context-and-namespace ()
+    (when-let* ((context (get-kubectl-output "config current-context"))
+                ((not (string-empty-p context))))
+      (let* ((ns-cmd (format "config view -o 'jsonpath={.contexts[?(@.name==\"%s\")].context.namespace}'"
+                             context))
+             (namespace (or (get-kubectl-output ns-cmd) "default")))
+        (propertize (format "(%s|%s) " context namespace)
+                    'face 'error))))
+  
+  (defun my/eshell-default-prompt-fn ()
+    "Generate the prompt string for eshell. Use for `eshell-prompt-function'."
+    (concat
+     (get-k8s-context-and-namespace) ;; TODO: verify gardenctl target in eshell
+     ;; pwd git last-status
+     (let ((pwd (eshell/pwd)))
+       (propertize (if (equal pwd "~")
+                       pwd
+                     (pwd-shorten-dirs (abbreviate-file-name pwd)))
+                   'face '(:inherit font-lock-keyword-face :weight bold)))
+     (propertize (my/eshell--current-git-branch)
+                 'face '(:inherit font-lock-constant-face :slant italic))
+     (if (zerop eshell-last-command-status)
+         (propertize " λ" 'face 'success)
+       (propertize (format " [%s] λ" eshell-last-command-status) 'face 'warning))
+     " "))
+
+  (defsubst my/eshell--current-git-branch ()
+    ;; TODO Refactor me
+    (cl-destructuring-bind (status . output)
+        (with-temp-buffer (cons
+                           (or (call-process "git" nil t nil "symbolic-ref" "-q" "--short" "HEAD")
+                               (call-process "git" nil t nil "describe" "--all" "--always" "HEAD")
+                               -1)
+                           (string-trim (buffer-string))))
+      (if (equal status 0)
+          (format " (%s)" output)
+        ""))))
+
 ;;   (add-to-list 'eshell-modules-list 'eshell-rebind)
 ;;   (add-to-list 'eshell-modules-list 'eshell-smart))
 (add-hook 'eshell-mode-hook
