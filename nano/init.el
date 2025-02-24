@@ -417,6 +417,8 @@
             (tab-bar-close-tab)
             (kill-buffer ediff-registry-buffer)))
 (with-eval-after-load 'ediff
+  (advice-add 'ediff-quit :around (lambda (&rest args)
+                                    (ediff-really-quit args)))
   (setq ediff-split-window-function 'split-window-horizontally
         ediff-window-setup-function 'ediff-setup-windows-plain
         ediff-diff-options "-w"))
@@ -529,6 +531,17 @@
       eshell-save-history-on-exit t
       eshell-glob-case-insensitive t)
 
+(defun my-eshell-only-aliases () ; create aliases that shouldn't be exported to common file
+  (push '("d" "dired-other-window $1") eshell-command-aliases-list)
+  (push '("dired" "dired $1") eshell-command-aliases-list)
+  (push '("ee" "find-file-other-window $1") eshell-command-aliases-list)
+  (push '("ff" "find-file $1") eshell-command-aliases-list)
+  (push '("e" "find-file $1") eshell-command-aliases-list)
+  (push '("groot" "cd ${git rev-parse --show-toplevel}") eshell-command-aliases-list)
+  (push '("nix-update-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} nix build .#darwinConfigurations.${hostname -s}.system --impure && cd -") eshell-command-aliases-list)
+  (push '("darwin-rebuild-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} ./result/sw/bin/darwin-rebuild switch --flake . --impure && cd -") eshell-command-aliases-list)
+  (push '("gk" "export KUBECONFIG=${gardenctl kubectl-env zsh | awk -F\"'\" '/export KUBECONFIG/ {print \$2}'}") eshell-command-aliases-list))
+
 (defun my-eshell-read-aliases-list ()
   "Read in an aliases list from `eshell-aliases-file' using bash format."
   (interactive)
@@ -546,7 +559,8 @@
                                       (concat (match-string 2) " $*"))
                                 eshell-command-aliases-list)))
                 (forward-line 1))
-              eshell-command-aliases-list)))))
+              eshell-command-aliases-list))))
+  (my-eshell-only-aliases))
 (advice-add 'eshell-read-aliases-list :override #'my-eshell-read-aliases-list)
 
 (defun eshell-insert-history () ; src: howard abrams
@@ -563,6 +577,9 @@
   ;; ("gardenctl" "--garden" "--project" "--shoot"))) ;; output issues
   (setq eshell-visual-subcommands '(("git" "log" "diff" "show"))))
 ;; ("gardenctl" "target")))) ;; output issues
+
+(with-eval-after-load 'em-ls
+  (set-face-attribute 'eshell-ls-directory nil :inherit font-lock-keyword-face))
 
 (defun my-eshell-narrow-to-prompt ()
   "Narrow buffer to prompt at point. src: ambrevar."
@@ -587,7 +604,7 @@
   (add-hook 'eshell-mode-hook
             (lambda nil (add-to-list 'process-environment "KUBECTX_IGNORE_FZF=1" :append)))
   (push 'file-capf completion-at-point-functions)
-  ;; src: Kathink (& doom)
+  ;; src: doom
   (setq eshell-prompt-regexp "^.* λ "
         eshell-prompt-function #'my/eshell-default-prompt-fn)
 
@@ -750,6 +767,7 @@
   (add-hook mode #'eglot-ensure))
 (add-hook 'rust-ts-mode-hook
           (lambda nil (add-to-list 'process-environment "CARGO_TERM_COLOR=always" :append)))
+(add-hook 'js-json-mode-hook (lambda nil (setq-local tab-width 2)))
 
 (setq-default c-basic-offset 4)
 (add-hook 'c-mode-hook (lambda () (c-toggle-comment-style -1)))
@@ -876,7 +894,9 @@
                   ("C-x ;" . comment-line) ("C-x C-;" . comment-line)
                   ("J" . delete-indentation) ("C-k" . kill-line) ("C-/" . undo-only)
                   ("f" . hs-toggle-hiding) ("c" . hs-hide-all) ("g" . hs-show-all)
-                  ("C" . string-rectangle) ("TAB" . indent-for-tab-command)))
+                  ("C" . string-rectangle) ("TAB" . indent-for-tab-command)
+                  ("{" . indent-rigidly-left-to-tab-stop)
+                  ("}" . indent-rigidly-right-to-tab-stop)))
     (define-key view-mode-map (kbd (car pair))
                 #'(lambda nil (interactive)
                     (view-mode-edit-command (cdr pair)))))
