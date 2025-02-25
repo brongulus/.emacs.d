@@ -765,20 +765,19 @@
               (define-key eshell-hist-mode-map (kbd "C-r") #'eshell-insert-history)))
 
 (unless (display-graphic-p)
-  (define-key (current-global-map) (kbd "M-w")
-              (lambda () (interactive)
-                (when (use-region-p)
-                  (let* ((clipboard-commands
-                          '(("darwin" . "pbcopy")
-                            ("gnu/linux" . "xclip -selection clipboard")
-                            ("windows-nt" . "clip")))
-                         (copy-cmd (or (cdr (assoc (symbol-name system-type)
-                                                   clipboard-commands))
-                                       nil)))
-                    (when copy-cmd
-                      (call-process-region
-                       (region-beginning) (region-end) copy-cmd)
-                      (deactivate-mark))))))
+  (setq interprogram-cut-function
+        (lambda (text)
+          (when (use-region-p)
+            (let* ((clipboard-commands
+                    '(("darwin" . "pbcopy")
+                      ("gnu/linux" . "xclip -selection clipboard")
+                      ("windows-nt" . "clip")))
+                   (copy-cmd (or (cdr (assoc (symbol-name system-type) clipboard-commands))
+                                 nil)))
+              (when copy-cmd
+                (call-process-region
+                 (region-beginning) (region-end) copy-cmd)
+                (deactivate-mark))))))
   (menu-bar-mode -1)
   (xterm-mouse-mode))
 
