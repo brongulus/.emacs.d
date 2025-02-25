@@ -2,6 +2,8 @@
 ;; Originally themed by: Nicolas P. Rougier <nicolas.rougier@inria.fr>
 ;; URL: https://github.com/rougier/nano-emacs
 
+;; TODO: consult, corfu, undo-fu-session, eldoc-box, highlight-indent-guide, diff-hl, magit, direnv
+
 ;; --- Speed benchmarking ---------------------------------------------------
 ;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
 (setq init-start-time (current-time))
@@ -27,7 +29,7 @@
 
 ;; --- Activate / Deactivate modes ------------------------------------------
 (blink-cursor-mode -1) (global-hl-line-mode 1)
-(icomplete-vertical-mode 1) (pixel-scroll-precision-mode 1)
+(fido-vertical-mode 1) (pixel-scroll-precision-mode 1)
 
 ;; --- Minimal NANO (not a real) theme --------------------------------------
 (defvar nano-current-theme 'dark "Current nano variant being used.")
@@ -66,35 +68,31 @@
   (set-face-attribute 'default nil
                       :foreground (face-foreground 'nano-default)
                       :background (face-background 'nano-default))
-  (dolist (item '((nano-default .  (variable-pitch variable-pitch-text
-                                                   fixed-pitch fixed-pitch-serif))
-                  (nano-highlight . (hl-line highlight))
-                  (nano-subtle .    (match region
-                                           lazy-highlight widget-field))
-                  (nano-faded .     (shadow
-                                     font-lock-comment-face
-                                     font-lock-doc-face
-                                     icomplete-section
-                                     completions-annotations))
-                  (nano-popout .    (warning help-key-binding))
-                  (nano-string .   (font-lock-string-face))
-                  (nano-salient .   (link custom-visibility
-                                          help-argument-name
-                                          font-lock-type-face
-                                          font-lock-keyword-face
-                                          font-lock-builtin-face
-                                          completions-common-part))
-                  (nano-strong .    (font-lock-function-name-face
-                                     font-lock-variable-name-face
-                                     icomplete-first-match
-                                     minibuffer-prompt))
-                  (nano-critical .  (error
-                                     completions-first-difference))
-                  (nano-default-i . (custom-button-mouse
-                                     isearch))
-                  (nano-critical-i . (isearch-fail))
-                  ((nano-subtle nano-strong) . (custom-button
-                                                icomplete-selected-match))
+  (dolist (item '((nano-default               . (fixed-pitch-serif
+                                                 fixed-pitch variable-pitch variable-pitch-text))
+                  (nano-highlight             . (hl-line highlight))
+                  (nano-subtle                . (match region lazy-highlight widget-field))
+                  (nano-faded                 . (shadow
+                                                 font-lock-comment-face
+                                                 font-lock-doc-face
+                                                 icomplete-section
+                                                 completions-annotations))
+                  (nano-popout                . (xref-file-header warning help-key-binding))
+                  (nano-string                . (font-lock-string-face))
+                  (nano-salient               . (link custom-visibility
+                                                      help-argument-name
+                                                      font-lock-type-face
+                                                      font-lock-keyword-face
+                                                      font-lock-builtin-face
+                                                      completions-common-part))
+                  (nano-strong                . (font-lock-function-name-face
+                                                 font-lock-variable-name-face
+                                                 icomplete-first-match
+                                                 minibuffer-prompt))
+                  (nano-critical              . (error completions-first-difference))
+                  (nano-default-i             . (custom-button-mouse isearch))
+                  (nano-critical-i            . (isearch-fail))
+                  ((nano-subtle nano-strong)  . (custom-button icomplete-selected-match))
                   ((nano-faded-i nano-strong) . (show-paren-match))))
     (nano-link-face (car item) (cdr item)))
 
@@ -108,23 +106,21 @@
   
   (with-eval-after-load 'ansi-color
     (let* ((color-themes ;; ansi-colors
-            '((black . ((dark . "#30343d") (light . "#EEEEEE")))
-              (red . ((dark . "#c47779") (light . "#c56655")))
-              (green . ((dark . "#a7bf87") (light . "#5f8700")))
-              (yellow . ((dark . "#d9c18c") (light . "#bb9200")))
-              (blue . ((dark . "#81a2be") (light . "#6079db")))
+            '((black   . ((dark . "#30343d") (light . "#EEEEEE")))
+              (red     . ((dark . "#c47779") (light . "#c56655")))
+              (green   . ((dark . "#a7bf87") (light . "#5f8700")))
+              (yellow  . ((dark . "#d9c18c") (light . "#bb9200")))
+              (blue    . ((dark . "#81a2be") (light . "#6079db")))
               (magenta . ((dark . "#b294bb") (light . "#7646c1")))
-              (cyan . ((dark . "#7b2bd") (light . "#6594bd")))
-              (white . ((dark . "#cccccc") (light . "#1a1a1a")))))
+              (cyan    . ((dark . "#7db2bd") (light . "#6594bd")))
+              (white   . ((dark . "#cccccc") (light . "#1a1a1a")))))
            (theme-variant (if (eq nano-current-theme 'light) 'light 'dark)))
       (dolist (color-def color-themes)
         (let* ((color-name (car color-def))
                (color-value (alist-get theme-variant (cdr color-def))))
-          (set-face-attribute
-           (intern (format "ansi-color-%s" color-name))
-           nil
-           :foreground color-value
-           :background color-value)))))
+          (set-face-attribute (intern (format "ansi-color-%s" color-name)) nil
+                              :foreground color-value
+                              :background color-value)))))
   
   ;; Mode & header lines
   (set-face-attribute 'header-line nil
@@ -190,11 +186,9 @@
               flymake-mode-line-format
 			  '(" " flymake-mode-line-exception flymake-mode-line-counters)
 			  global-mode-string nil)
-(setq-default mode-line-end-spaces '((:eval (propertize ;(truncate-string-to-width
-                                             (format-mode-line
-                                              (when which-function-mode
-                                                which-func-current))))
-                                        ;20 nil nil t)))
+(setq-default mode-line-end-spaces '((:eval (propertize (format-mode-line
+                                                         (when which-function-mode
+                                                           which-func-current))))
                                      (:eval (when (or (eq major-mode 'compilation-mode)
                                                       (eq major-mode 'comint-mode))
                                               compilation-mode-line-errors))
@@ -250,11 +244,10 @@
       icomplete-scroll t
       resize-mini-windows 'grow-only)
 (with-eval-after-load 'icomplete
-  (define-key icomplete-minibuffer-map (kbd "TAB") #'icomplete-forward-completions)
-  (define-key icomplete-minibuffer-map (kbd "<backtab>") #'icomplete-backward-completions)
-  (define-key icomplete-minibuffer-map (kbd "RET") #'icomplete-fido-ret)
-  (define-key icomplete-minibuffer-map (kbd "<escape>") #'minibuffer-keyboard-quit)
-  (define-key icomplete-minibuffer-map (kbd "DEL") #'icomplete-fido-backward-updir))
+  (define-key icomplete-fido-mode-map (kbd "TAB") #'icomplete-forward-completions)
+  (define-key icomplete-fido-mode-map (kbd "<backtab>") #'icomplete-backward-completions)
+  (define-key icomplete-fido-mode-map (kbd "C-<return>") #'icomplete-fido-exit)
+  (define-key icomplete-fido-mode-map (kbd "<escape>") #'minibuffer-keyboard-quit))
 
 (defun file-capf ()
   "File completion at point function. src: eshelyaron."
@@ -300,9 +293,6 @@
 (define-key (current-global-map) (kbd "C-h '") #'describe-face)
 (define-key (current-global-map) (kbd "C-,") #'my-scroll-other-down)
 (define-key (current-global-map) (kbd "C-.") #'my-scroll-other-up)
-(define-key (current-global-map) (kbd "C-x v e") #'vc-ediff)
-(define-key (current-global-map) (kbd "C-x v f")
-            (lambda () (interactive) (vc-git--pushpull "push" nil '("--force-with-lease"))))
 (define-key (current-global-map) (kbd "C-<tab>") #'tab-next)
 (define-key (current-global-map) (kbd "C-S-<tab>") #'tab-previous)
 (define-key (current-global-map) (kbd "C-x C-b") #'ibuffer)
@@ -317,11 +307,13 @@
 ;; --- Sane settings --------------------------------------------------------
 (set-default-coding-systems 'utf-8)
 (setq-default tab-width 4
+              debug-on-error t
               completion-styles
               '(basic partial-completion substring flex emacs22)
               completion-cycle-threshold t
               cursor-type 'bar
               line-spacing 3
+              display-line-numbers-width 4
               imenu-flatten t
               initial-scratch-message nil
               indent-tabs-mode nil
@@ -353,9 +345,10 @@
 
 (which-key-mode 1) (delete-selection-mode 1)
 (global-auto-revert-mode 1) (which-function-mode 1)
+(advice-add #'server-force-delete :around #'silent-command)
 (run-with-idle-timer 1 nil
-                     #'(lambda nil (require 'server)
-                         (unless (server-running-p) (server-start))))
+                     #'(lambda nil
+                         (unless server-mode (server-force-delete) (server-mode))))
 
 (setq auto-save-file-name-transforms `((".*" "~/.emacs.d/backup/" t))
       backup-directory-alist `(("." . "~/.emacs.d/backup/"))
@@ -366,6 +359,7 @@
       completion-ignore-case t
       completion-auto-help 'lazy;nil
       confirm-kill-emacs 'yes-or-no-p
+      diff-default-read-only t
       dired-dwim-target t
       dired-omit-verbose nil
       dired-use-ls-dired nil
@@ -373,14 +367,13 @@
       dired-recursive-copies 'always
       dired-recursive-deletes 'always
       eldoc-echo-area-prefer-doc-buffer t
-      eldoc-idle-delay 0.3
+      eldoc-idle-delay 0.2
       eldoc-echo-area-use-multiline-p nil
       eldoc-echo-area-display-truncation-message nil
       flymake-suppress-zero-counters t
       flymake-no-changes-timeout 2
       flymake-show-diagnostics-at-end-of-line 'short
       help-window-select t
-      recentf-max-menu-items 25
       recentf-max-saved-items 200
       recentf-auto-cleanup 'never
       save-abbrevs nil
@@ -396,7 +389,7 @@
       xref-search-program (if (executable-find "rg") 'ripgrep 'grep)
       xref-auto-jump-to-first-xref nil ; 'move
       xref-show-definitions-function 'xref-show-definitions-buffer-at-bottom
-      xref-show-xrefs-function 'xref-show-definitions-buffer-at-bottom)
+      xref-show-xrefs-function 'xref-show-definitions-completing-read)
 
 (when (executable-find "rg")
   (setq grep-command "rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)"
@@ -471,6 +464,7 @@
                                                              "^\\*compilation.*\\*$")
                                               '(mode-line-format . ""))))))))
 
+(defvar side-face-cookie nil)
 (defun toggle-side-normal-window ()
   "Toggle the current window between a side window and a normal window."
   (interactive)
@@ -480,19 +474,82 @@
     (delete-window window)
     (if side
         (let ((display-buffer-overriding-action '((display-buffer-pop-up-window))))
-          (pop-to-buffer buffer))
+          (pop-to-buffer buffer)
+          (setq side-face-cookie (face-remap-add-relative 'header-line :overline (face-background 'default))))
       (progn
-        (display-buffer buffer)))))
+        (display-buffer buffer)
+        (face-remap-remove-relative side-face-cookie)))))
 
 (define-key (current-global-map) (kbd "<f10>") #'toggle-side-normal-window)
 
-(dolist (modes '(help-mode-hook vc-git-log-edit-mode-hook
-                                compilation-mode-hook term-mode-hook eshell-mode-hook
-                                occur-hook grep-mode-hook special-mode-hook))
-  (add-hook modes (lambda () (setq-local header-line-format nil))))
+(when (display-graphic-p)
+  (dolist (modes '(help-mode-hook vc-git-log-edit-mode-hook
+                                  compilation-mode-hook term-mode-hook eshell-mode-hook
+                                  occur-hook grep-mode-hook special-mode-hook))
+    (add-hook modes (lambda () (setq-local header-line-format "")))))
+
+(setq other-window-scroll-default 'get-mru-window)
+
+(defun my-smart-window-selection-advice (orig-fun &rest args)
+  "Use 'pos strategy on window-delete from same buffer split, else 'mru."
+  (let ((delete-window-choose-selected 
+         (let* ((current-buffer (current-buffer))
+                (current-window (selected-window))
+                (same-buffer-windows (delq current-window
+                                           (get-buffer-window-list current-buffer nil t))))
+           (if same-buffer-windows 'pos 'mru))))
+    (apply orig-fun args)))
+
+(advice-add 'delete-window :around #'my-smart-window-selection-advice)
+
+;;; VC
+(defun my/vc-git-editor-command (command) ;; src: vimilla
+  "command is a git subcommand that requires an editor.
+ example usage: (my/vc-git-editor-command \"rebase -i HEAD~3\")"
+  (interactive "P")
+  (unless server-mode (server-force-delete) (server-mode))
+  (let ((command (if command command (read-string "command: git "))))
+    (compile (concat "GIT_EDITOR=\"emacsclient\" bash -c \"git " command "\""))))
+(defun my/vc-git-rebase-i (&optional branch)
+  "if branch isn't supplied from arg, prompt for it"
+  (interactive)
+  (let ((revision (vc-read-revision
+                   (format-prompt "Revision to rebase on top of" "working revision")
+                   (list buffer-file-name))))
+    (my/vc-git-editor-command (concat "rebase -i " revision))))
+
+(with-eval-after-load 'vc-dir
+  (define-key vc-dir-mode-map (kbd "q") #'kill-current-buffer))
+(with-eval-after-load 'diff
+  (define-key diff-mode-shared-map (kbd "q") #'kill-current-buffer))
+(add-hook 'vc-before-checkin-hook #'tab-bar-new-tab)
+(define-key vc-prefix-map (kbd "z") #'vc-git-stash)
+(define-key vc-prefix-map (kbd "Z") #'vc-git-stash-pop)
+(define-key vc-prefix-map (kbd "e") #'vc-ediff)
+(define-key vc-prefix-map (kbd "f")
+            (lambda () (interactive) (vc-git--pushpull "push" nil '("--force-with-lease"))))
+(define-key vc-prefix-map (kbd "R") #'my/vc-git-rebase-i)
+
+(define-advice log-edit-show-files (:after (&rest _args) show-diff)
+  (log-edit-show-diff)
+  (switch-to-buffer "*vc-log*"))
+
+(dolist (fn '(log-edit-done log-edit-kill-buffer))
+  (eval `(define-advice ,fn (:after (&rest _args) buffer-cleanup)
+           (ignore-errors
+             (progn
+               (kill-buffer "*log-edit-files*")
+               (kill-buffer "*vc-diff*")
+               (kill-buffer "*vc*")))
+           (tab-bar-close-tab))))
+;;;
 
 (with-eval-after-load 'help-mode
   (define-key help-mode-map "q" #'kill-buffer-and-window))
+(with-eval-after-load 'comint-mode
+  (define-key comint-mode-map "q" #'kill-buffer-and-window))
+(with-eval-after-load 'compile
+  (define-key compilation-minor-mode-map "q" #'kill-buffer-and-window))
 
 (setopt switch-to-buffer-obey-display-actions t)
 (define-key (current-global-map) (kbd "M-j") #'window-toggle-side-windows)
@@ -511,20 +568,6 @@
 
 (with-eval-after-load 'comint
   (add-hook 'comint-mode-hook #'completion-preview-mode))
-(with-eval-after-load 'comint
-  (add-hook 'comint-mode-hook #'completion-preview-mode))
-
-(add-hook 'compilation-mode-hook
-          (lambda nil
-            "Enable comint mode to allow for providing program input."
-            (comint-mode)
-            (setq-local buffer-read-only nil)))
-
-(add-hook 'compilation-finish-functions
-          (lambda (buffer status)
-            "Reset comint mode so that we get the compilation-mode goodness."
-            (setq-local buffer-read-only t)
-            (compilation-minor-mode)))
 
 (add-hook 'term-mode-hook
           (lambda ()
@@ -728,10 +771,14 @@
   (menu-bar-mode -1)
   (xterm-mouse-mode))
 
-(add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
-(add-hook 'compilation-filter-hook #'ansi-osc-compilation-filter)
+(add-hook 'compilation-filter-hook (lambda nil
+                                     (unless (eq major-mode 'grep-mode)
+                                       (ansi-color-compilation-filter)
+                                       (ansi-osc-compilation-filter))))
 
 ;; --- Programming ----------------------------------------------------------
+(define-key (current-global-map) (kbd "C-x c c") #'compile)
+(define-key (current-global-map) (kbd "C-x c r") #'recompile)
 (define-key prog-mode-map (kbd "C-c C-c") #'compile)
 (define-key prog-mode-map (kbd "C-c C-r") #'recompile)
 
@@ -806,11 +853,14 @@
   (setq project-vc-ignores '("**/vendor/**")))
 
 (with-eval-after-load 'eglot
+  
   (fset #'jsonrpc--log-event #'ignore)
   (setq eglot-events-buffer-config 0
         eglot-autoshutdown t
         eglot-inlay-hints-mode nil)
 
+  (add-to-list 'eglot-server-programs ;; zig-mode not there
+               '(c-mode . ("zls")))
   (add-to-list 'eglot-server-programs
                '(python-mode . ("ruff" "server")))
   
@@ -917,8 +967,8 @@
                   ("z" . undo-redo) ("u" . undo-only) ("R" . replace-regexp)
                   ("C-x ;" . comment-line) ("C-x C-;" . comment-line)
                   ("J" . delete-indentation) ("C-k" . kill-line) ("C-/" . undo-only)
-                  ("f" . hs-toggle-hiding) ("c" . hs-hide-all) ("g" . hs-show-all)
-                  ("C" . string-rectangle) ("TAB" . indent-for-tab-command)
+                  ("f" . hs-toggle-hiding) ("c" . hs-hide-all) ("C" . hs-show-all)
+                  ("V" . string-rectangle) ("TAB" . indent-for-tab-command)
                   ("{" . indent-rigidly-left-to-tab-stop)
                   ("}" . indent-rigidly-right-to-tab-stop)))
     (define-key view-mode-map (kbd (car pair))
