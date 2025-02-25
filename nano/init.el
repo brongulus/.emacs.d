@@ -10,9 +10,6 @@
 (setq inhibit-startup-screen t)
 
 ;; --- Typography stack -----------------------------------------------------
-;; (set-face-attribute 'default nil :height 160 :weight 'light :family "Input Mono Narrow")
-;; (set-face-attribute 'bold nil :weight 'regular)
-;; (set-face-attribute 'bold-italic nil :weight 'regular)
 (set-face-attribute 'default nil :height 140 :weight 'regular :family "VictorMono Nerd Font Mono")
 (set-face-attribute 'bold nil :weight 'semi-bold)
 (set-face-attribute 'bold-italic nil :weight 'semi-bold)
@@ -325,6 +322,7 @@
 
 ;;(add-hook 'after-init-hook #'repeat-mode)
 (add-hook 'after-init-hook #'global-goto-address-mode)
+(add-hook 'kill-emacs-hook #'recentf-cleanup)
 (add-hook 'dired-mode-hook #'dired-hide-details-mode)
 (add-hook 'dired-mode-hook #'dired-omit-mode)
 (add-hook 'prog-mode-hook (electric-pair-mode t))
@@ -851,7 +849,11 @@
 (add-hook 'js-json-mode-hook (lambda nil (setq-local tab-width 2)))
 
 (setq-default c-basic-offset 4)
-(add-hook 'c-mode-hook (lambda () (c-toggle-comment-style -1)))
+(add-hook 'c-mode-hook (lambda ()
+                         (c-toggle-comment-style -1)
+                         (when (string= "zig"
+                                        (file-name-extension buffer-file-name))
+                           (eglot '(c-mode) (project-current) 'eglot-lsp-server '("zls") '("zig")))))
 (add-hook 'c-ts-mode-hook
           (lambda nil
             (setq-local c-ts-mode-indent-style 'gnu)
@@ -869,8 +871,6 @@
         eglot-autoshutdown t
         eglot-inlay-hints-mode nil)
 
-  (add-to-list 'eglot-server-programs ;; zig-mode not there
-               '(c-mode . ("zls")))
   (add-to-list 'eglot-server-programs
                '(python-mode . ("ruff" "server")))
   
