@@ -307,7 +307,6 @@
 ;; --- Sane settings --------------------------------------------------------
 (set-default-coding-systems 'utf-8)
 (setq-default tab-width 4
-              debug-on-error t
               completion-styles
               '(basic partial-completion substring flex emacs22)
               completion-cycle-threshold t
@@ -568,6 +567,18 @@
 
 (with-eval-after-load 'comint
   (add-hook 'comint-mode-hook #'completion-preview-mode))
+
+(with-eval-after-load 'compile
+  (setq compilation-scroll-output t)
+  (define-key compilation-mode-map (kbd "i") (lambda nil (interactive)
+                                               (comint-mode)
+                                               (setq-local buffer-read-only nil))))
+
+(add-hook 'compilation-finish-functions
+          (lambda (buffer status)
+            (when (eq major-mode 'comint-mode)
+              (setq-local buffer-read-only t)
+              (compilation-minor-mode))))
 
 (add-hook 'term-mode-hook
           (lambda ()
