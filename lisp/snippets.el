@@ -5,11 +5,16 @@
 ;; https://www.lysator.liu.se/~davidk/elisp/
 
 ;; (define-abbrev global-abbrev-table "shbng" "#!/usr/bin/env ")
-
 (autoload 'tempo-define-template "tempo")
 (autoload 'tempo-forward-mark "tempo")
 (autoload 'tempo-expand-if-complete "tempo")
 (autoload 'tempo-backward-mark "tempo")
+(autoload 'tempo-use-tag-list "tempo")
+
+(defvar eshell-tempo-tags nil)
+(defvar go-tempo-tags nil)
+(defvar perl-tempo-tags nil)
+(defvar rust-tempo-tags nil)
 
 (defun tempo-tab () (interactive)
        (unless (tempo-forward-mark)
@@ -32,7 +37,8 @@
   (tempo-define-template "eshell-for"
                          '("for f in " p " { " p " \"$f\"; }")
                          "for"
-                         "Insert an Eshell for loop")
+                         "Insert an Eshell for loop"
+                         'eshell-tempo-tags)
 ;;; --Perl----------------------------------------------------------------
   (tempo-define-template "pl-header"
                          '("#!/usr/bin/env perl" n n
@@ -40,7 +46,8 @@
                            "use warnings;" n
                            "use autodie;" n n)
                          "plh"
-                         "Perl header")
+                         "Perl header"
+                         'perl-tempo-tags)
 ;;; --Go------------------------------------------------------------------
   (tempo-define-template "go-test-err"
                          '(> "if got != want {" > n
@@ -48,49 +55,49 @@
                              "}" > n>
                              )
                          "goerr"
-                         "Go test check")
+                         "Go test check"
+                         'go-tempo-tags)
   
   (tempo-define-template "errnil"
                          '(> "if err != nil {" > n
                              >  p n "}" > n >
                              )
                          "errnil"
-                         "Go check err")
+                         "Go check err"
+                         'go-tempo-tags)
 ;;; --Rust------------------------------------------------------------------
   (tempo-define-template "rs-print"
                          '("println!(\"" p "\");")
                          "pln"
-                         "Faster println! call.")
+                         "Faster println! call."
+                         'rust-tempo-tags)
 
   (tempo-define-template "rs-dbg"
                          '("dbg!(\"" p "\");")
                          "dbg"
-                         "Faster dbg! call."))
+                         "Faster dbg! call."
+                         'rust-tempo-tags))
 
 (with-eval-after-load 'em-cmpl
   (setup-tempo-keys eshell-cmpl-mode-map))
 
 (add-hook 'eshell-mode-hook
-          (lambda nil
-            (define-abbrev eshell-mode-abbrev-table "for" "" 'tempo-template-eshell-for)))
+          (lambda nil (tempo-use-tag-list 'eshell-tempo-tags)))
 
 (add-hook 'perl-mode-hook
           (lambda nil
             (setup-tempo-keys perl-mode-map)
-            (define-abbrev perl-mode-abbrev-table "plh" "" 'tempo-template-pl-header)))
+            (tempo-use-tag-list 'perl-tempo-tags)))
 
 (add-hook 'go-ts-mode-hook
-          (lambda ()
+          (lambda nil
             (setup-tempo-keys go-ts-mode-map)
-            (define-abbrev go-ts-mode-abbrev-table "goerr" "" 'tempo-template-go-err)
-            (define-abbrev go-ts-mode-abbrev-table "errnil" "" 'tempo-template-errnil)))
+            (tempo-use-tag-list 'go-tempo-tags)))
 
 (add-hook 'rust-ts-mode-hook
-          (lambda ()
+          (lambda nil
             (setup-tempo-keys rust-ts-mode-map)
-            (define-abbrev rust-ts-mode-abbrev-table "gtc" "" 'tempo-template-rust-header)
-            (define-abbrev rust-ts-mode-abbrev-table "pln" "" 'tempo-template-rust-print)
-            (define-abbrev rust-ts-mode-abbrev-table "dbg" "" 'tempo-template-rust-dbg)))
+            (tempo-use-tag-list 'rust-tempo-tags)))
 
 ;; (define-skeleton rs-header "Base rust template for competitive programming." ""
 ;;   "use std::io::{self, prelude::*};\n\n"
