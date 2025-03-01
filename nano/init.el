@@ -412,6 +412,7 @@
       sentence-end-double-space nil)
 
 (with-eval-after-load 'isearch
+  (define-key isearch-mode-map (kbd "M-o") #'isearch-occur)
   (define-key isearch-mode-map (kbd "M-<") #'isearch-beginning-of-buffer)
   (define-key isearch-mode-map (kbd "M->") #'isearch-end-of-buffer)
   (define-key isearch-mode-map (kbd "TAB") #'isearch-repeat-forward)
@@ -547,8 +548,6 @@
 
 (advice-add 'delete-window :around #'my-smart-window-selection-advice)
 
-(with-eval-after-load 'help-mode
-  (define-key help-mode-map "q" #'kill-buffer-and-window))
 (with-eval-after-load 'comint-mode
   (define-key comint-mode-map "q" #'kill-buffer-and-window))
 (with-eval-after-load 'compile
@@ -556,7 +555,6 @@
 
 (setq switch-to-buffer-obey-display-actions t)
 (define-key (current-global-map) (kbd "M-j") #'window-toggle-side-windows)
-(define-key occur-mode-map (kbd "q") #'kill-buffer-and-window)
 (define-key occur-mode-map (kbd "C-o") #'other-window)
 
 ;; --- Shell/term/compile ---------------------------------------------------
@@ -746,9 +744,14 @@
 ;; --- Mini Meow ------------------------------------------------------------
 (define-global-minor-mode global-view-mode view-mode
   (lambda () ; src: xenodium
-    (when (and (not (minibufferp)) (not noninteractive) ; 'special-mode
-               (derived-mode-p 'fundamental-mode 'messages-buffer-mode 'prog-mode 'conf-mode 'outline-mode))
+    (when (and (not (minibufferp)) (not noninteractive)
+               (derived-mode-p 'fundamental-mode 'messages-buffer-mode
+                               'prog-mode 'conf-mode 'outline-mode))
       (view-mode 1))))
+
+(define-key special-mode-map (kbd "j") #'next-line)
+(define-key special-mode-map (kbd "k") #'previous-line)
+(define-key special-mode-map (kbd "q") #'kill-buffer-and-window)
 (global-view-mode 1)
 (defun meow--set-cursor-type (type)
   (if (display-graphic-p)
@@ -788,11 +791,13 @@
                   ("DEL" . backward-delete-char-untabify) ("&" . align-regexp)
                   ("z" . undo-redo) ("u" . undo-only) ("R" . replace-regexp)
                   ("C-x ;" . comment-line) ("C-x C-;" . comment-line)
-                  ("J" . delete-indentation) ("C-k" . kill-line) ("C-/" . undo-only)
+                  ("C-k" . kill-line) ("C-/" . undo-only)
                   ("f" . hs-toggle-hiding) ("c" . hs-hide-all) ("C" . hs-show-all)
                   ("V" . string-rectangle) ("M-TAB" . indent-for-tab-command)
                   ("{" . indent-rigidly-left-to-tab-stop)
-                  ("}" . indent-rigidly-right-to-tab-stop)))
+                  ("}" . indent-rigidly-right-to-tab-stop)
+                  ("J" . (lambda nil (interactive)
+                           (delete-indentation t)))))
     (define-key view-mode-map (kbd (car pair))
                 #'(lambda nil (interactive)
                     (view-mode-edit-command (cdr pair)))))
