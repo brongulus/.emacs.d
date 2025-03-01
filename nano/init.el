@@ -863,6 +863,22 @@
                (kill-buffer "*vc*")))
            (tab-bar-close-tab))))
 
+(defun vc-ediff-quit nil
+  (interactive)
+  (let* ((revision-buf (if (string-match-p "\\*vc-\\|\\*ediff-revision" (buffer-name ediff-buffer-A))
+                           ediff-buffer-B
+                         ediff-buffer-A))
+         (file-buf (if (eq revision-buf ediff-buffer-B) ediff-buffer-A ediff-buffer-B)))
+    (ediff-really-quit nil)
+    (kill-buffer revision-buf)
+    (when (buffer-live-p file-buf)
+      (switch-to-buffer file-buf))))
+
+(define-advice ediff-vc-internal (:around (orig-fun &rest args) custom-quit)
+  (apply orig-fun args)
+  (switch-to-buffer "*Ediff Control Panel*")
+    (define-key ediff-mode-map (kbd "q") #'vc-ediff-quit))
+
 ;; --- Eshell ---------------------------------------------------------------
 ;; Eshell refs:
 ;; https://github.com/howardabrams/dot-files/blob/master/emacs-eshell.org
