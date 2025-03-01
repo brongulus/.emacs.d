@@ -12,9 +12,9 @@
 (autoload 'tempo-use-tag-list "tempo")
 
 (defvar eshell-tempo-tags nil)
-(defvar go-tempo-tags nil)
 (defvar perl-tempo-tags nil)
-(defvar rust-tempo-tags nil)
+(defvar go-ts-tempo-tags nil)
+(defvar rust-ts-tempo-tags nil)
 
 (defun tempo-tab () (interactive)
        (unless (tempo-forward-mark)
@@ -36,7 +36,7 @@
 ;;; --Eshell-------------------------------------------------------------
   (tempo-define-template "eshell-for"
                          '("for f in " p " { " p " \"$f\"; }")
-                         "for"
+                         "forl"
                          "Insert an Eshell for loop"
                          'eshell-tempo-tags)
 ;;; --Perl----------------------------------------------------------------
@@ -56,7 +56,7 @@
                              )
                          "goerr"
                          "Go test check"
-                         'go-tempo-tags)
+                         'go-ts-tempo-tags)
   
   (tempo-define-template "errnil"
                          '(> "if err != nil {" > n
@@ -64,40 +64,32 @@
                              )
                          "errnil"
                          "Go check err"
-                         'go-tempo-tags)
+                         'go-ts-tempo-tags)
 ;;; --Rust------------------------------------------------------------------
   (tempo-define-template "rs-print"
                          '("println!(\"" p "\");")
                          "pln"
                          "Faster println! call."
-                         'rust-tempo-tags)
+                         'rust-ts-tempo-tags)
 
   (tempo-define-template "rs-dbg"
                          '("dbg!(\"" p "\");")
                          "dbg"
                          "Faster dbg! call."
-                         'rust-tempo-tags))
+                         'rust-ts-tempo-tags))
 
 (with-eval-after-load 'em-cmpl
   (setup-tempo-keys eshell-cmpl-mode-map))
-
 (add-hook 'eshell-mode-hook
           (lambda nil (tempo-use-tag-list 'eshell-tempo-tags)))
 
-(add-hook 'perl-mode-hook
-          (lambda nil
-            (setup-tempo-keys perl-mode-map)
-            (tempo-use-tag-list 'perl-tempo-tags)))
-
-(add-hook 'go-ts-mode-hook
-          (lambda nil
-            (setup-tempo-keys go-ts-mode-map)
-            (tempo-use-tag-list 'go-tempo-tags)))
-
-(add-hook 'rust-ts-mode-hook
-          (lambda nil
-            (setup-tempo-keys rust-ts-mode-map)
-            (tempo-use-tag-list 'rust-tempo-tags)))
+(dolist (mode '(perl go-ts rust-ts))
+  (let ((hook (intern (concat (symbol-name mode) "-mode-hook")))
+        (map (intern (concat (symbol-name mode) "-mode-map")))
+        (tags (intern (concat (symbol-name mode) "-tempo-tags"))))
+    (add-hook hook `(lambda nil
+                      (setup-tempo-keys ,map)
+                      (tempo-use-tag-list ',tags)))))
 
 ;; (define-skeleton rs-header "Base rust template for competitive programming." ""
 ;;   "use std::io::{self, prelude::*};\n\n"
