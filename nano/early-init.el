@@ -7,12 +7,12 @@
       load-prefer-newer noninteractive
       garbage-collection-messages nil)
 
-(run-with-idle-timer 2 nil
-                     #'(lambda ()
-                         (setq gc-cons-threshold (* 64 1024 1024)
-                               gc-cons-percentage 0.1
-                               file-name-handler-alist my/saved-file-name-handler-alist)
-                         (garbage-collect)))
+(add-hook 'emacs-startup-hook
+          #'(lambda ()
+              (setq gc-cons-threshold (* 64 1024 1024)
+                    gc-cons-percentage 0.1
+                    file-name-handler-alist my/saved-file-name-handler-alist)
+              (garbage-collect)))
 
 ;; src: skangas
 (when (>= emacs-major-version 27)
@@ -75,6 +75,7 @@
       window-combination-resize t
       frame-inhibit-implied-resize t
       frame-resize-pixelwise t
+      initial-major-mode 'fundamental-mode
       initial-scratch-message nil)
 
 (when is-mac

@@ -1,20 +1,18 @@
 ;; init.el --- NANO Emacs (minimal version)  -*- lexical-binding: t -*-
 ;; Originally themed by: Nicolas P. Rougier <nicolas.rougier@inria.fr>
-;; URL: https://github.com/rougier/nano-emacs
-
-;; TODO: consult, corfu, undo-fu-session, eldoc-box, highlight-indent-guide, diff-hl, magit, direnv
+;; TODO: consult, corfu, undo-fu-session, eldoc-box, direnv (NEVER use setopt)
 
 ;; --- Speed benchmarking ---------------------------------------------------
 ;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
-(setq init-start-time (current-time))
+;; (setq init-start-time (current-time))
 (setq inhibit-startup-screen t)
 
 ;; --- Typography stack -----------------------------------------------------
 (set-face-attribute 'default nil :height 140 :weight 'regular :family "VictorMono Nerd Font Mono")
 (set-face-attribute 'bold nil :weight 'semi-bold)
 (set-face-attribute 'bold-italic nil :weight 'semi-bold)
-(set-display-table-slot standard-display-table 'truncation (make-glyph-code ?…))
 (set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
+(set-display-table-slot standard-display-table 'truncation (make-glyph-code ?…))
 (set-display-table-slot standard-display-table 'vertical-border (make-glyph-code ?│))
 
 ;; --- Frame / windows layout & behavior ------------------------------------
@@ -25,8 +23,14 @@
 (setq-default pop-up-windows nil)
 
 ;; --- Activate / Deactivate modes ------------------------------------------
-(blink-cursor-mode -1) (global-hl-line-mode 1)
-(fido-vertical-mode 1) (pixel-scroll-precision-mode 1)
+(blink-cursor-mode -1) (kill-ring-deindent-mode 1)
+(fido-vertical-mode 1) (global-subword-mode 1)
+(defun my-lazy-load-modes ()
+  (pixel-scroll-precision-mode 1) (winner-mode 1)
+  (delete-selection-mode 1) (global-auto-revert-mode 1)
+  (which-key-mode 1) (savehist-mode 1) (which-function-mode 1)
+  (save-place-mode 1) (global-goto-address-mode))
+(add-hook 'emacs-startup-hook #'my-lazy-load-modes)
 
 ;; --- Minimal NANO (not a real) theme --------------------------------------
 (defvar nano-current-theme 'dark "Current nano variant being used.")
@@ -95,7 +99,7 @@
 
   (set-face-attribute 'font-lock-string-face nil :slant 'italic :weight 'semi-bold)
   (set-face-attribute 'link nil :underline t)
-  (set-face-attribute 'success nil :inherit font-lock-constant-face)
+  (set-face-attribute 'success nil :foreground (face-foreground 'font-lock-constant-face))
   (set-face-attribute 'vertical-border nil :inherit 'nano-faded)
 
   (when (eq system-type 'darwin)
@@ -151,7 +155,7 @@
   (nano-set-face 'nano-salient "#673AB7") ;; Deep Purple / L500
   (nano-set-face 'nano-critical "#eb9250" nil 'bold) ;; Deep Orange / L200
   (nano-set-face 'nano-popout "#c56655") ;; Amber / L900
-  (nano-set-face 'nano-string "grey50")
+  (nano-set-face 'nano-string "#5f8700") ;"grey50")
   (setq nano-current-theme 'light)
   (nano-install-theme))
 
@@ -166,7 +170,7 @@
   (nano-set-face 'nano-salient "#81A1C1")  ;; Frost 2
   (nano-set-face 'nano-critical "#f3a171" nil 'bold) ;; Aurora 1
   (nano-set-face 'nano-popout "#c47779") ;; Aurora 2
-  (nano-set-face 'nano-string "grey70")
+  (nano-set-face 'nano-string "#a7bf87") ;"grey70")
   (setq nano-current-theme 'dark)
   (nano-install-theme))
 
@@ -181,8 +185,8 @@
                 flymake-mode-line-warning-counter
                 flymake-mode-line-note-counter " ")
               flymake-mode-line-format
-			  '(" " flymake-mode-line-exception flymake-mode-line-counters)
-			  global-mode-string nil)
+              '(" " flymake-mode-line-exception flymake-mode-line-counters)
+              global-mode-string nil)
 (setq-default mode-line-end-spaces '((:eval (propertize (format-mode-line
                                                          (when which-function-mode
                                                            which-func-current))))
@@ -190,10 +194,10 @@
                                                       (eq major-mode 'comint-mode))
                                               compilation-mode-line-errors))
                                      (:eval (when (bound-and-true-p flymake-mode)
-						                      flymake-mode-line-format))
+                                              flymake-mode-line-format))
                                      " "))
 (setq-default mode-line-format
-			  '("%e"
+              '("%e"
                 (:eval (when (mode-line-window-selected-p)
                          (let ((tabs (let* ((tabs (length (tab-bar-tabs)))
                                             (active-tab (tab-bar--current-tab-index)))
@@ -246,6 +250,10 @@
   (define-key icomplete-fido-mode-map (kbd "C-<return>") #'icomplete-fido-exit)
   (define-key icomplete-fido-mode-map (kbd "<escape>") #'minibuffer-keyboard-quit))
 
+(add-hook 'minibuffer-setup-hook
+          (lambda nil (setq-local truncate-lines t
+                                  line-spacing nil)))
+
 (defun file-capf ()
   "File completion at point function. src: eshelyaron."
   (pcase (bounds-of-thing-at-point 'filename)
@@ -271,13 +279,15 @@
 
 (defun my-scroll-other-down nil (interactive)
        (with-selected-window (other-window-for-scrolling)
-         (scroll-up-command 5)))
+         (let ((cursor-type nil))
+           (pixel-scroll-up 5))))
 (defun my-scroll-other-up nil (interactive)
        (with-selected-window (other-window-for-scrolling)
-         (scroll-down-command 5)))
+         (let ((cursor-type nil))
+           (pixel-scroll-down 5))))
 
 (define-key (current-global-map) (kbd "C-x C-m") #'execute-extended-command)
-(define-key (current-global-map) (kbd "C-x m") #'execute-extended-command)
+(define-key (current-global-map) (kbd "C-x m") esc-map)
 (define-key (current-global-map) (kbd "C-x x b") #'ibuffer)
 (define-key (current-global-map) (kbd "C-x x c") #'save-buffers-kill-emacs)
 (define-key (current-global-map) (kbd "C-x x e") #'eval-last-sexp)
@@ -300,6 +310,9 @@
 (define-key (current-global-map) (kbd "C-z")  #'restart-emacs)
 (define-key (current-global-map) (kbd "C-<wheel-up>") nil) ;; No text resize via mouse scroll
 (define-key (current-global-map) (kbd "C-<wheel-down>") nil) ;; No text resize via mouse scroll
+(define-key window-prefix-map (kbd "m") #'maximize-window)
+(define-key window-prefix-map (kbd "u") #'winner-undo)
+(define-key window-prefix-map (kbd "r") #'winner-redo)
 
 ;; --- Sane settings --------------------------------------------------------
 (set-default-coding-systems 'utf-8)
@@ -309,39 +322,32 @@
               completion-cycle-threshold t
               cursor-type 'bar
               line-spacing 3
-              display-line-numbers-width 4
               imenu-flatten t
+              display-line-numbers-width 4
               initial-scratch-message nil
               indent-tabs-mode nil
               mouse-wheel-tilt-scroll t
               mouse-wheel-flip-direction t
               ring-bell-function 'ignore
               select-enable-clipboard t
+              show-paren-context-when-offscreen t
+              show-paren-when-point-inside-paren t
               use-short-answers t
               uniquify-buffer-name-style 'forward)
 
-;;(add-hook 'after-init-hook #'repeat-mode)
-(add-hook 'after-init-hook #'global-goto-address-mode)
-(add-hook 'kill-emacs-hook #'recentf-cleanup)
+(when (featurep 'recentf)
+  (add-hook 'kill-emacs-hook #'recentf-cleanup))
 (add-hook 'dired-mode-hook #'dired-hide-details-mode)
 (add-hook 'dired-mode-hook #'dired-omit-mode)
 (add-hook 'prog-mode-hook (electric-pair-mode t))
 (add-hook 'prog-mode-hook #'completion-preview-mode)
 (add-hook 'prog-mode-hook #'hs-minor-mode)
+(add-hook 'prog-mode-hook #'hl-line-mode)
 (add-hook 'prog-mode-hook #'display-line-numbers-mode)
 (add-hook 'conf-mode-hook #'display-line-numbers-mode)
 
-(save-place-mode 1) (global-subword-mode 1) (winner-mode 1)
 (put 'narrow-to-region 'disabled nil)
 
-(defun my/lazy-load-savehist ()
-  "Enable `savehist-mode` only when the minibuffer is first used."
-  (savehist-mode 1)
-  (remove-hook 'minibuffer-setup-hook #'my/lazy-load-savehist))
-(add-hook 'minibuffer-setup-hook #'my/lazy-load-savehist)
-
-(which-key-mode 1) (delete-selection-mode 1)
-(global-auto-revert-mode 1) (which-function-mode 1)
 (advice-add #'server-force-delete :around #'silent-command)
 (run-with-idle-timer 1 nil
                      #'(lambda nil
@@ -351,6 +357,7 @@
       backup-directory-alist `(("." . "~/.emacs.d/backup/"))
       lock-file-name-transforms '(("\\`/.*/\\([^/]+\\)\\'" "/var/tmp/\\1" t))
       ;; ^^ https://emacs.stackexchange.com/a/81518/28970
+      auto-revert-verbose nil
       comint-prompt-read-only t
       compilation-ask-about-save nil
       completion-ignore-case t
@@ -363,6 +370,10 @@
       dired-kill-when-opening-new-dired-buffer t
       dired-recursive-copies 'always
       dired-recursive-deletes 'always
+      electric-pair-preserve-balance 'electric-pair-inhibit-predicate
+      electric-pair-delete-adjacent-pairs t
+      ;; electric-pair-open-newline-between-pairs nil
+      electric-pair-skip-whitespace nil
       eldoc-echo-area-prefer-doc-buffer t
       eldoc-idle-delay 0.2
       eldoc-echo-area-use-multiline-p nil
@@ -371,6 +382,7 @@
       flymake-no-changes-timeout 2
       flymake-show-diagnostics-at-end-of-line 'short
       help-window-select t
+      pixel-scroll-precision-interpolate-page t
       recentf-max-saved-items 200
       recentf-auto-cleanup 'never
       save-abbrevs nil
@@ -384,15 +396,15 @@
       vc-follow-symlinks t
       which-func-unknown ""
       xref-search-program (if (executable-find "rg") 'ripgrep 'grep)
-      xref-auto-jump-to-first-xref nil ; 'move
+      xref-auto-jump-to-first-xref nil
       xref-show-definitions-function 'xref-show-definitions-buffer-at-bottom
-      xref-show-xrefs-function 'xref-show-definitions-completing-read)
+      xref-show-xrefs-function 'xref-show-definitions-completing-read)    
 
 (when (executable-find "rg")
   (setq grep-command "rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)"
         grep-command-position 27))
 
-(setq isearch-wrap-pause 'no
+(setq isearch-wrap-pause 'no 
       isearch-lazy-count t
       isearch-allow-scroll 'unlimited
       isearch-regexp-lax-whitespace t
@@ -400,17 +412,25 @@
       sentence-end-double-space nil)
 
 (with-eval-after-load 'isearch
+  (define-key isearch-mode-map (kbd "M-<") #'isearch-beginning-of-buffer)
+  (define-key isearch-mode-map (kbd "M->") #'isearch-end-of-buffer)
   (define-key isearch-mode-map (kbd "TAB") #'isearch-repeat-forward)
   (define-key isearch-mode-map (kbd "<backtab>") #'isearch-repeat-backward))
 
 (with-eval-after-load 'completion-preview
+  (setq completion-preview-message-format nil)
   (define-key completion-preview-active-mode-map (kbd "M-n") #'completion-preview-next-candidate)
   (define-key completion-preview-active-mode-map (kbd "M-p") #'completion-preview-prev-candidate))
 
+;; (with-eval-after-load 'dabbrev
+;;   (advice-add #'dabbrev-capf :before #'dabbrev--reset-global-variables)
+;;   (add-hook 'completion-at-point-functions #'dabbrev-capf 100))
+
 (with-eval-after-load 'dired
-  (set-face-attribute 'dired-directory nil :slant 'italic)
+  (set-face-attribute 'dired-directory nil :inherit font-lock-string-face)
   (put 'dired-find-alternate-file 'disabled nil)
   (define-key dired-mode-map (kbd "\\") #'dired-up-directory)
+  (define-key dired-mode-map (kbd "I") #'dired-kill-subdir)
   (define-key dired-mode-map (kbd "q") #'kill-current-buffer)
   (define-key dired-mode-map (kbd "RET") #'dired-find-alternate-file)
   (define-key dired-mode-map (kbd "C-o") #'other-window))
@@ -431,6 +451,8 @@
         ediff-window-setup-function 'ediff-setup-windows-plain
         ediff-diff-options "-w"))
 
+(define-key occur-mode-map (kbd "TAB") #'occur-mode-display-occurrence)
+
 ;; install-info --dir-file=./dir --info-file=
 (push "~/.emacs.d/info" Info-default-directory-list)
 (setq Info-use-header-line nil)
@@ -442,6 +464,33 @@
         (save-silently t))
     (apply fn args)))
 
+(add-to-list 'write-file-functions
+             '(lambda ()
+                (when (derived-mode-p 'prog-mode)
+                  (check-parens))
+                nil))
+
+(define-advice load-theme (:before (&rest _args) theme-dont-propagate)
+  (mapc #'disable-theme custom-enabled-themes))
+
+(unless (display-graphic-p)
+  (setq interprogram-cut-function
+        (lambda (text)
+          (when (use-region-p)
+            (let* ((clipboard-commands
+                    '(("darwin" . "pbcopy")
+                      ("gnu/linux" . "xclip -selection clipboard")
+                      ("windows-nt" . "clip")))
+                   (copy-cmd (or (cdr (assoc (symbol-name system-type) clipboard-commands))
+                                 nil)))
+              (when copy-cmd
+                (call-process-region
+                 (region-beginning) (region-end) copy-cmd)
+                (deactivate-mark))))))
+  (menu-bar-mode -1)
+  (xterm-mouse-mode))
+
+;; --- Window Management ----------------------------------------------------
 (dolist (pops '(("\\*eshell-pop\\*" . -2 ) ;; <-- prima donna
                 ("^\\*term.*\\*$" . -1) ("^\\*compilation.*\\*$" . -1)
                 ("vc-git :.\*" . 0) ("\\*vc.\*-log\\*" . 0)
@@ -472,7 +521,8 @@
     (if side
         (let ((display-buffer-overriding-action '((display-buffer-pop-up-window))))
           (pop-to-buffer buffer)
-          (setq side-face-cookie (face-remap-add-relative 'header-line :overline (face-background 'default))))
+          (setq side-face-cookie
+                (face-remap-add-relative 'header-line :overline (face-background 'default))))
       (progn
         (display-buffer buffer)
         (face-remap-remove-relative side-face-cookie)))))
@@ -480,12 +530,10 @@
 (define-key (current-global-map) (kbd "<f10>") #'toggle-side-normal-window)
 
 (when (display-graphic-p)
-  (dolist (modes '(help-mode-hook vc-git-log-edit-mode-hook
-                                  compilation-mode-hook term-mode-hook eshell-mode-hook
-                                  occur-hook grep-mode-hook special-mode-hook))
+  (dolist (modes '(occur-hook vc-git-log-edit-mode-hook
+                              compilation-mode-hook term-mode-hook eshell-mode-hook
+                              help-mode-hook grep-mode-hook special-mode-hook))
     (add-hook modes (lambda () (setq-local header-line-format "")))))
-
-(setq other-window-scroll-default 'get-mru-window)
 
 (defun my-smart-window-selection-advice (orig-fun &rest args)
   "Use 'pos strategy on window-delete from same buffer split, else 'mru."
@@ -499,48 +547,6 @@
 
 (advice-add 'delete-window :around #'my-smart-window-selection-advice)
 
-;;; VC
-(defun my/vc-git-editor-command (command) ;; src: vimilla
-  "command is a git subcommand that requires an editor.
- example usage: (my/vc-git-editor-command \"rebase -i HEAD~3\")"
-  (interactive "P")
-  (unless server-mode (server-force-delete) (server-mode))
-  (let ((command (if command command (read-string "command: git "))))
-    (compile (concat "GIT_EDITOR=\"emacsclient\" bash -c \"git " command "\""))))
-(defun my/vc-git-rebase-i (&optional branch)
-  "if branch isn't supplied from arg, prompt for it"
-  (interactive)
-  (let ((revision (vc-read-revision
-                   (format-prompt "Revision to rebase on top of" "working revision")
-                   (list buffer-file-name))))
-    (my/vc-git-editor-command (concat "rebase -i " revision))))
-
-(with-eval-after-load 'vc-dir
-  (define-key vc-dir-mode-map (kbd "q") #'kill-current-buffer))
-(with-eval-after-load 'diff
-  (define-key diff-mode-shared-map (kbd "q") #'kill-current-buffer))
-(add-hook 'vc-before-checkin-hook #'tab-bar-new-tab)
-(define-key vc-prefix-map (kbd "z") #'vc-git-stash)
-(define-key vc-prefix-map (kbd "Z") #'vc-git-stash-pop)
-(define-key vc-prefix-map (kbd "e") #'vc-ediff)
-(define-key vc-prefix-map (kbd "f")
-            (lambda () (interactive) (vc-git--pushpull "push" nil '("--force-with-lease"))))
-(define-key vc-prefix-map (kbd "R") #'my/vc-git-rebase-i)
-
-(define-advice log-edit-show-files (:after (&rest _args) show-diff)
-  (log-edit-show-diff)
-  (switch-to-buffer "*vc-log*"))
-
-(dolist (fn '(log-edit-done log-edit-kill-buffer))
-  (eval `(define-advice ,fn (:after (&rest _args) buffer-cleanup)
-           (ignore-errors
-             (progn
-               (kill-buffer "*log-edit-files*")
-               (kill-buffer "*vc-diff*")
-               (kill-buffer "*vc*")))
-           (tab-bar-close-tab))))
-;;;
-
 (with-eval-after-load 'help-mode
   (define-key help-mode-map "q" #'kill-buffer-and-window))
 (with-eval-after-load 'comint-mode
@@ -548,16 +554,10 @@
 (with-eval-after-load 'compile
   (define-key compilation-minor-mode-map "q" #'kill-buffer-and-window))
 
-(setopt switch-to-buffer-obey-display-actions t)
+(setq switch-to-buffer-obey-display-actions t)
 (define-key (current-global-map) (kbd "M-j") #'window-toggle-side-windows)
-
 (define-key occur-mode-map (kbd "q") #'kill-buffer-and-window)
 (define-key occur-mode-map (kbd "C-o") #'other-window)
-(define-key occur-mode-map (kbd "TAB") #'occur-mode-display-occurrence)
-
-(define-advice load-theme (:before (&rest _args) theme-dont-propagate)
-  "Discard all themes before loading new."
-  (mapc #'disable-theme custom-enabled-themes))
 
 ;; --- Shell/term/compile ---------------------------------------------------
 (define-advice term-handle-exit (:after (&rest _args) term-kill-on-exit)
@@ -588,6 +588,249 @@
             (define-key term-raw-map "\M-w" 'kill-ring-save)
             (define-key term-raw-map "\M-j" 'window-toggle-side-windows)))
 
+(add-hook 'compilation-filter-hook (lambda nil
+                                     (unless (eq major-mode 'grep-mode)
+                                       (ansi-color-compilation-filter)
+                                       (ansi-osc-compilation-filter))))
+
+;; --- Programming ----------------------------------------------------------
+(define-key (current-global-map) (kbd "C-x c c") #'compile)
+(define-key (current-global-map) (kbd "C-x c r") #'recompile)
+(define-key prog-mode-map (kbd "C-c C-c") #'compile)
+(define-key prog-mode-map (kbd "C-c C-r") #'recompile)
+
+(add-hook 'prog-mode-hook
+          (lambda ()
+            (font-lock-add-keywords
+             nil
+             '(("\\<\\(FIXME\\|HACK\\|TODO\\|WIP\\|BUG\\|DONE\\)"
+                1 font-lock-warning-face t)
+               (";" . 'font-lock-comment-face)))))
+
+(with-eval-after-load 'treesit
+  (defun my/setup-install-grammars ()
+    "Install Tree-sitter grammars if they are absent."
+    (interactive)
+    (dolist (grammar
+             '((cpp "https://github.com/tree-sitter/tree-sitter-cpp")
+               (c "https://github.com/tree-sitter/tree-sitter-c")
+               (go "https://github.com/tree-sitter/tree-sitter-go")
+               (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
+               (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
+               (yaml "https://github.com/ikatyang/tree-sitter-yaml")
+               (helm "https://github.com/ngalaiko/tree-sitter-go-template"
+                     "master" "dialects/helm/src")
+               ;; (markdown "https://github.com/tree-sitter-grammars/tree-sitter-markdown"
+               ;;           "split_parser" "tree-sitter-markdown/src") ;; 31
+               ;; (markdown-inline "https://github.com/tree-sitter-grammars/tree-sitter-markdown"
+               ;;                  "split_parser" "tree-sitter-markdown-inline/src") ;; 31
+               (templ "https://github.com/vrischmann/tree-sitter-templ")
+               (gotmpl "https://github.com/ngalaiko/tree-sitter-go-template")
+               (rust "https://github.com/tree-sitter/tree-sitter-rust")
+               (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua")
+               (json "https://github.com/tree-sitter/tree-sitter-json")
+               (janet-simple "https://github.com/sogaiu/tree-sitter-janet-simple")
+               (typescript "https://github.com/tree-sitter/tree-sitter-typescript"
+                           "master" "typescript/src")))
+      (add-to-list 'treesit-language-source-alist grammar)
+      (unless (treesit-language-available-p (car grammar))
+        (treesit-install-language-grammar (car grammar)))))
+
+  (add-hook 'prog-mode-hook #'my/setup-install-grammars)
+  (setq go-ts-mode-indent-offset 4))
+
+(define-derived-mode zig-mode c-mode "zig-mode")  ;; Until zig-ts-mode is core
+(nconc auto-mode-alist
+       '(("\\.zig\\'" . zig-mode)
+         ("\\.zig\\.zon\\'" . js-json-mode)
+         ("\\.nix\\'" . conf-mode)
+         ("\\.fish\\'" . conf-mode)
+         ("\\.rs\\'" . rust-ts-mode)
+         ("\\.go\\'" . go-ts-mode)
+         ("\\go\\.mod\\'"  . go-mod-ts-mode)
+         ("\\.ts\\'" . typescript-ts-mode)
+         ("\\.lua\\'" . lua-ts-mode)
+         ("\\.ya?ml\\'" . yaml-ts-mode)
+         ("\\Dockerfile\\'" . dockerfile-ts-mode)
+         ;; ("\\.md\\'" . markdown-ts-mode) ;; 31
+         ("\\.dockerignore\\'" . dockerfile-ts-mode)
+         ("\\.bin\\'" . hexl-mode)
+         ("\\.info\\'" . Info-mode)))
+
+(dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook zig-mode-hook))
+  (add-hook mode #'eglot-ensure))
+(add-hook 'rust-ts-mode-hook
+          (lambda nil (add-to-list 'process-environment "CARGO_TERM_COLOR=always" :append)))
+
+(setq-default c-basic-offset 4)
+(add-hook 'c-mode-hook (lambda ()
+                         (define-key c-mode-map (kbd "C-c C-c") #'compile)
+                         (c-toggle-comment-style -1)))
+(add-hook 'c-ts-mode-hook
+          (lambda nil
+            (setq-local c-ts-mode-indent-style 'gnu)
+            (setq-local c-ts-mode-indent-offset 4)
+            (c-ts-mode-toggle-comment-style -1)))
+
+(with-eval-after-load 'project
+  (setq project-vc-extra-root-markers '("go.mod" "Cargo.toml" "build.zig"))
+  (setq project-vc-ignores '("**/vendor/**")))
+
+(with-eval-after-load 'eglot
+  (fset #'jsonrpc--log-event #'ignore)
+  (setq eglot-events-buffer-config 0
+        eglot-sync-connect nil
+        eglot-autoshutdown t
+        eglot-inlay-hints-mode nil)
+
+  (add-to-list 'eglot-server-programs
+               '(python-mode . ("ruff" "server")))
+  (push '(zig-mode . ("zls")) eglot-server-programs)
+  
+  (defun my-eglot-organize-imports ()
+    (interactive)
+    (ignore-errors
+      (eglot-code-actions nil nil "source.organizeImports" t)))
+  
+  (defun my-eglot-setup ()
+    (interactive)
+    (add-hook 'before-save-hook 'my-eglot-organize-imports nil t)
+    (add-hook 'before-save-hook 'eglot-format-buffer nil t))
+
+  (add-hook 'eglot-managed-mode-hook #'my-eglot-setup))
+
+(load "~/.emacs.d/lisp/snippets" :noerr :no-message)
+
+;; --- Misc functions -------------------------------------------------------
+(setq-default fill-column 100)
+(defun toggle-centered-buffer ()
+  "Toggle center alignment of the buffer. Source: jamesdyer."
+  (interactive)
+  (let* ((current-margins (window-margins))
+         (margin (if (or (equal current-margins '(0 . 0))
+                         (null (car (window-margins))))
+                     (/ (- (window-total-width) fill-column) 2)
+                   0)))
+    (visual-line-mode 1)
+    (set-window-margins nil margin margin)))
+(define-key (current-global-map) (kbd "<f9>") #'toggle-centered-buffer)
+
+(defun match-pair nil
+  (interactive)
+  (if (nth 3 (syntax-ppss))
+      (backward-up-list 1 t t)
+    (cond ((looking-at "\\s\(\\|\{") (forward-list 1) (backward-char 1))
+          ((looking-at "\\s\)\\|\}") (forward-char 1) (backward-list 1))
+          (t (backward-up-list 1 t t)))))
+
+(defun my-select-fwd-line (arg)
+  "Select ARG lines from current line and move cursor. src: Kaushal Modi."
+  (interactive "p")
+  (or arg (setq arg 1))
+  (when (not (use-region-p))
+    (forward-line 0)
+    (set-mark-command nil))
+  (forward-line arg))
+
+(defun my-chord (initial-key final-key fn)
+  (interactive) ;; src: wasamasa
+  (let* ((timeout 0.4)
+         (event (read-event nil nil timeout)))
+    (if event ;; timeout met
+        (if (and (characterp event) (= event final-key))
+            (funcall fn)
+          (insert initial-key)
+          (push event unread-command-events))
+      (insert initial-key))))
+
+;; --- Mini Meow ------------------------------------------------------------
+(define-global-minor-mode global-view-mode view-mode
+  (lambda () ; src: xenodium
+    (when (and (not (minibufferp)) (not noninteractive) ; 'special-mode
+               (derived-mode-p 'fundamental-mode 'messages-buffer-mode 'prog-mode 'conf-mode 'outline-mode))
+      (view-mode 1))))
+(global-view-mode 1)
+(defun meow--set-cursor-type (type)
+  (if (display-graphic-p)
+      (setq cursor-type type)
+    (let* ((shape (or (car-safe type) type))
+           (param (cond ((eq shape 'bar) "6")
+                        ((eq shape 'hbar) "4")
+                        (t "2"))))
+      (send-string-to-terminal (concat "\e[" param " q")))))
+(defun view-mode-edit-command (fn)
+  (interactive)
+  (View-exit) (ignore-errors (call-interactively fn)) (view-mode 1))
+(add-hook 'view-mode-hook
+          (lambda nil (meow--set-cursor-type (if view-mode 'box 'bar))))
+(define-key (current-global-map) (kbd "j") (lambda nil (interactive) (my-chord ?j ?k 'view-mode)))
+(with-eval-after-load 'view
+  ;; normal binds
+  (dolist (pair '(("\\" . dired-jump) ("A" . move-beginning-of-line) ("E" . move-end-of-line)
+                  ("a" . back-to-indentation) ("e" . forward-word) ("b" . backward-word)
+                  ("v" . set-mark-command) ("h" . backward-char) ("j" . next-line)
+                  ("k" . previous-line) ("l" . forward-char) ("i" . View-exit)
+                  ("y" . kill-ring-save) ("%" . match-pair) ("o" . other-window)
+                  ("D" . pixel-scroll-interpolate-down) ("U" . pixel-scroll-interpolate-up)
+                  ("[" . tab-bar-switch-to-prev-tab) ("]" . tab-bar-switch-to-next-tab)
+                  ("x" . my-select-fwd-line) ("X" . exchange-point-and-mark) ("O" . occur)
+                  ("w" . mark-word) ("," . my-scroll-other-down) ("M-h" . mark-paragraph)
+                  ("M-j" . window-toggle-side-windows) ("C-M-h" . mark-defun)
+                  ("." . my-scroll-other-up) (";" . keyboard-quit) ("F" . ffap)
+                  ("*" . isearch-forward-symbol-at-point) ("`" . window-toggle-side-windows)
+                  ("Z" . pop-to-mark-command) ("I" . eglot-find-implementation)
+                  ("K" . my-goto-doc) ("G" . xref-find-definitions) ("B" . xref-go-back)
+                  ("!" . flymake-show-buffer-diagnostics) ("=" . mark-sexp)
+                  ("?" . xref-find-references)))
+    (define-key view-mode-map (kbd (car pair)) (cdr pair)))
+  ;; buffer modifying binds
+  (dolist (pair '(("d" . kill-region) ("p" . yank) ("P" . yank-pop) ("r" . eglot-rename)
+                  ("DEL" . backward-delete-char-untabify) ("&" . align-regexp)
+                  ("z" . undo-redo) ("u" . undo-only) ("R" . replace-regexp)
+                  ("C-x ;" . comment-line) ("C-x C-;" . comment-line)
+                  ("J" . delete-indentation) ("C-k" . kill-line) ("C-/" . undo-only)
+                  ("f" . hs-toggle-hiding) ("c" . hs-hide-all) ("C" . hs-show-all)
+                  ("V" . string-rectangle) ("M-TAB" . indent-for-tab-command)
+                  ("{" . indent-rigidly-left-to-tab-stop)
+                  ("}" . indent-rigidly-right-to-tab-stop)))
+    (define-key view-mode-map (kbd (car pair))
+                #'(lambda nil (interactive)
+                    (view-mode-edit-command (cdr pair)))))
+  (define-key view-mode-map (kbd "H") help-map)
+  (define-key view-mode-map (kbd "SPC") ctl-x-map))
+
+(when (eq system-type 'darwin)
+  (select-frame-set-input-focus (selected-frame)))
+
+;; --- VC -------------------------------------------------------------------
+(with-eval-after-load 'vc-dir
+  (define-key vc-dir-mode-map (kbd "q") #'kill-current-buffer))
+(with-eval-after-load 'diff
+  (define-key diff-mode-shared-map (kbd "q") #'kill-current-buffer))
+(add-hook 'vc-before-checkin-hook #'tab-bar-new-tab)
+(define-key vc-prefix-map (kbd "e") #'vc-ediff)
+(define-key vc-prefix-map (kbd "f")
+            (lambda () (interactive) (vc-git--pushpull "push" nil '("--force-with-lease"))))
+(define-key vc-prefix-map (kbd "z") #'vc-git-stash)
+(define-key vc-prefix-map (kbd "A") #'vc-git-stash-apply)
+(define-key vc-prefix-map (kbd "S") #'vc-git-stash-show)
+(define-key vc-prefix-map (kbd "Z") #'vc-git-stash-pop)
+
+(define-advice log-edit-show-files (:after (&rest _args) show-diff)
+  (setq-local other-window-scroll-default 'get-mru-window)
+  (log-edit-show-diff)
+  (switch-to-buffer "*vc-log*"))
+
+(dolist (fn '(log-edit-done log-edit-kill-buffer))
+  (eval `(define-advice ,fn (:after (&rest _args) buffer-cleanup)
+           (ignore-errors
+             (progn
+               (kill-buffer "*log-edit-files*")
+               (kill-buffer "*vc-diff*")
+               (kill-buffer "*vc*")))
+           (tab-bar-close-tab))))
+
+;; --- Eshell ---------------------------------------------------------------
 ;; Eshell refs:
 ;; https://github.com/howardabrams/dot-files/blob/master/emacs-eshell.org
 ;; https://www.masteringemacs.org/article/complete-guide-mastering-eshell
@@ -604,12 +847,15 @@
       eshell-glob-case-insensitive t)
 
 (defun my-eshell-only-aliases () ; create aliases that shouldn't be exported to common file
+  (push '("source" ". $1") eshell-command-aliases-list)
   (push '("k" "kubecolor $*") eshell-command-aliases-list)
+  (push '("clear" "clear t") eshell-command-aliases-list)
   (push '("d" "dired-other-window $1") eshell-command-aliases-list)
   (push '("dired" "dired $1") eshell-command-aliases-list)
   (push '("ee" "find-file-other-window $1") eshell-command-aliases-list)
   (push '("ff" "find-file $1") eshell-command-aliases-list)
   (push '("e" "find-file $1") eshell-command-aliases-list)
+  (push '("gd" "vc-diff") eshell-command-aliases-list)
   (push '("groot" "cd ${git rev-parse --show-toplevel}") eshell-command-aliases-list)
   (push '("nix-update-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} nix build .#darwinConfigurations.${hostname -s}.system --impure && cd -") eshell-command-aliases-list)
   (push '("darwin-rebuild-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} ./result/sw/bin/darwin-rebuild switch --flake . --impure && cd -") eshell-command-aliases-list)
@@ -636,47 +882,25 @@
   (my-eshell-only-aliases))
 (advice-add 'eshell-read-aliases-list :override #'my-eshell-read-aliases-list)
 
-(defun eshell-insert-history () ; src: howard abrams
-  "Displays the eshell history to select and insert back into your eshell."
-  (interactive)
-  (insert (completing-read "Eshell history: "
-                           (delete-dups
-                            (ring-elements eshell-history-ring)))))
-
 (with-eval-after-load 'em-term
   (dolist (cmd '("fzf" "yazi" "mpv" "emacsclient" "bat"))
     (add-to-list 'eshell-visual-commands cmd))
   (setq eshell-visual-options '(("git" "--help" "--paginate" "--patch")))
-  ;; ("gardenctl" "--garden" "--project" "--shoot"))) ;; output issues
   (setq eshell-visual-subcommands '(("git" "log" "diff" "show"))))
-;; ("gardenctl" "target")))) ;; output issues
 
 (with-eval-after-load 'em-ls
   (set-face-attribute 'eshell-ls-directory nil :inherit font-lock-keyword-face))
 
-(defun my-eshell-narrow-to-prompt ()
-  "Narrow buffer to prompt at point. src: ambrevar."
-  (interactive)
-  (narrow-to-region
-   (save-excursion
-     (forward-line)
-     (call-interactively #'eshell-previous-prompt)
-     (beginning-of-line)
-     (point))
-   (save-excursion
-     (forward-line)
-     (call-interactively #'eshell-next-prompt)
-     (re-search-backward eshell-prompt-regexp nil t)
-     (when (and (require 'eshell-prompt-extras nil 'noerror)
-                (eq eshell-prompt-function #'epe-theme-multiline-with-status))
-       (previous-line))
-     (point))))
-
 (with-eval-after-load 'eshell
-  ;; (add-to-list 'eshell-modules-list 'eshell-smart)
   (add-hook 'eshell-mode-hook #'completion-preview-mode)
   (add-hook 'eshell-mode-hook
-            (lambda nil (add-to-list 'process-environment "KUBECTX_IGNORE_FZF=1" :append)))
+            (lambda nil
+              (when (not (or (getenv "GCTL_SESSION_ID") (getenv "TERM_SESSION_ID")))
+                (setenv "GCTL_SESSION_ID" (string-trim
+                                           (shell-command-to-string "uuidgen"))))
+              (setenv "GOPATH" (concat (getenv "HOME") "/go"))
+              (eshell/addpath (concat (getenv "GOPATH") "/bin"))
+              (add-to-list 'process-environment "KUBECTX_IGNORE_FZF=1" :append)))
   (push 'file-capf completion-at-point-functions)
   ;; src: doom
   (setq eshell-prompt-regexp "^.* λ "
@@ -719,295 +943,92 @@
              (namespace (or (get-kubectl-output ns-cmd) "default")))
         (propertize (format "(%s|%s) " context namespace)
                     'face 'error))))
-  
+
   (defun my/eshell-default-prompt-fn ()
-    "Generate the prompt string for eshell. Use for `eshell-prompt-function'."
     (concat
-     (get-k8s-context-and-namespace) ;; TODO: verify gardenctl target in eshell
+     (get-k8s-context-and-namespace)
      ;; pwd git last-status
      (let ((pwd (eshell/pwd)))
        (propertize (if (equal pwd "~")
                        pwd
                      (pwd-shorten-dirs (abbreviate-file-name pwd)))
                    'face '(:inherit font-lock-keyword-face :weight bold)))
-     (propertize (my/eshell--current-git-branch)
+     (propertize (my/eshell--git-prompt)
                  'face '(:inherit font-lock-constant-face :slant italic))
      (if (zerop eshell-last-command-status)
          (propertize " λ" 'face 'success)
        (propertize (format " [%s] λ" eshell-last-command-status) 'face 'warning))
      " "))
 
-  (defsubst my/eshell--current-git-branch ()
-    ;; TODO Refactor me
-    (cl-destructuring-bind (status . output)
-        (with-temp-buffer (cons
-                           (or (call-process "git" nil t nil "symbolic-ref" "-q" "--short" "HEAD")
-                               (call-process "git" nil t nil "describe" "--all" "--always" "HEAD")
-                               -1)
-                           (string-trim (buffer-string))))
+  (defun my/eshell--git-prompt ()
+    (let ((rebase-in-progress-p
+           (not (string-empty-p (my/eshell--git-output '("rev-parse" "--verify" "REBASE_HEAD") 128))))
+          (merge-in-progress-p
+           (not (string-empty-p (my/eshell--git-output '("rev-parse" "--verify" "MERGE_HEAD") 128))))
+          (git-branch
+           (my/eshell--git-output '("symbolic-ref" "-q" "--short" "HEAD") -1)))
+      (cond
+       (rebase-in-progress-p " (REBASE-i)")
+       (merge-in-progress-p " (MERGE-i)")
+       (t git-branch))))
+
+  (defun my/eshell--git-output (command err-status)
+    (let* ((result (with-temp-buffer 
+                     (list (or (apply #'call-process "git" nil t nil command) err-status)
+                           (string-trim (buffer-string)))))
+           (status (car result))
+           (output (cadr result)))
       (if (equal status 0)
           (format " (%s)" output)
-        ""))))
+        "")))
+
+  (defun eshell-insert-history () ; src: howard abrams
+    "Displays the eshell history to select and insert back into your eshell."
+    (interactive)
+    (insert (completing-read "Eshell history: "
+                             (delete-dups
+                              (ring-elements eshell-history-ring)))))
+
+  (defun my-eshell-narrow-to-prompt ()
+    "Narrow buffer to prompt at point. src: ambrevar."
+    (interactive)
+    (narrow-to-region
+     (save-excursion
+       (forward-line)
+       (call-interactively #'eshell-previous-prompt)
+       (beginning-of-line)
+       (point))
+     (save-excursion
+       (forward-line)
+       (call-interactively #'eshell-next-prompt)
+       (re-search-backward eshell-prompt-regexp nil t)
+       (when (and (require 'eshell-prompt-extras nil 'noerror)
+                  (eq eshell-prompt-function #'epe-theme-multiline-with-status))
+         (previous-line))
+       (point)))))
 
 (add-hook 'eshell-mode-hook
           #'(lambda ()
-              (goto-address-mode)
               (setq-local global-hl-line-mode nil)
               (setenv "TERM" "xterm-256color")
-              (keymap-unset eshell-hist-mode-map "<up>" t)
-              (keymap-unset eshell-hist-mode-map "<down>" t)
+              (define-key eshell-hist-mode-map (kbd "<up>") nil t)
+              (define-key eshell-hist-mode-map (kbd "<down>") nil t)
+              (define-key eshell-hist-mode-map (kbd "C-p")
+                          #'eshell-previous-matching-input-from-input)
+              (define-key eshell-hist-mode-map (kbd "C-n")
+                          #'eshell-next-matching-input-from-input)
               (define-key eshell-mode-map (kbd "C-x n d") #'my-eshell-narrow-to-prompt)
               (define-key eshell-mode-map (kbd "C-u") (lambda nil (interactive) (kill-line 0)))
               (define-key eshell-mode-map (kbd "C-w") #'backward-kill-word)
               (define-key eshell-mode-map (kbd "C-x n d") #'my-eshell-narrow-to-prompt)
               (define-key eshell-hist-mode-map (kbd "C-r") #'eshell-insert-history)))
 
-(unless (display-graphic-p)
-  (setq interprogram-cut-function
-        (lambda (text)
-          (when (use-region-p)
-            (let* ((clipboard-commands
-                    '(("darwin" . "pbcopy")
-                      ("gnu/linux" . "xclip -selection clipboard")
-                      ("windows-nt" . "clip")))
-                   (copy-cmd (or (cdr (assoc (symbol-name system-type) clipboard-commands))
-                                 nil)))
-              (when copy-cmd
-                (call-process-region
-                 (region-beginning) (region-end) copy-cmd)
-                (deactivate-mark))))))
-  (menu-bar-mode -1)
-  (xterm-mouse-mode))
-
-(add-hook 'compilation-filter-hook (lambda nil
-                                     (unless (eq major-mode 'grep-mode)
-                                       (ansi-color-compilation-filter)
-                                       (ansi-osc-compilation-filter))))
-
-;; --- Programming ----------------------------------------------------------
-(define-key (current-global-map) (kbd "C-x c c") #'compile)
-(define-key (current-global-map) (kbd "C-x c r") #'recompile)
-(define-key prog-mode-map (kbd "C-c C-c") #'compile)
-(define-key prog-mode-map (kbd "C-c C-r") #'recompile)
-
-(add-hook 'prog-mode-hook
-          (lambda ()
-            (font-lock-add-keywords
-             nil
-             '(("\\<\\(FIXME\\|HACK\\|TODO\\|WIP\\|BUG\\|DONE\\)"
-                1 font-lock-warning-face t)
-               (";" . 'font-lock-comment-face)))))
-
-(with-eval-after-load 'treesit
-  (defun my/setup-install-grammars ()
-    "Install Tree-sitter grammars if they are absent."
-    (interactive)
-    (dolist (grammar
-             '((cpp "https://github.com/tree-sitter/tree-sitter-cpp")
-               (c "https://github.com/tree-sitter/tree-sitter-c")
-               (go "https://github.com/tree-sitter/tree-sitter-go")
-               (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
-               (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
-               (yaml "https://github.com/ikatyang/tree-sitter-yaml")
-               (helm "https://github.com/ngalaiko/tree-sitter-go-template"
-                     "master" "dialects/helm/src")
-               (templ "https://github.com/vrischmann/tree-sitter-templ")
-               (gotmpl "https://github.com/ngalaiko/tree-sitter-go-template")
-               (rust "https://github.com/tree-sitter/tree-sitter-rust")
-               (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua")
-               (json "https://github.com/tree-sitter/tree-sitter-json")
-               (janet-simple "https://github.com/sogaiu/tree-sitter-janet-simple")
-               (typescript "https://github.com/tree-sitter/tree-sitter-typescript"
-                           "master" "typescript/src")))
-      (add-to-list 'treesit-language-source-alist grammar)
-      (unless (treesit-language-available-p (car grammar))
-        (treesit-install-language-grammar (car grammar)))))
-
-  (add-hook 'prog-mode-hook #'my/setup-install-grammars)
-  (setq go-ts-mode-indent-offset 4))
-
-(nconc auto-mode-alist
-       '(("\\.zig\\'" . c-mode) ;; Until zig-ts-mode is core
-         ("\\.zig\\.zon\\'" . js-json-mode)
-         ("\\.nix\\'" . js-json-mode)
-         ("\\.fish\\'" . conf-mode)
-         ("\\.rs\\'" . rust-ts-mode)
-         ("\\.go\\'" . go-ts-mode)
-         ("\\go\\.mod\\'"  . go-mod-ts-mode)
-         ("\\.ts\\'" . typescript-ts-mode)
-         ("\\.lua\\'" . lua-ts-mode)
-         ("\\.ya?ml\\'" . yaml-ts-mode)
-         ("\\Dockerfile\\'" . dockerfile-ts-mode)
-         ("\\.dockerignore\\'" . dockerfile-ts-mode)
-         ("\\.bin\\'" . hexl-mode)
-         ("\\.info\\'" . Info-mode)))
-
-(dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook))
-  (add-hook mode #'eglot-ensure))
-(add-hook 'rust-ts-mode-hook
-          (lambda nil (add-to-list 'process-environment "CARGO_TERM_COLOR=always" :append)))
-(add-hook 'js-json-mode-hook (lambda nil (setq-local tab-width 2)))
-
-(setq-default c-basic-offset 4)
-(add-hook 'c-mode-hook (lambda ()
-                         (c-toggle-comment-style -1)
-                         (when (string= "zig"
-                                        (file-name-extension buffer-file-name))
-                           (eglot '(c-mode) (project-current) 'eglot-lsp-server '("zls") '("zig")))))
-(add-hook 'c-ts-mode-hook
-          (lambda nil
-            (setq-local c-ts-mode-indent-style 'gnu)
-            (setq-local c-ts-mode-indent-offset 4)
-            (c-ts-mode-toggle-comment-style -1)))
-
-(with-eval-after-load 'project
-  (setq project-vc-extra-root-markers '("go.mod" "Cargo.toml"))
-  (setq project-vc-ignores '("**/vendor/**")))
-
-(with-eval-after-load 'eglot
-  
-  (fset #'jsonrpc--log-event #'ignore)
-  (setq eglot-events-buffer-config 0
-        eglot-autoshutdown t
-        eglot-inlay-hints-mode nil)
-
-  (add-to-list 'eglot-server-programs
-               '(python-mode . ("ruff" "server")))
-  
-  (defun my-eglot-organize-imports ()
-    (interactive)
-    (ignore-errors
-      (eglot-code-actions nil nil "source.organizeImports" t)))
-  
-  (defun my-eglot-setup ()
-    (interactive)
-    (when (not (eq major-mode 'sql-mode))
-      (add-hook 'before-save-hook 'my-eglot-organize-imports nil t)
-      (add-hook 'before-save-hook 'eglot-format-buffer nil t)))
-
-  (add-hook 'eglot-managed-mode-hook #'my-eglot-setup))
-
-(load "~/.emacs.d/lisp/snippets" :noerr :no-message)
-
-;; --- Misc functions -------------------------------------------------------
-(setq-default fill-column 100)
-(defun toggle-centered-buffer ()
-  "Toggle center alignment of the buffer. Source: jamesdyer."
-  (interactive)
-  (let* ((current-margins (window-margins))
-         (margin (if (or (equal current-margins '(0 . 0))
-                         (null (car (window-margins))))
-                     (/ (- (window-total-width) fill-column) 2)
-                   0)))
-    (visual-line-mode 1)
-    (set-window-margins nil margin margin)))
-(define-key (current-global-map) (kbd "<f9>") #'toggle-centered-buffer)
-
-(defun match-pair nil
-  (interactive)
-  (if (nth 3 (syntax-ppss))
-      (backward-up-list 1 t t)
-    (cond ((looking-at "\\s\(\\|\{") (forward-list 1) (backward-char 1))
-          ((looking-at "\\s\)\\|\}") (forward-char 1) (backward-list 1))
-          (t (backward-up-list 1 t t)))))
-
-(defun my/select-fwd-line (arg)
-  "Select ARG lines from current line and move cursor. src: Kaushal Modi."
-  (interactive "p")
-  (or arg (setq arg 1))
-  (when (not (use-region-p))
-    (forward-line 0)
-    (set-mark-command nil))
-  (forward-line arg))
-
-(defun my-chord (initial-key final-key fn)
-  (interactive) ;; src: wasamasa
-  (let* ((timeout 0.4)
-         (event (read-event nil nil timeout)))
-    (if event ;; timeout met
-        (if (and (characterp event) (= event final-key))
-            (funcall fn)
-          (insert initial-key)
-          (push event unread-command-events))
-      (insert initial-key))))
-
-;; --- Mini Meow ------------------------------------------------------------
-(define-global-minor-mode global-view-mode view-mode
-  (lambda () ; src: xenodium
-    (when (and (not (minibufferp)) (not noninteractive) ; 'special-mode
-               (derived-mode-p 'messages-buffer-mode 'prog-mode 'conf-mode 'outline-mode))
-      (view-mode 1))))
-(global-view-mode 1)
-(defun meow--set-cursor-type (type)
-  (if (display-graphic-p)
-      (setq cursor-type type)
-    (let* ((shape (or (car-safe type) type))
-           (param (cond ((eq shape 'bar) "6")
-                        ((eq shape 'hbar) "4")
-                        (t "2"))))
-      (send-string-to-terminal (concat "\e[" param " q")))))
-(defun view-mode-edit-command (fn)
-  (interactive)
-  (View-exit) (ignore-errors (call-interactively fn)) (view-mode 1))
-(add-hook 'view-mode-hook
-          (lambda nil (meow--set-cursor-type (if view-mode 'box 'bar))))
-(define-key (current-global-map) (kbd "j") (lambda nil (interactive) (my-chord ?j ?k 'view-mode)))
-(with-eval-after-load 'view
-  ;; normal binds
-  (dolist (pair '(("\\" . dired-jump) ("A" . move-beginning-of-line) ("E" . move-end-of-line)
-                  ("a" . back-to-indentation) ("e" . forward-word) ("b" . backward-word)
-                  ("v" . set-mark-command) ("h" . backward-char) ("j" . next-line)
-                  ("k" . previous-line) ("l" . forward-char) ("i" . View-exit)
-                  ("y" . kill-ring-save) ("%" . match-pair) ("o" . other-window)
-                  ("D" . View-scroll-half-page-forward) ("U" . View-scroll-half-page-backward)
-                  ("[" . tab-bar-switch-to-prev-tab) ("]" . tab-bar-switch-to-next-tab)
-                  ("x" . my/select-fwd-line) ("X" . exchange-point-and-mark) ("O" . occur)
-                  ("w" . mark-word) ("," . my-scroll-other-down) ("M-h" . mark-paragraph)
-                  ("M-j" . window-toggle-side-windows) ("C-M-h" . mark-defun)
-                  ("." . my-scroll-other-up) (";" . keyboard-quit) ("F" . ffap)
-                  ("*" . isearch-forward-symbol-at-point) ("`" . window-toggle-side-windows)
-                  ("Z" . pop-to-mark-command) ("I" . eglot-find-implementation)
-                  ("K" . my-goto-doc) ("G" . xref-find-definitions) ("B" . xref-go-back)
-                  ("!" . flymake-show-buffer-diagnostics) ("=" . mark-sexp)
-                  ("?" . xref-find-references)))
-    (define-key view-mode-map (kbd (car pair)) (cdr pair)))
-  ;; buffer modifying binds
-  (dolist (pair '(("d" . kill-region) ("p" . yank) ("P" . yank-pop) ("r" . eglot-rename)
-                  ("DEL" . backward-delete-char-untabify) ("&" . align-regexp)
-                  ("z" . undo-redo) ("u" . undo-only) ("R" . replace-regexp)
-                  ("C-x ;" . comment-line) ("C-x C-;" . comment-line)
-                  ("J" . delete-indentation) ("C-k" . kill-line) ("C-/" . undo-only)
-                  ("f" . hs-toggle-hiding) ("c" . hs-hide-all) ("C" . hs-show-all)
-                  ("V" . string-rectangle) ("TAB" . indent-for-tab-command)
-                  ("{" . indent-rigidly-left-to-tab-stop)
-                  ("}" . indent-rigidly-right-to-tab-stop)))
-    (define-key view-mode-map (kbd (car pair))
-                #'(lambda nil (interactive)
-                    (view-mode-edit-command (cdr pair)))))
-  (define-key view-mode-map (kbd "H") help-map)
-  (define-key view-mode-map (kbd "SPC") ctl-x-map))
-
-;; --- OSX Specific ---------------------------------------------------------
-(when (eq system-type 'darwin)
-  (select-frame-set-input-focus (selected-frame))
-  (setq mac-option-modifier 'meta
-        ns-function-modifier 'super
-        mac-right-option-modifier 'alt
-        mac-command-modifier 'hyper))
-
-;; --- Minibuffer setup -----------------------------------------------------
-(defun nano-minibuffer--setup ()
-  ;; (set-window-margins nil 3 0)
-  (setq truncate-lines t)
-  (setq-local line-spacing nil))
-(add-hook 'minibuffer-setup-hook #'nano-minibuffer--setup)
-
 ;; --- Speed benchmarking ---------------------------------------------------
-(let ((init-time (float-time (time-subtract (current-time) init-start-time)))
-      (total-time (string-to-number (emacs-init-time "%f"))))
-  (message (concat
-            (propertize "Startup time: " 'face 'bold)
-            (format "%.2fs " init-time)
-            (propertize (format "(+ %.2fs system time)"
-                                (- total-time init-time))
-                        'face 'shadow))))
+;; (let ((init-time (float-time (time-subtract (current-time) init-start-time)))
+;;       (total-time (string-to-number (emacs-init-time "%f"))))
+;;   (message (concat
+;;             (propertize "Startup time: " 'face 'bold)
+;;             (format "%.2fs " init-time)
+;;             (propertize (format "(+ %.2fs system time)"
+;;                                 (- total-time init-time))
+;;                         'face 'shadow))))
