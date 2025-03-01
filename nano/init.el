@@ -278,13 +278,23 @@
          (eldoc-doc-buffer t)))
 
 (defun my-scroll-other-down nil (interactive)
-       (with-selected-window (other-window-for-scrolling)
-         (let ((cursor-type nil))
-           (pixel-scroll-up 5))))
+       (let ((mode (with-current-buffer (window-buffer (other-window-for-scrolling))
+                     major-mode)))
+         (with-selected-window (other-window-for-scrolling)
+           (cond ((eq mode 'Info-mode) (Info-scroll-up))
+                 (pixel-scroll-precision-mode
+                  (let ((cursor-type nil))
+                    (pixel-scroll-up 5)))
+                 (t (scroll-up-command 5))))))
 (defun my-scroll-other-up nil (interactive)
-       (with-selected-window (other-window-for-scrolling)
-         (let ((cursor-type nil))
-           (pixel-scroll-down 5))))
+       (let ((mode (with-current-buffer (window-buffer (other-window-for-scrolling))
+                     major-mode)))
+         (with-selected-window (other-window-for-scrolling)
+           (cond ((eq mode 'Info-mode) (Info-scroll-down))
+                 (pixel-scroll-precision-mode
+                  (let ((cursor-type nil))
+                    (pixel-scroll-down 5)))
+                 (t (scroll-down-command 5))))))
 
 (define-key (current-global-map) (kbd "C-x C-m") #'execute-extended-command)
 (define-key (current-global-map) (kbd "C-x m") esc-map)
@@ -320,7 +330,7 @@
               completion-styles
               '(basic partial-completion substring flex emacs22)
               completion-cycle-threshold t
-              cursor-type 'bar
+              ;; cursor-type 'bar
               line-spacing 3
               imenu-flatten t
               display-line-numbers-width 4
@@ -428,6 +438,11 @@
 ;;   (add-hook 'completion-at-point-functions #'dabbrev-capf 100))
 
 (with-eval-after-load 'dired
+  (when (eq system-type 'darwin)
+    (require 'ls-lisp)
+    (setq ls-lisp-use-insert-directory-program nil
+          dired-listing-switches
+          "-l --almost-all --human-readable --group-directories-first"))
   (set-face-attribute 'dired-directory nil :inherit font-lock-string-face)
   (put 'dired-find-alternate-file 'disabled nil)
   (define-key dired-mode-map (kbd "\\") #'dired-up-directory)
@@ -765,9 +780,12 @@
   (interactive)
   (View-exit) (ignore-errors (call-interactively fn)) (view-mode 1))
 (add-hook 'view-mode-hook
-          (lambda nil (meow--set-cursor-type (if view-mode 'box 'bar))))
+          (lambda nil (meow--set-cursor-type
+                       (if (or view-mode (derived-mode-p 'special-mode)) 'box 'bar))))
 (define-key (current-global-map) (kbd "j") (lambda nil (interactive) (my-chord ?j ?k 'view-mode)))
 (with-eval-after-load 'view
+  (define-key view-mode-map (kbd "g") (make-sparse-keymap))
+  (define-key view-mode-map (kbd "z") (make-sparse-keymap))
   ;; normal binds
   (dolist (pair '(("\\" . dired-jump) ("A" . move-beginning-of-line) ("E" . move-end-of-line)
                   ("a" . back-to-indentation) ("e" . forward-word) ("b" . backward-word)
@@ -779,28 +797,38 @@
                   ("x" . my-select-fwd-line) ("X" . exchange-point-and-mark) ("O" . occur)
                   ("w" . mark-word) ("," . my-scroll-other-down) ("M-h" . mark-paragraph)
                   ("M-j" . window-toggle-side-windows) ("C-M-h" . mark-defun)
-                  ("." . my-scroll-other-up) (";" . keyboard-quit) ("F" . ffap)
-                  ("*" . isearch-forward-symbol-at-point) ("`" . window-toggle-side-windows)
-                  ("Z" . pop-to-mark-command) ("I" . eglot-find-implementation)
-                  ("K" . my-goto-doc) ("G" . xref-find-definitions) ("B" . xref-go-back)
-                  ("!" . flymake-show-buffer-diagnostics) ("=" . mark-sexp)
+                  ("." . my-scroll-other-up) (";" . keyboard-quit) ("gf" . ffap)
+                  ("gs" . scratch-buffer) ("*" . isearch-forward-symbol-at-point)
+                  ("`" . window-toggle-side-windows) ("zz" . pop-to-mark-command)
+                  ("gi" . eglot-find-implementation) ("I" . imenu) (")" . forward-sexp)
+                  ("(" . backward-sexp) ("g/" . xref-find-definitions-other-window)
+                  ("gd" . xref-find-definitions) ("gb" . xref-go-back) ("K" . my-goto-doc)
+                  ("gx" . flymake-show-buffer-diagnostics) ("=" . mark-sexp)
                   ("?" . xref-find-references)))
     (define-key view-mode-map (kbd (car pair)) (cdr pair)))
   ;; buffer modifying binds
-  (dolist (pair '(("d" . kill-region) ("p" . yank) ("P" . yank-pop) ("r" . eglot-rename)
+  (dolist (pair '(("d" . (lambda nil (interactive)
+                           (if (use-region-p) (call-interactively 'kill-region) (delete-char 1))))
+                  ("p" . yank) ("P" . yank-pop) ("+" . eglot-rename)
                   ("DEL" . backward-delete-char-untabify) ("&" . align-regexp)
-                  ("z" . undo-redo) ("u" . undo-only) ("R" . replace-regexp)
+                  ("Z" . undo-redo) ("u" . undo-only) ("R" . replace-regexp)
                   ("C-x ;" . comment-line) ("C-x C-;" . comment-line)
                   ("C-k" . kill-line) ("C-/" . undo-only)
-                  ("f" . hs-toggle-hiding) ("c" . hs-hide-all) ("C" . hs-show-all)
+                  ("zf" . hs-toggle-hiding) ("zc" . hs-hide-all) ("zs" . hs-show-all)
                   ("V" . string-rectangle) ("M-TAB" . indent-for-tab-command)
                   ("{" . indent-rigidly-left-to-tab-stop)
                   ("}" . indent-rigidly-right-to-tab-stop)
+                  ("r" . (lambda nil (interactive)
+                           (delete-char 1) (insert-char (read-char nil t)) (backward-char 1)))
                   ("J" . (lambda nil (interactive)
                            (delete-indentation t)))))
     (define-key view-mode-map (kbd (car pair))
                 #'(lambda nil (interactive)
                     (view-mode-edit-command (cdr pair)))))
+  (define-key view-mode-map (kbd "c")
+              (lambda nil (interactive)
+                (View-exit)
+                (if (use-region-p) (call-interactively 'kill-region) (delete-char 1))))
   (define-key view-mode-map (kbd "H") help-map)
   (define-key view-mode-map (kbd "SPC") ctl-x-map))
 
@@ -1027,6 +1055,12 @@
               (define-key eshell-mode-map (kbd "C-w") #'backward-kill-word)
               (define-key eshell-mode-map (kbd "C-x n d") #'my-eshell-narrow-to-prompt)
               (define-key eshell-hist-mode-map (kbd "C-r") #'eshell-insert-history)))
+
+(with-eval-after-load 'docview
+  (setq doc-view-resolution 300
+        doc-view-mupdf-use-svg t
+        ;; doc-view-doc-type '(("pdf" pdf) ("epub" pdf))
+        large-file-warning-threshold (* 50 (expt 2 20))))
 
 ;; --- Speed benchmarking ---------------------------------------------------
 ;; (let ((init-time (float-time (time-subtract (current-time) init-start-time)))
