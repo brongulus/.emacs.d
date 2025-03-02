@@ -740,6 +740,11 @@
           ((looking-at "\\s\)\\|\}") (forward-char 1) (backward-list 1))
           (t (backward-up-list 1 t t)))))
 
+(defvar insert-pair-map ;; src: oantolin
+  (let ((map (make-sparse-keymap)))
+    (define-key map [t] #'insert-pair)
+    map))
+
 (defun my-select-fwd-line (arg)
   "Select ARG lines from current line and move cursor. src: Kaushal Modi."
   (interactive "p")
@@ -798,6 +803,7 @@
 (define-key (current-global-map) (kbd "j") (lambda nil (interactive) (my-chord ?j ?k 'view-mode)))
 (with-eval-after-load 'view
   (define-key view-mode-map (kbd "g") (make-sparse-keymap))
+  (define-key view-mode-map (kbd "m") (make-sparse-keymap))
   (define-key view-mode-map (kbd "z") (make-sparse-keymap))
   ;; normal binds
   (dolist (pair '(("\\" . dired-jump) ("gl" . move-end-of-line) ("ge" . move-end-of-line)
@@ -819,6 +825,7 @@
                   ("g/" . xref-find-definitions-other-window) ("gd" . xref-find-definitions)
                   ("gb" . xref-go-back) ("K" . my-goto-doc) (":" . goto-line)
                   ("gx" . flymake-show-buffer-diagnostics) ("gr" . xref-find-references)
+                  ("ms" . (lambda nil (interactive) (View-exit) insert-pair-map))
                   ("C" . (lambda nil (interactive) (View-exit)
                            (call-interactively 'string-rectangle)))
                   ("a" . (lambda nil (interactive) (View-exit) (forward-char 1)))
@@ -831,15 +838,15 @@
                            (call-interactively 'indent-for-tab-command)))))
     (define-key view-mode-map (kbd (car pair)) (cdr pair)))
   ;; buffer modifying binds
-  (dolist (pair '(("d" . (lambda nil (interactive)
-                           (if (use-region-p) (call-interactively 'kill-region) (delete-char 1))))
-                  ("p" . yank) ("P" . yank-pop) ("+" . eglot-rename)
+  (dolist (pair '(("p" . yank) ("P" . yank-pop) ("+" . eglot-rename) ("mm" . point-to-register)
                   ("DEL" . backward-delete-char-untabify) ("&" . align-regexp)
                   ("Z" . undo-redo) ("u" . undo-only) ("R" . replace-regexp)
-                  ("C-x ;" . comment-line) ("C-x C-;" . comment-line)
+                  ("C-x ;" . comment-line) ("C-x C-;" . comment-line) ("md" . delete-pair)
                   ("C-k" . kill-line) ("C-/" . undo-only) ("+" . eglot-code-actions)
                   ("zf" . hs-toggle-hiding) ("zc" . hs-hide-all) ("zs" . hs-show-all)
                   ("V" . string-rectangle) ("M-TAB" . indent-for-tab-command)
+                  ("d" . (lambda nil (interactive)
+                           (if (use-region-p) (call-interactively 'kill-region) (delete-char 1))))
                   ("f". (lambda nil (interactive)
                           (forward-char 1) (call-interactively 'set-mark-command)
                           (let ((start-point (point))
