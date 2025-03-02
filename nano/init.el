@@ -305,6 +305,7 @@
 (define-key (current-global-map) (kbd "C-x x s") #'save-buffer)
 (define-key (current-global-map) (kbd "C-x x z") #'restart-emacs)
 (define-key (current-global-map) (kbd "C-o") #'other-window)
+(define-key (current-global-map) (kbd "C-x /") #'project-find-regexp)
 (define-key (current-global-map) (kbd "C-x ;") #'comment-line)
 (define-key (current-global-map) (kbd "C-h .") #'my-goto-doc)
 (define-key (current-global-map) (kbd "C-h '") #'describe-face)
@@ -488,7 +489,7 @@
 
 (define-advice load-theme (:before (&rest _args) theme-dont-propagate)
   (mapc #'disable-theme custom-enabled-themes))
-
+;; terminal stuff
 (unless (display-graphic-p)
   (setq interprogram-cut-function
         (lambda (text)
@@ -504,6 +505,9 @@
                  (region-beginning) (region-end) copy-cmd)
                 (deactivate-mark))))))
   (menu-bar-mode -1)
+  (setq scroll-margin 2
+        scroll-conservatively 101
+        scroll-preserve-screen-position t)
   (xterm-mouse-mode))
 
 ;; --- Window Management ----------------------------------------------------
@@ -756,6 +760,15 @@
           (push event unread-command-events))
       (insert initial-key))))
 
+(defun my-mark-word nil
+  (interactive)
+  (if (use-region-p)
+      (call-interactively 'mark-word)
+    (let ((bounds (bounds-of-thing-at-point 'symbol)))
+      (when bounds
+        (goto-char (car bounds))
+        (push-mark (cdr bounds) nil t)))))
+
 ;; --- Mini Meow ------------------------------------------------------------
 (define-global-minor-mode global-view-mode view-mode
   (lambda () ; src: xenodium
@@ -787,24 +800,35 @@
   (define-key view-mode-map (kbd "g") (make-sparse-keymap))
   (define-key view-mode-map (kbd "z") (make-sparse-keymap))
   ;; normal binds
-  (dolist (pair '(("\\" . dired-jump) ("A" . move-beginning-of-line) ("E" . move-end-of-line)
-                  ("a" . back-to-indentation) ("e" . forward-word) ("b" . backward-word)
+  (dolist (pair '(("\\" . dired-jump) ("gl" . move-end-of-line) ("ge" . move-end-of-line)
+                  ("gh" . back-to-indentation) ("ga" . move-beginning-of-line)
+                  ("e" . forward-word) ("b" . backward-word) ("=" . mark-sexp)
                   ("v" . set-mark-command) ("h" . backward-char) ("j" . next-line)
                   ("k" . previous-line) ("l" . forward-char) ("i" . View-exit)
                   ("y" . kill-ring-save) ("%" . match-pair) ("o" . other-window)
                   ("D" . pixel-scroll-interpolate-down) ("U" . pixel-scroll-interpolate-up)
-                  ("[" . tab-bar-switch-to-prev-tab) ("]" . tab-bar-switch-to-next-tab)
+                  ("gT" . tab-bar-switch-to-prev-tab) ("gt" . tab-bar-switch-to-next-tab)
                   ("x" . my-select-fwd-line) ("X" . exchange-point-and-mark) ("O" . occur)
-                  ("w" . mark-word) ("," . my-scroll-other-down) ("M-h" . mark-paragraph)
+                  ("w" . my-mark-word) ("," . my-scroll-other-down) ("M-h" . mark-paragraph)
                   ("M-j" . window-toggle-side-windows) ("C-M-h" . mark-defun)
                   ("." . my-scroll-other-up) (";" . keyboard-quit) ("gf" . ffap)
-                  ("gs" . scratch-buffer) ("*" . isearch-forward-symbol-at-point)
+                  ("gS" . scratch-buffer) ("*" . isearch-forward-symbol-at-point)
                   ("`" . window-toggle-side-windows) ("zz" . pop-to-mark-command)
-                  ("gi" . eglot-find-implementation) ("I" . imenu) (")" . forward-sexp)
-                  ("(" . backward-sexp) ("g/" . xref-find-definitions-other-window)
-                  ("gd" . xref-find-definitions) ("gb" . xref-go-back) ("K" . my-goto-doc)
-                  ("gx" . flymake-show-buffer-diagnostics) ("=" . mark-sexp)
-                  ("?" . xref-find-references)))
+                  ("gi" . eglot-find-implementation) ("gs" . imenu) ("(" . down-list)
+                  (")" . up-list) ("[" . backward-list) ("]" . forward-list)
+                  ("g/" . xref-find-definitions-other-window) ("gd" . xref-find-definitions)
+                  ("gb" . xref-go-back) ("K" . my-goto-doc) (":" . goto-line)
+                  ("gx" . flymake-show-buffer-diagnostics) ("gr" . xref-find-references)
+                  ("C" . (lambda nil (interactive) (View-exit)
+                           (call-interactively 'string-rectangle)))
+                  ("a" . (lambda nil (interactive) (View-exit) (forward-char 1)))
+                  ("c" . (lambda nil (interactive) (View-exit)
+                           (if (use-region-p) (call-interactively 'kill-region) (delete-char 1))))
+                  ("A" . (lambda nil (interactive) (call-interactively 'move-end-of-line)
+                           (View-exit) (call-interactively 'newline)))
+                  ("I" . (lambda nil (interactive) (back-to-indentation) (View-exit)
+                           (call-interactively 'newline) (previous-line)
+                           (call-interactively 'indent-for-tab-command)))))
     (define-key view-mode-map (kbd (car pair)) (cdr pair)))
   ;; buffer modifying binds
   (dolist (pair '(("d" . (lambda nil (interactive)
@@ -813,11 +837,17 @@
                   ("DEL" . backward-delete-char-untabify) ("&" . align-regexp)
                   ("Z" . undo-redo) ("u" . undo-only) ("R" . replace-regexp)
                   ("C-x ;" . comment-line) ("C-x C-;" . comment-line)
-                  ("C-k" . kill-line) ("C-/" . undo-only)
+                  ("C-k" . kill-line) ("C-/" . undo-only) ("+" . eglot-code-actions)
                   ("zf" . hs-toggle-hiding) ("zc" . hs-hide-all) ("zs" . hs-show-all)
                   ("V" . string-rectangle) ("M-TAB" . indent-for-tab-command)
-                  ("{" . indent-rigidly-left-to-tab-stop)
-                  ("}" . indent-rigidly-right-to-tab-stop)
+                  ("f". (lambda nil (interactive)
+                          (forward-char 1) (call-interactively 'set-mark-command)
+                          (let ((start-point (point))
+                                (found-pos
+                                 (search-forward (char-to-string (read-char nil t)) nil t)))
+                            (if found-pos
+                                (backward-char 1)
+                              (goto-char start-point) (backward-char 1) (deactivate-mark)))))
                   ("r" . (lambda nil (interactive)
                            (delete-char 1) (insert-char (read-char nil t)) (backward-char 1)))
                   ("J" . (lambda nil (interactive)
@@ -825,10 +855,6 @@
     (define-key view-mode-map (kbd (car pair))
                 #'(lambda nil (interactive)
                     (view-mode-edit-command (cdr pair)))))
-  (define-key view-mode-map (kbd "c")
-              (lambda nil (interactive)
-                (View-exit)
-                (if (use-region-p) (call-interactively 'kill-region) (delete-char 1))))
   (define-key view-mode-map (kbd "H") help-map)
   (define-key view-mode-map (kbd "SPC") ctl-x-map))
 
@@ -877,7 +903,29 @@
 (define-advice ediff-vc-internal (:around (orig-fun &rest args) custom-quit)
   (apply orig-fun args)
   (switch-to-buffer "*Ediff Control Panel*")
-    (define-key ediff-mode-map (kbd "q") #'vc-ediff-quit))
+  (define-key ediff-mode-map (kbd "q") #'vc-ediff-quit))
+
+(setq vc-annotate-background-mode t)
+(with-eval-after-load 'vc-annotate
+  ;; fixing vc-annotate : vc-annotate-background-mode doesn't play
+  ;; well with white fg, so we tweak the faces to have black fg
+  (defun vc-annotate-readable (&rest _)
+    (dolist (anno-face (seq-filter
+                        (lambda (face)
+                          (string-prefix-p "vc-annotate-face-" (symbol-name face)))
+                        (face-list)))
+      (face-remap-add-relative anno-face :foreground "black")))
+
+  (if vc-annotate-background-mode
+      (advice-add 'vc-annotate-lines :after #'vc-annotate-readable))
+  (define-key vc-annotate-mode-map
+              "q" (lambda () (interactive)
+                    (kill-current-buffer)
+                    (tab-bar-close-tab)))
+  ;; vc-annotate messes up the window-arrangement, give it a dedicated tab
+  (add-to-list 'display-buffer-alist
+               '("^\\*Annotate.*\\*$"
+                 (display-buffer-reuse-mode-window display-buffer-in-tab))))
 
 ;; --- Eshell ---------------------------------------------------------------
 ;; Eshell refs:
