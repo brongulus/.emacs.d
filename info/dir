@@ -14,11 +14,29 @@ File: dir,	Node: Top	This is the top of the INFO tree
 
 * Menu:
 
+Basics
+* Bash: (bash).                 The GNU Bourne-Again SHell.
+
+Development
+* Git: (git).                   A fast distributed revision control system
+
+Individual utilities
+* awk: (gawk)Invoking Gawk.                     Text scanning and processing.
+
 Miscellaneous
 * RubyIntro: (RubyIntro).       Ruby in Twenty Minutes
 * Tempo: (tempo).               Tempo templating system for Emacs
 
+Programming
+* C: (c).                       GNU C Language Intro and Reference Manual
+
+Text creation and manipulation
+* Gawk: (gawk).                 A text scanning and processing language.
+* grep: (grep).                 Print lines that match patterns.
+* sed: (sed).                   Stream EDitor.  
+
 The Algorithmic Language Scheme
+* Guile Reference: (guile).     The Guile reference manual.
 * SICP: (sicp).                 Structure and Interpretation of Computer 
                                   Programs
 
