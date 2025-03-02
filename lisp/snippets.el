@@ -11,10 +11,12 @@
 (autoload 'tempo-backward-mark "tempo")
 (autoload 'tempo-use-tag-list "tempo")
 
+(defvar emacs-lisp-tempo-tags nil)
 (defvar eshell-tempo-tags nil)
 (defvar perl-tempo-tags nil)
 (defvar go-ts-tempo-tags nil)
 (defvar rust-ts-tempo-tags nil)
+(defvar zig-tempo-tags nil)
 
 (defun tempo-tab () (interactive)
        (unless (tempo-forward-mark)
@@ -33,57 +35,64 @@
 
 (with-eval-after-load 'tempo
   (setq tempo-interactive nil)
-;;; --Eshell-------------------------------------------------------------
+;;; --Eshell/elisp-------------------------------------------------------
   (tempo-define-template "eshell-for"
                          '("for f in " p " { " p " \"$f\"; }")
-                         "forl"
-                         "Insert an Eshell for loop"
-                         'eshell-tempo-tags)
+                         "forl" "" 'eshell-tempo-tags)
+  (tempo-define-template "int-lambda"
+                         '("lambda nil (interactive)")
+                         "lnint" "" 'emacs-lisp-tempo-tags)
 ;;; --Perl----------------------------------------------------------------
   (tempo-define-template "pl-header"
                          '("#!/usr/bin/env perl" n n
                            "use 5.016;" n
                            "use warnings;" n
                            "use autodie;" n n)
-                         "plh"
-                         "Perl header"
-                         'perl-tempo-tags)
+                         "plh" "" 'perl-tempo-tags)
 ;;; --Go------------------------------------------------------------------
   (tempo-define-template "go-test-err"
                          '(> "if got != want {" > n
                              "t.Errorf(\"got %d want %d given, %v\", got, want, " p ")" > n
                              "}" > n>
                              )
-                         "goerr"
-                         "Go test check"
-                         'go-ts-tempo-tags)
-  
+                         "goerr" "" 'go-ts-tempo-tags)
   (tempo-define-template "errnil"
                          '(> "if err != nil {" > n
                              >  p n "}" > n >
                              )
-                         "errnil"
-                         "Go check err"
-                         'go-ts-tempo-tags)
+                         "errnil" "" 'go-ts-tempo-tags)
 ;;; --Rust------------------------------------------------------------------
   (tempo-define-template "rs-print"
                          '("println!(\"" p "\");")
-                         "pln"
-                         "Faster println! call."
-                         'rust-ts-tempo-tags)
-
+                         "pln" "" 'rust-ts-tempo-tags)
   (tempo-define-template "rs-dbg"
                          '("dbg!(\"" p "\");")
-                         "dbg"
-                         "Faster dbg! call."
-                         'rust-ts-tempo-tags))
+                         "dbg" "" 'rust-ts-tempo-tags)
+;;; --Zig-(src: matklad)----------------------------------------------------
+  (tempo-define-template "zig-assert"
+                         '("const assert = std.debug.assert;")
+                         "iass" "" 'zig-tempo-tags)
+  (tempo-define-template "zig-std"
+                         '("const std = @import(\"std\");")
+                         "istd" "" 'zig-tempo-tags)
+  (tempo-define-template "zig-main"
+                         '("pub fn main() !void {" > n
+			               > p n
+			               "}" > n >)
+                         "zmain" "" 'zig-tempo-tags)
+  (tempo-define-template "zig-err-log"
+                         '("log.err(\"{}:" p "\", .{" p "});")
+                         "lerr" "" 'zig-tempo-tags)
+  (tempo-define-template "zig-deb-pln"
+                         '("std.debug.print(\"{}\\n\", .{" p"});")
+                         "pln" "" 'zig-tempo-tags))
 
 (with-eval-after-load 'em-cmpl
   (setup-tempo-keys eshell-cmpl-mode-map))
 (add-hook 'eshell-mode-hook
           (lambda nil (tempo-use-tag-list 'eshell-tempo-tags)))
 
-(dolist (mode '(perl go-ts rust-ts))
+(dolist (mode '(emacs-lisp perl go-ts rust-ts zig))
   (let ((hook (intern (concat (symbol-name mode) "-mode-hook")))
         (map (intern (concat (symbol-name mode) "-mode-map")))
         (tags (intern (concat (symbol-name mode) "-tempo-tags"))))
