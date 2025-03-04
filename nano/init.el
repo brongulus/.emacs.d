@@ -99,6 +99,8 @@
 
   (set-face-attribute 'font-lock-string-face nil :slant 'italic :weight 'semi-bold)
   (set-face-attribute 'link nil :underline t)
+  (with-eval-after-load 'make-mode
+    (set-face-attribute 'makefile-targets nil :inherit 'font-lock-keyword-face))
   (set-face-attribute 'success nil :foreground (face-foreground 'font-lock-constant-face))
   (set-face-attribute 'vertical-border nil :inherit 'nano-faded)
 
@@ -359,6 +361,7 @@
 (add-hook 'prog-mode-hook #'hl-line-mode)
 (add-hook 'prog-mode-hook #'display-line-numbers-mode)
 (add-hook 'conf-mode-hook #'display-line-numbers-mode)
+(add-hook 'emacs-lisp-mode-hook #'prettify-symbols-mode)
 
 (put 'narrow-to-region 'disabled nil)
 
@@ -508,9 +511,6 @@
                  (region-beginning) (region-end) copy-cmd)
                 (deactivate-mark))))))
   (menu-bar-mode -1)
-  (setq scroll-margin 2
-        scroll-conservatively 101
-        scroll-preserve-screen-position t)
   (xterm-mouse-mode))
 
 ;; --- Window Management ----------------------------------------------------
@@ -723,7 +723,8 @@
 
 ;; --- Misc functions -------------------------------------------------------
 (setq-default fill-column 100)
-(defun toggle-centered-buffer ()
+(defvar old--mode-line-format nil)
+(defun toggle-zen-buffer ()
   "Toggle center alignment of the buffer. Source: jamesdyer."
   (interactive)
   (let* ((current-margins (window-margins))
@@ -732,8 +733,14 @@
                      (/ (- (window-total-width) fill-column) 2)
                    0)))
     (visual-line-mode 1)
+    (display-line-numbers-mode 'toggle)
+    (unless old--mode-line-format
+      (setq old--mode-line-format mode-line-format))
+    (if mode-line-format
+        (setq-local mode-line-format nil)
+      (setq-local mode-line-format old--mode-line-format))
     (set-window-margins nil margin margin)))
-(define-key (current-global-map) (kbd "<f9>") #'toggle-centered-buffer)
+(define-key (current-global-map) (kbd "<f9>") #'toggle-zen-buffer)
 
 (defun match-pair nil
   (interactive)
@@ -795,8 +802,8 @@
                (derived-mode-p 'fundamental-mode 'messages-buffer-mode
                                'prog-mode 'conf-mode 'outline-mode))
       (meow-mode 1))))
-(defun meow-insert nil (interactive) (meow-mode -1))
 (global-meow-mode 1)
+(defun meow-insert nil (interactive) (meow-mode -1))
 (defun meow--set-cursor-type (type)
   (if (display-graphic-p)
       (setq cursor-type type)
@@ -807,7 +814,7 @@
       (send-string-to-terminal (concat "\e[" param " q")))))
 (add-hook 'meow-mode-hook
           (lambda nil (meow--set-cursor-type
-                       (if (or meow-mode (derived-mode-p 'special-mode)) 'box 'bar))))
+                  (if (or meow-mode (derived-mode-p 'special-mode)) 'box 'bar))))
 (define-key (current-global-map) (kbd "j") (lambda nil (interactive) (my-chord ?j ?k 'meow-mode)))
 (define-key meow-mode-map (kbd "g") (make-sparse-keymap))
 (define-key meow-mode-map (kbd "m") (make-sparse-keymap))
@@ -894,9 +901,10 @@
 
 (defun vc-ediff-quit nil
   (interactive)
-  (let* ((revision-buf (if (string-match-p "\\*vc-\\|\\*ediff-revision" (buffer-name ediff-buffer-A))
-                           ediff-buffer-B
-                         ediff-buffer-A))
+  (let* ((revision-buf
+          (if (string-match-p "\\*vc-\\|\\*ediff-revision" (buffer-name ediff-buffer-A))
+              ediff-buffer-B
+            ediff-buffer-A))
          (file-buf (if (eq revision-buf ediff-buffer-B) ediff-buffer-A ediff-buffer-B)))
     (ediff-really-quit nil)
     (kill-buffer revision-buf)
