@@ -11,6 +11,7 @@
 (autoload 'tempo-backward-mark "tempo")
 (autoload 'tempo-use-tag-list "tempo")
 
+(defvar c++-tempo-tags nil)
 (defvar emacs-lisp-tempo-tags nil)
 (defvar eshell-tempo-tags nil)
 (defvar perl-tempo-tags nil)
@@ -85,14 +86,44 @@
                          "lerr" "" 'zig-tempo-tags)
   (tempo-define-template "zig-deb-pln"
                          '("std.debug.print(\"{}\\n\", .{" p"});")
-                         "pln" "" 'zig-tempo-tags))
+                         "pln" "" 'zig-tempo-tags)
+;;; --C++-------------------------------------------------------------------
+  (tempo-define-template "cpp-header"
+                         '("#include<bits/stdc++.h>" n
+                           "using namespace std;" n n
+                           "#ifdef LOCAL" n
+                           "#include \"algo/debug.h\"" n
+                           "#else" n
+                           "#define debug(...) 42" n n
+                           "int main() {" n
+                           > "ios::sync_with_stdio(0);" n
+                           > "cin.tie(0);" n
+                           > p n
+                           "}")
+                         "gtc" 'c++-tempo-tags)
+  (tempo-define-template "cpp-forl"
+                         '(> "for (int " (P "" iter) " = 0; " (s iter) " < " p "; " (s iter) "++) {"
+                             > n > p n "}" >)
+                         "forl" 'c++-tempo-tags)
+  (tempo-define-template "cpp-sortl"
+                         '(> "std::sort(v.begin(), v.end(), [](auto &left, &right) {" > n
+                             > "return " p "left.second < right.second;" n "});" >)
+                         "sortl" 'c++-tempo-tags)
+  (tempo-define-template "cpp-tests"
+                         '(> "int tt = 0; cin >> tt;" > n
+                             > "while(tt--) {" > n
+                             > p n "}" >)
+                         "ttt" 'c++-tempo-tags)
+  (tempo-define-template "cpp-all"
+                         '((P "iter: " iter)".begin(), " (s iter) ".end()")
+                         "alll" 'c++-tempo-tags))
 
 (with-eval-after-load 'em-cmpl
   (setup-tempo-keys eshell-cmpl-mode-map))
 (add-hook 'eshell-mode-hook
           (lambda nil (tempo-use-tag-list 'eshell-tempo-tags)))
 
-(dolist (mode '(emacs-lisp perl go-ts rust-ts zig))
+(dolist (mode '(emacs-lisp perl go-ts rust-ts zig c++))
   (let ((hook (intern (concat (symbol-name mode) "-mode-hook")))
         (map (intern (concat (symbol-name mode) "-mode-map")))
         (tags (intern (concat (symbol-name mode) "-tempo-tags"))))
@@ -147,55 +178,3 @@
 ;;   "\t\t}\n"
 ;;   "\t}\n"
 ;;   "}")
-
-
-;;; --C++------------------------------------------------------------------
-;; (define-skeleton cpp-header "Base c++ template for competitive programming." ""
-;;   "#include<bits/stdc++.h>\n"
-;;   "using namespace std;\n"
-;;   "\n#ifdef LOCAL\n"
-;;   "#include \"algo/debug.h\"\n"
-;;   "#else\n"
-;;   "#define debug(...) 42\n"
-;;   "#endif\n"
-;;   "\nint main () {\n"
-;;   "\tios::sync_with_stdio(0);\n"
-;;   "\tcin.tie(0);\n"
-;;   "\t" _ "\n"
-;;   "}")
-
-;; (define-skeleton cpp-for-loop
-;;   "Insert a C++ for loop with user-defined iterator and termination variable." ""
-;;   > "for (int " (setq iterator (read-char "Iterator variable: ")) " = 0; " iterator " < "
-;;   > (read-char "Termination: ") "; " iterator "++) {\n"
-;;   > _ "\n}" >)
-
-;; (define-skeleton sortl "Sort with custom comparator." ""
-;;   > "std::sort(v.begin(), v.end(), [](auto &left, auto &right) {\n\t"
-;;   > "return " _ "left.second < right.second;\n"
-;;   > "});")
-
-;; (define-skeleton cpp-tests "Run multiple testcases." ""
-;;   > "int tt = 0; cin >> tt;\n\t"
-;;   > "while(tt--) {\n\t\t"
-;;   > _ "\n}" >)
-
-;; (define-skeleton cpp-all "Run from beginning to end of iterator." ""
-;;   > (setq var (skeleton-read "Iterator variable: ")) ".begin(), " var ".end()"
-;;   > (forward-char)
-;;   > _)
-
-;; (defun init-c++-abbrevs ()
-;;   (define-abbrev c++-mode-abbrev-table "gtc" "" 'cpp-header)
-;;   (define-abbrev c++-mode-abbrev-table "forl" "" 'cpp-for-loop)
-;;   (define-abbrev c++-mode-abbrev-table "all" "" 'cpp-all)
-;;   (define-abbrev c++-mode-abbrev-table "ttt" "" 'cpp-tests))
-;; (defun init-c++-ts-abbrevs ()
-;;   (define-abbrev c++-ts-mode-abbrev-table "gtc" "" 'cpp-header)
-;;   (define-abbrev c++-ts-mode-abbrev-table "forl" "" 'cpp-for-loop)
-;;   (define-abbrev c++-ts-mode-abbrev-table "all" "" 'cpp-all)
-;;   (define-abbrev c++-ts-mode-abbrev-table "ttt" "" 'cpp-tests))
-;; (add-hook 'c++-mode-hook 'abbrev-mode)
-;; (add-hook 'c++-ts-mode-hook 'abbrev-mode)
-;; (add-hook 'c++-mode-hook 'init-c++-abbrevs)
-;; (add-hook 'c++-ts-mode-hook 'init-c++-ts-abbrevs)
