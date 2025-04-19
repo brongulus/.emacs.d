@@ -50,13 +50,13 @@
 ;;;; Competitive Companion
 ;; https://stackoverflow.com/a/6200347
 (defvar foxy-compile-command
-  ;;"g++ -std=c++17 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL "
+  "g++ -std=c++20 -Wall -Wextra -Wshadow -Wno-sign-conversion -O2 -DLOCAL "
   "The command used to compile the source file.")
 
 (make-variable-buffer-local 'foxy-compile-command)
 
 (defvar foxy-listen-port 27121
-    "Port of the server.")
+  "Port of the server.")
 
 (defvar foxy-listen-host "127.0.0.1"
   "Host of the server.")
@@ -64,16 +64,16 @@
 (defvar foxy-currently-listening nil)
 
 (defun foxy-listen-start nil
-    "Start the competitive-companion tcp client listener."
-    (interactive)
-    (if foxy-currently-listening
-        (foxy-listen-stop)
-      (progn
-        (setq foxy-currently-listening t))
-      (message "Started listening for competitive-companion")
-      (make-network-process :name "Fetch Contest" :buffer "*fetch*" :family nil
-                            :server t :host foxy-listen-host :service foxy-listen-port
-                            :sentinel 'foxy-listen-sentinel :filter 'foxy-listen-filter)))
+  "Start the competitive-companion tcp client listener."
+  (interactive)
+  (if foxy-currently-listening
+      (foxy-listen-stop)
+    (progn
+      (setq foxy-currently-listening t))
+    (message "Started listening for competitive-companion")
+    (make-network-process :name "Fetch Contest" :buffer "*fetch*" :family nil
+                          :server t :host foxy-listen-host :service foxy-listen-port
+                          :sentinel 'foxy-listen-sentinel :filter 'foxy-listen-filter)))
 
 (defun foxy-listen-stop nil
   "Stop the competitive-companion tcp listener."
@@ -87,8 +87,8 @@
   "Parse the incoming JSON data (STRING) from competitive-companion
 and populates the testcase files."
   (let* ((json-input (json-read-from-string
-                     (replace-regexp-in-string ".*\r\n" ""
-                                               string)))
+                      (replace-regexp-in-string ".*\r\n" ""
+                                                string)))
          (prob-name (replace-regexp-in-string
                      ".*/" ""
                      (cdr (assoc 'url json-input))))
@@ -106,13 +106,13 @@ and populates the testcase files."
       (kill-buffer)
       ;; populate output file
       (find-file (concat default-directory prob-name "/ans"
-                           (format "%s" i) ".txt"))
+                         (format "%s" i) ".txt"))
       (insert (format "%s" (cdr (assoc 'output
                                        (aref (cdr (assoc 'tests json-input)) (1- i))))))
       (basic-save-buffer)
       (kill-buffer)
       (setq i (1+ i)))
-      (message "Testcases added for %s" prob-name)))
+    (message "Testcases added for %s" prob-name)))
 
 (defun foxy-listen-sentinel (proc msg)
   "Echo client quit when MSG says broken connection."
@@ -123,7 +123,7 @@ and populates the testcase files."
   "Start the server that listens to competitive-companion for 1 minute."
   (interactive)
   (foxy-listen-start)
-  (run-at-time 60 nil #'foxy-listen-stop))
+  (run-at-time 100 nil #'foxy-listen-stop))
 
 (defun foxy-read-file (filename)
   "Return the contents of FILENAME."
@@ -135,45 +135,50 @@ and populates the testcase files."
   "Run all the available testcases for the current problem."
   (interactive)
   (let* ((file-ext (format "%s" (file-name-extension buffer-file-name)))
-        (bin-name
-         (if (string-equal file-ext "py")
-             (concat "python " (file-relative-name (buffer-file-name) default-directory))
-           "./a.out"))
-        (tests (length (directory-files
-                         default-directory nil "ans.*txt")))
+         (bin-name
+          (if (string-equal file-ext "py")
+              (concat "python " (file-relative-name (buffer-file-name) default-directory))
+            "./a.out"))
+         (tests (length (directory-files default-directory nil "ans.*txt")))
          (i 1)
          (results ""))
-    ;; Compile if cpp/rs file
+    ;;; Compile if cpp/rs file
     (unless (string-equal file-ext "py")
-                                        ;(file-exists-p "a.out")
+      ;;(file-exists-p "a.out")
       (compile (concat foxy-compile-command buffer-file-name))
-      (sleep-for 5)) ;; FIXME!!!
+      (sleep-for 3)) ;; FIXME!!!
+
+    ;;; Prepare output
     (while (< i (1+ tests)) ;; TODO: What if there's RTE, TLE?
       ;; Get the output, debug data and the answer as strings
-      (let* ((test-output ;; (2>./deb.txt handles debug output)
-             (shell-command-to-string (concat bin-name " < ./in"
-                                              (format "%s" i) ".txt 2> ./deb.txt")))
-            (test-debug (foxy-read-file "./deb.txt"))
-            (test-ans (foxy-read-file (concat "./ans"
-                                           (format "%s" i) ".txt"))))
+      (let* ((test-num (number-to-string i))
+             (test-in (with-temp-buffer
+                        (insert-file-contents (concat "./in" test-num ".txt"))
+                        (buffer-string)))
+             (test-output ;; (2>./deb.txt handles debug output)
+              (shell-command-to-string (concat bin-name " < ./in" test-num ".txt 2> ./deb.txt")))
+             (test-debug (foxy-read-file "./deb.txt"))
+             (test-ans (foxy-read-file (concat "./ans" test-num ".txt"))))
         ;; If output is same as test, continue else show all three strings
         (if (string-equal test-output test-ans)
-            (setq results (concat results "Testcase " (format "%s" i) " passed!\n"))
+            (setq results (concat results "Testcase " test-num " passed!\n"))
           (progn
             (if (fboundp 'diff-lisp-diff-strings)
                 (setq results (concat results (diff-lisp-diff-strings
                                                test-output test-ans
-                                               (concat "Testcase "
-                                                       (format "%s" i) " mismatch!"))))
+                                               (concat "Testcase " test-num " mismatch!"))))
               (setq results (concat results
-                                    "Testcase " (format "%s" i)
-                                    " mismatch!\nOutput:\n" test-output
+                                    "Testcase " test-num
+                                    " mismatch!\n"
+                                    "Input:\n" test-in
+                                    "\nOutput:\n" test-output
                                     "\nAns:\n" test-ans "\n")))
             (unless (string-equal "" test-debug)
-              (setq results (concat results "Debug:\n" test-debug))))))
+              (setq results (concat results "Debug:\n" test-debug "\n=================\n\n"))))))
       (delete-file "./deb.txt")
       (setq i (1+ i)))
-    ;; Populate the results buffer and show in a side window
+    
+    ;;; Populate the results buffer and show in a side window
     (with-current-buffer (get-buffer-create "*Results*")
       (let ((display-buffer-mark-dedicated t))
         (display-buffer (current-buffer)
@@ -185,19 +190,19 @@ and populates the testcase files."
                           (window-parameters
                            (dedicated . t)
                            (no-delete-other-windows . t)))))
-        (let ((inhibit-read-only t)) (erase-buffer))
-        (remove-overlays)
+      (let ((inhibit-read-only t))
+        (erase-buffer) ;; (remove-overlays)
         (insert (format "%s" results))
-        (diff-mode)
-        (use-local-map
-         (make-composed-keymap
-          (list (let ((map (make-sparse-keymap)))
-                  (define-key map (kbd "q") 'kill-buffer-and-window)
-                  (define-key map (kbd "C-M-b") 'window-toggle-side-windows)
-                  (if (bound-and-true-p evil-mode)
-                      (evil-make-overriding-map map 'normal))
-                  map))
-          widget-keymap))))
+        (diff-mode))
+      (use-local-map
+       (make-composed-keymap
+        (list (let ((map (make-sparse-keymap)))
+                (define-key map (kbd "q") 'kill-buffer-and-window)
+                (define-key map (kbd "M-j") 'window-toggle-side-windows)
+                (if (bound-and-true-p evil-mode)
+                    (evil-make-overriding-map map 'normal))
+                map))
+        widget-keymap))))
   (windmove-right))
 
 (defun elem-index (item seq)
@@ -214,13 +219,13 @@ Given a step of 1 (the default), will go to the next file.
          (arg (or step 1))
          (dir (substring default-directory 0 -1))
          (dirs (seq-filter #'file-directory-p
-                (directory-files
-                 (file-name-directory (directory-file-name
-                                       (file-name-directory default-directory)))
-                 t directory-files-no-dot-files-regexp nil)))
+                           (directory-files
+                            (file-name-directory (directory-file-name
+                                                  (file-name-directory default-directory)))
+                            t directory-files-no-dot-files-regexp nil)))
          (index (elem-index dir dirs))
          (new-index (mod (+ arg index) (length dirs))))
-   (find-file (concat (nth new-index dirs) "/main." file-ext))))
+    (find-file (concat (nth new-index dirs) "/main." file-ext))))
 
 ;; (global-set-key (kbd "C-M-b") #'foxy-run-all-tests)
 ;; (global-set-key (kbd "C-M-c") #'foxy-cycle-files)
@@ -229,8 +234,8 @@ Given a step of 1 (the default), will go to the next file.
 ;;;; TODO: Widget
 
 (defface persistent-variable '((t :inherit custom-variable-tag
-                                :height 1.2
-                                :weight semi-bold))
+                                  :height 1.2
+                                  :weight semi-bold))
   "Face for Persistent menu headers.")
 
 (set-face-attribute 'widget-button nil :foreground "white" :background "grey50")
@@ -240,29 +245,29 @@ Given a step of 1 (the default), will go to the next file.
        ((win (seq-find (lambda (w)
                          (eq
                           (buffer-mode (window-buffer w))
-                         'org-mode))
-              (window-list))))
+                          'org-mode))
+                       (window-list))))
        (with-current-buffer (window-buffer win)
-        (progn ,body))
+         (progn ,body))
      (message "No org-buffer visible!")))
 
 (defmacro persistent-choice (desc val choices notify-func)
   `(progn
-    (widget-create 'menu-choice
-     :format
-     (concat "%{%t%}"
-      (propertize " " 'display
-       '(space :align-to 20))
-      "%[%v%]")
-     :tag ,desc
-     :sample-face 'persistent-variable
-     :value ,val
-     ;; :help-echo "Choose color theme"
-     :notify #',notify-func
-     ,@(cl-loop for (choice-tag . choice-val) in choices
-        collect
-        `'(choice-item :tag ,choice-tag :value ,choice-val)))
-    (widget-insert "\n")))
+     (widget-create 'menu-choice
+                    :format
+                    (concat "%{%t%}"
+                            (propertize " " 'display
+                                        '(space :align-to 20))
+                            "%[%v%]")
+                    :tag ,desc
+                    :sample-face 'persistent-variable
+                    :value ,val
+                    ;; :help-echo "Choose color theme"
+                    :notify #',notify-func
+                    ,@(cl-loop for (choice-tag . choice-val) in choices
+                               collect
+                               `'(choice-item :tag ,choice-tag :value ,choice-val)))
+     (widget-insert "\n")))
 
 ;; TODO: add delete tc as well
 (defmacro persistent-toggler (desc var &optional var-values on-string off-string)
@@ -271,51 +276,51 @@ Given a step of 1 (the default), will go to the next file.
      (widget-insert (propertize " " 'display '(space :align-to 20)))
      ,(if (not var-values)
           `(widget-create 'toggle
-            :value (with-visible-org-buffer ,var)
-            :on (concat
-                 (propertize ,(or on-string " on ")
-                  'face '(:inherit success :box t
-                          :weight semi-bold :slant italic
-                          :height 1.2)))
-            :off (concat
-                  (propertize ,(or off-string " off ")
-                   'face '(:inherit error :box t
-                           :weight semi-bold
-                           :height 1.2 )))
-            :notify
-            (lambda (widget &rest ignore)
-              (with-visible-org-buffer
-               (if (commandp ',var)
-                   (,var (if (widget-value widget) 1 0))
-                 (setq ,var (widget-value widget))))))
+                          :value (with-visible-org-buffer ,var)
+                          :on (concat
+                               (propertize ,(or on-string " on ")
+                                           'face '(:inherit success :box t
+                                                            :weight semi-bold :slant italic
+                                                            :height 1.2)))
+                          :off (concat
+                                (propertize ,(or off-string " off ")
+                                            'face '(:inherit error :box t
+                                                             :weight semi-bold
+                                                             :height 1.2 )))
+                          :notify
+                          (lambda (widget &rest ignore)
+                            (with-visible-org-buffer
+                             (if (commandp ',var)
+                                 (,var (if (widget-value widget) 1 0))
+                               (setq ,var (widget-value widget))))))
         `(widget-create 'toggle
-          :value (eq ,var ',(caar var-values))
-          :on
-          (concat
-           (propertize ,(cdr (car var-values))
-            'face '(:box t :weight semi-bold :slant italic
-                    :inherit success :height 1.2))
-           "  "
-           (propertize ,(cdr (cadr var-values))
-            'face 'shadow
-                  ;; '(:box t :weight semi-bold
-                  ;;   :inherit shadow :height 1.2)
-            ))
-          :off (concat
-                (propertize ,(cdr (car var-values))
-                 'face 'shadow
-                       ;; '(:box t :weight semi-bold
-                       ;;   :inherit shadow :height 1.2)
-                       )
-                "  "
-                (propertize ,(cdr (cadr var-values))
-                 'face '(:box t :weight semi-bold :slant italic
-                         :inherit success :height 1.2)))
-          ;; :notify (lambda (widget &rest _)
-          ;;           (setq org-latex-preview-default-process
-          ;;            (if (widget-value widget)
-          ;;                ',(caar var-values) ',(caadr var-values))))
-          ))
+                        :value (eq ,var ',(caar var-values))
+                        :on
+                        (concat
+                         (propertize ,(cdr (car var-values))
+                                     'face '(:box t :weight semi-bold :slant italic
+                                                  :inherit success :height 1.2))
+                         "  "
+                         (propertize ,(cdr (cadr var-values))
+                                     'face 'shadow
+                                     ;; '(:box t :weight semi-bold
+                                     ;;   :inherit shadow :height 1.2)
+                                     ))
+                        :off (concat
+                              (propertize ,(cdr (car var-values))
+                                          'face 'shadow
+                                          ;; '(:box t :weight semi-bold
+                                          ;;   :inherit shadow :height 1.2)
+                                          )
+                              "  "
+                              (propertize ,(cdr (cadr var-values))
+                                          'face '(:box t :weight semi-bold :slant italic
+                                                       :inherit success :height 1.2)))
+                        ;; :notify (lambda (widget &rest _)
+                        ;;           (setq org-latex-preview-default-process
+                        ;;            (if (widget-value widget)
+                        ;;                ',(caar var-values) ',(caadr var-values))))
+                        ))
      (widget-insert "\n")))
 
 (defun persistent-toggle ()
@@ -323,7 +328,7 @@ Given a step of 1 (the default), will go to the next file.
   (interactive)
   (if-let ((win (cl-some (lambda (w)
                            (and (string= (buffer-name (window-buffer w))
-                                   "*persistent*")
+                                         "*persistent*")
                                 w))
                          (window-list))))
       (delete-window win)
@@ -418,9 +423,9 @@ Given a step of 1 (the default), will go to the next file.
                                        (message "Testcase Mismatch")
                                        (if (fboundp 'diff-lisp-diff-strings)
                                            (setq results (concat (diff-lisp-diff-strings
-                                                          test-output test-ans
-                                                          (concat "Testcase "
-                                                                  (widget-value widget) " mismatch!"))))
+                                                                  test-output test-ans
+                                                                  (concat "Testcase "
+                                                                          (widget-value widget) " mismatch!"))))
                                          (setq results (concat "Testcase " (widget-value widget)
                                                                " mismatch!\nOutput:\n" test-output
                                                                "\nAns:\n" test-ans "\n"))))))
@@ -441,7 +446,7 @@ Given a step of 1 (the default), will go to the next file.
         (setq i (1+ i))))
     ;; TODO: Time (ms) and next test
     (widget-insert "\n\n\n\n")
-   
+    
     (use-local-map
      (make-composed-keymap
       (list (let ((map (make-sparse-keymap)))
