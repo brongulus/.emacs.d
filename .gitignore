@@ -1,6 +1,7 @@
 [#]*[#]
 .doom.d/webkit/cookies
 .doom.d/webkit/history
+.cache/
 auto-save-list/
 backup/
 eln-cache/

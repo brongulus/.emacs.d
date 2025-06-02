@@ -20,6 +20,10 @@ Basics
 Development
 * Git: (git).                   A fast distributed revision control system
 
+Emacs misc features
+* Emacs Lisp Elements: (elispelem).
+                                A big picture view of Emacs Lisp.
+
 Individual utilities
 * awk: (gawk)Invoking Gawk.                     Text scanning and processing.
 

@@ -188,8 +188,7 @@ and populates the testcase files."
                           (slot . 0)
                           (window-width . 40)
                           (window-parameters
-                           (dedicated . t)
-                           (no-delete-other-windows . t)))))
+                           (dedicated . t)))))
       (let ((inhibit-read-only t))
         (erase-buffer) ;; (remove-overlays)
         (insert (format "%s" results))

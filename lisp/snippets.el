@@ -94,10 +94,11 @@
                            "#ifdef LOCAL" n
                            "#include \"algo/debug.h\"" n
                            "#else" n
-                           "#define debug(...) 42" n n
+                           "#define debug(...) 42" n
+                           "#endif" n n
                            "int main() {" n
-                           > "ios::sync_with_stdio(0);" n
-                           > "cin.tie(0);" n
+                           > "ios::sync_with_stdio(false);" n
+                           > "cin.tie(nullptr);" n
                            > p n
                            "}")
                          "gtc" 'c++-tempo-tags)
@@ -116,7 +117,14 @@
                          "ttt" 'c++-tempo-tags)
   (tempo-define-template "cpp-all"
                          '((P "iter: " iter)".begin(), " (s iter) ".end()")
-                         "alll" 'c++-tempo-tags))
+                         "alll" 'c++-tempo-tags)
+  (tempo-define-template "cpp-rng"
+                         '("mt19937_64 rng((unsigned int) "
+                           "chrono::steady_clock::now().time_since_epoch().count());" > n >)
+                         "rngg" 'c++-tempo-tags)
+  (tempo-define-template "cpp-ll" '("long long") "ll" 'c++-tempo-tags)
+  (tempo-define-template "cpp-ull" '("unsigned long long") "ull" 'c++-tempo-tags)
+  (tempo-define-template "cpp-uint" '("unsigned int") "uint" 'c++-tempo-tags))
 
 (with-eval-after-load 'em-cmpl
   (setup-tempo-keys eshell-cmpl-mode-map))

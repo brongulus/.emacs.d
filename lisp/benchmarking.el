@@ -30,7 +30,18 @@
 ;;
 
 ;;; Code:
+;;;;; GPT
+(defun elemacs-dump-load-history ()
+  "Dump `load-history` into a buffer for debugging."
+  (with-current-buffer (get-buffer-create "*Load History*")
+    (erase-buffer)
+    (insert; (pp-to-string load-history))
+     (mapconcat #'prin1-to-string load-history "\n"))
+    (display-buffer (current-buffer))))
 
+(add-hook 'emacs-startup-hook #'elemacs-dump-load-history)
+
+;;;; -----------------------------------
 (defun elemacs-time-subtract-millis (b a)
   (* 1000.0 (float-time (time-subtract b a))))
 
@@ -76,14 +87,23 @@ LOAD-DURATION is the time taken in milliseconds to load FEATURE.")
      (string-to-number (elt (nth 1 entry2) 2))))
 
 (defun elemacs-require-times-tabulated-list-entries ()
-  (cl-loop for (feature start-time millis) in elemacs-require-times
-           with order = 0
-           do (cl-incf order)
-           collect (list order
-                         (vector
-                          (format "%.3f" (elemacs-time-subtract-millis start-time before-init-time))
-                          (symbol-name feature)
-                          (format "%.3f" millis)))))
+  (let ((order 0)
+        (result nil)
+        (entries elemacs-require-times))
+    (while entries
+      (let* ((entry (car entries))
+             (feature (nth 0 entry))
+             (start-time (nth 1 entry))
+             (millis (nth 2 entry)))
+        (setq order (1+ order))
+        (push (list order
+                    (vector
+                     (format "%.3f" (elemacs-time-subtract-millis start-time before-init-time))
+                     (symbol-name feature)
+                     (format "%.3f" millis)))
+              result))
+      (setq entries (cdr entries)))
+    (nreverse result)))
 
 (defun elemacs-require-times ()
   "Show a tabular view of how long various libraries took to load."
