@@ -28,8 +28,10 @@
 (defun my-lazy-load-modes ()  (pixel-scroll-precision-mode 1) (winner-mode 1)
   (delete-selection-mode 1) (global-auto-revert-mode 1)
   (which-key-mode 1) (savehist-mode 1) (which-function-mode 1)
-  (save-place-mode 1) (global-goto-address-mode))
-(add-hook 'emacs-startup-hook #'my-lazy-load-modes)
+  (save-place-mode 1) (global-goto-address-mode)
+  (unless (display-graphic-p) (xterm-mouse-mode)))
+(run-with-idle-timer 0.5 nil #'my-lazy-load-modes)
+;; (add-hook 'emacs-startup-hook #'my-lazy-load-modes)
 
 ;; --- Minimal NANO (not a real) theme --------------------------------------
 (defvar nano-current-theme 'dark "Current nano variant being used.")
@@ -78,7 +80,7 @@
                                       font-lock-doc-face icomplete-section
                                       completions-annotations))
                   (nano-string     . (font-lock-string-face font-lock-constant-face))
-                  (nano-salient    . (custom-visibility help-argument-name
+                  (nano-salient    . (custom-visibility help-argument-name link
                                       font-lock-type-face font-lock-keyword-face
                                       font-lock-builtin-face font-lock-variable-name-face
                                       font-lock-function-name-face completions-common-part))
@@ -93,13 +95,14 @@
   (set-face-attribute 'font-lock-string-face nil :slant 'italic :weight 'semi-bold)
   (set-face-attribute 'font-lock-doc-face nil :slant 'italic)
   (set-face-attribute 'font-lock-builtin-face nil :slant 'italic)
+  (set-face-attribute 'link nil :underline t)
+  (set-face-attribute 'cursor nil :background "#00c2ff")
   (with-eval-after-load 'make-mode
     (set-face-attribute 'makefile-targets nil :inherit 'font-lock-keyword-face))
 
   (when (eq system-type 'darwin)
     (modify-all-frames-parameters `((ns-appearance . ,nano-current-theme))))
 
-  (require 'ansi-color)
   (with-eval-after-load 'ansi-color
     (let* ((color-themes ;; ansi-colors
             '((black   . ((dark . "#30343d") (light . "#EEEEEE")))
@@ -117,9 +120,7 @@
           (set-face-attribute (intern (format "ansi-color-%s" color-name)) nil
                               :foreground color-value :background color-value)
           (set-face-attribute (intern (format "ansi-color-bright-%s" color-name)) nil
-                              :foreground color-value :background color-value))))
-    (set-face-attribute 'link nil :foreground (face-foreground 'ansi-color-blue) :underline t)
-    (set-face-attribute 'success nil :foreground (face-foreground 'ansi-color-green)))
+                              :foreground color-value :background color-value)))))
   
   (with-eval-after-load 'whitespace
     (setq whitespace-style '(face tabs spaces tab-mark trailing)) ;space-mark
@@ -179,7 +180,7 @@
   (nano-set-face 'nano-highlight nil "#21242b")
   (nano-set-face 'nano-subtle nil "#434C5E")
   (nano-set-face 'nano-faded "#6A717C")
-  (nano-set-face 'nano-salient "#DEEEED" nil 'bold)
+  (nano-set-face 'nano-salient "#FFFFFF" nil 'bold)
   (nano-set-face 'nano-critical "#f3a171" nil 'bold)
   (nano-set-face 'nano-string "#babdb6")
   (setq nano-current-theme 'dark)
@@ -192,26 +193,26 @@
   (interactive)
   (nano-light)
   (set-face-attribute 'nano-default nil :foreground "#352f19" :background "#FEFAED")
+  (set-face-attribute 'nano-highlight nil :background "#E9E4E2")
   (let ((nano-current-theme 'light)) (nano-install-theme))
-  (set-face-attribute 'hl-line nil :background "#E9E4E2")
   (setq nano-current-theme 'amber))
 
 (defun nano-burn (&rest args)
   "Darken background of dark theme"
   (interactive)
   (nano-dark)
-  (set-face-attribute 'nano-default nil :foreground "#bcbcbc" :background "#181818")
+  (set-face-attribute 'nano-default nil :foreground "#deeeed" :background "#181818")
   (set-face-attribute 'nano-string nil :foreground "#d9d8d4")
+  (set-face-attribute 'nano-highlight nil :background "#282828")
   (let ((nano-current-theme 'dark)) (nano-install-theme))
-  (set-face-attribute 'hl-line nil :background "#282828")
   (setq nano-current-theme 'burn))
 
 (defun nano-toggle-theme nil
   (interactive)
-  (cond ((eq nano-current-theme 'dark) (nano-light))
-        ((eq nano-current-theme 'light) (nano-dark))
-        ((eq nano-current-theme 'amber) (nano-burn))
-        ((eq nano-current-theme 'burn) (nano-amber))))
+  (cond ((eq nano-current-theme 'burn) (nano-light))
+        ((eq nano-current-theme 'light) (nano-amber))
+        ((eq nano-current-theme 'amber) (nano-dark))
+        ((eq nano-current-theme 'dark) (nano-burn))))
 
 (define-key (current-global-map) (kbd "<f6>") #'nano-toggle-theme)
 
@@ -293,11 +294,11 @@
 
 (defun file-capf ()
   "File completion at point function. src: eshelyaron."
-  (pcase (bounds-of-thing-at-point 'filename)
-    (`(,beg . ,end)
-     (list beg end #'completion-file-name-table
-           :annotation-function (lambda (_) " File")
-           :exclusive 'no))))
+  (let ((bounds (bounds-of-thing-at-point 'filename)))
+  (when bounds
+    (list (car bounds) (cdr bounds) #'completion-file-name-table
+          :annotation-function (lambda (_) " File")
+          :exclusive 'no))))
 (add-hook 'completion-at-point-functions #'file-capf)
 
 ;; --- Minimal key bindings -------------------------------------------------
@@ -548,8 +549,7 @@
                 (call-process-region
                  (region-beginning) (region-end) copy-cmd)
                 (deactivate-mark))))))
-  (menu-bar-mode -1)
-  (xterm-mouse-mode))
+  (menu-bar-mode -1))
 
 ;; --- Window Management ----------------------------------------------------
 (dolist (pops '(("\\*eshell-pop\\*" . -2 ) ;; <-- prima donna
@@ -785,10 +785,12 @@
   (let* ((current-margins (window-margins))
          (margin (if (or (equal current-margins '(0 . 0))
                          (null (car (window-margins))))
-                     (/ (- (window-total-width) fill-column) 2)
-                   0)))
+                     (/ (- (window-total-width) (if (eq major-mode 'org-mode) 160 fill-column)) 2) 0)))
     (visual-line-mode 1)
-    (set-window-margins nil margin margin)))
+    (set-window-margins nil margin margin)
+    (when (eq major-mode 'org-mode)
+      (text-scale-set (if (eq text-scale-mode-amount 0) 2 0))
+      (setq-local line-spacing (if (eq line-spacing 3) 0.5 3)))))
 (define-key (current-global-map) (kbd "<f9>") #'toggle-zen-buffer)
 
 (defun match-pair nil
@@ -1200,5 +1202,4 @@
 ;;             (propertize "Startup time: " 'face 'bold)
 ;;             (format "%.2fs " init-time)
 ;;             (propertize (format "(+ %.2fs system time)"
-;;                                 (- total-time init-time))
-;;                         'face 'shadow))))
+;;                                 (- total-time init-time))))))

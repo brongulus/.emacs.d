@@ -7,6 +7,17 @@
   :hook ((org-mode . visual-line-mode)
          (org-mode . variable-pitch-mode))
   :config
+  ;; Faces
+  (dolist (face '(org-level-1 org-level-2 org-level-3 org-level-4 org-level-5
+                              org-level-6 org-level-7 org-level-8))
+    (set-face-attribute face nil :height 1.2 :inherit 'bold))
+  (set-face-attribute 'org-drawer nil :foreground (face-foreground 'org-meta-line))
+  (set-face-attribute 'org-footnote nil :foreground (face-foreground 'org-meta-line) :underline t)
+  (set-face-attribute 'org-date nil :foreground (face-foreground 'link))
+  (set-face-attribute 'org-table nil :foreground (face-foreground 'org-meta-line))
+  (set-face-attribute 'org-verbatim nil :inherit 'org-latex-and-related)
+  (set-face-attribute 'org-code nil :inherit 'org-latex-and-related)
+  
   (setq org-modules '(ol-info ol-eww org-habit))
   ;; Taken from rougier: org-outer-indent
   (defun org-outer-indent--compute-prefixes ()
@@ -67,6 +78,7 @@
         org-edit-src-content-indentation 0
         org-src-preserve-indentation t
         org-fontify-quote-and-verse-blocks t
+        org-fontify-done-headline nil
         org-src-fontify-natively t
         ;; tectonic
         org-highlight-latex-and-related '(latex)
