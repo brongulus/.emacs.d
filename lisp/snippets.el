@@ -1,4 +1,4 @@
-;;;; Snippets
+;;;; Snippets -*- lexical-binding: t -*-
 
 ;; Check (info "(autotype) Skeleton Language")
 ;; https://www.lysator.liu.se/~davidk/elisp/tempo-examples.html

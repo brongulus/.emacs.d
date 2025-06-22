@@ -1,3 +1,5 @@
+;;;; Org-conf -*- lexical-binding: t -*-
+
 (use-package org
   :ensure nil
   :bind (("C-x y" . yank-media)
@@ -7,16 +9,6 @@
   :hook ((org-mode . visual-line-mode)
          (org-mode . variable-pitch-mode))
   :config
-  ;; Faces
-  (dolist (face '(org-level-1 org-level-2 org-level-3 org-level-4 org-level-5
-                              org-level-6 org-level-7 org-level-8))
-    (set-face-attribute face nil :height 1.2 :inherit 'bold))
-  (set-face-attribute 'org-drawer nil :foreground (face-foreground 'org-meta-line))
-  (set-face-attribute 'org-footnote nil :foreground (face-foreground 'org-meta-line) :underline t)
-  (set-face-attribute 'org-date nil :foreground (face-foreground 'link))
-  (set-face-attribute 'org-table nil :foreground (face-foreground 'org-meta-line))
-  (set-face-attribute 'org-verbatim nil :inherit 'org-latex-and-related)
-  (set-face-attribute 'org-code nil :inherit 'org-latex-and-related)
   
   (setq org-modules '(ol-info ol-eww org-habit))
   ;; Taken from rougier: org-outer-indent
@@ -125,7 +117,7 @@
         org-agenda-include-deadlines t)
 
   (defun elegant-agenda--title nil ;; src: elegant-agenda-mode
-    (when-let ((title (when (and org-agenda-redo-command
+    (when-let* ((title (when (and org-agenda-redo-command
                                  (stringp (cadr org-agenda-redo-command)))
                         (format "─  %s "
                                 (mapconcat

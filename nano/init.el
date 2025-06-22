@@ -33,12 +33,14 @@
 (run-with-idle-timer 0.5 nil #'my-lazy-load-modes)
 ;; (add-hook 'emacs-startup-hook #'my-lazy-load-modes)
 
-;; --- Minimal NANO (not a real) theme --------------------------------------
+;; --- Minimal theme --------------------------------------
 (defvar nano-current-theme 'dark "Current nano variant being used.")
+(setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
+(setq nano-bg-theme-map
+      '(("#f7f7f7" . light) ("#fbf8ef" . amber) ("#282c33" . dark) ("#181818" . burn)))
 (let ((color (shell-command-to-string
-              "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" get-colors | grep ^background | awk '{printf $2}'")))
-  (when (string= color "#f7f7f7")
-    (setq nano-current-theme 'light)))
+              (concat kitty-send-command "get-colors | grep ^background | awk '{printf $2}'"))))
+  (setq nano-current-theme (cdr (assoc color nano-bg-theme-map))))
 (defface nano-default '((t)) ".")   (defface nano-default-i '((t)) ".")
 (defface nano-highlight '((t)) ".") (defface nano-highlight-i '((t)) ".")
 (defface nano-subtle '((t)) ".")    (defface nano-subtle-i '((t)) ".")
@@ -97,6 +99,7 @@
   (set-face-attribute 'font-lock-builtin-face nil :slant 'italic)
   (set-face-attribute 'link nil :underline t)
   (set-face-attribute 'cursor nil :background "#00c2ff")
+  (set-face-attribute 'success nil :foreground "ForestGreen")
   (with-eval-after-load 'make-mode
     (set-face-attribute 'makefile-targets nil :inherit 'font-lock-keyword-face))
 
@@ -133,6 +136,18 @@
     (set-face-attribute 'whitespace-trailing nil :background 'unspecified :foreground (face-foreground 'nano-critical))
     (set-face-attribute 'whitespace-line nil :background 'unspecified :foreground 'unspecified))
 
+  (with-eval-after-load 'outline
+    (dolist (face '(outline-1 outline-2 outline-3 outline-4 outline-5
+                              outline-6 outline-7 outline-8))
+      (set-face-attribute face nil :height 1.2 :inherit 'bold)))
+  (with-eval-after-load 'org
+    (set-face-attribute 'org-drawer nil :inherit 'nano-faded)
+    (set-face-attribute 'org-footnote nil :inherit 'nano-faded :underline t)
+    (set-face-attribute 'org-date nil :foreground (face-foreground 'link))
+    (set-face-attribute 'org-table nil :foreground (face-foreground 'nano-default))
+    (set-face-attribute 'org-verbatim nil :inherit 'org-latex-and-related)
+    (set-face-attribute 'org-code nil :inherit 'org-latex-and-related))
+
   ;; Mode & header lines
   (set-face-attribute 'header-line nil
                       :background 'unspecified
@@ -152,13 +167,7 @@
   (unless (display-graphic-p)
     (set-face-attribute 'mode-line-active nil
                         :foreground (face-background 'default)
-                        :background (face-foreground 'nano-string)))
-  (with-eval-after-load 'which-func
-    (set-face-attribute 'which-func nil
-                        :foreground (face-foreground 'nano-string)
-                        :background (face-background 'default)
-                        :inverse-video (not (display-graphic-p))
-                        :inherit 'unspecified)))
+                        :background (face-foreground 'nano-salient))))
 
 (defun nano-light (&rest args)
   "NANO light theme (was based on material colors)."
@@ -186,13 +195,11 @@
   (setq nano-current-theme 'dark)
   (nano-install-theme))
 
-(if (eq nano-current-theme 'light) (nano-light) (nano-dark))
-
 (defun nano-amber (&rest args)
   "Change background of light theme to plan9"
   (interactive)
   (nano-light)
-  (set-face-attribute 'nano-default nil :foreground "#352f19" :background "#FEFAED")
+  (set-face-attribute 'nano-default nil :foreground "#352f19" :background "#fbf8ef")
   (set-face-attribute 'nano-highlight nil :background "#E9E4E2")
   (let ((nano-current-theme 'light)) (nano-install-theme))
   (setq nano-current-theme 'amber))
@@ -212,9 +219,17 @@
   (cond ((eq nano-current-theme 'burn) (nano-light))
         ((eq nano-current-theme 'light) (nano-amber))
         ((eq nano-current-theme 'amber) (nano-dark))
-        ((eq nano-current-theme 'dark) (nano-burn))))
+        ((eq nano-current-theme 'dark) (nano-burn)))
+  (if (or (eq nano-current-theme 'light) (eq nano-current-theme 'amber))
+      (shell-command (concat kitty-send-command "set-colors --all --configured ~/.config/kitty/theme-light.conf" nil nil))
+    (shell-command (concat kitty-send-command "set-colors --all --configured ~/.config/kitty/theme.conf" nil nil)))
+  (let ((bg-color (car (rassoc nano-current-theme nano-bg-theme-map))))
+    (shell-command
+     (concat kitty-send-command "set-colors background=" bg-color " selection-foreground=" bg-color))))
 
 (define-key (current-global-map) (kbd "<f6>") #'nano-toggle-theme)
+;; Set current theme based on terminal
+(funcall (intern (concat "nano-" (symbol-name nano-current-theme))))
 
 ;; --- Header & mode lines --------------------------------------------------
 (setq-default flymake-mode-line-counter-format
@@ -261,10 +276,10 @@
                                       (t                    "--"))))
                          (propertize (concat "   " prefix " "))))
                 mode-line-format-right-align
-                (:eval (propertize (format-mode-line
-                                    (when which-function-mode
-                                      which-func-current))
-                                   'face 'which-func))
+                (:eval (propertize (format-mode-line (when which-function-mode which-func-current))
+                                   'face (if (or (display-graphic-p) (mode-line-window-selected-p))
+                                             'mode-line-active
+                                           'mode-line-inactive)))
                 (:eval (when (mode-line-window-selected-p)
                          mode-line-end-spaces))))
 
@@ -872,6 +887,8 @@
 (define-key meow-mode-map (kbd "z") (make-sparse-keymap))
 (define-key meow-mode-map (kbd "H") help-map)
 (define-key meow-mode-map (kbd "SPC") ctl-x-map)
+(dolist (num '(0 1 2 3 4 5 6 7 8 9))
+  (define-key meow-mode-map (int-to-string num) #'digit-argument))
 (dolist (pair '(("\\" . dired-jump) ("gl" . move-end-of-line) ("ge" . move-end-of-line)
                 ("gh" . back-to-indentation) ("ga" . move-beginning-of-line)
                 ("gj" . end-of-buffer) ("gk" . beginning-of-buffer) ("q" . quit-window)
@@ -1019,7 +1036,7 @@
   (push '("gd" "vc-diff") eshell-command-aliases-list)
   (push '("groot" "cd ${git rev-parse --show-toplevel}") eshell-command-aliases-list)
   (push '("nix-update-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} nix build .#darwinConfigurations.${hostname -s}.system --impure && cd -") eshell-command-aliases-list)
-  (push '("darwin-rebuild-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} sudo USER=${whoami} ./result/sw/bin/darwin-rebuild switch --flake . --impure && cd -") eshell-command-aliases-list)
+  (push '("darwin-rebuild-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} sudo ./result/sw/bin/darwin-rebuild switch --flake . --impure && cd -") eshell-command-aliases-list)
   (push '("gk" "export KUBECONFIG=${gardenctl kubectl-env zsh | awk -F\"'\" '/export KUBECONFIG/ {print \$2}'} && test -n \"$TMUX\" && (shell-command \"tmux set-environment -g KUBECONFIG \\\"$KUBECONFIG\\\" && tmux refresh-client -S\")") eshell-command-aliases-list))
 
 (defun my-eshell-read-aliases-list ()
@@ -1123,8 +1140,11 @@
      " "))
 
   (defun my/eshell--git-prompt ()
-    (let ((rebase-in-progress-p
-           (not (string-empty-p (my/eshell--git-output '("rev-parse" "--verify" "REBASE_HEAD") 128))))
+    (let* ((git-dir (locate-dominating-file default-directory ".git"))
+          (rebase-in-progress-p
+           (and git-dir (or (file-exists-p (expand-file-name ".git/rebase-merge" git-dir))
+                            (file-exists-p (expand-file-name ".git/rebase-apply" git-dir)))
+            (not (string-empty-p (my/eshell--git-output '("rev-parse" "--verify" "REBASE_HEAD") 128)))))
           (merge-in-progress-p
            (not (string-empty-p (my/eshell--git-output '("rev-parse" "--verify" "MERGE_HEAD") 128))))
           (git-branch
