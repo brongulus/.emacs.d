@@ -4,7 +4,7 @@
 ;;; Code:
 
 ;;; Bootstrap
-(load "~/.emacs.d/lisp/benchmarking" nil :no-message)
+;; (load "~/.emacs.d/lisp/benchmarking" nil :no-message)
 
 (define-key global-map (kbd "C-z") (make-sparse-keymap))
 (defconst dropbox-dir
@@ -105,7 +105,7 @@
                 custom-safe-themes t
                 ring-bell-function 'ignore
                 use-short-answers t
-                ;; debug-on-error t ; issues w/ completion in :bind
+                debug-on-error t ; issues w/ completion in :bind
                 warning-minimum-level :error
                 delete-by-moving-to-trash t ; never change this :'(
                 display-line-numbers-width 5
@@ -366,19 +366,7 @@ backwards instead."
                   (setq blink-cursor-interval 0.8)
                   (tooltip-mode -1))))
 
-(use-package package
-  :ensure nil
-  :init
-  (if package-quickstart
-      (let ((load-source-file-function nil))
-        (package-activate-all))
-    (package-initialize))
-  :config
-  (push '("melpa" . "https://melpa.org/packages/") package-archives)
-  (push '("melpa-stable" . "https://stable.melpa.org/packages/") package-archives)
-  (setq package-native-compile t
-        package-install-upgrade-built-in t
-        package-check-signature nil))
+(load "~/.emacs.d/lisp/dev-conf" nil :no-message)
 
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 ;;; Completion
@@ -548,43 +536,6 @@ backwards instead."
          ("C-<return>" . completion-preview-insert))
   :config
   (push 'org-self-insert-command completion-preview-commands))
-
-(use-package corfu
-  :hook (after-init . global-corfu-mode)
-  :hook ((corfu-mode . corfu-popupinfo-mode)
-         (meow-insert-exit . corfu-quit))
-  :bind (:map corfu-map
-              ("TAB" . corfu-next)
-              ([tab] . corfu-next)
-              ("S-TAB" . corfu-previous)
-              ([backtab] . corfu-previous))
-  :config
-  (keymap-unset corfu-map "<remap> <next-line>")
-  (keymap-unset corfu-map "<remap> <forward-char>")
-  (keymap-unset corfu-map "<remap> <backward-char>")
-  (keymap-unset corfu-map "<remap> <previous-line>")
-  (add-hook 'eshell-mode #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
-  (with-eval-after-load 'savehist
-    (corfu-history-mode 1)
-    (add-to-list 'savehist-additional-variables 'corfu-history))
-  (setq completion-ignore-case t)
-  (with-eval-after-load 'dabbrev
-    (push 'pdf-view-mode dabbrev-ignored-buffer-modes))
-  (setq corfu-cycle t
-        corfu-auto t
-        corfu-auto-prefix 2
-        corfu-auto-delay 0.3
-        corfu-separator 32
-        corfu-max-width 80
-        corfu-preselect 'prompt
-        corfu-quit-no-match t
-        corfu-quit-at-boundary 'separator
-        corfu-preview-current nil
-        corfu-popupinfo-delay '(0.5 . 0.1)
-        corfu-preselect-first nil)
-  (use-package corfu-terminal
-    :when (not (display-graphic-p))
-    :hook ((corfu-mode . corfu-terminal-mode))))
 
 ;;; Editing
 
@@ -1094,30 +1045,6 @@ deleted, kill the pairs around point."
 
 ;;; Visual Niceties
 
-(use-package eldoc-box
-  :after eldoc
-  :commands eldoc-box-help-at-point my/eldoc-get-help
-  :bind (("s-<mouse-1>" . my/eldoc-get-help)
-         ("C-z C-z" . my/eldoc-get-help))
-  :config
-  (defun my/eldoc-get-help ()
-    (interactive)
-    (if (derived-mode-p 'emacs-lisp-mode)
-        (describe-symbol (symbol-at-point))
-      (if (and (display-graphic-p)
-               (package-installed-p 'eldoc-box))
-          (eldoc-box-help-at-point)
-        (eldoc-doc-buffer t))))
-  (setq eldoc-box-max-pixel-width 800
-        eldoc-box-max-pixel-height 700
-        eldoc-box-only-multi-line t)
-  (setq eldoc-doc-buffer-separator
-        (concat "\n"
-                (propertize "-" 'display '(space :align-to right)
-                            'face '(:strike-through t)
-                            'font-lock-face '(:strike-through t))
-                "\n")))
-
 (use-package writeroom-mode
   :bind ("<f9>" . writeroom-mode)
   :hook ((nov-mode markdown-mode Info-mode Man-mode eww-mode) . writeroom-mode)
@@ -1229,49 +1156,13 @@ deleted, kill the pairs around point."
         highlight-indent-guides-auto-enabled nil
         highlight-indent-guides-responsive nil))
 
-(use-package diff-hl
-  :hook (((prog-mode conf-mode) . turn-on-diff-hl-mode)
-         ((prog-mode conf-mode) . diff-hl-margin-mode)
-         ((prog-mode conf-mode) . diff-hl-show-hunk-mouse-mode))
-  :config
-  (dolist (pair '(("q" . diff-hl-inline-popup-hide)
-                  ("r" . diff-hl-show-hunk-revert-hunk)))
-    (let ((key (car pair))
-          (fn (cdr pair)))
-      (define-key diff-hl-inline-popup-transient-mode-map
-                  (kbd key)
-                  (lambda nil
-                    "Clean up the littering diff-hl does by leaving its buffers after quitting."
-                    (interactive)
-                    (funcall fn)
-                    (let ((diff-hl-buffers
-                           (seq-filter
-                            (lambda (buf)
-                              (with-current-buffer buf
-                                (and (eq major-mode 'diff-mode)
-                                     (string-match-p "*diff-hl-.*" (buffer-name buf)))))
-                            (buffer-list))))
-                      (mapc #'kill-buffer diff-hl-buffers))))))
-  (diff-hl-flydiff-mode t)
-  (when (package-installed-p 'magit)
-    (add-hook 'magit-pre-refresh-hook  #'diff-hl-magit-pre-refresh)
-    (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh))
-  (setq vc-git-diff-switches '("--histogram")
-        diff-hl-flydiff-delay 0.5
-        diff-hl-update-async t
-        diff-hl-show-staged-changes nil
-        diff-hl-margin-symbols-alist '((insert . "█")
-                                       (delete . "█")
-                                       (change . "█"))
-        diff-hl-draw-borders nil))
-
 ;;; Apps
 
 (use-package desktop
   :ensure nil
   :if (display-graphic-p)
   :hook (window-setup . desktop-save-mode)
-  :hook (window-setup . desktop-read)
+  ;; :hook (window-setup . desktop-read)
   :config
   (advice-add 'desktop-read :around
               (lambda (orig &rest args)
@@ -1308,151 +1199,6 @@ deleted, kill the pairs around point."
                :cleanup-frames (not (eq desktop-restore-reuses-frames 'keep))
                :force-display desktop-restore-in-current-display
                :force-onscreen desktop-restore-forces-onscreen))))
-
-(use-package gnus
-  :ensure nil
-  :hook (gnus-exit-gnus . tab-bar-close-tab)
-  :hook (gnus-summary-mode . turn-on-gnus-mailing-list-mode)
-  :bind (:map gnus-article-mode-map
-              ("q" . kill-buffer-and-window)
-              ("RET" . gnus-summary-scroll-up)
-              ("C-<return>" . gnus-summary-scroll-down)
-              :map gnus-summary-mode-map
-              ("R" . (lambda nil (interactive)
-                       (gnus-summary-mark-article nil ?R))))
-  :preface
-  (setq gnus-directory (concat user-emacs-directory "/gnus")
-        gnus-startup-file (concat user-emacs-directory "/.newsrc")
-        gnus-use-dribble-file nil
-        gnus-always-read-dribble-file nil)
-  :config
-  (advice-add 'gnus-splash :before #'tab-bar-new-tab)
-  (setq gnus-select-method '(nntp "news.gwene.org"))
-  (setq gnus-secondary-select-methods
-        '((nnimap "personal"
-                  (nnimap-address "imap.gmail.com")
-                  (nnimap-server-port "993")
-                  (nnimap-stream ssl)
-                  (nnir-search-engine imap)
-                  (nnmail-expiry-target "nnimap+personal:[Imap]/Trash")
-                  (nnmail-expiry-wait 'immediate))
-          (nnrss ""))
-        ;; opts
-        gnus-check-new-newsgroups nil ;; disable first time you use gnus
-        gnus-asynchronous t
-        gnus-use-cache t
-        gnus-cache-remove-articles nil
-        gnus-large-newsgroup 200
-        gnus-blocked-images nil
-        gnus-treat-hide-boring-headers t
-        mm-text-html-renderer 'shr ;; w3m
-        mm-inline-large-images 'resize
-        shr-use-colors nil
-        shr-max-width fill-column
-        shr-indentation 2
-        gnus-article-x-face-too-ugly ".*"
-        gnus-interactive-exit nil
-        gnus-novice-user nil
-        gnus-expert-user nil
-        gnus-auto-select-first nil
-        gnus-auto-select-next 'quietly
-        gnus-summary-display-arrow nil
-        gnus-thread-sort-functions
-        '(gnus-thread-sort-by-most-recent-date
-          (not gnus-thread-sort-by-number)))
-  ;; Better UI
-  (gnus-add-configuration
-   '(article
-     (horizontal 1.0
-                 (vertical 1.0
-                           (summary 0.25 point)
-                           (article 1.0)))))
-  (gnus-add-configuration
-   '(summary
-     (horizontal 1.0
-                 (vertical 1.0
-                           (summary 1.0 point)))))
-  (setq gnus-unread-mark #x2022 ;; dot
-        gnus-unseen-mark 32 ;; space
-        gnus-read-mark 32
-        gnus-del-mark ?\
-        gnus-ancient-mark 32
-        gnus-replied-mark 32
-        gnus-cached-mark 32
-        gnus-ticked-mark ?!
-        gnus-low-score-mark #x2193 ;; down arrow
-        ;; see (info "(gnus) Summary Score Commands")
-        gnus-use-adaptive-scoring t
-        gnus-summary-expunge-below 0
-        gnus-sum-thread-tree-false-root ""
-        gnus-sum-thread-tree-indent " "
-        gnus-sum-thread-tree-root ""
-        gnus-sum-thread-tree-single-indent ""
-        gnus-sum-thread-tree-vertical        "│"
-        gnus-sum-thread-tree-leaf-with-other "├─►"
-        gnus-sum-thread-tree-single-leaf     "╰─►"
-        gnus-user-date-format-alist '(((gnus-seconds-today) . " %H:%M")
-                                      (t . "%b %d"))
-        gnus-topic-line-format (concat "%(%{%n - %A%}%) %v\n")
-        gnus-group-uncollapsed-levels 2
-        gnus-group-line-format (concat "%S%4y: %(%-40,40c%)\n") ;; %E (gnus-group-icon-list)
-        ;;  06-Jan   Sender Name    Email Subject
-        gnus-summary-line-format (concat " %0{%U%R%}"
-                                         ;; "%1{%-4,4i%}" " "
-                                         "%1{%&user-date;%}" "%3{ %}" " "
-                                         "%4{%-16,16f%}" " "
-                                         "%3{ %}" " "
-                                         "%1{%B%}" "%S\n"))
-  (setq gnus-message-archive-group '((format-time-string "sent.%Y"))))
-
-(use-package gnus-group
-  :ensure nil     ; use G R to subscribe to rss feeds
-  :after gnus
-  :hook (gnus-group-mode . gnus-topic-mode)
-  :config
-  (with-eval-after-load 'gnus-cite
-    (defun gnus-clean-citation nil
-      (save-excursion
-        (let ((replacement "▎ "))
-          (put-text-property 0 2 'face 'font-lock-comment-face replacement)
-          (replace-regexp-in-region
-           "\\(>[ ]?\\)" replacement (point-min) (point-max)))
-        (replace-regexp-in-region "\\([^\s\n]\\)▎ " "\\1>" (point-min) (point-max))))
-    
-    (nconc gnus-treatment-function-alist
-           '((t gnus-clean-citation))))
-
-  (add-hook 'gnus-article-mode-hook
-            (lambda nil
-              (setq left-margin-width 4)))
-  (with-eval-after-load 'gnus-topic
-    (setq gnus-topic-topology '(("Unread" visible)
-                                (("📥 Personal" visible nil nil))
-                                (("📰 News" visible nil nil))))
-    (setq gnus-topic-alist '(("📥 Personal" ; the key of topic
-                              "nnimap+personal:INBOX"
-                              "nnimap+personal:[Gmail]/Sent Mail"
-                              ;; "nnimap+personal:Sent"
-                              ;; "nnimap+personal:sent.2023"
-                              "nnimap+personal:[Gmail]/Starred")
-                             ("📰 News"
-                              ;; "nnrss:Prot Codelog" "nnrss:HLTV.org"
-                              "gwene.com.blogspot.petr-mitrichev" "gwene.me.tonsky.blog"
-                              "gmane.emacs.announce" "gmane.emacs.devel"
-                              "gmane.emacs.gnus.general" "gmane.emacs.gnus.user"
-                              "gmane.emacs.tramp" "gmane.emacs.bugs" "gwene.com.rubyweekly"
-                              "gwene.org.perlmonks.headlines" "gwene.com.perlweekly.perlweekly"
-                              "gmane.comp.lang.go.general" "gwene.com.iximiuz"
-                              "gwene.com.golangweekly" "gwene.org.golang.blog"
-                              "gwene.com.thisweekinrust" "gwene.org.rust-lang.blog"
-                              "gwene.com.youtube.feeds.videos.xml.user.ethoslab"
-                              "gmane.comp.web.qutebrowser" "gmane.comp.web.elinks.user"
-                              "gwene.io.kubernetes" "gwene.app.rsshub.leetcode.articles"
-                              "gwene.rs.lobste" "gwene.org.hnrss.newest.points"
-                              "gwene.com.arcan-fe" "gwene.io.github.matklad" "gwene.net.openmymind"
-                              "gwene.net.lwn.headlines" "gwene.org.quantamagazine"
-                              "gwene.com.tedinski" "gwene.org.bitlbee.news.rss")
-                             ("Unread")))))
 
 (use-package vc
   ;; :defer nil
@@ -1514,6 +1260,7 @@ deleted, kill the pairs around point."
         magit-save-repository-buffers nil
         magit-revision-insert-related-refs nil)
 
+  (add-hook 'magit-revision-mode-hook #'toggle-truncate-lines)
   (add-hook 'magit-status-mode-hook ;; src: doom (Might break magit on tramp)
             (lambda ()
               (when-let (path (executable-find magit-git-executable t))
@@ -1554,6 +1301,8 @@ deleted, kill the pairs around point."
   ;; username to fork to and remote is named copy, or fork.
   ;; Work on the local repo as usual, push to copy/fork.
   ;; Create a PR using forge. (source is fork, target is origin/master)
+  ;; To mark a PR as draft: C-c C-e d when creating it
+  ;; In case commits dont show for PR: run `forge-add-pullreq-refspec' (forge/issues/320)
   :after magit)
 
 (use-package dired
@@ -1706,206 +1455,8 @@ deleted, kill the pairs around point."
 ;;     (setf (cadr tex-list) "%(tex)"
 ;;           (cadr latex-list) "%l")))
 
-(use-package org
-  :ensure nil
-  :bind (("C-x y" . yank-media)
-         :map org-mode-map
-         ("C-'" . avy-goto-char-timer)
-         ("C-," . my/scroll-other-window))
-  :hook ((org-mode . visual-line-mode)
-         (org-mode . variable-pitch-mode))
-  :config
-  (setq org-modules '(ol-info ol-eww org-habit))
-  ;; Taken from rougier: org-outer-indent
-  (defun org-outer-indent--compute-prefixes ()
-    "Compute prefix strings for regular text and headlines."
-    (setq org-indent--heading-line-prefixes
-          (make-vector org-indent--deepest-level nil))
-    (setq org-indent--inlinetask-line-prefixes
-          (make-vector org-indent--deepest-level nil))
-    (setq org-indent--text-line-prefixes
-          (make-vector org-indent--deepest-level nil))
-    ;; Find the lowest headline level (FIXME)
-    (let* (;; (headline-levels (or (org-element-map
-           ;;                          (org-element-parse-buffer) 'headline
-           ;;                        #'(lambda (item)
-           ;;                            (org-element-property :level item)))
-           ;;                      '()))
-           ;; (max-level (seq-max (if headline-levels
-           ;;                         headline-levels
-           ;;                       '(0))))
-           (line-indentation (+ 3 4))
-           (headline-indentation))
-      (dotimes (level org-indent--deepest-level)
-        (setq headline-indentation
-              (max 0 (- line-indentation (+ 1 level))))
-        (aset org-indent--inlinetask-line-prefixes level
-              (make-string line-indentation ?\s))
-        (aset org-indent--text-line-prefixes level
-              (make-string line-indentation ?\s))
-        (aset org-indent--heading-line-prefixes level
-              (make-string headline-indentation ?\s))))
-    (setq-local org-hide-leading-stars nil))
-
-  (advice-add 'org-indent--compute-prefixes :override
-              #'org-outer-indent--compute-prefixes)
-
-  ;; configure <s template for org-src-blocks
-  (require 'org-tempo)
-  (add-hook 'org-mode-hook
-            (lambda ()
-              (setq-local electric-pair-inhibit-predicate
-                          `(lambda (c)
-                             (if (or (char-equal c ?\[)
-                                     (char-equal c ?<))
-                                 t
-                               (,electric-pair-inhibit-predicate c))))))
-
-  (setq org-directory (concat dropbox-dir "org")
-        org-use-sub-superscripts '{}
-        ;; org-export-with-sub-superscripts nil
-        org-ellipsis "…"
-        org-pretty-entities t
-        org-startup-indented t
-        org-startup-truncated nil
-        org-adapt-indentation t
-        org-special-ctrl-a/e nil
-        org-M-RET-may-split-line '((item . nil))
-        org-fold-catch-invisible-edits 'show-and-error
-        org-edit-src-content-indentation 0
-        org-src-preserve-indentation t
-        org-fontify-quote-and-verse-blocks t
-        org-src-fontify-natively t
-        ;; tectonic
-        org-highlight-latex-and-related '(latex)
-        org-preview-latex-default-process 'tectonic
-        org-preview-latex-process-alist
-        '((tectonic :programs
-                    ("tectonic" "convert")
-                    :description "pdf > png"
-                    :message "you need install the programs: tectonic and imagemagick."
-                    :image-input-type "pdf"
-                    :image-output-type "png"
-                    :image-size-adjust (1.0 . 1.0)
-                    :latex-compiler
-                    ("tectonic -Z shell-escape-cwd=%o -Z continue-on-errors --outfmt pdf --outdir %o %f")
-                    :image-converter
-                    ("magick convert -density %D -trim -antialias %f -quality 300 %O")))
-        org-latex-compiler "tectonic"
-        org-latex-pdf-process
-        '("tectonic -X compile -Z shell-escape -Z continue-on-errors --outdir=%o %f")))
-
-(use-package org-agenda
-  :ensure nil
-  :bind (("C-c o a" . (lambda nil (interactive)
-                        (org-agenda nil "n")))
-         :map org-agenda-mode-map
-         ("q" . org-agenda-exit))
-  :config
-  (add-to-list 'display-buffer-alist
-               '("\\*Calendar\\*"
-                 (display-buffer-reuse-window display-buffer-below-selected)
-                 (window-parameters (height . 0.33))))
-
-  (setq org-agenda-files (list org-directory)
-        org-agenda-ignore-properties '(effort appt stats category)
-        org-agenda-dim-blocked-tasks nil
-        org-agenda-use-tag-inheritance nil
-        org-agenda-inhibit-startup t
-        org-agenda-window-setup 'current-window
-        org-agenda-restore-windows-after-quit t
-        org-agenda-start-with-log-mode t
-        org-agenda-show-all-dates nil
-        org-log-done t
-        org-log-into-drawer t
-        org-agenda-include-deadlines t)
-
-  (defun elegant-agenda--title nil ;; src: elegant-agenda-mode
-    (when-let ((title (when (and org-agenda-redo-command
-                                 (stringp (cadr org-agenda-redo-command)))
-                        (format "─  %s "
-                                (mapconcat
-                                 #'identity
-                                 (split-string-and-unquote
-                                  (cadr org-agenda-redo-command) "")
-                                 ""))))
-               (width (window-width)))
-      (face-remap-set-base 'header-line :height 1.4)
-      (setq-local header-line-format
-                  (format "%s %s" title (make-string (- width (length title)) ?─ t)))))
-  
-  (add-hook 'org-agenda-finalize-hook #'elegant-agenda--title)
-  
-  (setq org-agenda-breadcrumbs-separator " ❱ "
-        org-agenda-todo-keyword-format "%-1s"
-        org-agenda-use-time-grid t
-        org-agenda-skip-timestamp-if-done t
-        org-agenda-skip-scheduled-if-done t
-        org-agenda-skip-deadline-if-done t
-        org-agenda-scheduled-leaders '("" "")
-        org-agenda-deadline-leaders '("" "")
-        org-agenda-todo-keyword-format ""
-        org-agenda-block-separator (string-to-char " ")
-        org-agenda-current-time-string "← now ─────────"
-        org-agenda-time-grid
-        '((daily today require-timed remove-matched)
-          (800 1200 1600 2000)
-          "       " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
-        org-agenda-prefix-format
-        '((agenda . " %i %-12b%t%s")
-          (todo . " %i %?-12b"))))
-
-(use-package org-habit
-  :after org-agenda
-  :ensure nil
-  :config
-  (setq org-habit-show-habits-only-for-today t
-        org-habit-show-done-always-green t
-        org-habit-show-all-today t
-        org-habit-missed-glyph ?◌;; 9676
-        org-habit-completed-glyph ?● ;; 9679
-        org-habit-today-glyph ?○ ;; 9675
-        org-habit-following-days 1
-        org-habit-preceding-days 21)
-  
-  (defun add-missed-day-glyph (graph)
-    (dotimes (i (length graph))
-      (when (char-equal ?\s (aref graph i))
-        (let* ((face (get-char-property i 'face graph))
-               (rep-str (propertize (char-to-string org-habit-missed-glyph)
-                                    'face face)))
-          (aset graph i (string-to-char rep-str)))))
-    graph)
-  
-  (advice-add 'org-habit-build-graph :filter-return #'add-missed-day-glyph))
-
-(use-package org-capture
-  :ensure nil
-  :bind ("C-c o c" . org-capture)
-  ;; :hook (org-capture-mode . meow-insert)
-  :config
-  (add-hook 'org-capture-mode-hook
-            (lambda nil
-              (setq-local header-line-format nil)))
-  (setq org-capture-file
-        (concat org-directory "/inbox.org")
-        org-joural-file
-        (concat org-directory "/journal.org")
-        org-capture-templates
-        '(("t" "TODO" entry
-           (file+headline org-capture-file "Tasks")
-           "* TODO %?\n%<%d %b '%g %R>%i %a" :prepend t)
-          ("n" "Note" entry
-           (file+headline org-capture-file "Notes")
-           "* %?\n%i %a" :prepend t)
-          ;; https://www.twelvety.net/2024/12/styling-a-markdown-one-line-journal-in-emacs
-          ("j" "Journal" plain
-           (file+datetree org-joural-file)
-           "%<%d %b, %a> | %?" :tree-type month :empty-lines 1)
-          ("h" "Habit" entry
-           (file+headline org-capture-file "Habit")
-           "* TODO %?\n:PROPERTIES:\n:STYLE: habit\n:END:"
-           :prepend t))))
+(load "~/.emacs.d/lisp/org-conf" nil :no-message)
+(load "~/.emacs.d/lisp/gnus-conf" nil :no-message)
 
 (use-package ox-awesomecv
   :ensure nil
@@ -1976,8 +1527,14 @@ deleted, kill the pairs around point."
   (setq howm-directory "~/Dropbox/denote"
         howm-home-directory howm-directory
         howm-file-name-format "%Y%m%dT%H%M%S.org"
-        howm-view-title-header "*"
+        howm-view-title-header "#+title:" ; "*"
         howm-prefix (kbd "C-x ;"))
+
+  (setopt howm-view-title-regexp
+        "^#?\\+?[tT][iI][tT][lL][eE]:\\( +\\(.*\\)\\|\\)$")
+  (setopt howm-view-title-regexp-grep
+          "^(#?\\+?[tT][iI][tT][lL][eE]:) +")
+  
   :bind* ("C-x ; ;" . howm-menu)
   :bind (:map howm-menu-mode-local-map
               ("<backtab>" . action-lock-goto-previous-link)
@@ -1996,14 +1553,22 @@ deleted, kill the pairs around point."
                   "^-\\{2,\\}$"
                   "─────────────────────────────────────────────────"
                   (car args)))))
+
+  (defvar howm-view-title-regexp)
+  (defun howm-cut-title (str)
+    "Remove `howm-view-title-header' plus whitespace from STR."
+    (let ((begin (when (string-match howm-view-title-regexp str)
+                   (match-beginning 2))))
+      (if begin (substring str begin) str)))
+
+  (advice-add 'howm-view-item-summary :filter-return 'howm-cut-title)
   (setq howm-menu-list-format
         (let* ((path (format-time-string howm-file-name-format))
                (width (length (file-name-sans-extension
                                (file-name-nondirectory path)))))
           (concat "❱ %-" (format "%s" width) "s │ %s"))))
 ;; howm-template "* %title%cursor\n%date %file\n\n"
-;; howm-view-title-regexp "^\\(\\*+\\|#\\+title:\\)\\( +\\(.*\\)\\|\\)$"
-;; howm-view-title-regexp-grep  "^\\(\\*+\\|#\\+title:\\) +"))
+
 
 
 ;;; Meow
@@ -2139,7 +1704,7 @@ deleted, kill the pairs around point."
              (insert-char (read-char nil t))
              (backward-char 1)))
    '("R" . replace-regexp)
-   '("s" . kmacro-start-macro)
+   '("s" . isearch-forward-regexp)
    '("S" . kmacro-end-or-call-macro)
    '("t" . meow-till)
    '("u" . undo-only)
@@ -2259,7 +1824,8 @@ deleted, kill the pairs around point."
   ;; :init (setq eglot-stay-out-of '(flymake))
   :config
   (with-eval-after-load 'project
-    (setq project-vc-extra-root-markers '("go.mod" "Cargo.toml")))
+    (setq project-vc-extra-root-markers '("go.mod" "Cargo.toml"))
+    (setq project-vc-ignores '("**/vendor/**")))
   
   (fset #'jsonrpc--log-event #'ignore)
   (setq eglot-events-buffer-config 0
@@ -2323,19 +1889,23 @@ deleted, kill the pairs around point."
 (use-package nix-mode
   :mode ("\\.nix\\'" . nix-mode))
 
+(use-package copilot
+  :vc (:url "https://github.com/copilot-emacs/copilot.el"
+            :rev :newest :branch "main"))
+
 (use-package direnv
   :hook (prog-mode. direnv-mode)
   :config
   (setq direnv-always-show-summary nil)
   (push 'comint-mode direnv-non-file-modes))
 
-(use-package flymake-golangci
-  :vc (:url "https://github.com/storvik/flymake-golangci")
-  :hook ((eglot-managed-mode . (lambda ()
-                                 (when (derived-mode-p '(go-mode go-ts-mode))
-                                   (flymake-golangci-load))))
-         (go-mode . flymake-golangci-load)
-         (go-ts-mode . flymake-golangci-load)))
+;; (use-package flymake-golangci
+;;   :vc (:url "https://github.com/storvik/flymake-golangci")
+;;   :hook ((eglot-managed-mode . (lambda ()
+;;                                  (when (derived-mode-p '(go-mode go-ts-mode))
+;;                                    (flymake-golangci-load))))
+;;          (go-mode . flymake-golangci-load)
+;;          (go-ts-mode . flymake-golangci-load)))
 
 (use-package fish-mode
   :mode ("\\.fish\\'" . fish-mode))
@@ -2349,15 +1919,6 @@ deleted, kill the pairs around point."
 ;; (use-package templ-ts-mode
 ;;   :vc (:url "https://github.com/danderson/templ-ts-mode")
 ;;   :mode ("\\.tpl\\'" . templ-ts-mode))
-
-(use-package markdown-mode
-  :hook (markdown-mode . visual-line-mode)
-  :config
-  (add-hook 'markdown-mode-hook #'(lambda nil
-                                    (when (display-graphic-p)
-                                      (markdown-toggle-inline-images))))
-  (setq markdown-fontify-code-blocks-natively t
-        markdown-max-image-size '(800 . 800)))
 
 (use-package cdlatex
   :hook (org-mode . turn-on-org-cdlatex))
