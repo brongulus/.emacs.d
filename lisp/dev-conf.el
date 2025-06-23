@@ -110,7 +110,7 @@
 
 (use-package markdown-mode
   :ensure t
-  :hook (markdown-mode . visual-line-mode)
+  ;; :hook (markdown-mode . visual-line-mode)
   :config
   (add-hook 'markdown-mode-hook #'(lambda nil
                                     (when (display-graphic-p) (markdown-toggle-inline-images))))

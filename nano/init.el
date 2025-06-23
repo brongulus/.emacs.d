@@ -157,6 +157,8 @@
                               outline-6 outline-7 outline-8))
       (set-face-attribute face nil :height 1.2 :inherit 'bold)))
   (with-eval-after-load 'org
+    (dolist (face '(org-block org-block-begin-line org-block-end-line))
+      (set-face-attribute face nil :background (face-background 'nano-highlight) :extend t :inherit 'default))
     (set-face-attribute 'org-drawer nil :foreground (face-foreground 'nano-faded))
     (set-face-attribute 'org-footnote nil :foreground (face-foreground 'nano-faded) :underline t)
     (set-face-attribute 'org-date nil :foreground (face-foreground 'link))
@@ -831,13 +833,14 @@
 (defun toggle-zen-buffer ()
   "Toggle center alignment of the buffer. Source: jamesdyer."
   (interactive)
-  (let* ((current-margins (window-margins))
+  (let* ((special-modes (or (eq major-mode 'org-mode) (eq major-mode 'markdown-mode)))
+         (current-margins (window-margins))
          (margin (if (or (equal current-margins '(0 . 0))
                          (null (car (window-margins))))
-                     (/ (- (window-total-width) (if (eq major-mode 'org-mode) 160 fill-column)) 2) 0)))
+                     (/ (- (window-total-width) (if special-modes 160 fill-column)) 2) 0)))
     (visual-line-mode 1)
     (set-window-margins nil margin margin)
-    (when (or (eq major-mode 'org-mode) (eq major-mode 'markdown-mode))
+    (when special-modes
       (text-scale-set (if (eq text-scale-mode-amount 0) 2 0))
       (setq-local line-spacing (if (eq line-spacing 3) 0.5 3)))))
 (define-key (current-global-map) (kbd "<f9>") #'toggle-zen-buffer)
