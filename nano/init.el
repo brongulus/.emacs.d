@@ -1,6 +1,5 @@
 ;; init.el --- NANO Emacs (minimal version)  -*- lexical-binding: t -*-
 ;; Originally themed by: Nicolas P. Rougier <nicolas.rougier@inria.fr>
-;; TODO: consult, corfu, undo-fu-session, eldoc-box, direnv (NEVER use setopt)
 
 ;; --- Speed benchmarking ---------------------------------------------------
 ;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
@@ -106,24 +105,31 @@
   (when (eq system-type 'darwin)
     (modify-all-frames-parameters `((ns-appearance . ,nano-current-theme))))
 
-  (with-eval-after-load 'ansi-color
-    (let* ((color-themes ;; ansi-colors
-            '((black   . ((dark . "#30343d") (light . "#EEEEEE")))
-              (red     . ((dark . "#c47779") (light . "#c56655")))
-              (green   . ((dark . "#a5e075") (light . "#5f8700")))
-              (yellow  . ((dark . "#d9c18c") (light . "#bb9200")))
-              (blue    . ((dark . "#81a2be") (light . "#6079db")))
-              (magenta . ((dark . "#b294bb") (light . "#7646c1")))
-              (cyan    . ((dark . "#7db2bd") (light . "#6594bd")))
-              (white   . ((dark . "#cccccc") (light . "#1a1a1a")))))
-           (theme-variant (if (eq nano-current-theme 'light) 'light 'dark)))
-      (dolist (color-def color-themes)
-        (let* ((color-name (car color-def))
-               (color-value (alist-get theme-variant (cdr color-def))))
+  (let* ((color-themes ;; ansi-colors
+          '((black   . ((dark . "#30343d") (light . "#EEEEEE")))
+            (red     . ((dark . "#c47779") (light . "#c56655")))
+            (green   . ((dark . "#a5e075") (light . "#5f8700")))
+            (yellow  . ((dark . "#d9c18c") (light . "#bb9200")))
+            (blue    . ((dark . "#81a2be") (light . "#6079db")))
+            (magenta . ((dark . "#b294bb") (light . "#7646c1")))
+            (cyan    . ((dark . "#7db2bd") (light . "#6594bd")))
+            (white   . ((dark . "#cccccc") (light . "#1a1a1a")))))
+         (theme-variant (if (eq nano-current-theme 'light) 'light 'dark)))
+    (dolist (color-def color-themes)
+      (let* ((color-name (car color-def))
+             (color-value (alist-get theme-variant (cdr color-def))))
+        (with-eval-after-load 'ansi-color
           (set-face-attribute (intern (format "ansi-color-%s" color-name)) nil
                               :foreground color-value :background color-value)
           (set-face-attribute (intern (format "ansi-color-bright-%s" color-name)) nil
-                              :foreground color-value :background color-value)))))
+                              :foreground color-value :background color-value))))
+    (with-eval-after-load 'diff-hl
+      (set-face-attribute 'diff-hl-insert nil :foreground
+                          (alist-get theme-variant (alist-get 'green color-themes)))
+      (set-face-attribute 'diff-hl-change nil :foreground
+                          (alist-get theme-variant (alist-get 'yellow color-themes)))
+      (set-face-attribute 'diff-hl-delete nil :foreground
+                          (alist-get theme-variant (alist-get 'red color-themes)))))
   
   (with-eval-after-load 'whitespace
     (setq whitespace-style '(face tabs spaces tab-mark trailing)) ;space-mark
@@ -141,8 +147,8 @@
                               outline-6 outline-7 outline-8))
       (set-face-attribute face nil :height 1.2 :inherit 'bold)))
   (with-eval-after-load 'org
-    (set-face-attribute 'org-drawer nil :inherit 'nano-faded)
-    (set-face-attribute 'org-footnote nil :inherit 'nano-faded :underline t)
+    (set-face-attribute 'org-drawer nil :foreground (face-foreground 'nano-faded))
+    (set-face-attribute 'org-footnote nil :foreground (face-foreground 'nano-faded) :underline t)
     (set-face-attribute 'org-date nil :foreground (face-foreground 'link))
     (set-face-attribute 'org-table nil :foreground (face-foreground 'nano-default))
     (set-face-attribute 'org-verbatim nil :inherit 'org-latex-and-related)
@@ -328,7 +334,10 @@
 (defun my-goto-doc nil (interactive)
        (if (derived-mode-p 'emacs-lisp-mode)
            (describe-symbol (symbol-at-point))
-         (eldoc-doc-buffer t)))
+         (if (and (display-graphic-p)
+                  (package-installed-p 'eldoc-box))
+             (eldoc-box-help-at-point)
+         (eldoc-doc-buffer t))))
 
 (defun my-scroll-other-down nil (interactive)
        (let ((mode (with-current-buffer (window-buffer (other-window-for-scrolling))
@@ -407,7 +416,8 @@
 (add-hook 'dired-mode-hook #'dired-hide-details-mode)
 (add-hook 'dired-mode-hook #'dired-omit-mode)
 (add-hook 'prog-mode-hook (electric-pair-mode t))
-(add-hook 'prog-mode-hook #'completion-preview-mode)
+(unless (package-installed-p 'corfu)
+  (add-hook 'prog-mode-hook #'completion-preview-mode))
 (add-hook 'prog-mode-hook #'hs-minor-mode)
 (add-hook 'prog-mode-hook #'hl-line-mode)
 (dolist (mode-hook '(prog-mode-hook conf-mode-hook yaml-ts-mode-hook))
@@ -469,7 +479,7 @@
       xref-search-program (if (executable-find "rg") 'ripgrep 'grep)
       xref-auto-jump-to-first-xref nil
       xref-show-definitions-function 'xref-show-definitions-buffer-at-bottom
-      xref-show-xrefs-function 'xref-show-definitions-completing-read)    
+      xref-show-xrefs-function 'xref-show-definitions-completing-read)
 
 (when (executable-find "rg")
   (setq grep-command "rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)"
@@ -506,6 +516,8 @@
           "-l --almost-all --human-readable --group-directories-first"))
   (set-face-attribute 'dired-directory nil :inherit font-lock-string-face)
   (put 'dired-find-alternate-file 'disabled nil)
+  (define-key dired-mode-map (kbd "j") #'next-line)
+  (define-key dired-mode-map (kbd "k") #'previous-line)
   (define-key dired-mode-map (kbd "\\") #'dired-up-directory)
   (define-key dired-mode-map (kbd "I") #'dired-kill-subdir)
   (define-key dired-mode-map (kbd "q") #'kill-current-buffer)
@@ -712,12 +724,14 @@
       (unless (treesit-language-available-p (car grammar))
         (treesit-install-language-grammar (car grammar)))))
 
-  (add-hook 'prog-mode-hook #'my/setup-install-grammars)
+  (if (string> emacs-version "31")
+      (setq treesit-auto-install-grammar 'always)
+   (add-hook 'prog-mode-hook #'my/setup-install-grammars))
   (setq go-ts-mode-indent-offset 4))
 
 (define-derived-mode zig-mode c-mode "zig-mode")  ;; Until zig-ts-mode is core
 (nconc auto-mode-alist
-       '(("\\.zig\\'" . zig-mode)
+       `(("\\.zig\\'" . zig-mode)
          ("\\.zig\\.zon\\'" . js-json-mode)
          ("\\.nix\\'" . conf-mode)
          ("\\.fish\\'" . conf-mode)
@@ -728,10 +742,11 @@
          ("\\.lua\\'" . lua-ts-mode)
          ("\\.ya?ml\\'" . yaml-ts-mode)
          ("\\Dockerfile\\'" . dockerfile-ts-mode)
-         ;; ("\\.md\\'" . markdown-ts-mode) ;; 31
          ("\\.dockerignore\\'" . dockerfile-ts-mode)
          ("\\.bin\\'" . hexl-mode)
          ("\\.info\\'" . Info-mode)))
+         ;; ,(when (string> emacs-version "31")
+         ;;  '("\\.md\\'" . markdown-ts-mode))))
 
 (dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook zig-mode-hook))
   (add-hook mode #'eglot-ensure))
@@ -803,7 +818,7 @@
                      (/ (- (window-total-width) (if (eq major-mode 'org-mode) 160 fill-column)) 2) 0)))
     (visual-line-mode 1)
     (set-window-margins nil margin margin)
-    (when (eq major-mode 'org-mode)
+    (when (or (eq major-mode 'org-mode) (eq major-mode 'markdown-mode))
       (text-scale-set (if (eq text-scale-mode-amount 0) 2 0))
       (setq-local line-spacing (if (eq line-spacing 3) 0.5 3)))))
 (define-key (current-global-map) (kbd "<f9>") #'toggle-zen-buffer)
@@ -925,6 +940,9 @@
                          (call-interactively 'indent-for-tab-command)))
                 ("d" . (lambda nil (interactive)
                          (if (use-region-p) (call-interactively 'kill-region) (delete-char 1))))
+                ("F" . (lambda nil (interactive)
+                         (let ((xref-show-xrefs-function 'xref--show-xref-buffer))
+                           (call-interactively 'project-find-regexp))))
                 ("f". (lambda nil (interactive)
                         (forward-char 1) (call-interactively 'set-mark-command)
                         (let ((start-point (point))
@@ -1215,6 +1233,25 @@
 (with-eval-after-load 'org
   (load "~/.emacs.d/lisp/org-conf" :noerr :no-message))
 
+(with-eval-after-load 'gnus
+  (load "~/.emacs.d/lisp/gnus-conf" nil :no-message)
+  (with-eval-after-load 'gnus-group
+    (define-key gnus-group-mode-map (kbd "j") #'next-line)
+    (define-key gnus-group-mode-map (kbd "k") #'previous-line))
+  (with-eval-after-load 'gnus-sum
+    (define-key gnus-summary-mode-map (kbd "j") #'next-line)
+    (define-key gnus-summary-mode-map (kbd "k") #'previous-line)))
+
+;; --- External -------------------------------------------------------------
+(load "~/.emacs.d/lisp/dev-conf" nil :no-message)
+
+;; --- 31 stuff -------------------------------------------------------------
+(when (string> emacs-version "31")
+  (setq kill-region-dwim 'emacs-word)
+  (with-eval-after-load 'dired (setq dired-hide-details-hide-absolute-location t))
+  ;; (with-eval-after-load 'icomplete (setq icomplete-vertical-in-buffer-adjust-list t))
+  (with-eval-after-load 'flymake (setq flymake-show-diagnostics-at-end-of-line 'fancy)))
+
 ;; --- Speed benchmarking ---------------------------------------------------
 ;; (let ((init-time (float-time (time-subtract (current-time) init-start-time)))
 ;;       (total-time (string-to-number (emacs-init-time "%f"))))
@@ -1223,3 +1260,9 @@
 ;;             (format "%.2fs " init-time)
 ;;             (propertize (format "(+ %.2fs system time)"
 ;;                                 (- total-time init-time))))))
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages '(corfu eldoc-box diff-hl markdown-mode)))
