@@ -34,6 +34,7 @@
 
 ;; --- Minimal theme --------------------------------------
 (defvar nano-current-theme 'dark "Current nano variant being used.")
+(defvar nano-monochrome t "Should the font-locking have colours.")
 (setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
 (setq nano-bg-theme-map
       '(("#f7f7f7" . light) ("#fbf8ef" . amber) ("#282c33" . dark) ("#181818" . burn)))
@@ -108,10 +109,10 @@
   (let* ((color-themes ;; ansi-colors
           '((black   . ((dark . "#30343d") (light . "#EEEEEE")))
             (red     . ((dark . "#c47779") (light . "#c56655")))
-            (green   . ((dark . "#a5e075") (light . "#5f8700")))
+            (green   . ((dark . "#a7bf87") (light . "#5f8700")))
             (yellow  . ((dark . "#d9c18c") (light . "#bb9200")))
-            (blue    . ((dark . "#81a2be") (light . "#6079db")))
-            (magenta . ((dark . "#b294bb") (light . "#7646c1")))
+            (blue    . ((dark . "#80ace3") (light . "#6079db")))
+            (magenta . ((dark . "#ab7bca") (light . "#7646c1")))
             (cyan    . ((dark . "#7db2bd") (light . "#6594bd")))
             (white   . ((dark . "#cccccc") (light . "#1a1a1a")))))
          (theme-variant (if (eq nano-current-theme 'light) 'light 'dark)))
@@ -129,7 +130,16 @@
       (set-face-attribute 'diff-hl-change nil :foreground
                           (alist-get theme-variant (alist-get 'yellow color-themes)))
       (set-face-attribute 'diff-hl-delete nil :foreground
-                          (alist-get theme-variant (alist-get 'red color-themes)))))
+                          (alist-get theme-variant (alist-get 'red color-themes))))
+    (unless nano-monochrome
+      (let ((face-color-map
+             '((font-lock-builtin-face . blue) (font-lock-function-name-face . blue)
+               (font-lock-constant-face . yellow) (font-lock-type-face . cyan)
+               (font-lock-keyword-face . magenta) (font-lock-property-name-face . magenta)
+               (font-lock-preprocessor-face . orange) (font-lock-string-face . green))))
+        (dolist (fc face-color-map)
+          (set-face-attribute (car fc) nil :foreground
+                              (alist-get theme-variant (alist-get (cdr fc) color-themes)))))))
   
   (with-eval-after-load 'whitespace
     (setq whitespace-style '(face tabs spaces tab-mark trailing)) ;space-mark
@@ -234,6 +244,9 @@
      (concat kitty-send-command "set-colors background=" bg-color " selection-foreground=" bg-color))))
 
 (define-key (current-global-map) (kbd "<f6>") #'nano-toggle-theme)
+(define-key (current-global-map) (kbd "<f7>") ;; Toggle monochrome
+            (lambda nil (interactive) (setq nano-monochrome (not nano-monochrome))
+              (nano-install-theme)))
 ;; Set current theme based on terminal
 (funcall (intern (concat "nano-" (symbol-name nano-current-theme))))
 
