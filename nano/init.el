@@ -227,10 +227,10 @@
         ((eq nano-current-theme 'amber) (nano-dark))
         ((eq nano-current-theme 'dark) (nano-burn)))
   (if (or (eq nano-current-theme 'light) (eq nano-current-theme 'amber))
-      (shell-command (concat kitty-send-command "set-colors --all --configured ~/.config/kitty/theme-light.conf" nil nil))
-    (shell-command (concat kitty-send-command "set-colors --all --configured ~/.config/kitty/theme.conf" nil nil)))
+      (shell-command-to-string (concat kitty-send-command "set-colors --all --configured ~/.config/kitty/theme-light.conf"))
+    (shell-command-to-string (concat kitty-send-command "set-colors --all --configured ~/.config/kitty/theme.conf")))
   (let ((bg-color (car (rassoc nano-current-theme nano-bg-theme-map))))
-    (shell-command
+    (shell-command-to-string
      (concat kitty-send-command "set-colors background=" bg-color " selection-foreground=" bg-color))))
 
 (define-key (current-global-map) (kbd "<f6>") #'nano-toggle-theme)
@@ -781,6 +781,12 @@
                '((ruby-mode ruby-ts-mode) . ("ruby-lsp")))
   (push '(zig-mode . ("zls")) eglot-server-programs)
 
+  (add-hook 'eglot-managed-mode-hook
+            (lambda ()
+              (when (eq major-mode 'go-ts-mode)
+                (setq eldoc-documentation-functions
+                      (remove #'eglot-signature-eldoc-function eldoc-documentation-functions)))))
+
   (defun my-eglot-organize-imports ()
     (interactive)
     (ignore-errors
@@ -1250,7 +1256,7 @@
   (setq kill-region-dwim 'emacs-word)
   (with-eval-after-load 'dired (setq dired-hide-details-hide-absolute-location t))
   ;; (with-eval-after-load 'icomplete (setq icomplete-vertical-in-buffer-adjust-list t))
-  (with-eval-after-load 'flymake (setq flymake-show-diagnostics-at-end-of-line 'fancy)))
+  (setq flymake-show-diagnostics-at-end-of-line 'fancy))
 
 ;; --- Speed benchmarking ---------------------------------------------------
 ;; (let ((init-time (float-time (time-subtract (current-time) init-start-time)))
