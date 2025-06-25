@@ -28,7 +28,8 @@
   (delete-selection-mode 1) (global-auto-revert-mode 1)
   (which-key-mode 1) (savehist-mode 1) (which-function-mode 1)
   (save-place-mode 1) (global-goto-address-mode)
-  (unless (display-graphic-p) (xterm-mouse-mode)))
+  (unless (display-graphic-p) (xterm-mouse-mode))
+  (when (package-installed-p 'corfu) (global-corfu-mode)))
 (run-with-idle-timer 0.5 nil #'my-lazy-load-modes)
 ;; (add-hook 'emacs-startup-hook #'my-lazy-load-modes)
 
@@ -514,6 +515,21 @@
   (define-key isearch-mode-map (kbd "TAB") #'isearch-repeat-forward)
   (define-key isearch-mode-map (kbd "<backtab>") #'isearch-repeat-backward))
 
+(with-eval-after-load 'replace
+  (setq list-matching-lines-default-context-lines 2)
+  (defun clean-occur-context-line (orig-fun &rest args) ; src: GPT
+    "Advice for `occur-context-lines` to change the separator."
+    (let ((result (apply orig-fun args)))
+      (cl-destructuring-bind (output-line after-lines) result
+        (setq output-line
+              (replace-regexp-in-string
+               "-------\n" ;; Old separator
+               (propertize (concat (make-string (window-total-width) ?─) "\n")
+                           'face list-matching-lines-prefix-face)
+               output-line))
+        (list output-line after-lines))))
+  (advice-add 'occur-context-lines :around #'clean-occur-context-line))
+
 (with-eval-after-load 'completion-preview
   (setq completion-preview-message-format nil)
   (define-key completion-preview-active-mode-map (kbd "M-n") #'completion-preview-next-candidate)
@@ -599,7 +615,8 @@
                 ("vc-git :.\*" . 0) ("\\*vc.\*-log\\*" . 0)
                 ("\\*eldoc\\*" . 0) ("\\*Help\\*" . 0)
                 ("\\*Warnings\\*" . 1) ("\\*log-edit-files\\*" . 1)
-                ("\\*Occur.*\\*$" . 1) ("\\*grep.*\\*$" . 1)))
+                ("\\*Occur.*\\*$" . 1) ("\\*grep.*\\*$" . 1)
+                ("\\*Org Select\\*" . 1) ("CAPTURE-.*" . 1)))
   (add-to-list 'display-buffer-alist
                `(,(car pops)
                  display-buffer-in-side-window
@@ -927,9 +944,10 @@
 (dolist (num '(0 1 2 3 4 5 6 7 8 9))
   (define-key meow-mode-map (int-to-string num) #'digit-argument))
 (dolist (pair '(("\\" . dired-jump) ("gl" . move-end-of-line) ("ge" . move-end-of-line)
-                ("gh" . back-to-indentation) ("ga" . move-beginning-of-line)
-                ("gj" . end-of-buffer) ("gk" . beginning-of-buffer) ("q" . quit-window)
-                ("e" . forward-word) ("b" . backward-word) ("=" . mark-sexp)
+                ("gh" . back-to-indentation) ("gj" . end-of-buffer) ("gk" . beginning-of-buffer)
+                ("q" . quit-window) ("=" . mark-sexp)
+                ("e" . (lambda (arg) (interactive "P") (forward-word (or arg 1)) (mark-word) (exchange-point-and-mark)))
+                ("b" . (lambda (arg) (interactive "P") (backward-word (or arg 1)) (mark-word)))
                 ("v" . set-mark-command) ("h" . backward-char) ("j" . next-line)
                 ("k" . previous-line) ("l" . forward-char) ("i" . meow-insert)
                 ("y" . kill-ring-save) ("%" . match-pair) ("o" . other-window)
@@ -939,6 +957,7 @@
                 ("w" . my-mark-word) ("," . my-scroll-other-down) ("s" . isearch-forward-regexp)
                 ("." . my-scroll-other-up) (";" . keyboard-quit) ("gf" . ffap)
                 ("gS" . scratch-buffer) ("*" . isearch-forward-symbol-at-point)
+                ("ga" . (lambda nil (interactive) (org-agenda nil "n"))) ("gc" . org-capture)
                 ("`" . window-toggle-side-windows) ("zz" . pop-to-mark-command)
                 ("gi" . eglot-find-implementation) ("gs" . imenu) ("(" . down-list)
                 (")" . up-list) ("[" . backward-list) ("]" . forward-list)
@@ -1253,7 +1272,8 @@
         large-file-warning-threshold (* 50 (expt 2 20))))
 
 (with-eval-after-load 'org
-  (load "~/.emacs.d/lisp/org-conf" :noerr :no-message))
+  (load "~/.emacs.d/lisp/org-conf" :noerr :no-message)
+  (add-hook 'org-capture-mode-hook 'meow-insert))
 
 (with-eval-after-load 'gnus
   (load "~/.emacs.d/lisp/gnus-conf" nil :no-message)

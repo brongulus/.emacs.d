@@ -16,7 +16,7 @@
 
 (use-package corfu
   :ensure t
-  :hook (after-init . global-corfu-mode)
+  ;; :hook (after-init . global-corfu-mode)
   :hook ((corfu-mode . corfu-popupinfo-mode))
          ;; (meow-insert-exit . corfu-quit))
   :bind (:map corfu-map
@@ -37,7 +37,7 @@
   (setq corfu-cycle t
         corfu-auto t
         corfu-auto-prefix 2
-        corfu-auto-delay 0.3
+        corfu-auto-delay 0.2
         corfu-separator 32
         corfu-max-width 80
         corfu-preselect 'prompt
@@ -95,7 +95,7 @@
                                      (string-match-p "*diff-hl-.*" (buffer-name buf)))))
                             (buffer-list))))
                       (mapc #'kill-buffer diff-hl-buffers))))))
-  (diff-hl-flydiff-mode t)
+  ;; (diff-hl-flydiff-mode t)
   (when (package-installed-p 'magit)
     (add-hook 'magit-pre-refresh-hook  #'diff-hl-magit-pre-refresh)
     (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh))
@@ -110,6 +110,7 @@
 
 (use-package markdown-mode
   :ensure t
+  :mode ("\\.md\\'" . markdown-mode)
   ;; :hook (markdown-mode . visual-line-mode)
   :config
   (add-hook 'markdown-mode-hook #'(lambda nil
