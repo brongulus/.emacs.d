@@ -7,12 +7,12 @@
       load-prefer-newer noninteractive
       garbage-collection-messages nil)
 
-(run-with-idle-timer 10 nil
-                     #'(lambda ()
-                         (setq gc-cons-threshold (* 64 1024 1024)
-                               gc-cons-percentage 0.1
-                               file-name-handler-alist my/saved-file-name-handler-alist)
-                         (garbage-collect)))
+(add-hook 'emacs-startup-hook
+          #'(lambda ()
+              (setq gc-cons-threshold (* 64 1024 1024)
+                    gc-cons-percentage 0.1
+                    file-name-handler-alist my/saved-file-name-handler-alist)
+              (garbage-collect)))
 
 ;; src: skangas
 (when (>= emacs-major-version 27)
@@ -24,13 +24,11 @@
                 #'gc-on-last-frame-out-of-focus))
 
 (setq-default default-frame-alist
-              '((alpha . 95)
+              '((alpha . 98)
                 (menu-bar-lines . 0)
                 (tool-bar-lines . 0)
                 (vertical-scroll-bars)
                 (fullscreen . maximized))
-              fringe-indicator-alist
-              (assq-delete-all 'truncation fringe-indicator-alist)
               cursor-in-non-selected-windows nil
               bidi-display-reordering 'left-to-right
               bidi-inhibit-bpa t
@@ -51,18 +49,6 @@
   (set-face-attribute 'default nil :height 170)
   (unless (file-directory-p "~/fonts")
     (copy-directory "~/.emacs.d/fonts/" "~/fonts")))
-
-(if (or is-android is-mac)
-    (push '(font . "VictorMono Nerd Font Mono-15:weight=semi-bold") default-frame-alist)
-  (push '(font . "VictorMono Nerd Font Mono-13:weight=semi-bold") default-frame-alist))
-(if is-android
-    (set-face-attribute
-     'variable-pitch nil :family "iA Writer Duo S" :weight 'regular)
-  (if is-mac
-      (set-face-attribute
-       'variable-pitch nil :family "Input Mono Narrow" :weight 'light)
-    (set-face-attribute
-     'variable-pitch nil :family "iA Writer Duospace" :weight 'regular :height 140)))
 
 ;; doom
 (setq-default inhibit-redisplay t
@@ -91,54 +77,6 @@
       frame-resize-pixelwise t
       initial-major-mode 'fundamental-mode
       initial-scratch-message nil)
-
-(defun ar/show-welcome-buffer () ;; xendoium (centering issues...)
-  "Show *Welcome* buffer."
-  (with-current-buffer (get-buffer-create "*Welcome*")
-    (setq truncate-lines t)
-    (let* ((buffer-read-only)
-           (image-path (fancy-splash-image-file))
-           (image (create-image image-path))
-           (size (image-size image))
-           (height (cdr size))
-           (width (and image (car size)))
-           (top-margin (floor (/ (- (window-height) height) 2)))
-           (left-margin (floor (/ (- (max (window-width) 195) width) 2)))
-           (prompt-title (format "%d packages loaded in %s"
-                                 (length package-activated-list)
-                                 (format "%.2f seconds"
-                                         (float-time
-                                          (time-subtract (current-time)
-                                                         before-init-time))))))
-      (erase-buffer)
-      (setq mode-line-format nil)
-      (goto-char (point-min))
-      (insert (make-string top-margin ?\n ))
-      (insert (make-string left-margin ?\ ))
-      (insert-image image)
-      (insert "\n\n\n")
-      (insert (make-string (floor (/ (- (max (window-width) 195)
-                                        (string-width prompt-title))
-                                     2))
-                           ?\ ))
-      (insert prompt-title))
-    (setq-local cursor-type nil)
-    (read-only-mode +1)
-    (switch-to-buffer (current-buffer))
-    (local-set-key (kbd "q") 'kill-current-buffer)
-    (local-set-key (kbd "RET") 'kill-current-buffer)))
-
-(add-hook 'window-setup-hook
-          (lambda ()
-            (message (format "%d packages loaded in %s"
-                             (length package-activated-list)
-                             (format "%.2f seconds"
-                                     (float-time
-                                      (time-subtract (current-time) before-init-time)))))
-            (when (and (not (file-exists-p (locate-user-emacs-file ".emacs.desktop")))
-                       (display-graphic-p))
-              (ar/show-welcome-buffer)))
-          1000)
 
 (when is-mac
   (add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
