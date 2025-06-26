@@ -100,7 +100,6 @@
   (set-face-attribute 'font-lock-builtin-face nil :slant 'italic)
   (set-face-attribute 'link nil :underline t)
   (set-face-attribute 'cursor nil :background "#00c2ff")
-  (set-face-attribute 'success nil :foreground "ForestGreen")
   (with-eval-after-load 'make-mode
     (set-face-attribute 'makefile-targets nil :inherit 'font-lock-keyword-face))
 
@@ -112,7 +111,7 @@
             (red     . ((dark . "#c47779") (light . "#c56655")))
             (green   . ((dark . "#a7bf87") (light . "#5f8700")))
             (yellow  . ((dark . "#d9c18c") (light . "#bb9200")))
-            (blue    . ((dark . "#80ace3") (light . "#6079db")))
+            (blue    . ((dark . "#80ace3") (light . "#0184bc")))
             (magenta . ((dark . "#ab7bca") (light . "#7646c1")))
             (cyan    . ((dark . "#7db2bd") (light . "#6594bd")))
             (white   . ((dark . "#cccccc") (light . "#1a1a1a")))))
@@ -125,6 +124,8 @@
                               :foreground color-value :background color-value)
           (set-face-attribute (intern (format "ansi-color-bright-%s" color-name)) nil
                               :foreground color-value :background color-value))))
+    (set-face-attribute 'success nil :foreground
+                        (alist-get theme-variant (alist-get 'green color-themes)))
     (with-eval-after-load 'diff-hl
       (set-face-attribute 'diff-hl-insert nil :foreground
                           (alist-get theme-variant (alist-get 'green color-themes)))
@@ -475,6 +476,10 @@
       flymake-suppress-zero-counters t
       flymake-no-changes-timeout 2
       flymake-show-diagnostics-at-end-of-line 'short
+      flymake-margin-indicators-string
+      '((error "»" compilation-error)
+        (warning "»" compilation-warning)
+        (note "»" compilation-info))
       help-window-select t
       pixel-scroll-precision-interpolate-page t
       recentf-max-saved-items 200
@@ -489,6 +494,7 @@
       shell-kill-buffer-on-exit t
       shell-file-name (car (process-lines "which" "fish"))
       tab-bar-show nil
+      vc-allow-rewriting-published-history 'ask
       vc-display-status 'no-backend
       vc-follow-symlinks t
       which-func-unknown ""
@@ -1264,12 +1270,13 @@
               (define-key eshell-mode-map (kbd "C-x n d") #'my-eshell-narrow-to-prompt)
               (define-key eshell-hist-mode-map (kbd "C-r") #'eshell-insert-history)))
 
-(with-eval-after-load 'docview
-  (setq doc-view-resolution 300
-        doc-view-continuous t
-        doc-view-mupdf-use-svg t
-        ;; doc-view-doc-type '(("pdf" pdf) ("epub" pdf))
-        large-file-warning-threshold (* 50 (expt 2 20))))
+(setq doc-view-resolution 600
+      doc-view-continuous t
+      doc-view-mupdf-use-svg t
+      large-file-warning-threshold (* 50 (expt 2 20)))
+(with-eval-after-load 'doc-view
+  (define-key doc-view-mode-map (kbd "j") #'doc-view-scroll-up-or-next-page)
+  (define-key doc-view-mode-map (kbd "k") #'doc-view-scroll-down-or-previous-page))
 
 (with-eval-after-load 'org
   (load "~/.emacs.d/lisp/org-conf" :noerr :no-message)
@@ -1307,4 +1314,4 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(package-selected-packages '(corfu eldoc-box diff-hl markdown-mode)))
+ '(package-selected-packages '(corfu diff-hl eldoc-box markdown-mode)))

@@ -1,30 +1,23 @@
 ;;;; dev-conf -*- lexical-binding: t -*-
 
-(use-package package
-  :ensure nil
-  :init
-  (if package-quickstart
-      (let ((load-source-file-function nil))
-        (package-activate-all))
-    (package-initialize))
-  :config
+(if package-quickstart
+    (let ((load-source-file-function nil))
+      (package-activate-all))
+  (package-initialize))
+
+(with-eval-after-load 'package
   (push '("melpa" . "https://melpa.org/packages/") package-archives)
   (push '("melpa-stable" . "https://stable.melpa.org/packages/") package-archives)
   (setq package-native-compile t
         package-install-upgrade-built-in t
         package-check-signature nil))
 
-(use-package corfu
-  :ensure t
-  ;; :hook (after-init . global-corfu-mode)
-  :hook ((corfu-mode . corfu-popupinfo-mode))
-         ;; (meow-insert-exit . corfu-quit))
-  :bind (:map corfu-map
-              ("TAB" . corfu-next)
-              ([tab] . corfu-next)
-              ("S-TAB" . corfu-previous)
-              ([backtab] . corfu-previous))
-  :config
+(with-eval-after-load 'corfu
+  (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)
+  (define-key corfu-map (kbd "TAB") #'corfu-next)
+  (define-key corfu-map [tab] #'corfu-next)
+  (define-key corfu-map (kbd "S-TAB") #'corfu-previous)
+  (define-key corfu-map [backtab] #'corfu-previous)
   (dolist (fn '("<next-line>" "<forward-line>" "<backward-char>" "<previous-line>"))
     (keymap-unset corfu-map (concat "<remap> " fn)))
   (add-hook 'eshell-mode #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
@@ -44,39 +37,35 @@
         corfu-quit-no-match t
         corfu-quit-at-boundary 'separator
         corfu-preview-current nil
-        corfu-popupinfo-delay '(0.5 . 0.1)
+        corfu-popupinfo-delay '(0.3 . 0.1)
         corfu-preselect-first nil))
 
-(use-package eldoc-box
-  :after eldoc
-  :ensure t
-  :commands eldoc-box-help-at-point my/eldoc-get-help
-  :bind (("s-<mouse-1>" . my/eldoc-get-help))
-  :config
-  (defun my/eldoc-get-help ()
-    (interactive)
-    (if (derived-mode-p 'emacs-lisp-mode)
-        (describe-symbol (symbol-at-point))
-      (if (and (display-graphic-p)
-               (package-installed-p 'eldoc-box))
-          (eldoc-box-help-at-point)
-        (eldoc-doc-buffer t))))
-  (setq eldoc-box-max-pixel-width 800
-        eldoc-box-max-pixel-height 700
-        eldoc-box-only-multi-line t)
-  (setq eldoc-doc-buffer-separator
-        (concat "\n"
-                (propertize "-" 'display '(space :align-to right)
-                            'face '(:strike-through t)
-                            'font-lock-face '(:strike-through t))
-                "\n")))
+(define-key (current-global-map) (kbd "s-<mouse-1>") #'my/eldoc-get-help)
+(defun my/eldoc-get-help ()
+  (interactive)
+  (if (derived-mode-p 'emacs-lisp-mode)
+      (describe-symbol (symbol-at-point))
+    (if (and (display-graphic-p)
+             (package-installed-p 'eldoc-box))
+        (eldoc-box-help-at-point)
+      (eldoc-doc-buffer t))))
+(with-eval-after-load 'eldoc
+  (with-eval-after-load 'eldoc-box
+    (setq eldoc-box-max-pixel-width 800
+          eldoc-box-max-pixel-height 700
+          eldoc-box-only-multi-line t)
+    (setq eldoc-doc-buffer-separator
+          (concat "\n"
+                  (propertize "-" 'display '(space :align-to right)
+                              'face '(:strike-through t)
+                              'font-lock-face '(:strike-through t))
+                  "\n"))))
 
-(use-package diff-hl
-  :ensure t
-  :hook (((prog-mode conf-mode) . turn-on-diff-hl-mode)
-         ((prog-mode conf-mode) . diff-hl-margin-mode)
-         ((prog-mode conf-mode) . diff-hl-show-hunk-mouse-mode))
-  :config
+(dolist (hook '(prog-mode-hook conf-mode-hook))
+  (add-hook hook #'turn-on-diff-hl-mode)
+  (add-hook hook #'diff-hl-margin-mode)
+  (add-hook hook #'diff-hl-show-hunk-mouse-mode))
+(with-eval-after-load 'diff-hl
   (dolist (pair '(("q" . diff-hl-inline-popup-hide)
                   ("r" . diff-hl-show-hunk-revert-hunk)))
     (let ((key (car pair))
@@ -108,11 +97,9 @@
                                        (change . "█"))
         diff-hl-draw-borders nil))
 
-(use-package markdown-mode
-  :ensure t
-  :mode ("\\.md\\'" . markdown-mode)
-  ;; :hook (markdown-mode . visual-line-mode)
-  :config
+
+(push '("\\.md\\'" . markdown-mode) auto-mode-alist)
+(with-eval-after-load 'markdown-mode
   (add-hook 'markdown-mode-hook #'(lambda nil
                                     (when (display-graphic-p) (markdown-toggle-inline-images))))
   (setq markdown-fontify-code-blocks-natively t
