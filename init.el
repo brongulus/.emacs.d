@@ -28,8 +28,7 @@
   (delete-selection-mode 1) (global-auto-revert-mode 1)
   (which-key-mode 1) (savehist-mode 1) (which-function-mode 1)
   (save-place-mode 1) (global-goto-address-mode)
-  (unless (display-graphic-p) (xterm-mouse-mode))
-  (when (package-installed-p 'corfu) (global-corfu-mode)))
+  (unless (display-graphic-p) (xterm-mouse-mode)))
 (run-with-idle-timer 0.5 nil #'my-lazy-load-modes)
 ;; (add-hook 'emacs-startup-hook #'my-lazy-load-modes)
 
@@ -39,9 +38,10 @@
 (setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
 (setq nano-bg-theme-map
       '(("#f7f7f7" . light) ("#fbf8ef" . amber) ("#282c33" . dark) ("#181818" . burn)))
-(let ((color (shell-command-to-string
-              (concat kitty-send-command "get-colors | grep ^background | awk '{printf $2}'"))))
-  (setq nano-current-theme (cdr (assoc color nano-bg-theme-map))))
+(unless (eq system-type 'android)
+  (let ((color (shell-command-to-string
+                (concat kitty-send-command "get-colors | grep ^background | awk '{printf $2}'"))))
+    (setq nano-current-theme (cdr (assoc color nano-bg-theme-map)))))
 (defface nano-default '((t)) ".")   (defface nano-default-i '((t)) ".")
 (defface nano-highlight '((t)) ".") (defface nano-highlight-i '((t)) ".")
 (defface nano-subtle '((t)) ".")    (defface nano-subtle-i '((t)) ".")
@@ -247,10 +247,12 @@
     (shell-command-to-string
      (concat kitty-send-command "set-colors background=" bg-color " selection-foreground=" bg-color))))
 
+(defun nano-monochrome nil
+  (interactive)
+  (setq nano-monochrome (not nano-monochrome)) (nano-install-theme))
+
 (define-key (current-global-map) (kbd "<f6>") #'nano-toggle-theme)
-(define-key (current-global-map) (kbd "<f7>") ;; Toggle monochrome
-            (lambda nil (interactive) (setq nano-monochrome (not nano-monochrome))
-              (nano-install-theme)))
+(define-key (current-global-map) (kbd "<f7>") #'nano-monochrome)
 ;; Set current theme based on terminal
 (funcall (intern (concat "nano-" (symbol-name nano-current-theme))))
 
@@ -1314,4 +1316,4 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(package-selected-packages '(corfu diff-hl eldoc-box markdown-mode)))
+ '(package-selected-packages nil))

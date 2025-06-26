@@ -12,6 +12,22 @@
         package-install-upgrade-built-in t
         package-check-signature nil))
 
+;; Auto-install function
+(defun my/ensure-package-installed (&rest packages)
+  "Ensure PACKAGES are installed, install if missing."
+  (mapcar
+   (lambda (package)
+     (unless (package-installed-p package)
+       (unless package-archive-contents
+         (package-refresh-contents))
+       (package-install package)))
+   packages))
+
+;; Usage
+(my/ensure-package-installed 'corfu 'diff-hl 'eldoc-box 'markdown-mode)
+
+
+(add-hook 'after-init-hook #'global-corfu-mode)
 (with-eval-after-load 'corfu
   (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)
   (define-key corfu-map (kbd "TAB") #'corfu-next)
