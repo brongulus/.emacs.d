@@ -28,7 +28,8 @@
        (delete-selection-mode 1) (global-auto-revert-mode 1) (minibuffer-depth-indicate-mode)
        (which-key-mode 1) (savehist-mode 1) (which-function-mode 1)
        (save-place-mode 1) (global-goto-address-mode)
-       (unless (display-graphic-p) (xterm-mouse-mode)))
+       (unless (display-graphic-p) (xterm-mouse-mode))
+       (when (package-installed-p 'corfu) (global-corfu-mode)))
 (run-with-idle-timer 0.5 nil #'my-lazy-load-modes)
 ;; (add-hook 'emacs-startup-hook #'my-lazy-load-modes)
 
@@ -1319,9 +1320,3 @@
 ;;             (format "%.2fs " init-time)
 ;;             (propertize (format "(+ %.2fs system time)"
 ;;                                 (- total-time init-time))))))
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(package-selected-packages '(corfu eldoc-box diff-hl markdown-mode)))

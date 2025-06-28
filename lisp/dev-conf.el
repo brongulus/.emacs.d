@@ -23,11 +23,9 @@
        (package-install package)))
    packages))
 
-;; Usage
 (my/ensure-package-installed 'corfu 'diff-hl 'eldoc-box 'markdown-mode)
 
-
-(add-hook 'after-init-hook #'global-corfu-mode)
+;; (add-hook 'after-init-hook #'global-corfu-mode)
 (with-eval-after-load 'corfu
   (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)
   (define-key corfu-map (kbd "TAB") #'corfu-next)
