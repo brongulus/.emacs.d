@@ -4,7 +4,8 @@
 ;; --- Speed benchmarking ---------------------------------------------------
 ;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
 ;; (setq init-start-time (current-time))
-(setq inhibit-startup-screen t)
+(setq inhibit-startup-screen t
+      custom-file null-device)
 
 ;; --- Typography stack -----------------------------------------------------
 (set-face-attribute 'default nil :height (if is-android 160 140) :family "VictorMono Nerd Font Mono")

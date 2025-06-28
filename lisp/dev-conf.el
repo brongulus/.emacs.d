@@ -51,7 +51,7 @@
         corfu-quit-no-match t
         corfu-quit-at-boundary 'separator
         corfu-preview-current nil
-        corfu-popupinfo-delay '(0.3 . 0.1)
+        corfu-popupinfo-delay '(0.2 . 0.1)
         corfu-preselect-first nil))
 
 (define-key (current-global-map) (kbd "s-<mouse-1>") #'my/eldoc-get-help)
