@@ -9,7 +9,6 @@
   :hook ((org-mode . visual-line-mode)
          (org-mode . variable-pitch-mode))
   :config
-  
   (setq org-modules '(ol-info ol-eww org-habit))
   ;; Taken from rougier: org-outer-indent
   (defun org-outer-indent--compute-prefixes ()

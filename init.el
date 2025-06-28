@@ -24,11 +24,11 @@
 ;; --- Activate / Deactivate modes ------------------------------------------
 (blink-cursor-mode -1) (kill-ring-deindent-mode 1)
 (fido-vertical-mode 1) (global-subword-mode 1)
-(defun my-lazy-load-modes ()  (pixel-scroll-precision-mode 1) (winner-mode 1)
-  (delete-selection-mode 1) (global-auto-revert-mode 1)
-  (which-key-mode 1) (savehist-mode 1) (which-function-mode 1)
-  (save-place-mode 1) (global-goto-address-mode)
-  (unless (display-graphic-p) (xterm-mouse-mode)))
+(defun my-lazy-load-modes () (pixel-scroll-precision-mode 1) (winner-mode 1)
+       (delete-selection-mode 1) (global-auto-revert-mode 1) (minibuffer-depth-indicate-mode)
+       (which-key-mode 1) (savehist-mode 1) (which-function-mode 1)
+       (save-place-mode 1) (global-goto-address-mode)
+       (unless (display-graphic-p) (xterm-mouse-mode)))
 (run-with-idle-timer 0.5 nil #'my-lazy-load-modes)
 ;; (add-hook 'emacs-startup-hook #'my-lazy-load-modes)
 
@@ -75,20 +75,20 @@
   (set-face-attribute 'default nil
                       :foreground (face-foreground 'nano-default)
                       :background (face-background 'nano-default))
-  (dolist (item '((nano-default    . (fixed-pitch-serif minibuffer-prompt
-                                      fixed-pitch variable-pitch variable-pitch-text))
+  (dolist (item '((nano-default    . (minibuffer-prompt fixed-pitch-serif fixed-pitch variable-pitch
+                                                        variable-pitch-text))
                   (nano-highlight  . (hl-line highlight))
                   (nano-subtle     . (match region lazy-highlight widget-field))
                   (nano-faded      . (shadow vertical-border font-lock-comment-face
-                                      font-lock-doc-face icomplete-section
-                                      completions-annotations))
+                                             font-lock-doc-face icomplete-section
+                                             completions-annotations))
                   (nano-string     . (font-lock-string-face font-lock-constant-face))
-                  (nano-salient    . (custom-visibility help-argument-name link
-                                      font-lock-type-face font-lock-keyword-face
-                                      font-lock-builtin-face font-lock-variable-name-face
-                                      font-lock-function-name-face completions-common-part))
-                  (nano-critical   . (xref-file-header warning help-key-binding
-                                      error completions-first-difference))
+                  (nano-salient    . (link help-argument-name custom-visibility
+                                           font-lock-type-face font-lock-keyword-face
+                                           font-lock-builtin-face font-lock-variable-name-face
+                                           font-lock-function-name-face completions-common-part))
+                  (nano-critical   . (erro xref-file-header warning help-key-binding
+                                           completions-first-difference))
                   (nano-default-i  . (custom-button-mouse isearch))
                   (nano-critical-i . (isearch-fail))
                   (nano-subtle     . (custom-button icomplete-selected-match))
@@ -335,10 +335,10 @@
 (defun file-capf ()
   "File completion at point function. src: eshelyaron."
   (let ((bounds (bounds-of-thing-at-point 'filename)))
-  (when bounds
-    (list (car bounds) (cdr bounds) #'completion-file-name-table
-          :annotation-function (lambda (_) " File")
-          :exclusive 'no))))
+    (when bounds
+      (list (car bounds) (cdr bounds) #'completion-file-name-table
+            :annotation-function (lambda (_) " File")
+            :exclusive 'no))))
 (add-hook 'completion-at-point-functions #'file-capf)
 
 ;; --- Minimal key bindings -------------------------------------------------
@@ -356,7 +356,7 @@
          (if (and (display-graphic-p)
                   (package-installed-p 'eldoc-box))
              (eldoc-box-help-at-point)
-         (eldoc-doc-buffer t))))
+           (eldoc-doc-buffer t))))
 
 (defun my-scroll-other-down nil (interactive)
        (let ((mode (with-current-buffer (window-buffer (other-window-for-scrolling))
@@ -415,6 +415,7 @@
               '(basic partial-completion substring flex emacs22)
               completion-cycle-threshold t
               ;; cursor-type 'bar
+              enable-recursive-minibuffers t
               line-spacing 3
               imenu-flatten t
               display-line-numbers-width 4
@@ -428,6 +429,7 @@
               show-paren-context-when-offscreen t
               show-paren-when-point-inside-paren t
               use-short-answers t
+              use-dialog-box nil
               uniquify-buffer-name-style 'forward)
 
 (when (featurep 'recentf)
@@ -555,6 +557,7 @@
           "-l --almost-all --human-readable --group-directories-first"))
   (set-face-attribute 'dired-directory nil :inherit font-lock-string-face)
   (put 'dired-find-alternate-file 'disabled nil)
+  (define-key dired-mode-map (kbd "SPC") ctl-x-map)
   (define-key dired-mode-map (kbd "j") #'next-line)
   (define-key dired-mode-map (kbd "k") #'previous-line)
   (define-key dired-mode-map (kbd "\\") #'dired-up-directory)
@@ -764,9 +767,8 @@
       (unless (treesit-language-available-p (car grammar))
         (treesit-install-language-grammar (car grammar)))))
 
-  (if (string> emacs-version "31")
-      (setq treesit-auto-install-grammar 'always)
-   (add-hook 'prog-mode-hook #'my/setup-install-grammars))
+  (when (string< emacs-version "31")
+    (add-hook 'prog-mode-hook #'my/setup-install-grammars))
   (setq go-ts-mode-indent-offset 4))
 
 (define-derived-mode zig-mode c-mode "zig-mode")  ;; Until zig-ts-mode is core
@@ -785,8 +787,8 @@
          ("\\.dockerignore\\'" . dockerfile-ts-mode)
          ("\\.bin\\'" . hexl-mode)
          ("\\.info\\'" . Info-mode)))
-         ;; ,(when (string> emacs-version "31")
-         ;;  '("\\.md\\'" . markdown-ts-mode))))
+;; ,(when (string> emacs-version "31")
+;;  '("\\.md\\'" . markdown-ts-mode))))
 
 (dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook zig-mode-hook))
   (add-hook mode #'eglot-ensure))
@@ -805,6 +807,7 @@
             (c-ts-mode-toggle-comment-style -1)))
 
 (with-eval-after-load 'project
+  (setq project-compilation-buffer-name-function #'project-prefixed-buffer-name)
   (setq project-vc-extra-root-markers '("go.mod" "Cargo.toml" "build.zig"))
   (setq project-vc-ignores '("**/vendor/**")))
 
@@ -953,7 +956,7 @@
   (define-key meow-mode-map (int-to-string num) #'digit-argument))
 (dolist (pair '(("\\" . dired-jump) ("gl" . move-end-of-line) ("ge" . move-end-of-line)
                 ("gh" . back-to-indentation) ("gj" . end-of-buffer) ("gk" . beginning-of-buffer)
-                ("q" . quit-window) ("=" . mark-sexp)
+                ("q" . quit-window) ("=" . mark-sexp) ("-" . negative-argument) ("/" . isearch-forward-regexp)
                 ("e" . (lambda (arg) (interactive "P") (forward-word (or arg 1)) (mark-word) (exchange-point-and-mark)))
                 ("b" . (lambda (arg) (interactive "P") (backward-word (or arg 1)) (mark-word)))
                 ("v" . set-mark-command) ("h" . backward-char) ("j" . next-line)
@@ -969,7 +972,7 @@
                 ("`" . window-toggle-side-windows) ("zz" . pop-to-mark-command)
                 ("gi" . eglot-find-implementation) ("gs" . imenu) ("(" . down-list)
                 (")" . up-list) ("[" . backward-list) ("]" . forward-list)
-                ("-" . negative-argument)
+                ("{" . flymake-goto-prev-error) ("}" . flymake-goto-next-error)
                 ("g/" . xref-find-definitions-other-window) ("gd" . xref-find-definitions)
                 ("gb" . xref-go-back) ("K" . my-goto-doc) (":" . goto-line)
                 ("gx" . flymake-show-buffer-diagnostics) ("gr" . xref-find-references)
@@ -1208,14 +1211,14 @@
 
   (defun my/eshell--git-prompt ()
     (let* ((git-dir (locate-dominating-file default-directory ".git"))
-          (rebase-in-progress-p
-           (and git-dir (or (file-exists-p (expand-file-name ".git/rebase-merge" git-dir))
-                            (file-exists-p (expand-file-name ".git/rebase-apply" git-dir)))
-            (not (string-empty-p (my/eshell--git-output '("rev-parse" "--verify" "REBASE_HEAD") 128)))))
-          (merge-in-progress-p
-           (not (string-empty-p (my/eshell--git-output '("rev-parse" "--verify" "MERGE_HEAD") 128))))
-          (git-branch
-           (my/eshell--git-output '("symbolic-ref" "-q" "--short" "HEAD") -1)))
+           (rebase-in-progress-p
+            (and git-dir (or (file-exists-p (expand-file-name ".git/rebase-merge" git-dir))
+                             (file-exists-p (expand-file-name ".git/rebase-apply" git-dir)))
+                 (not (string-empty-p (my/eshell--git-output '("rev-parse" "--verify" "REBASE_HEAD") 128)))))
+           (merge-in-progress-p
+            (not (string-empty-p (my/eshell--git-output '("rev-parse" "--verify" "MERGE_HEAD") 128))))
+           (git-branch
+            (my/eshell--git-output '("symbolic-ref" "-q" "--short" "HEAD") -1)))
       (cond
        (rebase-in-progress-p " (REBASE-i)")
        (merge-in-progress-p " (MERGE-i)")
@@ -1276,7 +1279,7 @@
       doc-view-continuous t
       doc-view-mupdf-use-svg t
       large-file-warning-threshold (* 50 (expt 2 20)))
-(with-eval-after-load 'doc-view
+(with-eval-after-load 'doc-view ;; requires `'gs', `mupdf' (alongwith `mupdf-tools' on android)
   (define-key doc-view-mode-map (kbd "j") #'doc-view-scroll-up-or-next-page)
   (define-key doc-view-mode-map (kbd "k") #'doc-view-scroll-down-or-previous-page))
 
@@ -1287,9 +1290,13 @@
 (with-eval-after-load 'gnus
   (load "~/.emacs.d/lisp/gnus-conf" nil :no-message)
   (with-eval-after-load 'gnus-group
+    (define-key gnus-group-mode-map (kbd "SPC") ctl-x-map)
     (define-key gnus-group-mode-map (kbd "j") #'next-line)
     (define-key gnus-group-mode-map (kbd "k") #'previous-line))
+  (with-eval-after-load 'gnus-topic
+    (define-key gnus-topic-mode-map (kbd "SPC") ctl-x-map))
   (with-eval-after-load 'gnus-sum
+    (define-key gnus-summary-mode-map (kbd "SPC") ctl-x-map)
     (define-key gnus-summary-mode-map (kbd "j") #'next-line)
     (define-key gnus-summary-mode-map (kbd "k") #'previous-line)))
 
@@ -1298,6 +1305,7 @@
 
 ;; --- 31 stuff -------------------------------------------------------------
 (when (string> emacs-version "31")
+  (setq treesit-auto-install-grammar 'always)
   (setq kill-region-dwim 'emacs-word)
   (with-eval-after-load 'dired (setq dired-hide-details-hide-absolute-location t))
   ;; (with-eval-after-load 'icomplete (setq icomplete-vertical-in-buffer-adjust-list t))
@@ -1316,4 +1324,4 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(package-selected-packages nil))
+ '(package-selected-packages '(corfu eldoc-box diff-hl markdown-mode)))
