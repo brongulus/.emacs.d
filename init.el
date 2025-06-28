@@ -7,7 +7,7 @@
 (setq inhibit-startup-screen t)
 
 ;; --- Typography stack -----------------------------------------------------
-(set-face-attribute 'default nil :height 140 :family "VictorMono Nerd Font Mono")
+(set-face-attribute 'default nil :height (if is-android 160 140) :family "VictorMono Nerd Font Mono")
 (set-face-attribute 'bold nil :weight 'bold)
 (set-face-attribute 'bold-italic nil :weight 'bold)
 (set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
