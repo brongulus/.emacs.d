@@ -23,9 +23,8 @@
        (package-install package)))
    packages))
 
-(my/ensure-package-installed 'corfu 'diff-hl 'eldoc-box 'markdown-mode)
+(my/ensure-package-installed 'corfu 'diff-hl 'eldoc-box 'markdown-mode 'dape)
 
-;; (add-hook 'after-init-hook #'global-corfu-mode)
 (with-eval-after-load 'corfu
   (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)
   (define-key corfu-map (kbd "TAB") #'corfu-next)
@@ -79,6 +78,8 @@
   (add-hook hook #'turn-on-diff-hl-mode)
   (add-hook hook #'diff-hl-margin-mode)
   (add-hook hook #'diff-hl-show-hunk-mouse-mode))
+(with-eval-after-load 'vc
+  (define-key vc-prefix-map "*" #'diff-hl-show-hunk))
 (with-eval-after-load 'diff-hl
   (dolist (pair '(("q" . diff-hl-inline-popup-hide)
                   ("r" . diff-hl-show-hunk-revert-hunk)))
@@ -111,10 +112,51 @@
                                        (change . "█"))
         diff-hl-draw-borders nil))
 
-
 (push '("\\.md\\'" . markdown-mode) auto-mode-alist)
 (with-eval-after-load 'markdown-mode
   (add-hook 'markdown-mode-hook #'(lambda nil
                                     (when (display-graphic-p) (markdown-toggle-inline-images))))
   (setq markdown-fontify-code-blocks-natively t
         markdown-max-image-size '(800 . 800)))
+
+(setq dape-key-prefix "a")
+(setq dape-debug t)
+(define-key (current-global-map) (kbd "C-x a d") #'dape)
+(autoload 'dape-breakpoint-toggle "dape")
+(define-key (current-global-map) (kbd "C-x a b") #'dape-breakpoint-toggle)
+(with-eval-after-load 'dape
+  (add-hook 'dape-start-hook #'repeat-mode)
+  (setq dape-breakpoint-margin-string (make-string 1 #x23fA))
+  (set-face-attribute 'dape-breakpoint-face nil :inherit 'compilation-mode-line-fail)
+  (add-to-list 'dape-configs
+               `(dlv-custom-simple
+                 modes (go-mode go-ts-mode)
+                 ensure dape-ensure-command
+                 command "dlv"
+                 command-cwd dape-command-cwd
+                 command-insert-stderr t
+                 command-args ("dap" "--listen" "127.0.0.1::autoport")
+                 port :autoport
+                 fn (lambda (config) ;; FIXME: check for different formats
+                      (let* ((input (read-string "Config: " "dlv debug"))
+                             (parts (split-string input "dlv debug" t))
+                             (program (string-trim (car (split-string (cadr parts) "--" t))))
+                             (args-string (cadr (split-string (cadr parts) "--" t)))
+                             (args (if (string-empty-p args-string) []
+                                     (vconcat (split-string args-string " " t))))
+                             (env-string (car parts))
+                             (env-vars
+                              (if (string-empty-p env-string) nil
+                                (let ((env-list '()))
+                                  (dolist (pair (split-string env-string " " t))
+                                    (let ((kv (split-string pair "=" t)))
+                                      (when (>= (length kv) 2)
+                                        (push (cadr kv) env-list)
+                                        (push (intern (concat ":" (car kv))) env-list))))
+                                  env-list))))
+                        (when env-vars (plist-put config :env env-vars))
+                        (plist-put config :program program)
+                        (when (> (length args) 0) (plist-put config :args args))))
+                 :request "launch"
+                 :type (lambda() (if (string-suffix-p "_test.go" (buffer-name)) "test" "debug"))
+                 :cwd dape-command-cwd)))
