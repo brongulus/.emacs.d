@@ -219,8 +219,7 @@ Given a step of 1 (the default), will go to the next file.
          (dir (substring default-directory 0 -1))
          (dirs (seq-filter #'file-directory-p
                            (directory-files
-                            (file-name-directory (directory-file-name
-                                                  (file-name-directory default-directory)))
+                            (file-name-parent-directory default-directory)
                             t directory-files-no-dot-files-regexp nil)))
          (index (elem-index dir dirs))
          (new-index (mod (+ arg index) (length dirs))))

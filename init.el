@@ -99,6 +99,7 @@
   (set-face-attribute 'font-lock-doc-face nil :slant 'italic)
   (set-face-attribute 'font-lock-builtin-face nil :slant 'italic)
   (set-face-attribute 'link nil :underline t)
+  (set-face-attribute 'region nil :extend nil)
   (set-face-attribute 'cursor nil :background "#00c2ff")
   (with-eval-after-load 'make-mode
     (set-face-attribute 'makefile-targets nil :inherit 'font-lock-keyword-face))
@@ -565,7 +566,7 @@
     (setq ls-lisp-use-insert-directory-program nil
           dired-listing-switches
           "-l --almost-all --human-readable --group-directories-first"))
-  (set-face-attribute 'dired-directory nil :inherit font-lock-string-face)
+  (set-face-attribute 'dired-directory nil :inherit 'warning)
   (put 'dired-find-alternate-file 'disabled nil)
   (define-key dired-mode-map (kbd "SPC") ctl-x-map)
   (define-key dired-mode-map (kbd "j") #'next-line)
@@ -799,7 +800,7 @@
 ;; ,(when (string> emacs-version "31")
 ;;  '("\\.md\\'" . markdown-ts-mode))))
 
-(dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook zig-mode-hook))
+(dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook zig-mode-hook c++-mode-hook))
   (add-hook mode #'eglot-ensure))
 (add-hook 'go-ts-mode-hook #'whitespace-mode)
 (add-hook 'rust-ts-mode-hook
@@ -931,6 +932,36 @@
                           mark-word transpose-words capitalize-word
                           upcase-word downcase-word))
   (advice-add func :around #'my/quote-as-word))
+
+(defun dired-vc-current (&optional dir-path) (interactive)
+      (when (and dir-path (file-directory-p dir-path))
+        (let ((current-buffer (current-buffer)))
+          (dired-vc-left dir-path) (kill-buffer current-buffer))))
+
+(defun dired-vc-left (&optional dir-path) (interactive)
+       (let ((dir (dired-noselect (or dir-path (vc-root-dir) default-directory))))
+         (display-buffer-in-side-window
+          dir `((side . left) (slot . 0) (window-width . 0.2)
+                (window-parameters . ((no-delete-other-windows . t)
+                                      (mode-line-format . (" %b"))))))
+         
+         (with-current-buffer dir
+           (select-window (get-buffer-window dir))
+           (define-key (current-local-map) (kbd "\\")
+                       (lambda nil (interactive)
+                         (dired-vc-current (file-name-parent-directory default-directory))))
+           (define-key (current-local-map) (kbd "q") #'kill-buffer-and-window)
+           (define-key (current-local-map) (kbd "`") #'window-toggle-side-windows)
+           (define-key (current-local-map) (kbd "RET")
+                       (lambda nil (interactive)
+                         (let ((file (dired-get-file-for-visit)))
+                           (if (file-directory-p file)
+                               (dired-vc-current file)
+                             (with-selected-window (or (window-in-direction 'right)
+                                                       (split-window-right))
+                               (find-file file))
+                             (windmove-right))))))))
+(define-key (current-global-map) (kbd "C-x d") #'dired-vc-left)
 
 ;; --- Mini Meow ------------------------------------------------------------
 (define-key special-mode-map (kbd "j") #'next-line)
