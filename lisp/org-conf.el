@@ -117,14 +117,14 @@
 
   (defun elegant-agenda--title nil ;; src: elegant-agenda-mode
     (when-let* ((title (when (and org-agenda-redo-command
-                                 (stringp (cadr org-agenda-redo-command)))
-                        (format "─  %s "
-                                (mapconcat
-                                 #'identity
-                                 (split-string-and-unquote
-                                  (cadr org-agenda-redo-command) "")
-                                 ""))))
-               (width (window-width)))
+                                  (stringp (cadr org-agenda-redo-command)))
+                         (format "─  %s "
+                                 (mapconcat
+                                  #'identity
+                                  (split-string-and-unquote
+                                   (cadr org-agenda-redo-command) "")
+                                  ""))))
+                (width (window-width)))
       (face-remap-set-base 'header-line :height 1.4)
       (setq-local header-line-format
                   (format "%s %s" title (make-string (- width (length title)) ?─ t)))))

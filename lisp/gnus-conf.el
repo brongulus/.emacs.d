@@ -140,7 +140,8 @@
                               "gmane.comp.web.qutebrowser" "gmane.comp.web.elinks.user"
                               "gwene.io.kubernetes" "gwene.app.rsshub.leetcode.articles"
                               "gwene.rs.lobste" "gwene.org.hnrss.newest.points"
-                              "gwene.com.arcan-fe" "gwene.io.github.matklad" "gwene.net.openmymind"
-                              "gwene.net.lwn.headlines" "gwene.org.quantamagazine"
-                              "gwene.com.tedinski" "gwene.org.bitlbee.news.rss")
+                              "gwene.net.lwn.headlines" "gwene.com.arcan-fe"
+                              "gwene.io.github.matklad" "gwene.net.openmymind"
+                              "gwene.org.quantamagazine" "gwene.com.tedinski"
+                              "gwene.org.bitlbee.news.rss")
                              ("Unread")))))

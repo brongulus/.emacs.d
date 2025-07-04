@@ -56,12 +56,19 @@
                              "t.Errorf(\"got %d want %d given, %v\", got, want, " p ")" > n
                              "}" > n>
                              )
-                         "goerr" "" 'go-ts-tempo-tags)
+                         "terr" "" 'go-ts-tempo-tags)
   (tempo-define-template "errnil"
                          '(> "if err != nil {" > n
                              >  p n "}" > n >
                              )
                          "errnil" "" 'go-ts-tempo-tags)
+  (tempo-define-template "reterr"
+                         '((progn (setq-local res (meain/go-return-string)) "") 
+                           > "if err != nil { " > n
+                           > res n
+                           "}" >
+                           )
+                         "gerr" "" 'go-ts-tempo-tags)
 ;;; --Rust------------------------------------------------------------------
   (tempo-define-template "rs-print"
                          '("println!(\"" p "\");")

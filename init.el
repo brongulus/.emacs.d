@@ -5,7 +5,7 @@
 ;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
 ;; (setq init-start-time (current-time))
 (setq inhibit-startup-screen t
-      custom-file null-device)
+      custom-file (make-temp-file "emacs-custom"))
 
 ;; --- Typography stack -----------------------------------------------------
 (set-face-attribute 'default nil :height (if is-android 160 140) :family "VictorMono Nerd Font Mono")
@@ -28,7 +28,7 @@
 (defun my-lazy-load-modes () (pixel-scroll-precision-mode 1) (winner-mode 1)
        (delete-selection-mode 1) (global-auto-revert-mode 1) (minibuffer-depth-indicate-mode)
        (which-key-mode 1) (savehist-mode 1) (which-function-mode 1)
-       (save-place-mode 1) (global-goto-address-mode)
+       (save-place-mode 1) (global-goto-address-mode) (tooltip-mode -1)
        (unless (display-graphic-p) (xterm-mouse-mode))
        (when (package-installed-p 'corfu) (global-corfu-mode)))
 (run-with-idle-timer 0.5 nil #'my-lazy-load-modes)
@@ -39,7 +39,7 @@
 (defvar nano-monochrome t "Should the font-locking have colours.")
 (setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
 (setq nano-bg-theme-map
-      '(("#f7f7f7" . light) ("#fbf8ef" . amber) ("#282c33" . dark) ("#181818" . burn)))
+      '(("#f7f7f7" . light) ("#fbf8ef" . amber) ("#282c33" . dark) ("#121212" . burn)))
 (unless (eq system-type 'android)
   (let ((color (shell-command-to-string
                 (concat kitty-send-command "get-colors | grep ^background | awk '{printf $2}'"))))
@@ -74,13 +74,13 @@
       (set-face-attribute face nil :inherit sources))))
 
 (defun nano-install-theme ()
-  (set-face-attribute 'default nil
-                      :foreground (face-foreground 'nano-default)
+  (set-face-attribute 'default nil :foreground (face-foreground 'nano-default)
                       :background (face-background 'nano-default))
   (dolist (item '((nano-default    . (minibuffer-prompt fixed-pitch-serif fixed-pitch variable-pitch
                                                         variable-pitch-text))
-                  (nano-highlight  . (hl-line highlight))
-                  (nano-subtle     . (match region lazy-highlight widget-field))
+                  (nano-highlight  . (hl-line highlight custom-button-mouse lazy-highlight))
+                  (nano-subtle     . (match region isearch widget-field
+                                            custom-button icomplete-selected-match))
                   (nano-faded      . (shadow vertical-border font-lock-comment-face
                                              font-lock-doc-face icomplete-section
                                              completions-annotations))
@@ -88,12 +88,10 @@
                   (nano-salient    . (link help-argument-name custom-visibility
                                            font-lock-type-face font-lock-keyword-face
                                            font-lock-builtin-face font-lock-variable-name-face
-                                           font-lock-function-name-face completions-common-part))
-                  (nano-critical   . (erro xref-file-header warning help-key-binding
-                                           completions-first-difference))
-                  (nano-default-i  . (custom-button-mouse isearch))
+                                           font-lock-function-name-face))
+                  (nano-critical   . (error xref-file-header warning help-key-binding
+                                            completions-common-part))
                   (nano-critical-i . (isearch-fail))
-                  (nano-subtle     . (custom-button icomplete-selected-match))
                   (nano-faded-i    . (show-paren-match))))
     (nano-link-face (car item) (cdr item)))
 
@@ -129,12 +127,12 @@
     (set-face-attribute 'success nil :foreground
                         (alist-get theme-variant (alist-get 'green color-themes)))
     (with-eval-after-load 'diff-hl
-      (set-face-attribute 'diff-hl-insert nil :foreground
-                          (alist-get theme-variant (alist-get 'green color-themes)))
-      (set-face-attribute 'diff-hl-change nil :foreground
-                          (alist-get theme-variant (alist-get 'yellow color-themes)))
-      (set-face-attribute 'diff-hl-delete nil :foreground
-                          (alist-get theme-variant (alist-get 'red color-themes))))
+      (set-face-attribute 'diff-hl-insert nil :background (face-background 'default)
+                          :foreground (alist-get theme-variant (alist-get 'green color-themes)))
+      (set-face-attribute 'diff-hl-change nil :background (face-background 'default)
+                          :foreground (alist-get theme-variant (alist-get 'yellow color-themes)))
+      (set-face-attribute 'diff-hl-delete nil :background (face-background 'default)
+                          :foreground (alist-get theme-variant (alist-get 'red color-themes))))
     (unless nano-monochrome
       (let ((face-color-map
              '((font-lock-builtin-face . blue) (font-lock-function-name-face . blue)
@@ -144,7 +142,8 @@
         (dolist (fc face-color-map)
           (set-face-attribute (car fc) nil :foreground
                               (alist-get theme-variant (alist-get (cdr fc) color-themes)))))))
-  
+
+  (with-eval-after-load 'eglot (set-face-attribute 'eglot-mode-line nil :inherit 'nano-faded))
   (with-eval-after-load 'whitespace
     (setq whitespace-style '(face tabs spaces tab-mark trailing)) ;space-mark
     (setq whitespace-display-mappings
@@ -169,6 +168,8 @@
     (set-face-attribute 'org-table nil :foreground (face-foreground 'nano-default))
     (set-face-attribute 'org-verbatim nil :inherit 'org-latex-and-related)
     (set-face-attribute 'org-code nil :inherit 'org-latex-and-related))
+  (with-eval-after-load 'sh-script
+    (set-face-attribute 'sh-quoted-exec nil :foreground (face-foreground 'nano-salient) :italic t))
 
   ;; Mode & header lines
   (set-face-attribute 'header-line nil
@@ -195,9 +196,9 @@
   "NANO light theme (was based on material colors)."
   (interactive)
   (nano-set-face 'nano-default "#37474F" "#F7F7F7")
-  (nano-set-face 'nano-highlight nil "#EEEEEE")
-  (nano-set-face 'nano-subtle nil "#C9D0D9")
-  (nano-set-face 'nano-faded "#90A4AE")
+  (nano-set-face 'nano-highlight nil "#C9D0D9")
+  (nano-set-face 'nano-subtle "#F7F7F7" "#37474F")
+  (nano-set-face 'nano-faded "#949494")
   (nano-set-face 'nano-salient "#37474F" nil 'bold)
   (nano-set-face 'nano-critical "#eb9250" nil 'bold)
   (nano-set-face 'nano-string "#767676")
@@ -230,9 +231,11 @@
   "Darken background of dark theme"
   (interactive)
   (nano-dark)
-  (set-face-attribute 'nano-default nil :foreground "#deeeed" :background "#181818")
+  (set-face-attribute 'nano-default nil :foreground "#d0d0d0" :background "#121212")
   (set-face-attribute 'nano-string nil :foreground "#d9d8d4")
-  (set-face-attribute 'nano-highlight nil :background "#282828")
+  (set-face-attribute 'nano-faded nil :foreground "#666666")
+  (set-face-attribute 'nano-subtle nil :foreground "#121212" :background "#d0d0d0")
+  (set-face-attribute 'nano-highlight nil :background "#393939")
   (let ((nano-current-theme 'dark)) (nano-install-theme))
   (setq nano-current-theme 'burn))
 
@@ -297,18 +300,23 @@
                                    'face '(:weight light :slant italic)))
                 (:eval (let ((prefix (cond
                                       ((or defining-kbd-macro executing-kbd-macro) "▶▶")
-                                      (meow-mode            "%p")
-                                      ((buffer-modified-p)  "**")
-                                      (buffer-read-only     "RO")
-                                      (t                    "--"))))
+                                      ((region-active-p)
+                                       (format "{%d}" (count-lines (region-beginning) (region-end))))
+                                      ((or meow-mode (eq major-mode 'eww-mode)) "%p")
+                                      ((buffer-modified-p)       "**")
+                                      (buffer-read-only          "RO")
+                                      (t                         "--"))))
                          (propertize (concat "   " prefix " "))))
                 mode-line-format-right-align
-                (:eval (propertize (format-mode-line (when which-function-mode which-func-current))
+                (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p)) eglot-mode-line-progress)
+                (:eval (propertize (concat " " (format-mode-line (when which-function-mode which-func-current)))
                                    'face (if (or (display-graphic-p) (mode-line-window-selected-p))
                                              'mode-line-active
                                            'mode-line-inactive)))
                 (:eval (when (mode-line-window-selected-p)
                          mode-line-end-spaces))))
+
+(add-hook 'post-command-hook #'(lambda nil (when (region-active-p) (force-mode-line-update))))
 
 ;; --- Minibuffer completion ------------------------------------------------
 (setq tab-always-indent 'complete
@@ -467,7 +475,7 @@
       diff-default-read-only t
       dired-dwim-target t
       dired-omit-verbose nil
-      dired-use-ls-dired nil
+      dired-use-ls-dired (not (eq system-type 'darwin))
       dired-kill-when-opening-new-dired-buffer t
       dired-recursive-copies 'always
       dired-recursive-deletes 'always
@@ -589,6 +597,7 @@
 ;; install-info --dir-file=./dir --info-file=
 (push "~/.emacs.d/info" Info-default-directory-list)
 (setq Info-use-header-line nil)
+(add-hook 'Info-mode-hook #'(lambda nil (setq-local left-margin-width 5)))
 
 (defun silent-command (fn &rest args)
   "Used to suppress output of FN."
@@ -598,10 +607,7 @@
     (apply fn args)))
 
 (add-to-list 'write-file-functions
-             '(lambda ()
-                (when (derived-mode-p 'emacs-lisp-mode)
-                  (check-parens))
-                nil))
+             '(lambda () (when (derived-mode-p 'emacs-lisp-mode) (check-parens)) nil))
 
 (define-advice load-theme (:before (&rest _args) theme-dont-propagate)
   (mapc #'disable-theme custom-enabled-themes))
@@ -683,6 +689,7 @@
 (with-eval-after-load 'comint-mode
   (define-key comint-mode-map "q" #'kill-buffer-and-window))
 (with-eval-after-load 'compile
+  (setq compile-command (or (car-safe compile-history) ""))
   (define-key compilation-minor-mode-map "q" #'kill-buffer-and-window))
 
 (setq switch-to-buffer-obey-display-actions t)
@@ -816,7 +823,7 @@
 (with-eval-after-load 'eglot
   (fset #'jsonrpc--log-event #'ignore)
   (setq eglot-events-buffer-config 0
-        eglot-sync-connect nil
+        eglot-sync-connect 3
         eglot-autoshutdown t
         eglot-inlay-hints-mode nil)
 
@@ -832,19 +839,13 @@
                 (setq eldoc-documentation-functions
                       (remove #'eglot-signature-eldoc-function eldoc-documentation-functions)))))
 
-  (defun my-eglot-organize-imports ()
-    (interactive)
-    (ignore-errors
-      (eglot-code-actions nil nil "source.organizeImports" t)))
-
+  (defun my-eglot-organize-imports () (interactive)
+         (ignore-errors (eglot-code-actions nil nil "source.organizeImports" t)))
   (defun my-eglot-setup ()
     (interactive)
     (add-hook 'before-save-hook 'my-eglot-organize-imports nil t)
     (add-hook 'before-save-hook 'eglot-format-buffer nil t))
-
-  (add-hook 'eglot-managed-mode-hook #'my-eglot-setup)
-
-  (set-face-attribute 'eglot-highlight-symbol-face nil :inherit 'match))
+  (add-hook 'eglot-managed-mode-hook #'my-eglot-setup))
 
 (load "~/.emacs.d/lisp/snippets" :noerr :no-message)
 (dolist (fn '(foxy-start-server-with-timer foxy-cycle-files foxy-run-all-tests))
@@ -917,6 +918,20 @@
         (goto-char (car bounds))
         (push-mark (cdr bounds) nil t)))))
 
+(defun my/quote-as-word (orig-fun &rest args)
+  "Temporarily treat quotes as word constituents."
+  (let ((old-syntax (char-syntax ?\")))
+    (unwind-protect
+        (progn
+          (modify-syntax-entry ?\" "w")
+          (apply orig-fun args))
+      (modify-syntax-entry ?\" (string old-syntax)))))
+
+(dolist (func '(kill-word backward-kill-word backward-word forward-word 
+                          mark-word transpose-words capitalize-word
+                          upcase-word downcase-word))
+  (advice-add func :around #'my/quote-as-word))
+
 ;; --- Mini Meow ------------------------------------------------------------
 (define-key special-mode-map (kbd "j") #'next-line)
 (define-key special-mode-map (kbd "k") #'previous-line)
@@ -954,13 +969,13 @@
 (define-key meow-mode-map (kbd "z") (make-sparse-keymap))
 (define-key meow-mode-map (kbd "H") help-map)
 (define-key meow-mode-map (kbd "SPC") ctl-x-map)
+(define-key meow-mode-map (kbd "ms") insert-pair-map)
 (dolist (num '(0 1 2 3 4 5 6 7 8 9))
   (define-key meow-mode-map (int-to-string num) #'digit-argument))
 (dolist (pair '(("\\" . dired-jump) ("gl" . move-end-of-line) ("ge" . move-end-of-line)
                 ("gh" . back-to-indentation) ("gj" . end-of-buffer) ("gk" . beginning-of-buffer)
-                ("q" . quit-window) ("=" . mark-sexp) ("-" . negative-argument) ("/" . isearch-forward-regexp)
-                ("e" . (lambda (arg) (interactive "P") (forward-word (or arg 1)) (mark-word) (exchange-point-and-mark)))
-                ("b" . (lambda (arg) (interactive "P") (backward-word (or arg 1)) (mark-word)))
+                ("q" . quit-window) ("=" . mark-sexp) ("-" . negative-argument)
+                ("/" . isearch-forward-regexp) ("e" . forward-word) ("b" . backward-word)
                 ("v" . set-mark-command) ("h" . backward-char) ("j" . next-line)
                 ("k" . previous-line) ("l" . forward-char) ("i" . meow-insert)
                 ("y" . kill-ring-save) ("%" . match-pair) ("o" . other-window)
@@ -978,8 +993,8 @@
                 ("g/" . xref-find-definitions-other-window) ("gd" . xref-find-definitions)
                 ("gb" . xref-go-back) ("K" . my-goto-doc) (":" . goto-line)
                 ("gx" . flymake-show-buffer-diagnostics) ("gr" . xref-find-references)
-                ("ms" . insert-pair-map) ("&" . align-regexp) ("C" . string-rectangle)
-                ("p" . yank) ("P" . yank-pop) ("+" . eglot-rename) ("mm" . point-to-register)
+                ("&" . align-regexp) ("C" . string-rectangle) ("p" . yank)
+                ("P" . yank-pop) ("+" . eglot-rename) ("mm" . point-to-register)
                 ("'" . register-to-point) ("md" . delete-pair) ("+" . eglot-code-actions)
                 ("Z" . undo-redo) ("u" . undo-only) ("R" . replace-regexp)
                 ("zf" . hs-toggle-hiding) ("zc" . hs-hide-all) ("zs" . hs-show-all)
@@ -1004,6 +1019,9 @@
                           (if found-pos
                               (backward-char 1)
                             (goto-char start-point) (backward-char 1) (deactivate-mark)))))
+                ("|" . (lambda nil (interactive)
+                         (let ((current-prefix-arg '(4)))
+                           (call-interactively 'shell-command-on-region))))
                 ("r" . (lambda nil (interactive)
                          (delete-char 1) (insert-char (read-char nil t)) (backward-char 1)))
                 ("J" . (lambda nil (interactive) (delete-indentation t)))))
@@ -1099,6 +1117,7 @@
   (push '("source" ". $1") eshell-command-aliases-list)
   (push '("mkcd" "mkdir -p $1 && cd $1") eshell-command-aliases-list)
   (push '("k" "kubecolor $*") eshell-command-aliases-list)
+  (push '("ky" "kubecolor -oyaml $*") eshell-command-aliases-list)
   (push '("clear" "clear t") eshell-command-aliases-list)
   (push '("d" "dired-other-window $1") eshell-command-aliases-list)
   (push '("dired" "dired $1") eshell-command-aliases-list)
@@ -1109,7 +1128,7 @@
   (push '("groot" "cd ${git rev-parse --show-toplevel}") eshell-command-aliases-list)
   (push '("nix-update-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} nix build .#darwinConfigurations.${hostname -s}.system --impure && cd -") eshell-command-aliases-list)
   (push '("darwin-rebuild-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} sudo ./result/sw/bin/darwin-rebuild switch --flake . --impure && cd -") eshell-command-aliases-list)
-  (push '("gk" "export KUBECONFIG=${gardenctl kubectl-env zsh | awk -F\"'\" '/export KUBECONFIG/ {print \$2}'} && test -n \"$TMUX\" && (shell-command \"tmux set-environment -g KUBECONFIG \\\"$KUBECONFIG\\\" && tmux refresh-client -S\")") eshell-command-aliases-list))
+  (push '("gk" "export KUBECONFIG=${gardenctl kubectl-env zsh | awk -F\"'\" '/export KUBECONFIG/ {print \$2}'} && test -n \"$TMUX\" && (shell-command \"tmux set-option -p @kubeconfig \\\"$KUBECONFIG\\\"  && tmux refresh-client -S\")") eshell-command-aliases-list))
 
 (defun my-eshell-read-aliases-list ()
   "Read in an aliases list from `eshell-aliases-file' using bash format."
@@ -1310,6 +1329,7 @@
   (setq treesit-auto-install-grammar 'always)
   (setq kill-region-dwim 'emacs-word)
   (with-eval-after-load 'dired (setq dired-hide-details-hide-absolute-location t))
+  (with-eval-after-load 'eglot (setq eglot-code-action-indicator ""))
   ;; (with-eval-after-load 'icomplete (setq icomplete-vertical-in-buffer-adjust-list t))
   (setq flymake-show-diagnostics-at-end-of-line 'fancy))
 

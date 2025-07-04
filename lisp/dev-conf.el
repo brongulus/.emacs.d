@@ -23,7 +23,7 @@
        (package-install package)))
    packages))
 
-(my/ensure-package-installed 'corfu 'diff-hl 'eldoc-box 'markdown-mode 'dape)
+(my/ensure-package-installed 'corfu 'eldoc-box 'diff-hl 'markdown-mode 'dape)
 
 (with-eval-after-load 'corfu
   (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)
@@ -125,11 +125,17 @@
 (autoload 'dape-breakpoint-toggle "dape")
 (define-key (current-global-map) (kbd "C-x a b") #'dape-breakpoint-toggle)
 (with-eval-after-load 'dape
+  (define-key (dape-global-map) (kbd "f7") #'dape-step-in)
+  (define-key (dape-global-map) (kbd "f8") #'dape-next)
+  (define-key (dape-global-map) (kbd "f9") #'dape-continue)
   (add-hook 'dape-start-hook #'repeat-mode)
-  (setq dape-breakpoint-margin-string (make-string 1 #x23fA))
-  (set-face-attribute 'dape-breakpoint-face nil :inherit 'compilation-mode-line-fail)
+  (setq dape-breakpoint-margin-string (make-string 1 #x23fA)
+        dape-inlay-hints t
+        dape-buffer-window-arrangement 'right)
+  (set-face-attribute 'dape-breakpoint-face nil :inherit 'compilation-mode-line-fail
+                      :background (face-background 'default))
   (add-to-list 'dape-configs
-               `(dlv-custom-simple
+               `(dlv-custom
                  modes (go-mode go-ts-mode)
                  ensure dape-ensure-command
                  command "dlv"
