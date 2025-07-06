@@ -146,6 +146,47 @@
                       (setup-tempo-keys ,map)
                       (tempo-use-tag-list ',tags)))))
 
+;; FIXME src: https://blog.meain.io/2021/intelligent-snippets-treesitter/
+(defun meain/go-default-returns (type)
+  "Making it a function instead of an alist so that we can handle unknown TYPE."
+  (pcase type
+    ("error" "err")
+    ("string" "\"\"")
+    ("rune" "0")
+    ("int" "0")
+    ("float64" "0.0")
+    ("bool" "false")
+    ("chan" "nil")
+    ((pred (string-prefix-p "<-")) "nil") ; channels
+    ((pred (string-prefix-p "[")) "nil") ; arrays
+    ;; ((pred (string-match " ")) nil) ; for situations with return name
+    (_ (concat type "{}"))))
+(defun meain/go-return-string ()
+  "Get return string for go by looking up the return type of current func."
+  (let* ((func-node (treesit-parent-until (treesit-node-at (point))
+                                          (lambda (node)
+                                            (string= (treesit-node-type node)
+                                                     "function_declaration"))))
+         (return-node (treesit-node-child-by-field-name func-node "result")))
+    ;; remove extra whitespace if nothing at end
+    ;; (message "%s : %s" func-node return-node)
+    (replace-regexp-in-string
+     " $" ""
+     (concat "return "
+             (if return-node
+                 (let ((return-node-type (treesit-node-type return-node))
+                       (return-node-text (treesit-node-text return-node)))
+                   ;; (message "%s | %s" return-node-type return-node-text)
+                   (pcase return-node-type
+                     ('parameter_list
+                      (string-join 
+                       (remove-if (lambda (x) (equal nil x))
+                                  (mapcar 'meain/go-default-returns
+                                          (mapcar 'string-trim
+                                                  (split-string (string-trim return-node-text "(" ")") ","))))
+                       ", "))
+                     (_ (meain/go-default-returns return-node-text)))))))))
+
 ;; (define-skeleton rs-header "Base rust template for competitive programming." ""
 ;;   "use std::io::{self, prelude::*};\n\n"
 

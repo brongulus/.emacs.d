@@ -35,7 +35,7 @@
 ;; (add-hook 'emacs-startup-hook #'my-lazy-load-modes)
 
 ;; --- Minimal theme --------------------------------------
-(defvar nano-current-theme 'dark "Current nano variant being used.")
+(defvar nano-current-theme 'burn "Current nano variant being used.")
 (defvar nano-monochrome t "Should the font-locking have colours.")
 (setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
 (setq nano-bg-theme-map
@@ -89,9 +89,8 @@
                                            font-lock-type-face font-lock-keyword-face
                                            font-lock-builtin-face font-lock-variable-name-face
                                            font-lock-function-name-face))
-                  (nano-critical   . (error xref-file-header warning help-key-binding
-                                            completions-common-part))
-                  (nano-critical-i . (isearch-fail))
+                  (nano-critical   . (error xref-file-header warning help-key-binding))
+                  (nano-critical-i . (isearch-fail completions-common-part))
                   (nano-faded-i    . (show-paren-match))))
     (nano-link-face (car item) (cdr item)))
 
@@ -197,8 +196,8 @@
   "NANO light theme (was based on material colors)."
   (interactive)
   (nano-set-face 'nano-default "#37474F" "#F7F7F7")
-  (nano-set-face 'nano-highlight nil "#C9D0D9")
-  (nano-set-face 'nano-subtle "#F7F7F7" "#37474F")
+  (nano-set-face 'nano-highlight nil "#d0d0d0")
+  (nano-set-face 'nano-subtle "#F7F7F7" "#393939")
   (nano-set-face 'nano-faded "#949494")
   (nano-set-face 'nano-salient "#37474F" nil 'bold)
   (nano-set-face 'nano-critical "#eb9250" nil 'bold)
@@ -310,10 +309,12 @@
                          (propertize (concat "   " prefix " "))))
                 mode-line-format-right-align
                 (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p)) eglot-mode-line-progress)
-                (:eval (propertize (concat " " (format-mode-line (when which-function-mode which-func-current)))
-                                   'face (if (or (display-graphic-p) (mode-line-window-selected-p))
-                                             'mode-line-active
-                                           'mode-line-inactive)))
+                (:eval (unless (eq major-mode 'dired-mode)
+                         (propertize (concat " " (format-mode-line
+                                                  (when which-function-mode which-func-current)))
+                                     'face (if (or (display-graphic-p) (mode-line-window-selected-p))
+                                               'mode-line-active
+                                             'mode-line-inactive))))
                 (:eval (when (mode-line-window-selected-p)
                          mode-line-end-spaces))))
 
@@ -934,17 +935,15 @@
   (advice-add func :around #'my/quote-as-word))
 
 (defun dired-vc-current (&optional dir-path) (interactive)
-      (when (and dir-path (file-directory-p dir-path))
-        (let ((current-buffer (current-buffer)))
-          (dired-vc-left dir-path) (kill-buffer current-buffer))))
+       (when (and dir-path (file-directory-p dir-path))
+         (let ((current-buffer (current-buffer)))
+           (dired-vc-left dir-path) (kill-buffer current-buffer))))
 
 (defun dired-vc-left (&optional dir-path) (interactive)
        (let ((dir (dired-noselect (or dir-path (vc-root-dir) default-directory))))
          (display-buffer-in-side-window
           dir `((side . left) (slot . 0) (window-width . 0.2)
-                (window-parameters . ((no-delete-other-windows . t)
-                                      (mode-line-format . (" %b"))))))
-         
+                (window-parameters . ((no-delete-other-windows . t)))))
          (with-current-buffer dir
            (select-window (get-buffer-window dir))
            (define-key (current-local-map) (kbd "\\")
