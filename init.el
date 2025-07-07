@@ -29,10 +29,8 @@
        (delete-selection-mode 1) (global-auto-revert-mode 1) (minibuffer-depth-indicate-mode)
        (which-key-mode 1) (savehist-mode 1) (which-function-mode 1)
        (save-place-mode 1) (global-goto-address-mode) (tooltip-mode -1)
-       (unless (display-graphic-p) (xterm-mouse-mode))
-       (when (package-installed-p 'corfu) (global-corfu-mode)))
+       (unless (display-graphic-p) (xterm-mouse-mode)))
 (run-with-idle-timer 0.5 nil #'my-lazy-load-modes)
-;; (add-hook 'emacs-startup-hook #'my-lazy-load-modes)
 
 ;; --- Minimal theme --------------------------------------
 (defvar nano-current-theme 'burn "Current nano variant being used.")
@@ -335,9 +333,9 @@
       icomplete-scroll t
       resize-mini-windows 'grow-only)
 (with-eval-after-load 'icomplete
+  (define-key icomplete-minibuffer-map (kbd "C-j") #'icomplete-fido-exit)
   (define-key icomplete-fido-mode-map (kbd "TAB") #'icomplete-forward-completions)
   (define-key icomplete-fido-mode-map (kbd "<backtab>") #'icomplete-backward-completions)
-  (define-key icomplete-fido-mode-map (kbd "C-<return>") #'icomplete-fido-exit)
   (define-key icomplete-fido-mode-map (kbd "<escape>") #'minibuffer-keyboard-quit))
 
 (add-hook 'minibuffer-setup-hook
@@ -366,7 +364,7 @@
        (if (derived-mode-p 'emacs-lisp-mode)
            (describe-symbol (symbol-at-point))
          (if (and (display-graphic-p)
-                  (package-installed-p 'eldoc-box))
+                  (require 'eldoc-box nil t))
              (eldoc-box-help-at-point)
            (eldoc-doc-buffer t))))
 
@@ -449,7 +447,7 @@
 (add-hook 'dired-mode-hook #'dired-hide-details-mode)
 (add-hook 'dired-mode-hook #'dired-omit-mode)
 (add-hook 'prog-mode-hook (electric-pair-mode t))
-(unless (package-installed-p 'corfu)
+(unless (require 'corfu nil t)
   (add-hook 'prog-mode-hook #'completion-preview-mode))
 (add-hook 'prog-mode-hook #'hs-minor-mode)
 (add-hook 'prog-mode-hook #'hl-line-mode)
@@ -518,6 +516,23 @@
       xref-auto-jump-to-first-xref nil
       xref-show-definitions-function 'xref-show-definitions-buffer-at-bottom
       xref-show-xrefs-function 'xref-show-definitions-completing-read)
+
+(defun meain/electric-pair-conservative-inhibit (char)
+  (or
+   ;; I find it more often preferable not to pair when the
+   ;; same char is next.
+   (eq char (char-after))
+   ;; Don't pair up when we insert the second of "" or of ((.
+   (and (eq char (char-before))
+        (eq char (char-before (1- (point)))))
+   ;; I also find it often preferable not to pair next to a word.
+   (eq (char-syntax (following-char)) ?w)
+   ;; Don't pair at the end of a word, unless parens.
+   (and
+    (eq (char-syntax (char-before (1- (point)))) ?w)
+    (eq (preceding-char) char)
+    (not (eq (char-syntax (preceding-char)) ?\()))))
+(setq electric-pair-inhibit-predicate 'meain/electric-pair-conservative-inhibit)
 
 (when (executable-find "rg")
   (setq grep-command "rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)"
@@ -867,8 +882,7 @@
   "Toggle center alignment of the buffer. Source: jamesdyer."
   (interactive)
   (let* ((special-modes (or (eq major-mode 'org-mode) (eq major-mode 'markdown-mode)))
-         (current-margins (window-margins))
-         (margin (if (or (equal current-margins '(0 . 0))
+         (margin (if (or (equal (window-margins) '(0 . 0))
                          (null (car (window-margins))))
                      (/ (- (window-total-width) (if special-modes 160 fill-column)) 2) 0)))
     (visual-line-mode 1)
@@ -1352,7 +1366,9 @@
     (define-key gnus-summary-mode-map (kbd "k") #'previous-line)))
 
 ;; --- External -------------------------------------------------------------
-(load "~/.emacs.d/lisp/dev-conf" nil :no-message)
+(run-with-idle-timer
+ 0.7 nil (lambda nil (load "~/.emacs.d/lisp/dev-conf" nil :no-message)
+           (when (require 'corfu nil t) (global-corfu-mode))))
 
 ;; --- 31 stuff -------------------------------------------------------------
 (when (string> emacs-version "31")
