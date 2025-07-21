@@ -74,22 +74,22 @@
 (defun nano-install-theme ()
   (set-face-attribute 'default nil :foreground (face-foreground 'nano-default)
                       :background (face-background 'nano-default))
-  (dolist (item '((nano-default    . (minibuffer-prompt fixed-pitch-serif fixed-pitch variable-pitch
-                                                        variable-pitch-text))
-                  (nano-highlight  . (hl-line highlight custom-button-mouse lazy-highlight))
-                  (nano-subtle     . (match region isearch widget-field
-                                            custom-button icomplete-selected-match))
-                  (nano-faded      . (shadow vertical-border font-lock-comment-face
-                                             font-lock-doc-face icomplete-section
-                                             completions-annotations))
-                  (nano-string     . (font-lock-string-face font-lock-constant-face))
-                  (nano-salient    . (link help-argument-name custom-visibility
-                                           font-lock-type-face font-lock-keyword-face
-                                           font-lock-builtin-face font-lock-variable-name-face
-                                           font-lock-function-name-face))
-                  (nano-critical   . (error xref-file-header warning help-key-binding))
-                  (nano-critical-i . (isearch-fail completions-common-part))
-                  (nano-faded-i    . (show-paren-match))))
+  (dolist (item '((nano-default      . (minibuffer-prompt fixed-pitch-serif fixed-pitch
+                                                          variable-pitch variable-pitch-text))
+                  (nano-highlight    . (hl-line highlight custom-button-mouse lazy-highlight))
+                  (nano-subtle       . (match region isearch widget-field
+                                              custom-button icomplete-selected-match))
+                  (nano-faded        . (shadow vertical-border font-lock-comment-face
+                                               font-lock-doc-face icomplete-section
+                                               completions-annotations))
+                  (nano-string       . (font-lock-string-face font-lock-constant-face))
+                  (nano-salient      . (link help-argument-name custom-visibility
+                                             font-lock-type-face font-lock-keyword-face
+                                             font-lock-builtin-face font-lock-variable-name-face
+                                             font-lock-function-name-face))
+                  (nano-critical     . (error xref-file-header warning help-key-binding))
+                  (nano-critical-i   . (isearch-fail completions-common-part))
+                  (nano-faded-i      . (show-paren-match))))
     (nano-link-face (car item) (cdr item)))
 
   (set-face-attribute 'fringe nil :background (face-background 'default))
@@ -144,11 +144,14 @@
 
   (with-eval-after-load 'eglot (set-face-attribute 'eglot-mode-line nil :inherit 'nano-faded))
   (with-eval-after-load 'whitespace
-    (setq whitespace-style '(face tabs spaces tab-mark trailing)) ;space-mark
-    (setq whitespace-display-mappings
-          '((space-mark   ?\     [?·]     [?.])
-            (newline-mark ?\n    [?↵ ?\n] [?$ ?\n])
-            (tab-mark     ?\t    [?│ ?\t] [?\\ ?\t])))
+    (setq whitespace-style '(face tabs spaces tab-mark trailing)); indentation::tab space-after-tab::tab))
+    (setq whitespace-indentation-regexp
+          `(,(format "^\t*\\(\\( \\{%d\\}\\)+\\)" tab-width) . "^ *\\(\t+\\)."))
+    (setq tabify-regexp "^\t* [ \t]+"
+          whitespace-display-mappings
+          '((space-mark     ?\       [?·]       [?.])
+            (newline-mark   ?\n      [?↵ ?\n] [?$ ?\n])
+            (tab-mark       ?\t      [?│ ?\t] [?\\ ?\t])))
     (dolist (face '(whitespace-tab whitespace-space))
       (set-face-attribute face nil :background 'unspecified :foreground (face-foreground 'nano-faded)))
     (set-face-attribute 'whitespace-trailing nil :background 'unspecified :foreground (face-foreground 'nano-critical))
@@ -780,9 +783,9 @@
                (helm "https://github.com/ngalaiko/tree-sitter-go-template"
                      "master" "dialects/helm/src")
                ;; (markdown "https://github.com/tree-sitter-grammars/tree-sitter-markdown"
-               ;;           "split_parser" "tree-sitter-markdown/src") ;; 31
+               ;;             "split_parser" "tree-sitter-markdown/src") ;; 31
                ;; (markdown-inline "https://github.com/tree-sitter-grammars/tree-sitter-markdown"
-               ;;                  "split_parser" "tree-sitter-markdown-inline/src") ;; 31
+               ;;                    "split_parser" "tree-sitter-markdown-inline/src") ;; 31
                (templ "https://github.com/vrischmann/tree-sitter-templ")
                (gotmpl "https://github.com/ngalaiko/tree-sitter-go-template")
                (rust "https://github.com/tree-sitter/tree-sitter-rust")
@@ -801,21 +804,22 @@
 
 (define-derived-mode zig-mode c-mode "zig-mode")  ;; Until zig-ts-mode is core
 (nconc auto-mode-alist
-       `(("\\.zig\\'" . zig-mode)
-         ("\\.zig\\.zon\\'" . js-json-mode)
-         ("\\.nix\\'" . conf-mode)
-         ("\\.fish\\'" . conf-mode)
-         ("\\.rs\\'" . rust-ts-mode)
-         ("\\.go\\'" . go-ts-mode)
-         ("\\go\\.mod\\'"  . go-mod-ts-mode)
-         ("\\.ts\\'" . typescript-ts-mode)
-         ("\\.lua\\'" . lua-ts-mode)
-         ("\\.ya?ml\\'" . yaml-ts-mode)
-         ("\\.json\\'" . js-json-mode)
-         ("\\Dockerfile\\'" . dockerfile-ts-mode)
+       `(("\\.zig\\'"          . zig-mode)
+         ("\\.zig\\.zon\\'"    . js-json-mode)
+         ("\\.nix\\'"          . conf-mode)
+         ("\\.fish\\'"         . conf-mode)
+         ("\\.rs\\'"           . rust-ts-mode)
+         ("\\.go\\'"           . go-ts-mode)
+         ("\\go\\.mod\\'"      . go-mod-ts-mode)
+         ("\\.ts\\'"           . typescript-ts-mode)
+         ("\\.lua\\'"          . lua-ts-mode)
+         ("\\.ya?ml\\'"        . yaml-ts-mode)
+         ("\\.json\\'"         . js-json-mode)
+         ("\\Dockerfile\\'"    . dockerfile-ts-mode)
          ("\\.dockerignore\\'" . dockerfile-ts-mode)
-         ("\\.bin\\'" . hexl-mode)
-         ("\\.info\\'" . Info-mode)))
+         ("\\.bin\\'"          . hexl-mode)
+         ("\\.tpl\\'"          . php-ts-mode)
+         ("\\.info\\'"         . Info-mode)))
 ;; ,(when (string> emacs-version "31")
 ;;  '("\\.md\\'" . markdown-ts-mode))))
 
@@ -879,6 +883,13 @@
 (define-key (current-global-map) (kbd"C-x '") #'foxy-run-all-tests)
 
 ;; --- Misc functions -------------------------------------------------------
+;; (defun whitespace-tabify nil
+;;   (interactive)
+;;   (let ((modified (buffer-modified-p)))
+;;     (call-interactively 'tabify t)
+;;     (whitespace-mode 1)
+;;     (call-interactively 'untabify t)
+;;     (set-buffer-modified-p modified)))
 (setq-default fill-column 120)
 (defvar old--mode-line-format nil)
 (defun toggle-zen-buffer ()
@@ -1059,8 +1070,8 @@
                 ("F" . (lambda nil (interactive)
                          (let ((xref-show-xrefs-function 'xref--show-xref-buffer))
                            (call-interactively 'project-find-regexp))))
-                ("f". (lambda nil (interactive)
-                        (forward-char 1) (call-interactively 'set-mark-command)
+                ("f". (lambda nil (interactive) ;; (forward-char 1)
+                        (call-interactively 'set-mark-command)
                         (let ((start-point (point))
                               (found-pos (search-forward (char-to-string (read-char nil t)) nil t)))
                           (if found-pos
