@@ -17,7 +17,7 @@
 
 ;; --- Frame / windows layout & behavior ------------------------------------
 (setq default-frame-alist
-      '((left-fringe . 0) (right-fringe . 0) (internal-border-width . 20)
+      '((left-fringe . 8) (right-fringe . 8) (internal-border-width . 20)
         (bottom-divider-width . 0) (right-divider-width . 0) (undecorated-round . t)))
 (modify-frame-parameters nil default-frame-alist)
 (setq-default pop-up-windows nil)
@@ -92,6 +92,7 @@
                   (nano-faded-i    . (show-paren-match))))
     (nano-link-face (car item) (cdr item)))
 
+  (set-face-attribute 'fringe nil :background (face-background 'default))
   (set-face-attribute 'font-lock-string-face nil :slant 'italic :weight 'semi-bold)
   (set-face-attribute 'font-lock-doc-face nil :slant 'italic)
   (set-face-attribute 'font-lock-builtin-face nil :slant 'italic)
@@ -299,7 +300,9 @@
                 (:eval (let ((prefix (cond
                                       ((or defining-kbd-macro executing-kbd-macro) "▶▶")
                                       ((region-active-p)
-                                       (format "{%d}" (count-lines (region-beginning) (region-end))))
+                                       (concat "%p " (format "{%d}" (count-lines (region-beginning) (region-end)))))
+                                      ((eq major-mode 'doc-view-mode)
+                                       (format "[%d/%d]" (doc-view-current-page) (doc-view-last-page-number)))
                                       ((or meow-mode (eq major-mode 'eww-mode)) "%p")
                                       ((buffer-modified-p)       "**")
                                       (buffer-read-only          "RO")
@@ -648,11 +651,10 @@
 ;; --- Window Management ----------------------------------------------------
 (dolist (pops '(("\\*eshell-pop\\*" . -2 ) ;; <-- prima donna
                 ("^\\*term.*\\*$" . -1) ("^\\*compilation.*\\*$" . -1)
-                ("vc-git :.\*" . 0) ("\\*vc.\*-log\\*" . 0)
-                ("\\*eldoc\\*" . 0) ("\\*Help\\*" . 0)
-                ("\\*Warnings\\*" . 1) ("\\*log-edit-files\\*" . 1)
-                ("\\*Occur.*\\*$" . 1) ("\\*grep.*\\*$" . 1)
-                ("\\*Org Select\\*" . 1) ("CAPTURE-.*" . 1)))
+                ("vc-git :.\*" . 0) ("\\*vc.\*-log\\*" . 0) ("\\*eldoc\\*" . 0)
+                ("\\*Help\\*" . 0) ("\\*Warnings\\*" . 1) ("\\*log-edit-files\\*" . 1)
+                ("\\*Occur.*\\*$" . 1) ("\\*grep.*\\*$" . 1) ("CAPTURE-.*" . 1)
+                ("\\*Org Select\\*" . 1) ("\\*xref\\*" . 1)))
   (add-to-list 'display-buffer-alist
                `(,(car pops)
                  display-buffer-in-side-window
@@ -809,6 +811,7 @@
          ("\\.ts\\'" . typescript-ts-mode)
          ("\\.lua\\'" . lua-ts-mode)
          ("\\.ya?ml\\'" . yaml-ts-mode)
+         ("\\.json\\'" . js-json-mode)
          ("\\Dockerfile\\'" . dockerfile-ts-mode)
          ("\\.dockerignore\\'" . dockerfile-ts-mode)
          ("\\.bin\\'" . hexl-mode)
@@ -1169,6 +1172,7 @@
   (push '("ff" "find-file $1") eshell-command-aliases-list)
   (push '("e" "find-file $1") eshell-command-aliases-list)
   (push '("gd" "vc-diff") eshell-command-aliases-list)
+  (push '("glog" "vc-print-root-log") eshell-command-aliases-list)
   (push '("groot" "cd ${git rev-parse --show-toplevel}") eshell-command-aliases-list)
   (push '("nix-update-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} nix build .#darwinConfigurations.${hostname -s}.system --impure && cd -") eshell-command-aliases-list)
   (push '("darwin-rebuild-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} sudo ./result/sw/bin/darwin-rebuild switch --flake . --impure && cd -") eshell-command-aliases-list)
@@ -1196,7 +1200,7 @@
 (advice-add 'eshell-read-aliases-list :override #'my-eshell-read-aliases-list)
 
 (with-eval-after-load 'em-term
-  (dolist (cmd '("fzf" "yazi" "mpv" "emacsclient" "bat"))
+  (dolist (cmd '("fzf" "yazi" "mpv" "emacsclient" "bat" "gh"))
     (add-to-list 'eshell-visual-commands cmd))
   (setq eshell-visual-options '(("git" "--help" "--paginate" "--patch")))
   (setq eshell-visual-subcommands '(("git" "log" "diff" "show"))))
@@ -1344,7 +1348,7 @@
       doc-view-continuous t
       doc-view-mupdf-use-svg t
       large-file-warning-threshold (* 50 (expt 2 20)))
-(with-eval-after-load 'doc-view ;; requires `'gs', `mupdf' (alongwith `mupdf-tools' on android)
+(with-eval-after-load 'doc-view ;; requires `'gs', `mupdf-tools'
   (define-key doc-view-mode-map (kbd "j") #'doc-view-scroll-up-or-next-page)
   (define-key doc-view-mode-map (kbd "k") #'doc-view-scroll-down-or-previous-page))
 

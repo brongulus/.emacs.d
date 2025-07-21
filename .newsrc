@@ -2,7 +2,7 @@ gmane.comp.lang.go.general: 1-234751
 gmane.emacs.devel! 1-333403
 gmane.comp.web.elinks.user: 1-2213
 gmane.comp.web.qutebrowser: 1-688
-gmane.emacs.announce: 1-293
+gmane.emacs.announce: 1-295
 gmane.emacs.bugs! 1-309936
 gmane.emacs.gnus.general! 1-91848
 gmane.emacs.gnus.user! 1-20452
@@ -19,13 +19,13 @@ gwene.com.thisweekinrust: 1-653
 gwene.com.youtube.feeds.videos.xml.user.ethoslab: 1-522
 gwene.io.github.matklad: 1-151,154,157-159
 gwene.io.kubernetes: 1-447,449-451,480-482
-gwene.me.tonsky.blog: 1-148
+gwene.me.tonsky.blog: 1-149
 gwene.net.cheney.dave: 167
-gwene.net.lwn.headlines: 1-13220
+gwene.net.lwn.headlines: 1-13230
 gwene.org.bitlbee.news.rss: 1-49
 gwene.org.golang.blog: 1-256
-gwene.org.hnrss.newest.points: 1-29958
+gwene.org.hnrss.newest.points: 1-29976
 gwene.org.perlmonks.headlines: 1-22804
 gwene.org.quantamagazine: 1-1661
 gwene.org.rust-lang.blog: 1-308
-gwene.rs.lobste: 1-101877
+gwene.rs.lobste: 1-101937
