@@ -37,7 +37,7 @@
 (defvar nano-monochrome t "Should the font-locking have colours.")
 (setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
 (setq nano-bg-theme-map
-      '(("#f7f7f7" . light) ("#fbf8ef" . amber) ("#282c33" . dark) ("#222222" . burn)))
+      '(("#f7f7f7" . light) ("#fbf8ef" . amber) ("#282c33" . dark) ("#212121" . burn)))
 (unless (eq system-type 'android)
   (let ((color (shell-command-to-string
                 (concat kitty-send-command "get-colors | grep ^background | awk '{printf $2}'"))))
@@ -236,9 +236,11 @@
   "Darken background of dark theme"
   (interactive)
   (nano-dark)
-  (set-face-attribute 'nano-default nil :foreground "#eeeee7" :background "#222222")
+  (set-face-attribute 'nano-default nil :foreground "#e3dac4" :background "#212121")
   (set-face-attribute 'nano-faded nil :foreground "#666666")
-  (set-face-attribute 'nano-subtle nil :foreground "#222222" :background "#eeeee7")
+  (set-face-attribute 'nano-subtle nil :foreground "#212121" :background "#e3dac4")
+  (set-face-attribute 'nano-string nil :foreground "#e9e2d1")
+  (set-face-attribute 'nano-salient nil :foreground "#eee6d9")
   (set-face-attribute 'nano-highlight nil :background "#393939")
   (let ((nano-current-theme 'dark)) (nano-install-theme))
   (setq nano-current-theme 'burn))
