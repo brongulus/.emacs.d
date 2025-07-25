@@ -37,7 +37,7 @@
 (defvar nano-monochrome t "Should the font-locking have colours.")
 (setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
 (setq nano-bg-theme-map
-      '(("#f7f7f7" . light) ("#fbf8ef" . amber) ("#282c33" . dark) ("#121212" . burn)))
+      '(("#f7f7f7" . light) ("#fbf8ef" . amber) ("#282c33" . dark) ("#222222" . burn)))
 (unless (eq system-type 'android)
   (let ((color (shell-command-to-string
                 (concat kitty-send-command "get-colors | grep ^background | awk '{printf $2}'"))))
@@ -99,6 +99,8 @@
   (set-face-attribute 'link nil :underline t)
   (set-face-attribute 'region nil :extend nil)
   (set-face-attribute 'cursor nil :background "#00c2ff")
+  (set-face-attribute 'line-number-current-line nil :foreground (face-foreground 'default)
+                      :background (face-background 'nano-highlight) :weight 'bold)
   (with-eval-after-load 'make-mode
     (set-face-attribute 'makefile-targets nil :inherit 'font-lock-keyword-face))
 
@@ -135,6 +137,7 @@
     (unless nano-monochrome
       (let ((face-color-map
              '((font-lock-builtin-face . blue) (font-lock-function-name-face . blue)
+               (font-lock-variable-name-face . blue)
                (font-lock-constant-face . yellow) (font-lock-type-face . cyan)
                (font-lock-keyword-face . magenta) (font-lock-property-name-face . magenta)
                (font-lock-preprocessor-face . orange) (font-lock-string-face . green))))
@@ -216,7 +219,7 @@
   (nano-set-face 'nano-faded "#6A717C")
   (nano-set-face 'nano-salient "#FFFFFF" nil 'bold)
   (nano-set-face 'nano-critical "#f3a171" nil 'bold)
-  (nano-set-face 'nano-string "#babdb6")
+  (nano-set-face 'nano-string "#aaaaaa")
   (setq nano-current-theme 'dark)
   (nano-install-theme))
 
@@ -233,10 +236,9 @@
   "Darken background of dark theme"
   (interactive)
   (nano-dark)
-  (set-face-attribute 'nano-default nil :foreground "#d0d0d0" :background "#121212")
-  (set-face-attribute 'nano-string nil :foreground "#d9d8d4")
+  (set-face-attribute 'nano-default nil :foreground "#eeeee7" :background "#222222")
   (set-face-attribute 'nano-faded nil :foreground "#666666")
-  (set-face-attribute 'nano-subtle nil :foreground "#121212" :background "#d0d0d0")
+  (set-face-attribute 'nano-subtle nil :foreground "#222222" :background "#eeeee7")
   (set-face-attribute 'nano-highlight nil :background "#393939")
   (let ((nano-current-theme 'dark)) (nano-install-theme))
   (setq nano-current-theme 'burn))
@@ -380,9 +382,6 @@
          (with-selected-window (other-window-for-scrolling)
            (cond ((eq mode 'Info-mode) (Info-scroll-up))
                  ((eq mode 'doc-view-mode) (doc-view-scroll-up-or-next-page 5))
-                 (pixel-scroll-precision-mode
-                  (let ((cursor-type nil))
-                    (pixel-scroll-up 5)))
                  (t (scroll-up-command 5))))))
 (defun my-scroll-other-up nil (interactive)
        (let ((mode (with-current-buffer (window-buffer (other-window-for-scrolling))
@@ -390,9 +389,6 @@
          (with-selected-window (other-window-for-scrolling)
            (cond ((eq mode 'Info-mode) (Info-scroll-down))
                  ((eq mode 'doc-view-mode) (doc-view-scroll-down-or-previous-page 5))
-                 (pixel-scroll-precision-mode
-                  (let ((cursor-type nil))
-                    (pixel-scroll-down 5)))
                  (t (scroll-down-command 5))))))
 
 (define-key (current-global-map) (kbd "C-x C-m") #'execute-extended-command)
@@ -435,6 +431,7 @@
               line-spacing 3
               imenu-flatten t
               display-line-numbers-width 4
+              display-line-numbers-widen t
               initial-scratch-message nil
               indent-tabs-mode nil
               mouse-wheel-tilt-scroll t
@@ -474,11 +471,16 @@
       ;; ^^ https://emacs.stackexchange.com/a/81518/28970
       auto-revert-verbose nil
       comint-prompt-read-only t
+      comint-buffer-maximum-size 2048
       compilation-ask-about-save nil
       completion-ignore-case t
       completion-auto-help 'lazy;nil
       confirm-kill-emacs 'yes-or-no-p
+      confirm-nonexistent-file-or-buffer nil
       diff-default-read-only t
+      dired-clean-confirm-killing-deleted-buffers nil
+      dired-create-destination-dirs 'ask
+      dired-deletion-confirmer 'y-or-n-p
       dired-dwim-target t
       dired-omit-verbose nil
       dired-use-ls-dired (not (eq system-type 'darwin))
@@ -493,6 +495,7 @@
       eldoc-idle-delay 0.2
       eldoc-echo-area-use-multiline-p nil
       eldoc-echo-area-display-truncation-message nil
+      ffap-machine-p-known 'reject
       flymake-suppress-zero-counters t
       flymake-no-changes-timeout 2
       flymake-show-diagnostics-at-end-of-line 'short
@@ -501,6 +504,9 @@
         (warning "»" compilation-warning)
         (note "»" compilation-info))
       help-window-select t
+      hl-line-sticky-flag nil
+      global-hl-line-sticky-flag nil
+      kill-buffer-delete-auto-save-files t
       pixel-scroll-precision-interpolate-page t
       recentf-max-saved-items 200
       recentf-auto-cleanup 'never
@@ -846,8 +852,8 @@
 
 (with-eval-after-load 'eglot
   (fset #'jsonrpc--log-event #'ignore)
-  (setq eglot-events-buffer-config 0
-        eglot-sync-connect 3
+  (setq eglot-events-buffer-config '(:size 0 :format short)
+        eglot-sync-connect 0
         eglot-autoshutdown t
         eglot-inlay-hints-mode nil)
 

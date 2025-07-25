@@ -9,10 +9,14 @@
 
 (add-hook 'emacs-startup-hook
           #'(lambda ()
-              (setq gc-cons-threshold (* 64 1024 1024)
-                    gc-cons-percentage 0.1
-                    file-name-handler-alist my/saved-file-name-handler-alist)
-              (garbage-collect)))
+              (run-at-time
+               2 nil
+               (lambda nil            
+                 (setq gc-cons-threshold (* 32 1024 1024)
+                       gc-cons-percentage 0.1
+                       file-name-handler-alist my/saved-file-name-handler-alist)
+                 (garbage-collect))))
+          105)
 
 ;; src: skangas
 (when (>= emacs-major-version 27)
@@ -77,6 +81,11 @@
       frame-resize-pixelwise t
       initial-major-mode 'fundamental-mode
       initial-scratch-message nil)
+
+(advice-add 'display-startup-screen :override #'ignore)
+
+(when (string> emacs-version "31")
+  (setq load-path-filter-function #'load-path-filter-cache-directory-files))
 
 (when is-mac
   (add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
