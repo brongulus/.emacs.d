@@ -23,7 +23,7 @@
        (package-install package)))
    packages))
 
-(my/ensure-package-installed 'corfu 'eldoc-box 'diff-hl 'markdown-mode 'dape)
+(my/ensure-package-installed 'corfu 'eldoc-box 'markdown-mode 'dape 'ox-hugo) ;; 'diff-hl
 
 (with-eval-after-load 'corfu
   (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)
@@ -74,50 +74,15 @@
                               'font-lock-face '(:strike-through t))
                   "\n"))))
 
-(dolist (hook '(prog-mode-hook conf-mode-hook))
-  (add-hook hook #'turn-on-diff-hl-mode)
-  (add-hook hook #'diff-hl-margin-mode)
-  (add-hook hook #'diff-hl-show-hunk-mouse-mode))
-(with-eval-after-load 'vc
-  (define-key vc-prefix-map "*" #'diff-hl-show-hunk))
-(with-eval-after-load 'diff-hl
-  (dolist (pair '(("q" . diff-hl-inline-popup-hide)
-                  ("r" . diff-hl-show-hunk-revert-hunk)))
-    (let ((key (car pair))
-          (fn (cdr pair)))
-      (define-key diff-hl-inline-popup-transient-mode-map
-                  (kbd key)
-                  (lambda nil
-                    "Clean up the littering diff-hl does by leaving its buffers after quitting."
-                    (interactive)
-                    (funcall fn)
-                    (let ((diff-hl-buffers
-                           (seq-filter
-                            (lambda (buf)
-                              (with-current-buffer buf
-                                (and (eq major-mode 'diff-mode)
-                                     (string-match-p "*diff-hl-.*" (buffer-name buf)))))
-                            (buffer-list))))
-                      (mapc #'kill-buffer diff-hl-buffers))))))
-  ;; (diff-hl-flydiff-mode t)
-  (when (package-installed-p 'magit)
-    (add-hook 'magit-pre-refresh-hook  #'diff-hl-magit-pre-refresh)
-    (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh))
-  (setq vc-git-diff-switches '("--histogram")
-        diff-hl-flydiff-delay 0.5
-        diff-hl-update-async nil;t
-        diff-hl-show-staged-changes nil
-        diff-hl-margin-symbols-alist '((insert . "█")
-                                       (delete . "█")
-                                       (change . "█"))
-        diff-hl-draw-borders nil))
-
 (push '("\\.md\\'" . markdown-mode) auto-mode-alist)
 (with-eval-after-load 'markdown-mode
   (add-hook 'markdown-mode-hook #'(lambda nil
                                     (when (display-graphic-p) (markdown-toggle-inline-images))))
   (setq markdown-fontify-code-blocks-natively t
         markdown-max-image-size '(800 . 800)))
+
+(with-eval-after-load 'ox
+  (require 'ox-hugo))
 
 (setq dape-key-prefix "a")
 (setq dape-debug t)
@@ -166,3 +131,42 @@
                  :request "launch"
                  :type (lambda() (if (string-suffix-p "_test.go" (buffer-name)) "test" "debug"))
                  :cwd dape-command-cwd)))
+
+;; (dolist (hook '(prog-mode-hook conf-mode-hook))
+;;   (add-hook hook #'turn-on-diff-hl-mode)
+;;   (add-hook hook #'diff-hl-margin-mode)
+;;   (add-hook hook #'diff-hl-show-hunk-mouse-mode))
+;; (with-eval-after-load 'vc
+;;   (define-key vc-prefix-map "*" #'diff-hl-show-hunk))
+;; (with-eval-after-load 'diff-hl
+;;   (dolist (pair '(("q" . diff-hl-inline-popup-hide)
+;;                   ("r" . diff-hl-show-hunk-revert-hunk)))
+;;     (let ((key (car pair))
+;;           (fn (cdr pair)))
+;;       (define-key diff-hl-inline-popup-transient-mode-map
+;;                   (kbd key)
+;;                   (lambda nil
+;;                     "Clean up the littering diff-hl does by leaving its buffers after quitting."
+;;                     (interactive)
+;;                     (funcall fn)
+;;                     (let ((diff-hl-buffers
+;;                            (seq-filter
+;;                             (lambda (buf)
+;;                               (with-current-buffer buf
+;;                                 (and (eq major-mode 'diff-mode)
+;;                                      (string-match-p "*diff-hl-.*" (buffer-name buf)))))
+;;                             (buffer-list))))
+;;                       (mapc #'kill-buffer diff-hl-buffers))))))
+;;   ;; (diff-hl-flydiff-mode t)
+;;   (when (package-installed-p 'magit)
+;;     (add-hook 'magit-pre-refresh-hook  #'diff-hl-magit-pre-refresh)
+;;     (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh))
+;;   (setq vc-git-diff-switches '("--histogram")
+;;         diff-hl-flydiff-delay 0.5
+;;         diff-hl-update-async nil;t
+;;         diff-hl-show-staged-changes nil
+;;         diff-hl-margin-symbols-alist '((insert . "█")
+;;                                        (delete . "█")
+;;                                        (change . "█"))
+;;         diff-hl-draw-borders nil))
+
