@@ -23,7 +23,8 @@
        (package-install package)))
    packages))
 
-(my/ensure-package-installed 'corfu 'eldoc-box 'markdown-mode 'dape 'ox-hugo) ;; 'diff-hl
+(my/ensure-package-installed
+ 'corfu 'eldoc-box 'markdown-mode 'dape 'ox-hugo 'zig-mode) ;; 'diff-hl
 
 (with-eval-after-load 'corfu
   (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)
@@ -74,10 +75,13 @@
                               'font-lock-face '(:strike-through t))
                   "\n"))))
 
-(push '("\\.md\\'" . markdown-mode) auto-mode-alist)
+(push '("\\..?md\\'" . markdown-mode) auto-mode-alist)
 (with-eval-after-load 'markdown-mode
   (add-hook 'markdown-mode-hook #'(lambda nil
+                                    (visual-line-mode t)
                                     (when (display-graphic-p) (markdown-toggle-inline-images))))
+  (dolist (level '("1" "2" "3" "4" "5" "6"))
+    (set-face-attribute (intern (concat "markdown-header-face-" level)) nil :height 1.2 :inherit 'bold))
   (setq markdown-fontify-code-blocks-natively t
         markdown-max-image-size '(800 . 800)))
 

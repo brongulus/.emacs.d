@@ -28,7 +28,7 @@
                 #'gc-on-last-frame-out-of-focus))
 
 (setq-default default-frame-alist
-              '((alpha . 98)
+              '((alpha . 100)
                 (menu-bar-lines . 0)
                 (tool-bar-lines . 0)
                 (vertical-scroll-bars)
@@ -88,6 +88,8 @@
   (setq load-path-filter-function #'load-path-filter-cache-directory-files))
 
 (when is-mac
+  (setq ns-use-proxy-icon nil
+        frame-title-format nil)
   (add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
   (let ((home (getenv "HOME")))
     (setenv "PATH" (concat (getenv "PATH")

@@ -37,8 +37,8 @@
 (defvar nano-monochrome t "Should the font-locking have colours.")
 (setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
 (setq nano-bg-theme-map
-      '(("#f7f7f7" . light) ("#fbf8ef" . amber) ("#282c33" . dark) ("#212121" . burn)))
-(unless (eq system-type 'android)
+      '(("#f7f7f7" . light) ("#fbf8ef" . amber) ("#1b1b1b" . dark) ("#212121" . burn)))
+(unless (or (eq system-type 'android) (string= "" (shell-command-to-string "pgrep kitty")))
   (let ((color (shell-command-to-string
                 (concat kitty-send-command "get-colors | grep ^background | awk '{printf $2}'"))))
     (setq nano-current-theme (cdr (assoc color nano-bg-theme-map)))))
@@ -74,21 +74,23 @@
 (defun nano-install-theme ()
   (set-face-attribute 'default nil :foreground (face-foreground 'nano-default)
                       :background (face-background 'nano-default))
-  (dolist (item '((nano-default      . (minibuffer-prompt fixed-pitch-serif fixed-pitch
-                                                          variable-pitch variable-pitch-text))
-                  (nano-highlight    . (hl-line highlight custom-button-mouse lazy-highlight))
-                  (nano-subtle       . (match region isearch widget-field
-                                              custom-button icomplete-selected-match))
+  (dolist (item '((nano-default      . (fixed-pitch-serif fixed-pitch variable-pitch
+                                                          variable-pitch-text))
+                  (nano-highlight    . (hl-line highlight custom-button-mouse lazy-highlight
+                                                icomplete-selected-match completions-common-part))
+                  (nano-subtle       . (match region isearch widget-field custom-button))
                   (nano-faded        . (shadow vertical-border font-lock-comment-face
                                                font-lock-doc-face icomplete-section
                                                completions-annotations))
                   (nano-string       . (font-lock-string-face font-lock-constant-face))
                   (nano-salient      . (link help-argument-name custom-visibility
+                                             minibuffer-prompt font-lock-builtin-face
                                              font-lock-type-face font-lock-keyword-face
-                                             font-lock-builtin-face font-lock-variable-name-face
-                                             font-lock-function-name-face))
+                                             font-lock-variable-name-face
+                                             font-lock-function-name-face
+                                             font-lock-property-name-face))
                   (nano-critical     . (error xref-file-header warning help-key-binding))
-                  (nano-critical-i   . (isearch-fail completions-common-part))
+                  (nano-critical-i   . (isearch-fail))
                   (nano-faded-i      . (show-paren-match))))
     (nano-link-face (car item) (cdr item)))
 
@@ -97,8 +99,9 @@
   (set-face-attribute 'font-lock-doc-face nil :slant 'italic)
   (set-face-attribute 'font-lock-builtin-face nil :slant 'italic)
   (set-face-attribute 'link nil :underline t)
+  (set-face-attribute 'completions-common-part nil :underline t)
   (set-face-attribute 'region nil :extend nil)
-  (set-face-attribute 'cursor nil :background "#00c2ff")
+  (set-face-attribute 'cursor nil :background "#00c2ff") ; FIXME
   (set-face-attribute 'line-number-current-line nil :foreground (face-foreground 'default)
                       :background (face-background 'nano-highlight) :weight 'bold)
   (with-eval-after-load 'make-mode
@@ -145,7 +148,9 @@
           (set-face-attribute (car fc) nil :foreground
                               (alist-get theme-variant (alist-get (cdr fc) color-themes)))))))
 
-  (with-eval-after-load 'eglot (set-face-attribute 'eglot-mode-line nil :inherit 'nano-faded))
+  (with-eval-after-load 'eglot
+    (set-face-attribute 'eglot-mode-line nil :inherit 'nano-faded)
+    (set-face-attribute 'eglot-highlight-symbol-face nil :underline t))
   (with-eval-after-load 'whitespace
     (setq whitespace-style '(face tabs spaces tab-mark trailing)); indentation::tab space-after-tab::tab))
     (setq whitespace-indentation-regexp
@@ -161,9 +166,11 @@
     (set-face-attribute 'whitespace-line nil :background 'unspecified :foreground 'unspecified))
 
   (with-eval-after-load 'outline
-    (dolist (face '(outline-1 outline-2 outline-3 outline-4 outline-5
-                              outline-6 outline-7 outline-8))
+    (dolist (face '(outline-1 outline-2 outline-3 outline-4 outline-5 outline-6 outline-7 outline-8))
       (set-face-attribute face nil :height 1.2 :inherit 'bold)))
+  (with-eval-after-load 'markdown-mode
+    (dolist (face '(markdown-pre-face)); markdown-code-face))
+      (set-face-attribute face nil :background (face-background 'nano-highlight) :extend t)))
   (with-eval-after-load 'org
     (dolist (face '(org-block org-block-begin-line org-block-end-line))
       (set-face-attribute face nil :background (face-background 'nano-highlight) :extend t :inherit 'default))
@@ -171,10 +178,13 @@
     (set-face-attribute 'org-footnote nil :foreground (face-foreground 'nano-faded) :underline t)
     (set-face-attribute 'org-date nil :foreground (face-foreground 'link))
     (set-face-attribute 'org-table nil :foreground (face-foreground 'nano-default))
+    (set-face-attribute 'org-ellipsis nil :foreground (face-foreground 'nano-default) :underline nil)
     (set-face-attribute 'org-verbatim nil :inherit 'org-latex-and-related)
     (set-face-attribute 'org-code nil :inherit 'org-latex-and-related))
   (with-eval-after-load 'sh-script
     (set-face-attribute 'sh-quoted-exec nil :foreground (face-foreground 'nano-salient) :italic t))
+  (with-eval-after-load 'shr
+    (set-face-attribute 'shr-code nil :weight 'bold))
 
   ;; Mode & header lines
   (set-face-attribute 'header-line nil
@@ -213,10 +223,10 @@
 (defun nano-dark (&rest args)
   "NANO dark theme (was based on nord colors)."
   (interactive)
-  (nano-set-face 'nano-default "#ECEFF4" "#282C33")
-  (nano-set-face 'nano-highlight nil "#21242b")
-  (nano-set-face 'nano-subtle nil "#434C5E")
-  (nano-set-face 'nano-faded "#6A717C")
+  (nano-set-face 'nano-default "#e8e8e8" "#1b1b1b")
+  (nano-set-face 'nano-highlight nil "#2b2b2b")
+  (nano-set-face 'nano-subtle "#CCCCCC" "#464646")
+  (nano-set-face 'nano-faded "#707070")
   (nano-set-face 'nano-salient "#FFFFFF" nil 'bold)
   (nano-set-face 'nano-critical "#f3a171" nil 'bold)
   (nano-set-face 'nano-string "#aaaaaa")
@@ -239,8 +249,8 @@
   (set-face-attribute 'nano-default nil :foreground "#e3dac4" :background "#212121")
   (set-face-attribute 'nano-faded nil :foreground "#666666")
   (set-face-attribute 'nano-subtle nil :foreground "#212121" :background "#e3dac4")
-  (set-face-attribute 'nano-string nil :foreground "#e9e2d1")
-  (set-face-attribute 'nano-salient nil :foreground "#eee6d9")
+  (set-face-attribute 'nano-string nil :foreground "#ebdbb2")
+  (set-face-attribute 'nano-salient nil :foreground "#f9f5d7")
   (set-face-attribute 'nano-highlight nil :background "#393939")
   (let ((nano-current-theme 'dark)) (nano-install-theme))
   (setq nano-current-theme 'burn))
@@ -267,6 +277,11 @@
 ;; Set current theme based on terminal
 (funcall (intern (concat "nano-" (symbol-name nano-current-theme))))
 
+(setq modus-themes-common-palette-overrides
+      '((fringe bg-main)
+        (bg-line-number-inactive bg-main)
+        (bg-line-number-active bg-hl-line)))
+
 ;; --- Header & mode lines --------------------------------------------------
 (setq-default flymake-mode-line-counter-format
               '("" flymake-mode-line-error-counter
@@ -286,15 +301,21 @@
                 (:eval (when (mode-line-window-selected-p)
                          (let ((tabs (let* ((tabs (length (tab-bar-tabs)))
                                             (active-tab (tab-bar--current-tab-index)))
-                                       (if (<= tabs 1)
-                                           ""
+                                       (if (<= tabs 1) ""
                                          (let ((result '()))
                                            (dotimes (i tabs)
-                                             (if (= i active-tab)
-                                                 (push (format "[%d]" (1+ i)) result)
-                                               (push (format "%d" (1+ i)) result)))
-                                           (concat " " (mapconcat 'identity (reverse result) " ")
-                                                   " "))))))
+                                             (let ((indicator (if (= i active-tab) "⦿" "○")))
+                                               (push (propertize
+                                                      indicator 'mouse-face 'mode-line-highlight
+                                                      'local-map (let ((map (make-sparse-keymap)))
+                                                                   (define-key
+                                                                    map [mode-line mouse-1]
+                                                                    `(lambda ()
+                                                                       (interactive)
+                                                                       (tab-bar-select-tab ,(1+ i))))
+                                                                   map))
+                                                     result)))
+                                           (concat " " (mapconcat 'identity (reverse result) " ")))))))
                            (propertize tabs 'face 'bold))))
                 (:eval (when (and (buffer-narrowed-p)
                                   (not (derived-mode-p 'Info-mode)))
@@ -304,6 +325,7 @@
                 (:eval (propertize (string-trim-left
                                     (format-mode-line vc-mode))
                                    'face '(:weight light :slant italic)))
+                (:eval (unless display-line-numbers (propertize " L%l")))
                 (:eval (let ((prefix (cond
                                       ((or defining-kbd-macro executing-kbd-macro) "▶▶")
                                       ((region-active-p)
@@ -373,8 +395,8 @@
 (defun my-goto-doc nil (interactive)
        (if (derived-mode-p 'emacs-lisp-mode)
            (describe-symbol (symbol-at-point))
-         (if (and (display-graphic-p)
-                  (require 'eldoc-box nil t))
+         (if ;(and (display-graphic-p)
+             (require 'eldoc-box nil t);)
              (eldoc-box-help-at-point)
            (eldoc-doc-buffer t))))
 
@@ -458,6 +480,9 @@
 (add-hook 'prog-mode-hook #'hl-line-mode)
 (dolist (mode-hook '(prog-mode-hook conf-mode-hook yaml-ts-mode-hook))
   (add-hook mode-hook #'display-line-numbers-mode))
+(add-to-list 'auto-mode-alist '("\\.log\\'" . (lambda ()
+                                                (hl-line-mode)
+                                                (display-line-numbers-mode))))
 ;; (add-hook 'emacs-lisp-mode-hook #'prettify-symbols-mode)
 
 (put 'narrow-to-region 'disabled nil)
@@ -472,6 +497,7 @@
       lock-file-name-transforms '(("\\`/.*/\\([^/]+\\)\\'" "/var/tmp/\\1" t))
       ;; ^^ https://emacs.stackexchange.com/a/81518/28970
       auto-revert-verbose nil
+      blink-cursor-delay 0.8
       comint-prompt-read-only t
       comint-buffer-maximum-size 2048
       compilation-ask-about-save nil
@@ -514,7 +540,9 @@
       recentf-auto-cleanup 'never
       save-abbrevs nil
       save-interprogram-paste-before-kill t
+      savehist-additional-variables '(register-alist kill-ring)
       scroll-margin 0
+      maximum-scroll-margin 0.5
       scroll-conservatively 101
       scroll-preserve-screen-position t
       set-mark-command-repeat-pop t
@@ -531,7 +559,7 @@
       xref-show-definitions-function 'xref-show-definitions-buffer-at-bottom
       xref-show-xrefs-function 'xref-show-definitions-completing-read)
 
-(defun meain/electric-pair-conservative-inhibit (char)
+(defun meain/electric-pair-conservative-inhibit (char) ;; FIXME
   (or
    ;; I find it more often preferable not to pair when the
    ;; same char is next.
@@ -546,6 +574,7 @@
     (eq (char-syntax (char-before (1- (point)))) ?w)
     (eq (preceding-char) char)
     (not (eq (char-syntax (preceding-char)) ?\()))))
+
 (setq electric-pair-inhibit-predicate 'meain/electric-pair-conservative-inhibit)
 
 (when (executable-find "rg")
@@ -607,7 +636,10 @@
   (define-key dired-mode-map (kbd "RET") #'dired-find-alternate-file)
   (define-key dired-mode-map (kbd "C-o") #'other-window))
 
+(setq browse-url-browser-function 'eww-browse-url
+      browse-url-new-window-flag t)
 (with-eval-after-load 'eww
+  (define-key eww-mode-map (kbd "SPC") ctl-x-map)
   (setq eww-header-line-format nil)
   (setq eww-auto-rename-buffer 'title))
 
@@ -810,7 +842,7 @@
     (add-hook 'prog-mode-hook #'my/setup-install-grammars))
   (setq go-ts-mode-indent-offset 4))
 
-(define-derived-mode zig-mode c-mode "zig-mode")  ;; Until zig-ts-mode is core
+;; (define-derived-mode zig-mode c-mode "zig-mode")  ;; Until zig-ts-mode is core
 (nconc auto-mode-alist
        `(("\\.zig\\'"          . zig-mode)
          ("\\.zig\\.zon\\'"    . js-json-mode)
@@ -849,9 +881,10 @@
 
 (with-eval-after-load 'project
   (setq project-compilation-buffer-name-function #'project-prefixed-buffer-name)
-  (setq project-vc-extra-root-markers '("go.mod" "Cargo.toml" "build.zig"))
+  (setq project-vc-extra-root-markers '("Cargo.toml" "build.zig")); "go.mod")) ; use go.work instead
   (setq project-vc-ignores '("**/vendor/**")))
 
+(define-key (current-global-map) (kbd "C-x =") #'eglot-code-actions)
 (with-eval-after-load 'eglot
   (fset #'jsonrpc--log-event #'ignore)
   (setq eglot-events-buffer-config '(:size 0 :format short)
@@ -898,20 +931,25 @@
 ;;     (whitespace-mode 1)
 ;;     (call-interactively 'untabify t)
 ;;     (set-buffer-modified-p modified)))
-(setq-default fill-column 120)
+(setq-default fill-column 125)
+(with-eval-after-load 'shr (setq shr-max-width 110 shr-width 110))
 (defvar old--mode-line-format nil)
 (defun toggle-zen-buffer ()
-  "Toggle center alignment of the buffer. Source: jamesdyer."
+  "Toggle center alignment of the buffer. Inspired by: jamesdyer."
   (interactive)
   (let* ((special-modes (or (eq major-mode 'org-mode) (eq major-mode 'markdown-mode)))
+         (sm-half (ceiling (window-screen-lines) 2))
          (margin (if (or (equal (window-margins) '(0 . 0))
                          (null (car (window-margins))))
                      (/ (- (window-total-width) (if special-modes 160 fill-column)) 2) 0)))
     (visual-line-mode 1)
-    (set-window-margins nil margin margin)
-    (when special-modes
-      (text-scale-set (if (eq text-scale-mode-amount 0) 2 0))
-      (setq-local line-spacing (if (eq line-spacing 3) 0.5 3)))))
+    (when (>= margin 0)
+      (set-window-margins nil margin margin)
+      (when special-modes
+        (text-scale-set (if (eq text-scale-mode-amount 0) 2 0))
+        (setq-local line-spacing (if (eq line-spacing 3) 0.5 3))))
+    (setq-local scroll-margin (if (zerop scroll-margin) sm-half 0) ;99999
+                scroll-conservatively (if (zerop scroll-conservatively) 101 0))))
 (define-key (current-global-map) (kbd "<f9>") #'toggle-zen-buffer)
 
 (defun match-pair nil
@@ -946,6 +984,24 @@
           (insert initial-key)
           (push event unread-command-events))
       (insert initial-key))))
+
+(defun my/quick-window-jump () ; src: captainflasmr
+  "Jump to window by character label. Split if 1 window, jump if 2, select if more(ignore side win)."
+  (interactive)
+  (let ((ws (cl-remove-if (lambda (w) (window-parameter w 'window-side)) (window-list nil 'no-mini))))
+    (cond ((= (length ws) 1) (split-window-horizontally) (other-window 1))
+          ((= (length ws) 2) (select-window (if (eq (selected-window) (car ws)) (cadr ws) (car ws))))
+          (t (let* ((sws (sort ws (lambda (w1 w2) (let ((e1 (window-edges w1)) (e2 (window-edges w2)))
+                                                    (or (< (car e1) (car e2)) (and (= (car e1) (car e2)) (< (cadr e1) (cadr e2))))))))
+                    (ks (cl-subseq '("j" "k" "l" ";" "a" "s" "d" "f") 0 (length sws)))
+                    (wm (cl-pairlis ks sws))
+                    (ovs (mapcar (lambda (e) (let ((o (make-overlay (window-start (cdr e)) (window-start (cdr e)) (window-buffer (cdr e)))))
+                                               (overlay-put o 'after-string (propertize (format "[%s]" (car e)) 'face 'highlight))
+                                               (overlay-put o 'window (cdr e)) o)) wm))
+                    (k (read-key (format "Select window [%s]: " (mapconcat 'identity ks ", ")))))
+               (mapc 'delete-overlay ovs)
+               (when-let* ((sw (cdr (assoc (char-to-string k) wm)))) (select-window sw)))))))
+(define-key (current-global-map) (kbd "M-o") #'my/quick-window-jump)
 
 (defun my-mark-word nil
   (interactive)
@@ -1027,14 +1083,27 @@
                         (t "2"))))
       (send-string-to-terminal (concat "\e[" param " q")))))
 (add-hook 'meow-mode-hook
-          (lambda nil (meow--set-cursor-type
-                       (if (or meow-mode (derived-mode-p 'special-mode)) 'box 'bar))))
+          (lambda nil (if (or meow-mode (derived-mode-p 'special-mode))
+                          (progn (meow--set-cursor-type 'box) (blink-cursor-mode -1))
+                        (progn (meow--set-cursor-type '(bar . 3)) (blink-cursor-mode 1)))))
+
+(defun ctrl-meta-prefix-command ()
+  "Read next key and execute it with C-M- prefix"
+  (interactive)
+  (let* ((key (read-key "C-M-"))
+         (cmd (key-binding (vector (list 'control 'meta key)))))
+    (if cmd
+        (call-interactively cmd)
+      (message "C-M-%c is not bound" key))))
+
 (define-key (current-global-map) (kbd "j") (lambda nil (interactive) (my-chord ?j ?k 'meow-mode)))
+(define-key (current-global-map) [escape] (lambda nil (interactive) (meow-mode t)))
 (define-key meow-mode-map (kbd "g") (make-sparse-keymap))
 (define-key meow-mode-map (kbd "m") (make-sparse-keymap))
 (define-key meow-mode-map (kbd "z") (make-sparse-keymap))
 (define-key meow-mode-map (kbd "H") help-map)
 (define-key meow-mode-map (kbd "SPC") ctl-x-map)
+(define-key meow-mode-map (kbd "SPC g") 'ctrl-meta-prefix-command)
 (define-key meow-mode-map (kbd "ms") insert-pair-map)
 (dolist (num '(0 1 2 3 4 5 6 7 8 9))
   (define-key meow-mode-map (int-to-string num) #'digit-argument))
@@ -1057,10 +1126,10 @@
                 (")" . up-list) ("[" . backward-list) ("]" . forward-list)
                 ("{" . flymake-goto-prev-error) ("}" . flymake-goto-next-error)
                 ("g/" . xref-find-definitions-other-window) ("gd" . xref-find-definitions)
-                ("gb" . xref-go-back) ("K" . my-goto-doc) (":" . goto-line)
-                ("gx" . flymake-show-buffer-diagnostics) ("gr" . xref-find-references)
+                ("gb" . xref-go-back) ("K" . my-goto-doc) (":" . goto-line) ("gr" . xref-find-references)
+                ("gx" . flymake-show-buffer-diagnostics) ("gX" . flymake-show-project-diagnostics)
                 ("&" . align-regexp) ("C" . string-rectangle) ("p" . yank)
-                ("P" . yank-pop) ("+" . eglot-rename) ("mm" . point-to-register)
+                ("P" . yank-pop) ("+" . eglot-rename) ("mm" . file-to-register)
                 ("'" . register-to-point) ("md" . delete-pair) ("+" . eglot-code-actions)
                 ("Z" . undo-redo) ("u" . undo-only) ("R" . replace-regexp)
                 ("zf" . hs-toggle-hiding) ("zc" . hs-hide-all) ("zs" . hs-show-all)
@@ -1163,6 +1232,35 @@
                '("^\\*Annotate.*\\*$"
                  (display-buffer-reuse-mode-window display-buffer-in-tab))))
 
+(defun switch-git-status-buffer () ; src: emacs-solo
+  "Parse git status from an expanded path and switch to a file."
+  (interactive)
+  (require 'vc-git)
+  (let* ((repo-root (vc-git-root default-directory)))
+    (if (not repo-root)
+        (message "Not inside a Git repository.")
+      (let* ((expanded-root (expand-file-name repo-root))
+             (command-to-run (format "git -C %s status --porcelain=v1"
+                                     (shell-quote-argument expanded-root)))
+             (cmd-output (shell-command-to-string command-to-run))
+             (target-files
+              (cl-remove-if-not
+               (lambda (line)
+                 (when (> (length line) 3)
+                   (let ((status (substring line 0 2))
+                         (path-info (substring line 3)))
+                     (or (string-match "M" status)
+                         (string-match "\\?\\?" status)
+                         (string-match "^R" status)))))
+               (split-string cmd-output "\n" t))))
+        (when target-files
+          (let ((selection (completing-read "Switch to buffer (Git modified): "
+                                            (mapcar #'identity target-files) nil t)))
+            (when selection
+              (find-file (expand-file-name (substring selection 3) expanded-root)))))))))
+(define-key (current-global-map) (kbd "C-x C-g") #'switch-git-status-buffer)
+
+
 ;; --- Eshell ---------------------------------------------------------------
 ;; Eshell refs:
 ;; https://github.com/howardabrams/dot-files/blob/master/emacs-eshell.org
@@ -1183,6 +1281,7 @@
   (push '("source" ". $1") eshell-command-aliases-list)
   (push '("mkcd" "mkdir -p $1 && cd $1") eshell-command-aliases-list)
   (push '("k" "kubecolor $*") eshell-command-aliases-list)
+  (push '("z" "eshell/z") eshell-command-aliases-list)
   (push '("ky" "kubecolor -oyaml $*") eshell-command-aliases-list)
   (push '("clear" "clear t") eshell-command-aliases-list)
   (push '("d" "dired-other-window $1") eshell-command-aliases-list)
@@ -1329,6 +1428,15 @@
                              (delete-dups
                               (ring-elements eshell-history-ring)))))
 
+  (defun eshell/z (&optional regexp) ; src: karthink
+    "Navigate to a previously visited directory in eshell, or to
+any directory proferred by `consult-dir'."
+    (let ((eshell-dirs (delete-dups
+                        (mapcar 'abbreviate-file-name
+                                (ring-elements eshell-last-dir-ring)))))
+      (eshell/cd (if regexp (eshell-find-previous-directory regexp)
+                   (completing-read "cd: " eshell-dirs)))))
+  
   (defun my-eshell-narrow-to-prompt ()
     "Narrow buffer to prompt at point. src: ambrevar."
     (interactive)
@@ -1368,6 +1476,7 @@
       doc-view-mupdf-use-svg t
       large-file-warning-threshold (* 50 (expt 2 20)))
 (with-eval-after-load 'doc-view ;; requires `'gs', `mupdf-tools'
+  (define-key doc-view-mode-map (kbd "SPC") ctl-x-map)
   (define-key doc-view-mode-map (kbd "j") #'doc-view-scroll-up-or-next-page)
   (define-key doc-view-mode-map (kbd "k") #'doc-view-scroll-down-or-previous-page))
 

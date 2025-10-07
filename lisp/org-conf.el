@@ -5,11 +5,15 @@
   :bind (("C-x y" . yank-media)
          :map org-mode-map
          ("C-'" . avy-goto-char-timer)
-         ("C-," . my/scroll-other-window))
+         ("C-," . my-scroll-other-window)
+         ("C-c C-x C-m" . my-toggle-org-markers))
   :hook ((org-mode . visual-line-mode)
          (org-mode . variable-pitch-mode))
   :config
   (setq org-modules '(ol-info ol-eww org-habit))
+  (defun my-toggle-org-markers nil (interactive)
+    (setq org-hide-emphasis-markers (not org-hide-emphasis-markers))
+    (revert-buffer-quick))
   ;; Taken from rougier: org-outer-indent
   (defun org-outer-indent--compute-prefixes ()
     "Compute prefix strings for regular text and headlines."
@@ -58,7 +62,7 @@
   (setq org-directory (concat "~/Dropbox/" "org")
         org-use-sub-superscripts '{}
         ;; org-export-with-sub-superscripts nil
-        org-ellipsis "…"
+        org-ellipsis "…" ; "  ·"
         org-pretty-entities t
         org-startup-indented t
         org-startup-truncated nil
@@ -157,22 +161,37 @@
   (setq org-habit-show-habits-only-for-today t
         org-habit-show-done-always-green t
         org-habit-show-all-today t
-        org-habit-missed-glyph ?◌;; 9676
-        org-habit-completed-glyph ?● ;; 9679
-        org-habit-today-glyph ?○ ;; 9675
+        org-habit-missed-glyph ?o ;?◌ ;; 9676
+        org-habit-completed-glyph ?* ;?● ;; 9679
+        org-habit-today-glyph ?o ;?○ ;; 9675
         org-habit-following-days 1
         org-habit-preceding-days 21)
 
   (defun add-missed-day-glyph (graph)
     (dotimes (i (length graph))
       (when (char-equal ?\s (aref graph i))
-        (let* ((face (get-char-property i 'face graph))
-               (rep-str (propertize (char-to-string org-habit-missed-glyph)
-                                    'face face)))
-          (aset graph i (string-to-char rep-str)))))
+        (let ((face (get-char-property i 'face graph)))
+          (aset graph i org-habit-missed-glyph)
+          (put-text-property i (1+ i) 'face face graph))))
     graph)
 
-  (advice-add 'org-habit-build-graph :filter-return #'add-missed-day-glyph))
+  (advice-add 'org-habit-build-graph :filter-return #'add-missed-day-glyph)
+  (set-face-attribute 'org-habit-clear-face nil :background 'unspecified 
+                      :foreground (face-foreground 'font-lock-comment-face))
+  (set-face-attribute 'org-habit-clear-future-face nil :background 'unspecified 
+                      :foreground (face-foreground 'font-lock-comment-face))
+  (set-face-attribute 'org-habit-alert-face nil :background 'unspecified 
+                      :foreground (face-foreground 'ansi-color-yellow))
+  (set-face-attribute 'org-habit-alert-future-face nil :background 'unspecified 
+                      :foreground (face-foreground 'ansi-color-yellow))
+  (set-face-attribute 'org-habit-overdue-face nil :background 'unspecified 
+                      :foreground (face-foreground 'ansi-color-red))
+  (set-face-attribute 'org-habit-overdue-future-face nil :background 'unspecified 
+                      :foreground (face-foreground 'ansi-color-red))
+  (set-face-attribute 'org-habit-ready-face nil :background 'unspecified 
+                      :foreground (face-foreground 'ansi-color-green))
+  (set-face-attribute 'org-habit-ready-future-face nil :background 'unspecified 
+                      :foreground (face-foreground 'ansi-color-green)))
 
 (use-package org-capture
   :ensure nil
