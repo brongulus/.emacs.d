@@ -24,7 +24,8 @@
 
 ;; --- Activate / Deactivate modes ------------------------------------------
 (blink-cursor-mode -1) (kill-ring-deindent-mode 1)
-(fido-vertical-mode 1) (global-subword-mode 1)
+(run-with-idle-timer 0.1 nil #'fido-vertical-mode) ;; FIXME overkill?
+(global-subword-mode 1)
 (defun my-lazy-load-modes () (pixel-scroll-precision-mode 1) (winner-mode 1)
        (delete-selection-mode 1) (global-auto-revert-mode 1) (minibuffer-depth-indicate-mode)
        (which-key-mode 1) (savehist-mode 1) (which-function-mode 1)
@@ -600,7 +601,7 @@
   (defun clean-occur-context-line (orig-fun &rest args) ; src: GPT
     "Advice for `occur-context-lines` to change the separator."
     (let ((result (apply orig-fun args)))
-      (cl-destructuring-bind (output-line after-lines) result
+      (let* ((output-line (car result)) (after-lines (cadr result)))
         (setq output-line
               (replace-regexp-in-string
                "-------\n" ;; Old separator
@@ -1500,7 +1501,8 @@ any directory proferred by `consult-dir'."
 ;; --- External -------------------------------------------------------------
 (run-with-idle-timer
  0.7 nil (lambda nil (load "~/.emacs.d/lisp/dev-conf" nil :no-message)
-           (when (require 'corfu nil t) (global-corfu-mode))))
+           (when (require 'corfu nil t) (global-corfu-mode))
+           (setq scroll-bar-mode nil)))
 
 ;; --- 31 stuff -------------------------------------------------------------
 (when (string> emacs-version "31")

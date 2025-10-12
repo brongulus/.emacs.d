@@ -29,6 +29,12 @@
 ;;  https://github.com/purcell/emacs.d/blob/master/lisp/init-benchmarking.el
 ;;
 
+;; To get backtrace of any feature
+;; (with-eval-after-load 'cl-lib
+;;   (unless after-init-time
+;;     (message "cl-lib loaded during init! Printing backtrace...")
+;;     (backtrace)))
+
 ;;; Code:
 ;;;;; GPT
 (defun elemacs-dump-load-history ()

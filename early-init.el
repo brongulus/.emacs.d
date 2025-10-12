@@ -19,19 +19,20 @@
           105)
 
 ;; src: skangas
-(when (>= emacs-major-version 27)
-  (defun gc-on-last-frame-out-of-focus ()
-    "GC if all frames are inactive."
-    (if (seq-every-p #'null (mapcar #'frame-focus-state (frame-list)))
-        (garbage-collect)))
-  (add-function :after after-focus-change-function
-                #'gc-on-last-frame-out-of-focus))
+;; (when (>= emacs-major-version 27)
+;;   (defun gc-on-last-frame-out-of-focus ()
+;;     "GC if all frames are inactive."
+;;     (if (seq-every-p #'null (mapcar #'frame-focus-state (frame-list)))
+;;         (garbage-collect)))
+;;   (add-function :after after-focus-change-function
+;;                 #'gc-on-last-frame-out-of-focus))
 
 (setq-default default-frame-alist
               '((alpha . 100)
                 (menu-bar-lines . 0)
                 (tool-bar-lines . 0)
-                (vertical-scroll-bars)
+                (vertical-scroll-bars . nil)
+                (horizontal-scroll-bars . nil)
                 (fullscreen . maximized))
               cursor-in-non-selected-windows nil
               bidi-display-reordering 'left-to-right
@@ -48,8 +49,8 @@
 
 (when is-android
   (let ((termuxpath "/data/data/com.termux/files/usr/"))
-    (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin"))
-    (push (concat termuxpath "bin") exec-path))
+    (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin")))
+  ;; (push (concat termuxpath "bin") exec-path))
   (set-face-attribute 'default nil :height 160)
   (unless (file-directory-p "~/fonts")
     (copy-directory "~/.emacs.d/fonts/" "~/fonts")))
@@ -66,8 +67,8 @@
 ;;
 (fset 'display-startup-echo-area-message 'ignore)
 
-(setf (cdr (assq 'continuation fringe-indicator-alist))
-      '(nil nil))
+(setcdr (assq 'continuation fringe-indicator-alist)
+        '(nil nil))
 
 (when t
   (defvar package-quickstart)

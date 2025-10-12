@@ -44,7 +44,7 @@
   (setq corfu-cycle t
         corfu-auto t
         corfu-auto-prefix 2
-        corfu-auto-delay 0.2
+        corfu-auto-delay 0.3
         corfu-separator 32
         corfu-max-width 80
         corfu-preselect 'prompt

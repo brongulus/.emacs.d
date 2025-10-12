@@ -1,15 +1,14 @@
 ;;;; Org-conf -*- lexical-binding: t -*-
 
-(use-package org
-  :ensure nil
-  :bind (("C-x y" . yank-media)
-         :map org-mode-map
-         ("C-'" . avy-goto-char-timer)
-         ("C-," . my-scroll-other-window)
-         ("C-c C-x C-m" . my-toggle-org-markers))
-  :hook ((org-mode . visual-line-mode)
-         (org-mode . variable-pitch-mode))
-  :config
+(with-eval-after-load 'org
+  (define-key (current-global-map) (kbd "C-x y") #'yank-media)
+  (define-key org-mode-map (kbd "C-'") #'avy-goto-char-timer)
+  (define-key org-mode-map (kbd "C-,") #'my-scroll-other-window)
+  (define-key org-mode-map (kbd "C-c C-x C-m") #'my-toggle-org-markers)
+
+  (add-hook 'org-mode-hook #'visual-line-mode)
+  (add-hook 'org-mode-hook #'variable-pitch-mode)
+
   (setq org-modules '(ol-info ol-eww org-habit))
   (defun my-toggle-org-markers nil (interactive)
     (setq org-hide-emphasis-markers (not org-hide-emphasis-markers))
@@ -94,13 +93,11 @@
         org-latex-pdf-process
         '("tectonic -X compile -Z shell-escape -Z continue-on-errors --outdir=%o %f")))
 
-(use-package org-agenda
-  :ensure nil
-  :bind (("C-c o a" . (lambda nil (interactive)
-                        (org-agenda nil "n")))
-         :map org-agenda-mode-map
-         ("q" . org-agenda-exit))
-  :config
+(define-key (current-global-map) (kbd "C-c o a")
+            #'(lambda nil (interactive) (org-agenda nil "n")))
+(with-eval-after-load 'org-agenda
+  (define-key org-agenda-mode-map (kbd "q") #'org-agenda-exit)
+
   (add-to-list 'display-buffer-alist
                '("\\*Calendar\\*"
                  (display-buffer-reuse-window display-buffer-below-selected)
@@ -154,10 +151,8 @@
         '((agenda . " %i %-12b%t%s")
           (todo . " %i %?-12b"))))
 
-(use-package org-habit
-  :after org-agenda
-  :ensure nil
-  :config
+(with-eval-after-load 'org-habit
+  ;; :after org-agenda
   (setq org-habit-show-habits-only-for-today t
         org-habit-show-done-always-green t
         org-habit-show-all-today t
@@ -193,11 +188,9 @@
   (set-face-attribute 'org-habit-ready-future-face nil :background 'unspecified 
                       :foreground (face-foreground 'ansi-color-green)))
 
-(use-package org-capture
-  :ensure nil
-  :bind ("C-c o c" . org-capture)
+(define-key (current-global-map) (kbd "C-c o c") #'org-capture)
+(with-eval-after-load 'org-capture
   ;; :hook (org-capture-mode . meow-insert)
-  :config
   (add-hook 'org-capture-mode-hook
             (lambda nil
               (setq-local header-line-format nil)))
