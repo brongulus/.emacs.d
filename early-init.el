@@ -33,7 +33,10 @@
                 (tool-bar-lines . 0)
                 (vertical-scroll-bars . nil)
                 (horizontal-scroll-bars . nil)
-                (fullscreen . maximized))
+                (fullscreen . maximized)
+                (left-fringe . 8) (right-fringe . 8); (internal-border-width . 20)
+                (bottom-divider-width . 0) (right-divider-width . 0)
+                (undecorated-round . t))
               cursor-in-non-selected-windows nil
               bidi-display-reordering 'left-to-right
               bidi-inhibit-bpa t
