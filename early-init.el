@@ -34,7 +34,7 @@
                 (vertical-scroll-bars . nil)
                 (horizontal-scroll-bars . nil)
                 (fullscreen . maximized)
-                (left-fringe . 8) (right-fringe . 8); (internal-border-width . 20)
+                (left-fringe . 8) (right-fringe . 8) (internal-border-width . 10)
                 (bottom-divider-width . 0) (right-divider-width . 0)
                 (undecorated-round . t))
               cursor-in-non-selected-windows nil

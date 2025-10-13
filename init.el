@@ -28,11 +28,11 @@
 (run-with-idle-timer 0.3 nil #'my-lazy-load-modes)
 
 ;; --- Minimal theme --------------------------------------
-(load "~/.emacs.d/lisp/nano-theme" :noerr :no-message)
 (setq modus-themes-common-palette-overrides
       '((fringe bg-main)
         (bg-line-number-inactive bg-main)
         (bg-line-number-active bg-hl-line)))
+(load "~/.emacs.d/lisp/nano-theme" :noerr :no-message)
 
 ;; --- Header & mode lines --------------------------------------------------
 (setq-default flymake-mode-line-counter-format
@@ -42,7 +42,10 @@
               flymake-mode-line-format
               '(" " flymake-mode-line-exception flymake-mode-line-counters)
               global-mode-string nil)
-(setq-default mode-line-end-spaces '((:eval (when (or (eq major-mode 'compilation-mode)
+(setq-default mode-line-end-spaces '((:eval (when (and (featurep 'org-clock)
+                                                       (org-clock-is-active))
+                                              org-mode-line-string))
+                                     (:eval (when (or (eq major-mode 'compilation-mode)
                                                       (eq major-mode 'comint-mode))
                                               compilation-mode-line-errors))
                                      (:eval (when (bound-and-true-p flymake-mode)
@@ -91,9 +94,10 @@
                          (propertize (concat "   " prefix " "))))
                 mode-line-format-right-align
                 (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p)) eglot-mode-line-progress)
-                (:eval (unless (eq major-mode 'dired-mode)
+                (:eval (unless (or (eq major-mode 'dired-mode) (eq major-mode 'org-mode))
                          (propertize (concat " " (format-mode-line
-                                                  (when which-function-mode which-func-current)))
+                                                  (when which-function-mode which-func-current))
+                                             " ")
                                      'face (if (or (display-graphic-p) (mode-line-window-selected-p))
                                                'mode-line-active
                                              'mode-line-inactive))))
@@ -157,6 +161,7 @@
                      major-mode)))
          (with-selected-window (other-window-for-scrolling)
            (cond ((eq mode 'Info-mode) (Info-scroll-up))
+                 ((eq mode 'nov-mode) (nov-scroll-up 5))
                  ((eq mode 'doc-view-mode) (doc-view-scroll-up-or-next-page 5))
                  (t (scroll-up-command 5))))))
 (defun my-scroll-other-up nil (interactive)
@@ -164,6 +169,7 @@
                      major-mode)))
          (with-selected-window (other-window-for-scrolling)
            (cond ((eq mode 'Info-mode) (Info-scroll-down))
+                 ((eq mode 'nov-mode) (nov-scroll-down 5))
                  ((eq mode 'doc-view-mode) (doc-view-scroll-down-or-previous-page 5))
                  (t (scroll-down-command 5))))))
 
@@ -359,6 +365,7 @@
       browse-url-new-window-flag t)
 (with-eval-after-load 'eww
   (define-key eww-mode-map (kbd "SPC") ctl-x-map)
+  (define-key eww-mode-map (kbd "#") #'definition-at-point)
   (setq eww-header-line-format nil)
   (setq eww-auto-rename-buffer 'title))
 
@@ -416,7 +423,7 @@
                 ("vc-git :.\*" . 0) ("\\*vc.\*-log\\*" . 0) ("\\*eldoc\\*" . 0)
                 ("\\*Help\\*" . 0) ("\\*Warnings\\*" . 1) ("\\*log-edit-files\\*" . 1)
                 ("\\*Occur.*\\*$" . 1) ("\\*grep.*\\*$" . 1) ("CAPTURE-.*" . 1)
-                ("\\*Org Select\\*" . 1) ("\\*xref\\*" . 1)))
+                ("\\*Org Select\\*" . 1) ("\\*xref\\*" . 1))) ;("^\\*Dictionary\\*" . 1)))
   (add-to-list 'display-buffer-alist
                `(,(car pops)
                  display-buffer-in-side-window
@@ -429,6 +436,9 @@
                                            ,(unless (string= (car pops)
                                                              "^\\*compilation.*\\*$")
                                               '(mode-line-format . ""))))))))
+(add-to-list 'display-buffer-alist
+             '("^\\*Dictionary\\*" display-buffer-in-side-window
+               (side . right) (window-width . 80)))
 
 (defvar side-face-cookie nil)
 (defun toggle-side-normal-window ()
@@ -631,8 +641,18 @@
 
 ;; --- Misc functions -------------------------------------------------------
 (setq-default fill-column 125)
-(with-eval-after-load 'shr (setq shr-max-width 110 shr-width 110))
-(defvar old--mode-line-format nil)
+(with-eval-after-load 'shr
+  (setq shr-max-width 110 shr-width 110)
+  (defun my-url-expand-file-name-fixed (orig-fun file &optional base)
+    "Preserve spaces when expanding file URLs."
+    (funcall orig-fun (url-encode-url file) base))
+  (advice-add 'url-expand-file-name :around #'my-url-expand-file-name-fixed))
+
+(setq dictionary-server "localhost")
+(with-eval-after-load 'dictionary
+  (set-face-attribute 'dictionary-word-definition-face nil :family (face-attribute 'default :family)))
+
+
 (defun toggle-zen-buffer ()
   "Toggle center alignment of the buffer. Inspired by: jamesdyer."
   (interactive)
@@ -777,6 +797,13 @@
         (call-interactively cmd)
       (message "C-M-%c is not bound" key))))
 
+(defun definition-at-point nil
+  (interactive)
+  (if (use-region-p)
+      (dictionary-new-search
+       (cons (buffer-substring-no-properties (mark) (point)) dictionary-default-dictionary))
+    (dictionary-lookup-definition)))
+
 (define-key (current-global-map) (kbd "j") (lambda nil (interactive) (my-chord ?j ?k 'meow-mode)))
 (define-key (current-global-map) [escape] (lambda nil (interactive) (meow-mode t)))
 (define-key meow-mode-map (kbd "g") (make-sparse-keymap))
@@ -803,8 +830,8 @@
                 ("gS" . scratch-buffer) ("*" . isearch-forward-symbol-at-point)
                 ("ga" . (lambda nil (interactive) (org-agenda nil "n"))) ("gc" . org-capture)
                 ("`" . window-toggle-side-windows) ("zz" . pop-to-mark-command)
-                ("gi" . eglot-find-implementation) ("gs" . imenu) ("(" . down-list)
-                (")" . up-list) ("[" . backward-list) ("]" . forward-list)
+                ("gi" . eglot-find-implementation) ("gs" . imenu) ("(" . down-list) (")" . up-list)
+                ("[" . backward-list) ("]" . forward-list) ("#" . definition-at-point)
                 ("{" . flymake-goto-prev-error) ("}" . flymake-goto-next-error)
                 ("g/" . xref-find-definitions-other-window) ("gd" . xref-find-definitions)
                 ("gb" . xref-go-back) ("K" . my-goto-doc) (":" . goto-line) ("gr" . xref-find-references)
@@ -1150,7 +1177,8 @@ any directory proferred by `consult-dir'."
  0.2 nil (lambda nil
            (load "~/.emacs.d/lisp/dev-conf" nil :no-message)
            (when (require 'corfu nil t) (global-corfu-mode))
-           (add-to-list 'auto-mode-alist '("\\.zig\\'" . zig-mode))))
+           (add-to-list 'auto-mode-alist '("\\.zig\\'" . zig-mode))
+           (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))))
 
 ;; --- 31 stuff -------------------------------------------------------------
 (when (string> emacs-version "31")

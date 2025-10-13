@@ -3,7 +3,7 @@
 (with-eval-after-load 'org
   (define-key (current-global-map) (kbd "C-x y") #'yank-media)
   (define-key org-mode-map (kbd "C-'") #'avy-goto-char-timer)
-  (define-key org-mode-map (kbd "C-,") #'my-scroll-other-window)
+  (define-key org-mode-map (kbd "C-,") #'my-scroll-other-down)
   (define-key org-mode-map (kbd "C-c C-x C-m") #'my-toggle-org-markers)
 
   (add-hook 'org-mode-hook #'visual-line-mode)
@@ -97,6 +97,9 @@
             #'(lambda nil (interactive) (org-agenda nil "n")))
 (with-eval-after-load 'org-agenda
   (define-key org-agenda-mode-map (kbd "q") #'org-agenda-exit)
+  (set-face-attribute 'org-agenda-clocking nil :inherit 'highlight)
+  (set-face-attribute 'org-agenda-date nil :inherit 'org-agenda-date-today)
+  (set-face-attribute 'org-time-grid nil :foreground (face-foreground 'font-lock-comment-face))
 
   (add-to-list 'display-buffer-alist
                '("\\*Calendar\\*"
@@ -111,7 +114,9 @@
         org-agenda-window-setup 'current-window
         org-agenda-restore-windows-after-quit t
         org-agenda-start-with-log-mode t
+        org-agenda-log-mode-add-notes nil
         org-agenda-show-all-dates nil
+        org-agenda-start-on-weekday 0
         org-log-done t
         org-log-into-drawer t
         org-agenda-include-deadlines t)
@@ -129,8 +134,24 @@
       (face-remap-set-base 'header-line :height 1.4)
       (setq-local header-line-format
                   (format "%s %s" title (make-string (- width (length title)) ?─ t)))))
-
   (add-hook 'org-agenda-finalize-hook #'elegant-agenda--title)
+
+  (setq my/org-grid-w 31)
+  ;; TODO https://writequit.org/denver-emacs/presentations/2017-04-11-time-clocking-with-org.html
+  (defun my/org-agenda-clean-clockin (orig-fun &rest args)
+    "Reformat clock entries to show time ranges after task name."
+    (let ((result (apply orig-fun args)))
+      (when (and result (stringp result))
+        (if (string-match "\\([0-9]+:[0-9]+\\)-\\([0-9]+:[0-9]+\\)Clocked:\\s-+(\\([^)]+\\))\\(.+\\)$" result)
+            (let* ((start-time (match-string 1 result))
+                   (duration (concat "(" (match-string 3 result) ")"))
+                   (task-name (string-trim (match-string 4 result)))
+                   (prefix (substring result 0 (match-beginning 1)))
+                   (padlen (max 0 (- (1- my/org-grid-w) (length task-name))))
+                   (pad (make-string padlen ?┄ t)))
+              (concat prefix start-time (format " %7s " duration) task-name " " pad))
+          result))))
+  (advice-add 'org-agenda-format-item :around #'my/org-agenda-clean-clockin)
 
   (setq org-agenda-breadcrumbs-separator " ❱ "
         org-agenda-todo-keyword-format "%-1s"
@@ -138,18 +159,20 @@
         org-agenda-skip-timestamp-if-done t
         org-agenda-skip-scheduled-if-done t
         org-agenda-skip-deadline-if-done t
+        org-agenda-skip-deadline-prewarning-if-scheduled 'pre-scheduled
         org-agenda-scheduled-leaders '("" "")
         org-agenda-deadline-leaders '("" "")
         org-agenda-todo-keyword-format ""
         org-agenda-block-separator (string-to-char " ")
-        org-agenda-current-time-string "← now ─────────"
+        org-agenda-current-time-string
+        (concat "← now " (make-string (- my/org-grid-w 6) ?─ t))
         org-agenda-time-grid
-        '((daily today require-timed remove-matched)
+        `((daily today require-timed remove-matched)
           (800 1200 1600 2000)
-          "       " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+          ,(make-string 9 ?  t) ,(make-string my/org-grid-w ?┄ t))
         org-agenda-prefix-format
-        '((agenda . " %i %-12b%t%s")
-          (todo . " %i %?-12b"))))
+        '((agenda . " %i %-16b%t%s")
+          (todo . " %i %?-16b"))))
 
 (with-eval-after-load 'org-habit
   ;; :after org-agenda

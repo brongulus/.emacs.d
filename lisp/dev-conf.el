@@ -24,7 +24,7 @@
    packages))
 
 (my/ensure-package-installed
- 'corfu 'eldoc-box 'markdown-mode 'dape 'ox-hugo 'zig-mode) ;; 'diff-hl
+ 'corfu 'eldoc-box 'markdown-mode 'dape 'ox-hugo 'zig-mode 'nov) ;; 'diff-hl
 
 (with-eval-after-load 'corfu
   (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)

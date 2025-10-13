@@ -34,8 +34,9 @@
                                       :height :slant :overline :underline :box))))
     (dolist (face (seq-filter #'facep faces))
       (dolist (attribute attributes)
-        (set-face-attribute face nil attribute 'unspecified))
-      (set-face-attribute face nil :inherit sources))))
+        (set-face-attribute face nil attribute 'unspecified)
+        (when (face-attribute sources attribute)
+          (set-face-attribute face nil attribute (face-attribute sources attribute)))))))
 
 (defun nano-install-theme ()
   (set-face-attribute 'default nil :foreground (face-foreground 'nano-default)
@@ -138,34 +139,42 @@
   (with-eval-after-load 'org
     (dolist (face '(org-block org-block-begin-line org-block-end-line))
       (set-face-attribute face nil :background (face-background 'nano-highlight) :extend t :inherit 'default))
-    (set-face-attribute 'org-drawer nil :foreground (face-foreground 'nano-faded))
-    (set-face-attribute 'org-footnote nil :foreground (face-foreground 'nano-faded) :underline t)
+    (set-face-attribute 'org-mode-line-clock nil :weight 'bold
+                        :foreground (face-foreground 'warning)
+                        :background (face-background 'highlight))
+    (set-face-attribute 'org-drawer nil :foreground (face-foreground 'font-lock-comment-face))
+    (set-face-attribute 'org-footnote nil :foreground (face-foreground 'font-lock-comment-face) :underline t)
     (set-face-attribute 'org-date nil :foreground (face-foreground 'link))
     (set-face-attribute 'org-table nil :foreground (face-foreground 'nano-default))
     (set-face-attribute 'org-ellipsis nil :foreground (face-foreground 'nano-default) :underline nil)
     (set-face-attribute 'org-verbatim nil :inherit 'org-latex-and-related)
     (set-face-attribute 'org-code nil :inherit 'org-latex-and-related))
+  (with-eval-after-load 'org-agenda
+    (set-face-attribute 'org-agenda-structure nil :height 1.2 :foreground (face-foreground 'default))
+    (set-face-attribute 'org-agenda-done nil :foreground (face-foreground 'default)))
+
   (with-eval-after-load 'sh-script
     (set-face-attribute 'sh-quoted-exec nil :foreground (face-foreground 'nano-salient) :italic t))
   (with-eval-after-load 'shr
+    (set-face-attribute 'shr-text nil :height (face-attribute 'default :height))
     (set-face-attribute 'shr-code nil :weight 'bold))
 
   ;; Mode & header lines
   (set-face-attribute 'header-line nil
                       :background 'unspecified
                       :underline nil
-                      :overline (face-foreground 'nano-faded))
+                      :overline (face-foreground 'font-lock-comment-face))
   (set-face-attribute 'mode-line nil
                       :foreground (face-foreground 'default)
                       :background 'unspecified
                       :box '(:line-width 1 :style flat-button)
-                      :overline (face-foreground 'nano-faded))
+                      :overline (face-foreground 'font-lock-comment-face))
   (set-face-attribute 'mode-line-inactive nil
-                      :foreground (face-foreground 'nano-faded)
+                      :foreground (face-foreground 'font-lock-comment-face)
                       :background 'unspecified
                       :box '(:line-width 1 :style flat-button)
                       :inverse-video (not (display-graphic-p))
-                      :overline (face-foreground 'nano-faded))
+                      :overline (face-foreground 'font-lock-comment-face))
   (unless (display-graphic-p)
     (set-face-attribute 'mode-line-active nil
                         :foreground (face-background 'default)
