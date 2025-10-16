@@ -7,8 +7,8 @@
 
 ;; --- Typography stack -----------------------------------------------------
 (set-face-attribute 'default nil :height (if is-android 160 140) :family "Victor Mono")
-(set-face-attribute 'bold nil :weight 'bold)
-(set-face-attribute 'bold-italic nil :weight 'bold)
+(set-face-attribute 'bold nil :weight 'demi-bold)
+(set-face-attribute 'bold-italic nil :weight 'demi-bold)
 (dolist (face '(fixed-pitch-serif fixed-pitch variable-pitch variable-pitch-text))
   (set-face-attribute face nil :family (face-attribute 'default :family)))
 (set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
