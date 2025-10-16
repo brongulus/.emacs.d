@@ -6,10 +6,9 @@
       custom-file (make-temp-file "emacs-custom"))
 
 ;; --- Typography stack -----------------------------------------------------
-(set-face-attribute 'default nil :height (if is-android 160 140) :family "VictorMono Nerd Font Mono")
+(set-face-attribute 'default nil :height (if is-android 160 140) :family "Victor Mono")
 (set-face-attribute 'bold nil :weight 'bold)
 (set-face-attribute 'bold-italic nil :weight 'bold)
-(set-face-attribute 'fringe nil :background (face-background 'default))
 (dolist (face '(fixed-pitch-serif fixed-pitch variable-pitch variable-pitch-text))
   (set-face-attribute face nil :family (face-attribute 'default :family)))
 (set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
@@ -19,7 +18,7 @@
 ;; --- Activate / Deactivate modes ------------------------------------------
 (blink-cursor-mode -1) (kill-ring-deindent-mode 1)
 (run-with-idle-timer 0.1 nil #'fido-vertical-mode) ;; FIXME overkill?
-(global-subword-mode 1)
+(global-subword-mode 1) (global-eldoc-mode -1)
 (defun my-lazy-load-modes () (pixel-scroll-precision-mode 1) (winner-mode 1)
        (delete-selection-mode 1) (global-auto-revert-mode 1) (minibuffer-depth-indicate-mode)
        (which-key-mode 1) (savehist-mode 1) (which-function-mode 1)
@@ -31,7 +30,8 @@
 (setq modus-themes-common-palette-overrides
       '((fringe bg-main)
         (bg-line-number-inactive bg-main)
-        (bg-line-number-active bg-hl-line)))
+        (bg-line-number-active bg-main)))
+;; (load-theme 'modus-operandi-deuteranopia)
 (load "~/.emacs.d/lisp/nano-theme" :noerr :no-message)
 
 ;; --- Header & mode lines --------------------------------------------------
@@ -70,35 +70,46 @@
                                                             (tab-bar-select-tab ,(1+ i))))
                                                         map))
                                                      result)))
-                                           (concat " " (mapconcat 'identity (reverse result) " ")))))))
+                                           (concat " " (mapconcat 'identity
+                                                                  (reverse result) " ")))))))
                            (propertize tabs 'face 'bold))))
-                (:eval (when (and (buffer-narrowed-p)
-                                  (not (derived-mode-p 'Info-mode)))
-                         (propertize " (N)"))); 'face font-lock-constant-face)))
-                (:eval (propertize " %b" 'face (if (buffer-modified-p) 'bold-italic 'bold)
-                                   'help-echo (buffer-file-name)))
+                (:eval (when (and (buffer-narrowed-p) (not (derived-mode-p 'Info-mode)))
+                         (propertize " (N)")))
+                (:eval (if (buffer-modified-p)
+                           (propertize " * %b" 'face 'bold-italic 'help-echo (buffer-file-name))
+                         (propertize "   %b" 'face 'bold 'help-echo (buffer-file-name))))
                 (:eval (propertize (string-trim-left
                                     (format-mode-line vc-mode))
                                    'face '(:weight light :slant italic)))
-                (:eval (unless display-line-numbers (propertize " L%l")))
+                (:eval (unless display-line-numbers
+                         (propertize "   L%l" 'face 'shadow)))
                 (:eval (let ((prefix (cond
                                       ((or defining-kbd-macro executing-kbd-macro) "▶▶")
                                       ((region-active-p)
-                                       (concat "%p " (format "{%d}" (count-lines (region-beginning) (region-end)))))
+                                       (concat "%p " (format "{%d}"
+                                                             (count-lines (region-beginning)
+                                                                          (region-end)))))
+                                      ((eq major-mode 'nov-mode)
+                                       (format "[%d/%d]" ;(/ (window-start) 0.01 (point-max))
+                                               (1+ nov-documents-index)
+                                               (length nov-documents)))
                                       ((eq major-mode 'doc-view-mode)
-                                       (format "[%d/%d]" (doc-view-current-page) (doc-view-last-page-number)))
+                                       (format "[%d/%d]" (doc-view-current-page)
+                                               (doc-view-last-page-number)))
                                       ((or meow-mode (eq major-mode 'eww-mode)) "%p")
                                       ((buffer-modified-p)       "**")
                                       (buffer-read-only          "RO")
                                       (t                         "--"))))
-                         (propertize (concat "   " prefix " "))))
+                         (propertize (concat "   " prefix " ") 'face 'shadow)))
                 mode-line-format-right-align
-                (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p)) eglot-mode-line-progress)
+                (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
+                  eglot-mode-line-progress)
                 (:eval (unless (or (eq major-mode 'dired-mode) (eq major-mode 'org-mode))
                          (propertize (concat " " (format-mode-line
                                                   (when which-function-mode which-func-current))
                                              " ")
-                                     'face (if (or (display-graphic-p) (mode-line-window-selected-p))
+                                     'face (if (or (display-graphic-p)
+                                                   (mode-line-window-selected-p))
                                                'mode-line-active
                                              'mode-line-inactive))))
                 (:eval (when (mode-line-window-selected-p)
@@ -236,11 +247,11 @@
 (unless (require 'corfu nil t)
   (add-hook 'prog-mode-hook #'completion-preview-mode))
 (add-hook 'prog-mode-hook #'hs-minor-mode)
-(add-hook 'prog-mode-hook #'hl-line-mode)
 (dolist (mode-hook '(prog-mode-hook conf-mode-hook yaml-ts-mode-hook))
   (add-hook mode-hook #'display-line-numbers-mode))
-(add-to-list 'auto-mode-alist
-             '("\\.log\\'" . (lambda () (hl-line-mode) (display-line-numbers-mode))))
+;;   (add-hook mode-hook #'hl-line-mode))
+;; (add-to-list 'auto-mode-alist
+;;              '("\\.log\\'" . (lambda () (hl-line-mode) (display-line-numbers-mode))))
 ;; (add-hook 'emacs-lisp-mode-hook #'prettify-symbols-mode)
 
 (put 'narrow-to-region 'disabled nil)
@@ -524,7 +535,7 @@
              nil
              '(("\\<\\(FIXME\\|HACK\\|TODO\\|WIP\\|BUG\\|DONE\\)"
                 1 font-lock-warning-face t)
-               (";" . 'font-lock-comment-face)))))
+               (";" . 'shadow)))))
 
 (with-eval-after-load 'treesit
   (defun my/setup-install-grammars ()
@@ -581,7 +592,7 @@
 
 (dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook zig-mode-hook c++-mode-hook))
   (add-hook mode #'eglot-ensure))
-(add-hook 'go-ts-mode-hook #'whitespace-mode)
+;; (add-hook 'go-ts-mode-hook #'whitespace-mode)
 (add-hook 'rust-ts-mode-hook
           (lambda nil (add-to-list 'process-environment "CARGO_TERM_COLOR=always" :append)))
 
@@ -641,6 +652,7 @@
 
 ;; --- Misc functions -------------------------------------------------------
 (setq-default fill-column 125)
+(setq-default shr-max-width 110 shr-width 110)
 (with-eval-after-load 'shr
   (setq shr-max-width 110 shr-width 110)
   (defun my-url-expand-file-name-fixed (orig-fun file &optional base)
@@ -1097,6 +1109,14 @@
           (format " (%s)" output)
         "")))
 
+  (defun eshell-venv ()
+    "Activate Python virtual environment in eshell"
+    (interactive)
+    (let ((venv-path (expand-file-name ".venv")))
+      (when (file-directory-p venv-path)
+        (setenv "VIRTUAL_ENV" venv-path)
+        (eshell-set-path (concat venv-path "/bin:" (getenv "PATH"))))))
+  
   (defun eshell-insert-history () ; src: howard abrams
     "Displays the eshell history to select and insert back into your eshell."
     (interactive)
@@ -1175,14 +1195,13 @@ any directory proferred by `consult-dir'."
 ;; --- External -------------------------------------------------------------
 (run-with-idle-timer
  0.2 nil (lambda nil
-           (load "~/.emacs.d/lisp/dev-conf" nil :no-message)
-           (when (require 'corfu nil t) (global-corfu-mode))
-           (add-to-list 'auto-mode-alist '("\\.zig\\'" . zig-mode))
-           (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))))
+           (load "~/.emacs.d/lisp/dev-conf" nil :no-message)))
+;; (when (require 'corfu nil t) (global-corfu-mode)))) ;; FIXME
 
 ;; --- 31 stuff -------------------------------------------------------------
 (when (string> emacs-version "31")
-  (setq treesit-auto-install-grammar 'always)
+  (setq treesit-auto-install-grammar 'always
+        treesit-font-lock-level 4)
   (setq kill-region-dwim 'emacs-word)
   (with-eval-after-load 'dired (setq dired-hide-details-hide-absolute-location t))
   (with-eval-after-load 'eglot (setq eglot-code-action-indicator ""))

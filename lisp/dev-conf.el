@@ -24,7 +24,14 @@
    packages))
 
 (my/ensure-package-installed
- 'corfu 'eldoc-box 'markdown-mode 'dape 'ox-hugo 'zig-mode 'nov) ;; 'diff-hl
+ 'consult-eglot 'corfu 'eldoc-box 'markdown-mode 'dape 'ox-hugo 'zig-mode 'nov) ;; 'diff-hl
+
+(define-key (current-global-map) (kbd "C-x S") #'consult-eglot-symbols)
+(with-eval-after-load 'ox
+  (require 'ox-hugo))
+(add-to-list 'auto-mode-alist '("\\.zig\\'" . zig-mode))
+(add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
+(setq nov-header-line-format nil)
 
 (with-eval-after-load 'corfu
   (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)
@@ -34,7 +41,7 @@
   (define-key corfu-map [backtab] #'corfu-previous)
   (dolist (fn '("<next-line>" "<forward-line>" "<backward-char>" "<previous-line>"))
     (keymap-unset corfu-map (concat "<remap> " fn)))
-  (add-hook 'eshell-mode #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
+  (add-hook 'eshell-mode-hook #'(lambda () (setq-local corfu-auto nil) (corfu-mode)))
   (with-eval-after-load 'savehist
     (corfu-history-mode 1)
     (add-to-list 'savehist-additional-variables 'corfu-history))
@@ -51,7 +58,7 @@
         corfu-quit-no-match t
         corfu-quit-at-boundary 'separator
         corfu-preview-current nil
-        corfu-popupinfo-delay '(0.2 . 0.1)
+        corfu-popupinfo-delay '(0.3 . 0.2)
         corfu-preselect-first nil))
 
 (define-key (current-global-map) (kbd "s-<mouse-1>") #'my/eldoc-get-help)
@@ -84,9 +91,6 @@
     (set-face-attribute (intern (concat "markdown-header-face-" level)) nil :height 1.2 :inherit 'bold))
   (setq markdown-fontify-code-blocks-natively t
         markdown-max-image-size '(800 . 800)))
-
-(with-eval-after-load 'ox
-  (require 'ox-hugo))
 
 (setq dape-key-prefix "a")
 (setq dape-debug t)

@@ -8,11 +8,12 @@
 
   (add-hook 'org-mode-hook #'visual-line-mode)
   (add-hook 'org-mode-hook #'variable-pitch-mode)
+  (add-hook 'org-mode-hook (lambda () (org-cycle-hide-drawers 'all)))
 
   (setq org-modules '(ol-info ol-eww org-habit))
   (defun my-toggle-org-markers nil (interactive)
-    (setq org-hide-emphasis-markers (not org-hide-emphasis-markers))
-    (revert-buffer-quick))
+         (setq org-hide-emphasis-markers (not org-hide-emphasis-markers))
+         (revert-buffer-quick))
   ;; Taken from rougier: org-outer-indent
   (defun org-outer-indent--compute-prefixes ()
     "Compute prefix strings for regular text and headlines."
@@ -58,6 +59,14 @@
                                  t
                                (,electric-pair-inhibit-predicate c))))))
 
+  (org-clock-persistence-insinuate)
+  (setq org-global-properties ; org clock in effort times default
+        '(("Effort_ALL" . "0:15 0:30 0:45 1:00 2:00 3:00 4:00 5:00 6:00 0:00"))
+        org-clock-history-length 23
+        org-clock-persist t
+        org-clock-in-resume t
+        org-clock-out-remove-zero-time-clocks t)
+  
   (setq org-directory (concat "~/Dropbox/" "org")
         org-use-sub-superscripts '{}
         ;; org-export-with-sub-superscripts nil
@@ -115,6 +124,7 @@
         org-agenda-restore-windows-after-quit t
         org-agenda-start-with-log-mode t
         org-agenda-log-mode-add-notes nil
+        org-agenda-remove-tags t
         org-agenda-show-all-dates nil
         org-agenda-start-on-weekday 0
         org-log-done t
@@ -142,15 +152,33 @@
     "Reformat clock entries to show time ranges after task name."
     (let ((result (apply orig-fun args)))
       (when (and result (stringp result))
-        (if (string-match "\\([0-9]+:[0-9]+\\)-\\([0-9]+:[0-9]+\\)Clocked:\\s-+(\\([^)]+\\))\\(.+\\)$" result)
-            (let* ((start-time (match-string 1 result))
-                   (duration (concat "(" (match-string 3 result) ")"))
-                   (task-name (string-trim (match-string 4 result)))
-                   (prefix (substring result 0 (match-beginning 1)))
-                   (padlen (max 0 (- (1- my/org-grid-w) (length task-name))))
-                   (pad (make-string padlen ?┄ t)))
-              (concat prefix start-time (format " %7s " duration) task-name " " pad))
-          result))))
+        (cond
+         ((string-match
+           "\\([0-9]+:[0-9]+\\)-\\([0-9]+:[0-9]+\\)Clocked:\\s-+(\\([^)]+\\))\\(.+\\)$" result)
+          (let* ((start-time (match-string 1 result))
+                 (duration (concat "(" (match-string 3 result) ")"))
+                 (task (string-trim (match-string 4 result)))
+                 (prefix (substring result 0 (match-beginning 1)))
+                 (padlen (max 0 (- (1- my/org-grid-w) (length task))))
+                 (pad (make-string padlen ?┄ t)))
+            (format "%s%s %7s %s %s" prefix start-time duration task pad)))
+         ((string-match
+           "\\([0-9]+:[0-9]+\\)\\s-+Closed:\\s-+\\(.+\\)$" result)
+          (let* ((time (match-string 1 result))
+                 (task (string-trim (match-string 2 result)))
+                 (prefix (substring result 0 (match-beginning 1)))
+                 (padlen (max 0 (- (+ 2 my/org-grid-w) (length task))))
+                 (pad (make-string padlen ?┄ t)))
+            (format "%s%s %7s ✓ %s %s" prefix time "" task pad)))
+         ((string-match
+           "\\([0-9]+:[0-9]+\\)\\s-+Clocked:\\s-+\\(.+\\)$" result)
+          (let* ((time (match-string 1 result))
+                 (task (string-trim (match-string 2 result)))
+                 (prefix (substring result 0 (match-beginning 1)))
+                 (padlen (max 0 (- (1- my/org-grid-w) (length task))))
+                 (pad (make-string padlen ?┄ t)))
+            (format "%s%s %7s %s %s" prefix time "" task pad)))
+         (t result)))))
   (advice-add 'org-agenda-format-item :around #'my/org-agenda-clean-clockin)
 
   (setq org-agenda-breadcrumbs-separator " ❱ "

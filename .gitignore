@@ -28,6 +28,7 @@ ido.last
 network-security.data
 nov-places
 .org-id-locations
+org-clock-save.el
 package-quickstart.el
 package-quickstart.elc
 places
