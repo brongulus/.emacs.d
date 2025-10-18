@@ -42,15 +42,16 @@
               flymake-mode-line-format
               '(" " flymake-mode-line-exception flymake-mode-line-counters)
               global-mode-string nil)
-(setq-default mode-line-end-spaces '((:eval (when (and (featurep 'org-clock)
-                                                       (org-clock-is-active))
-                                              org-mode-line-string))
-                                     (:eval (when (or (eq major-mode 'compilation-mode)
-                                                      (eq major-mode 'comint-mode))
-                                              compilation-mode-line-errors))
-                                     (:eval (when (bound-and-true-p flymake-mode)
-                                              flymake-mode-line-format))
-                                     " "))
+(setq-default mode-line-end-spaces
+              '((:eval (when (and (featurep 'org-clock)
+                                  (org-clock-is-active))
+                         org-mode-line-string))
+                (:eval (when (or (eq major-mode 'compilation-mode)
+                                 (eq major-mode 'comint-mode))
+                         compilation-mode-line-errors))
+                (:eval (when (bound-and-true-p flymake-mode)
+                         flymake-mode-line-format))
+                " "))
 (setq-default mode-line-format
               '("%e"
                 (:eval (when (mode-line-window-selected-p)
@@ -310,7 +311,6 @@
       save-abbrevs nil
       save-interprogram-paste-before-kill t
       savehist-additional-variables '(register-alist kill-ring)
-      scroll-margin 0
       maximum-scroll-margin 0.5
       scroll-conservatively 101
       scroll-preserve-screen-position t
@@ -434,7 +434,8 @@
                 ("vc-git :.\*" . 0) ("\\*vc.\*-log\\*" . 0) ("\\*eldoc\\*" . 0)
                 ("\\*Help\\*" . 0) ("\\*Warnings\\*" . 1) ("\\*log-edit-files\\*" . 1)
                 ("\\*Occur.*\\*$" . 1) ("\\*grep.*\\*$" . 1) ("CAPTURE-.*" . 1)
-                ("\\*Org Select\\*" . 1) ("\\*xref\\*" . 1))) ;("^\\*Dictionary\\*" . 1)))
+                ("\\*Org Select\\*" . 1) ("\\*xref\\*" . 1) ;("^\\*Dictionary\\*" . 1)))
+                ("\\*Flymake diagnostics.*\\*$" . 1)))
   (add-to-list 'display-buffer-alist
                `(,(car pops)
                  display-buffer-in-side-window
@@ -469,7 +470,6 @@
         (face-remap-remove-relative side-face-cookie)))))
 
 (define-key (current-global-map) (kbd "<f10>") #'toggle-side-normal-window)
-
 (when (display-graphic-p)
   (dolist (modes '(occur-hook vc-git-log-edit-mode-hook
                               compilation-mode-hook term-mode-hook eshell-mode-hook
@@ -488,6 +488,8 @@
 
 (advice-add 'delete-window :around #'my-smart-window-selection-advice)
 
+(with-eval-after-load 'flymake
+  (define-key flymake-project-diagnostics-mode-map (kbd "q") #'quit-window))
 (with-eval-after-load 'comint-mode
   (define-key comint-mode-map "q" #'kill-buffer-and-window))
 (with-eval-after-load 'compile
@@ -619,14 +621,16 @@
         eglot-autoshutdown t
         eglot-inlay-hints-mode nil)
 
-  (add-to-list 'eglot-server-programs
-               '(python-mode . ("ruff" "server")))
+  (setq python-flymake-command '("ruff" "check" "--output-format=concise" 
+                                 "--stdin-filename" "stdin" "-"))
   (add-to-list 'eglot-server-programs
                '((ruby-mode ruby-ts-mode) . ("ruby-lsp")))
   (push '(zig-mode . ("zls")) eglot-server-programs)
 
   (add-hook 'eglot-managed-mode-hook
             (lambda ()
+              (when (eq major-mode 'python-mode)
+                (add-hook 'flymake-diagnostic-functions 'python-flymake nil t))
               (when (eq major-mode 'go-ts-mode)
                 (setq eldoc-documentation-functions
                       (remove #'eglot-signature-eldoc-function eldoc-documentation-functions)))))
@@ -651,7 +655,7 @@
 (define-key (current-global-map) (kbd"C-x '") #'foxy-run-all-tests)
 
 ;; --- Misc functions -------------------------------------------------------
-(setq-default fill-column 125)
+(setq-default fill-column 160)
 (setq-default shr-max-width 110 shr-width 110)
 (with-eval-after-load 'shr
   (setq shr-max-width 110 shr-width 110)
@@ -664,7 +668,6 @@
 (with-eval-after-load 'dictionary
   (set-face-attribute 'dictionary-word-definition-face nil :family (face-attribute 'default :family)))
 
-
 (defun toggle-zen-buffer ()
   "Toggle center alignment of the buffer. Inspired by: jamesdyer."
   (interactive)
@@ -676,12 +679,21 @@
     (visual-line-mode 1)
     (when (>= margin 0)
       (set-window-margins nil margin margin)
+      ;; persist for the buffer
+      (setq-local zen-buffer-enabled (> margin 0))
+      (setq-local zen-buffer-margin margin)
       (when special-modes
         (text-scale-set (if (eq text-scale-mode-amount 0) 2 0))
         (setq-local line-spacing (if (eq line-spacing 3) 0.5 3))))
-    (setq-local scroll-margin (if (zerop scroll-margin) sm-half 0) ;99999
-                scroll-conservatively (if (zerop scroll-conservatively) 101 0))))
+    (setq-local scroll-margin (if (or (zerop scroll-margin) (> margin 0)) sm-half 0)))) ;99999
 (define-key (current-global-map) (kbd "<f9>") #'toggle-zen-buffer)
+
+(defun zen-buffer-apply-margins ()
+  "Apply zen margins if enabled for this buffer."
+  (when (and (bound-and-true-p zen-buffer-enabled)
+             (bound-and-true-p zen-buffer-margin))
+    (set-window-margins nil zen-buffer-margin zen-buffer-margin)))
+(add-hook 'buffer-list-update-hook #'zen-buffer-apply-margins)
 
 (defun match-pair nil
   (interactive)
@@ -980,6 +992,7 @@
   (push '("gd" "vc-diff") eshell-command-aliases-list)
   (push '("glog" "vc-print-root-log") eshell-command-aliases-list)
   (push '("groot" "cd ${git rev-parse --show-toplevel}") eshell-command-aliases-list)
+  (push '("gpr" "git fetch origin pull/$1/head:$2; git checkout $2") eshell-command-aliases-list)
   (push '("nix-update-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} nix build .#darwinConfigurations.${hostname -s}.system --impure && cd -") eshell-command-aliases-list)
   (push '("darwin-rebuild-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} sudo ./result/sw/bin/darwin-rebuild switch --flake . --impure && cd -") eshell-command-aliases-list)
   (push '("gk" "export KUBECONFIG=${gardenctl kubectl-env zsh | awk -F\"'\" '/export KUBECONFIG/ {print \$2}'} && test -n \"$TMUX\" && (shell-command \"tmux set-option -p @kubeconfig \\\"$KUBECONFIG\\\"  && tmux refresh-client -S\")") eshell-command-aliases-list))
@@ -1206,7 +1219,7 @@ any directory proferred by `consult-dir'."
   (with-eval-after-load 'dired (setq dired-hide-details-hide-absolute-location t))
   (with-eval-after-load 'eglot (setq eglot-code-action-indicator ""))
   ;; (with-eval-after-load 'icomplete (setq icomplete-vertical-in-buffer-adjust-list t))
-  (setq flymake-show-diagnostics-at-end-of-line 'fancy))
+  (setq flymake-show-diagnostics-at-end-of-line 'short));fancy))
 
 ;; --- Speed benchmarking ---------------------------------------------------
 ;; (let ((init-time (float-time (time-subtract (current-time) init-start-time)))

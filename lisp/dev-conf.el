@@ -32,6 +32,7 @@
 (add-to-list 'auto-mode-alist '("\\.zig\\'" . zig-mode))
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
 (setq nov-header-line-format nil)
+(with-eval-after-load 'nov (define-key nov-mode-map (kbd "SPC") ctl-x-map))
 
 (with-eval-after-load 'corfu
   (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)
@@ -61,6 +62,7 @@
         corfu-popupinfo-delay '(0.3 . 0.2)
         corfu-preselect-first nil))
 
+(setq eldoc-box-clear-with-C-g t)
 (define-key (current-global-map) (kbd "s-<mouse-1>") #'my/eldoc-get-help)
 (defun my/eldoc-get-help ()
   (interactive)
@@ -82,8 +84,22 @@
                               'font-lock-face '(:strike-through t))
                   "\n"))))
 
+;; Src: https://github.com/joaotavora/eglot/discussions/1238#discussioncomment-13365314
+(defun my-markdown-follow-help-or-link-at-point-advice (orig-fun &rest args)
+  "Prefer to use the help-echo property as `browse-url' target."
+  (let* ((event-win (posn-window (event-start last-input-event)))
+         (help-echo (with-selected-frame (window-frame event-win)
+                      (with-current-buffer (window-buffer event-win)
+                        (get-text-property (point) 'help-echo))))
+         (help-is-url (url-type (url-generic-parse-url help-echo))))
+    (message "if %s (browse-url %S)" help-is-url help-echo)
+    (if help-is-url
+        (browse-url help-echo)
+      (apply orig-fun args))))
+
 (push '("\\..?md\\'" . markdown-mode) auto-mode-alist)
 (with-eval-after-load 'markdown-mode
+  (advice-add 'markdown-follow-link-at-point :around #'my-markdown-follow-help-or-link-at-point-advice)
   (add-hook 'markdown-mode-hook #'(lambda nil
                                     (visual-line-mode t)
                                     (when (display-graphic-p) (markdown-toggle-inline-images))))

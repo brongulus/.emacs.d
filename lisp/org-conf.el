@@ -77,6 +77,7 @@
         org-adapt-indentation t
         org-special-ctrl-a/e nil
         org-M-RET-may-split-line '((item . nil))
+        org-insert-heading-respect-content t
         org-fold-catch-invisible-edits 'show-and-error
         org-edit-src-content-indentation 0
         org-src-preserve-indentation t
@@ -127,7 +128,7 @@
         org-agenda-remove-tags t
         org-agenda-show-all-dates nil
         org-agenda-start-on-weekday 0
-        org-log-done t
+        org-log-done 'time
         org-log-into-drawer t
         org-agenda-include-deadlines t)
 

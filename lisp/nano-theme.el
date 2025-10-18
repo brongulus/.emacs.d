@@ -1,19 +1,19 @@
 ;;;; nano-theme -*- lexical-binding: t -*-
-(defvar nano-current-theme 'burn "Current nano variant being used.")
+(defvar nano-current-theme 'dark "Current nano variant being used.")
 (defvar nano-monochrome t "Should the font-locking have colours.")
 (setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
 (setq nano-bg-theme-map
-      '(("#f7f7f7" . light) ("#fbf8ef" . amber) ("#1b1b1b" . dark) ("#212121" . burn)))
+      '(("#f7f7f7" . light) ("#fbf8ef" . amber) ("#222323" . dark) ("#212121" . burn)))
 ;; FIXME: `shell-command-to-string' causes startup slowdown
-(run-with-idle-timer
- 0.5 nil
- (lambda nil
-   (unless (or (eq system-type 'android) (string= "" (shell-command-to-string "pgrep kitty")))
-     (let ((color (shell-command-to-string
-                   (concat kitty-send-command
-                           "get-colors | grep ^background | awk '{printf $2}'"))))
-       (setq nano-current-theme (cdr (assoc color nano-bg-theme-map)))
-       (funcall (intern (concat "nano-" (symbol-name nano-current-theme))))))))
+;; (run-with-idle-timer
+;;  0.5 nil
+;;  (lambda nil
+;;    (unless (or (eq system-type 'android) (string= "" (shell-command-to-string "pgrep kitty")))
+;;      (let ((color (shell-command-to-string
+;;                    (concat kitty-send-command
+;;                            "get-colors | grep ^background | awk '{printf $2}'"))))
+;;        (setq nano-current-theme (cdr (assoc color nano-bg-theme-map)))
+;;        (funcall (intern (concat "nano-" (symbol-name nano-current-theme))))))))
 (defface nano-default '((t)) ".")   (defface nano-default-i '((t)) ".")
 (defface nano-highlight '((t)) ".") (defface nano-highlight-i '((t)) ".")
 (defface nano-subtle '((t)) ".")    (defface nano-subtle-i '((t)) ".")
@@ -49,21 +49,18 @@
 (defun nano-install-theme ()
   (set-face-attribute 'default nil :foreground (face-foreground 'nano-default)
                       :background (face-background 'nano-default))
-  (dolist (item '((nano-default      . (font-lock-constant-face font-lock-keyword-face
-                                                                font-lock-builtin-face
-                                                                font-lock-property-name-face))
-                  (nano-highlight    . (hl-line highlight custom-button-mouse lazy-highlight ))
+  (dolist (item '((nano-highlight    . (hl-line highlight custom-button-mouse lazy-highlight))
                   (nano-subtle       . (match region isearch widget-field custom-button
                                               completions-common-part icomplete-selected-match))
-                  (nano-faded        . (shadow font-lock-comment-face font-lock-doc-face
-                                               icomplete-section completions-annotations))
-                  (nano-string       . (font-lock-string-face))
+                  (nano-faded        . (shadow font-lock-comment-face icomplete-section
+                                               completions-annotations))
+                  (nano-string       . (font-lock-string-face font-lock-doc-face))
                   (nano-salient      . (link help-argument-name custom-visibility
                                              minibuffer-prompt font-lock-type-face
                                              font-lock-variable-name-face
                                              font-lock-function-name-face))
-                  (nano-critical     . (error xref-file-header warning help-key-binding))
-                  (nano-critical-i   . (isearch-fail))
+                  (nano-critical     . (error warning help-key-binding))
+                  (nano-critical-i   . (secondary-selection isearch-fail))
                   (nano-faded-i      . (show-paren-match))))
     (nano-link-face (car item) (cdr item)))
 
@@ -71,19 +68,22 @@
   (set-face-attribute 'vertical-border nil :inherit nil
                       :background (face-background 'default)
                       :foreground (face-foreground 'shadow))
-  ;; (let ((bg-map '(("light" . "gray95") ("amber" . "gray95") ("dark" . "gray20"))))
-  ;;   (set-face-attribute 'font-lock-comment-face nil
-  ;;                       :background (cdr (assoc (symbol-name nano-current-theme) bg-map))))
+  ;; (set-face-attribute 'font-lock-doc-face nil :background (face-background 'highlight))
+  (with-eval-after-load 'xref
+    (set-face-attribute 'xref-match nil :underline t :inherit nil)
+    (set-face-attribute 'xref-file-header nil :background (face-background 'nano-highlight)))
   (dolist (face '(font-lock-string-face font-lock-doc-face font-lock-builtin-face))
     (set-face-attribute face nil :slant 'italic))
   (set-face-attribute 'font-lock-function-call-face nil :slant 'italic :weight 'regular)
   (set-face-attribute 'font-lock-variable-use-face nil :weight 'regular)
-  (set-face-attribute 'font-lock-property-name-face nil :inherit nil)
+  (dolist (face '(font-lock-builtin-face font-lock-constant-face font-lock-keyword-face
+                                         font-lock-property-use-face font-lock-property-name-face))
+    (set-face-attribute face nil :foreground (face-foreground 'default) :inherit nil))
   (set-face-attribute 'link nil :underline t)
   (set-face-attribute 'completions-common-part nil :underline t)
   (set-face-attribute 'region nil :extend nil)
   (set-face-attribute 'line-number-current-line nil :foreground (face-foreground 'default)
-		              :weight 'bold :background nil)
+		              :weight 'bold :background 'unspecified)
   (with-eval-after-load 'make-mode
     (set-face-attribute 'makefile-targets nil :inherit 'font-lock-keyword-face))
 
@@ -111,6 +111,9 @@
                               :foreground color-value :background color-value))))
     (set-face-attribute 'success nil :foreground
                         (alist-get theme-variant (alist-get 'green color-themes)))
+    (with-eval-after-load 'compile
+      (set-face-attribute 'compilation-warning nil
+                          :foreground (alist-get theme-variant (alist-get 'yellow color-themes))))
     (with-eval-after-load 'diff-hl
       (set-face-attribute 'diff-hl-insert nil :background (face-background 'default)
                           :foreground (alist-get theme-variant (alist-get 'green color-themes)))
@@ -124,7 +127,7 @@
       (let ((face-color-map
              '((font-lock-builtin-face . blue) (font-lock-function-name-face . blue)
                (font-lock-constant-face . yellow) (font-lock-preprocessor-face . orange)
-               (font-lock-string-face . green))))
+               (font-lock-doc-face . cyan) (font-lock-string-face . green))))
         (dolist (fc face-color-map)
           (set-face-attribute (car fc) nil :foreground
                               (alist-get theme-variant (alist-get (cdr fc) color-themes)))))
@@ -213,11 +216,11 @@
 (defun nano-dark (&rest args)
   "NANO dark theme (was based on nord colors)."
   (interactive)
-  (nano-set-face 'nano-default "#e8e8e8" "#1b1b1b")
+  (nano-set-face 'nano-default "#e8e8e8" "#222323")
   (nano-set-face 'nano-highlight nil "#2b2b2b")
   (nano-set-face 'nano-subtle "#e8e8e8" "#005f87")
   (nano-set-face 'nano-faded "#707070")
-  (nano-set-face 'nano-salient "#FFFFFF" nil 'demi-bold)
+  (nano-set-face 'nano-salient "#f0f6f0" nil 'demi-bold)
   (nano-set-face 'nano-critical "#f3a171" nil 'demi-bold)
   (nano-set-face 'nano-string "#aaaaaa")
   (setq nano-current-theme 'dark)
