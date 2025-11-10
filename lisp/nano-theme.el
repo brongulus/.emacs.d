@@ -3,7 +3,7 @@
 (defvar nano-monochrome t "Should the font-locking have colours.")
 (setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
 (setq nano-bg-theme-map
-      '(("#f7f7f7" . light) ("#fbf8ef" . amber) ("#222323" . dark) ("#212121" . burn)))
+      '(("#f7f7f7" . light) ("#F5E4C1" . amber) ("#222323" . dark) ("#121213" . burn)))
 ;; FIXME: `shell-command-to-string' causes startup slowdown
 ;; (run-with-idle-timer
 ;;  0.5 nil
@@ -44,17 +44,16 @@
         (when (face-attribute sources attribute)
           (set-face-attribute face nil attribute (face-attribute sources attribute)))))))
 
-(set-face-attribute 'cursor nil :background "#00c2ff") ; FIXME
-
 (defun nano-install-theme ()
+  (set-face-attribute 'cursor nil :background "#00c2ff")
   (set-face-attribute 'default nil :foreground (face-foreground 'nano-default)
                       :background (face-background 'nano-default))
   (dolist (item '((nano-highlight    . (hl-line highlight custom-button-mouse lazy-highlight))
                   (nano-subtle       . (match region isearch widget-field custom-button
                                               completions-common-part icomplete-selected-match))
                   (nano-faded        . (shadow font-lock-comment-face icomplete-section
-                                               completions-annotations))
-                  (nano-string       . (font-lock-string-face font-lock-doc-face))
+                                               completions-annotations line-number))
+                  (nano-string       . (font-lock-string-face font-lock-doc-face icomplete-first-match))
                   (nano-salient      . (link help-argument-name custom-visibility
                                              minibuffer-prompt font-lock-type-face
                                              font-lock-variable-name-face
@@ -75,7 +74,8 @@
   (dolist (face '(font-lock-string-face font-lock-doc-face font-lock-builtin-face))
     (set-face-attribute face nil :slant 'italic))
   (set-face-attribute 'font-lock-function-call-face nil :slant 'italic :weight 'regular)
-  (set-face-attribute 'font-lock-variable-use-face nil :weight 'regular)
+  (set-face-attribute 'font-lock-variable-use-face nil :weight 'regular
+                      :foreground (face-foreground 'default))
   (dolist (face '(font-lock-builtin-face font-lock-constant-face font-lock-keyword-face
                                          font-lock-property-use-face font-lock-property-name-face))
     (set-face-attribute face nil :foreground (face-foreground 'default) :inherit nil))
@@ -93,11 +93,11 @@
   (let* ((color-themes ;; ansi-colors
           '((black   . ((dark . "#30343d") (light . "#EEEEEE")))
             (red     . ((dark . "#c47779") (light . "#c56655")))
-            (green   . ((dark . "#a7bf87") (light . "#5f8700")))
-            (yellow  . ((dark . "#d9c18c") (light . "#bb9200")))
-            (blue    . ((dark . "#80ace3") (light . "#0184bc")))
-            (magenta . ((dark . "#ab7bca") (light . "#7646c1")))
-            (cyan    . ((dark . "#7db2bd") (light . "#6594bd")))
+            (green   . ((dark . "#99c476") (light . "#427b58")))
+            (yellow  . ((dark . "#d9c18c") (light . "#b57614"))) ; dark FFBF00
+            (blue    . ((dark . "#6eaadb") (light . "#04508c")))
+            (magenta . ((dark . "#c9b1ca") (light . "#7646c1")))
+            (cyan    . ((dark . "#6fcfd2") (light . "#076678")))
             (white   . ((dark . "#cccccc") (light . "#1a1a1a")))))
          (theme-variant (if (or (eq nano-current-theme 'light) (eq nano-current-theme 'amber))
                             'light 'dark)))
@@ -109,6 +109,15 @@
                               :foreground color-value :background color-value)
           (set-face-attribute (intern (format "ansi-color-bright-%s" color-name)) nil
                               :foreground color-value :background color-value))))
+    (with-eval-after-load 'icomplete
+      (set-face-attribute 'icomplete-first-match nil :foreground
+                          (alist-get theme-variant (alist-get 'blue color-themes))))
+    (with-eval-after-load 'ido
+      (set-face-attribute 'ido-subdir nil :foreground (face-foreground 'warning))
+      (set-face-attribute 'ido-first-match nil :foreground
+                          (alist-get theme-variant (alist-get 'blue color-themes)))
+      (set-face-attribute 'ido-only-match nil :foreground
+                          (alist-get theme-variant (alist-get 'green color-themes))))
     (set-face-attribute 'success nil :foreground
                         (alist-get theme-variant (alist-get 'green color-themes)))
     (with-eval-after-load 'compile
@@ -121,20 +130,58 @@
                           :foreground (alist-get theme-variant (alist-get 'yellow color-themes)))
       (set-face-attribute 'diff-hl-delete nil :background (face-background 'default)
                           :foreground (alist-get theme-variant (alist-get 'red color-themes))))
+    (with-eval-after-load 'howm
+      (set-face-attribute 'action-lock-face nil :underline
+                          (alist-get theme-variant (alist-get 'blue color-themes)))
+      (set-face-attribute 'howm-mode-keyword-face nil :background
+                          (alist-get theme-variant (alist-get 'blue color-themes))
+                          :foreground (face-background 'default))
+      (set-face-attribute 'howm-mode-title-face nil :foreground
+                          (alist-get theme-variant (alist-get 'blue color-themes)))
+      (set-face-attribute 'howm-mode-ref-face nil :foreground
+                          (alist-get theme-variant (alist-get 'cyan color-themes)))
+      (set-face-attribute 'howm-reminder-todo-face nil :foreground
+                          (alist-get theme-variant (alist-get 'yellow color-themes)))
+      (set-face-attribute 'howm-reminder-today-face nil :background
+                          (face-foreground 'warning))
+      (set-face-attribute 'howm-reminder-defer-face nil :foreground
+                          (alist-get theme-variant (alist-get 'magenta color-themes)))
+      (set-face-attribute 'howm-reminder-schedule-face nil :foreground
+                          (alist-get theme-variant (alist-get 'green color-themes)))
+      (set-face-attribute 'howm-reminder-deadline-face nil :foreground
+                          (alist-get theme-variant (alist-get 'red color-themes)))
+      (set-face-attribute 'howm-reminder-late-deadline-face nil :background
+                          (alist-get theme-variant (alist-get 'red color-themes)))
+      (set-face-attribute 'howm-reminder-normal-face nil :foreground
+                          (alist-get theme-variant (alist-get 'blue color-themes)))
+      (set-face-attribute 'howm-view-name-face nil :background
+                          (alist-get theme-variant (alist-get 'blue color-themes))
+                          :foreground (face-background 'default))
+      (set-face-attribute 'howm-view-hilit-face nil :underline
+                          (alist-get theme-variant (alist-get 'blue color-themes))
+                          :foreground 'unspecified)
+      (set-face-attribute 'howm-view-empty-face nil :background 'unspecified)
+      )
+    
     ;; (font-lock-variable-name-face . blue) (font-lock-keyword-face . magenta)
     ;; (font-lock-type-face . cyan) (font-lock-property-name-face . magenta)
     (unless nano-monochrome
       (let ((face-color-map
              '((font-lock-builtin-face . blue) (font-lock-function-name-face . blue)
-               (font-lock-constant-face . yellow) (font-lock-preprocessor-face . orange)
-               (font-lock-doc-face . cyan) (font-lock-string-face . green))))
+               (font-lock-constant-face . yellow) (font-lock-number-face . yellow)
+               (font-lock-preprocessor-face . magenta) (font-lock-doc-face . cyan)
+               (font-lock-string-face . green))))
         (dolist (fc face-color-map)
           (set-face-attribute (car fc) nil :foreground
                               (alist-get theme-variant (alist-get (cdr fc) color-themes)))))
       (set-face-attribute 'font-lock-builtin-face nil :slant 'unspecified)
       (set-face-attribute 'font-lock-function-call-face nil :slant 'unspecified)
-      (set-face-attribute 'font-lock-function-name-face nil :weight 'regular)))
+      (set-face-attribute 'font-lock-function-name-face nil :weight 'demi-bold)))
 
+  (with-eval-after-load 'dired
+    (set-face-attribute 'dired-marked nil :foreground (face-foreground 'font-lock-string-face))
+    (set-face-attribute 'dired-header nil :foreground (face-foreground 'font-lock-function-name-face)))
+  
   (with-eval-after-load 'eglot
     (set-face-attribute 'eglot-mode-line nil :inherit 'nano-faded)
     (set-face-attribute 'eglot-highlight-symbol-face nil :underline t))
@@ -154,7 +201,7 @@
 
   (with-eval-after-load 'outline
     (dolist (face '(outline-1 outline-2 outline-3 outline-4 outline-5 outline-6 outline-7 outline-8))
-      (set-face-attribute face nil :height 1.2 :inherit 'bold)))
+      (set-face-attribute face nil :height 1.1 :inherit 'bold)))
   (with-eval-after-load 'markdown-mode
     (dolist (face '(markdown-pre-face)); markdown-code-face))
       (set-face-attribute face nil :background (face-background 'nano-highlight) :extend t)))
@@ -205,9 +252,9 @@
   (interactive)
   (nano-set-face 'nano-default "#37474F" "#F7F7F7")
   (nano-set-face 'nano-highlight nil "#d0d0d0")
-  (nano-set-face 'nano-subtle "#F7F7F7" "#005f87")
+  (nano-set-face 'nano-subtle "#37474F" "#BAD7FB")
   (nano-set-face 'nano-faded "#949494")
-  (nano-set-face 'nano-salient "#37474F" nil 'demi-bold)
+  (nano-set-face 'nano-salient "#1b2229" nil 'demi-bold)
   (nano-set-face 'nano-critical "#eb9250" nil 'demi-bold)
   (nano-set-face 'nano-string "#767676")
   (setq nano-current-theme 'light)
@@ -216,13 +263,13 @@
 (defun nano-dark (&rest args)
   "NANO dark theme (was based on nord colors)."
   (interactive)
-  (nano-set-face 'nano-default "#e8e8e8" "#222323")
+  (nano-set-face 'nano-default "#d0d0d0" "#222323")
   (nano-set-face 'nano-highlight nil "#2b2b2b")
   (nano-set-face 'nano-subtle "#e8e8e8" "#005f87")
   (nano-set-face 'nano-faded "#707070")
-  (nano-set-face 'nano-salient "#f0f6f0" nil 'demi-bold)
-  (nano-set-face 'nano-critical "#f3a171" nil 'demi-bold)
-  (nano-set-face 'nano-string "#aaaaaa")
+  (nano-set-face 'nano-salient "#ffffff" nil 'bold)
+  (nano-set-face 'nano-critical "#b77e64" nil 'bold)
+  (nano-set-face 'nano-string "#bcd7d3")
   (setq nano-current-theme 'dark)
   (nano-install-theme))
 
@@ -230,22 +277,26 @@
   "Change background of light theme to plan9"
   (interactive)
   (nano-light)
-  (set-face-attribute 'nano-default nil :foreground "#352f19" :background "#fbf8ef")
-  (set-face-attribute 'nano-highlight nil :background "#E9E4E2")
+  (set-face-attribute 'nano-default nil :foreground "#352f19" :background "#F5E4C1")
+  (set-face-attribute 'nano-highlight nil :background "wheat3")
+  (set-face-attribute 'nano-subtle nil :foreground "#F7F7F7" :background "#005f87")
+  (set-face-attribute 'nano-faded nil :foreground "#a89984")
   (let ((nano-current-theme 'light)) (nano-install-theme))
   (setq nano-current-theme 'amber))
 
 (defun nano-burn (&rest args)
-  "Darken background of dark theme"
+  "You know what it is, Black 'n Yellow"
   (interactive)
   (nano-dark)
-  (set-face-attribute 'nano-default nil :foreground "#e3dac4" :background "#212121")
-  (set-face-attribute 'nano-faded nil :foreground "#666666")
-  (set-face-attribute 'nano-subtle nil :foreground "#e3dac4" :background "#005f87")
-  (set-face-attribute 'nano-string nil :foreground "#ebdbb2")
-  (set-face-attribute 'nano-salient nil :foreground "#f9f5d7")
+  (set-face-attribute 'nano-default nil :foreground "#ddc898" :background "#121213")
+  (set-face-attribute 'nano-faded nil :foreground "#7a766e")
+  (set-face-attribute 'nano-subtle nil :foreground "#ddc898" :background "#005f87")
+  (set-face-attribute 'nano-string nil :foreground "#af9661")
+  (set-face-attribute 'nano-salient nil :foreground "#d4af5a" :weight 'demi-bold)
   (set-face-attribute 'nano-highlight nil :background "#393939")
   (let ((nano-current-theme 'dark)) (nano-install-theme))
+  (set-face-attribute 'font-lock-variable-name-face nil :weight 'regular)
+  (set-face-attribute 'font-lock-variable-use-face nil :weight 'regular)
   (setq nano-current-theme 'burn))
 
 (defun nano-toggle-theme nil
