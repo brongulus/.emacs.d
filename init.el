@@ -6,18 +6,28 @@
       custom-file (make-temp-file "emacs-custom"))
 
 ;; --- Typography stack -----------------------------------------------------
-(set-face-attribute 'default nil :height (if is-android 160 140) :family "Victor Mono")
-(set-face-attribute 'bold nil :weight 'demi-bold)
-(set-face-attribute 'bold-italic nil :weight 'demi-bold)
-(dolist (face '(fixed-pitch-serif fixed-pitch variable-pitch variable-pitch-text))
-  (set-face-attribute face nil :family (face-attribute 'default :family)))
+(defvar my-font-configs
+  '((input :family "Input Mono Narrow" :weight light :bold-weight regular)
+    (ioskeley :family "Ioskeley Mono" :weight regular :bold-weight bold)
+    (victor :family "Victor Mono" :weight medium :bold-weight bold)))
+(let ((config (alist-get 'input my-font-configs)))
+  (set-face-attribute 'default nil :family (plist-get config :family)
+                      :weight (plist-get config :weight) :height (if is-android 160 150))
+  (set-face-attribute 'bold nil :weight (plist-get config :bold-weight))
+  (set-face-attribute 'bold-italic nil :weight (plist-get config :bold-weight))
+  (dolist (face '(fixed-pitch-serif fixed-pitch variable-pitch variable-pitch-text))
+    (set-face-attribute face nil :family (face-attribute 'default :family))))
+(setq-default line-spacing 7) ; 3
+(set-face-attribute 'nobreak-space nil :underline nil)
 (set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
 (set-display-table-slot standard-display-table 'truncation (make-glyph-code ?…))
 (set-display-table-slot standard-display-table 'vertical-border (make-glyph-code ?│))
+;; (setq default-input-method 'english-dvorak)
+;; (define-key (current-global-map) (kbd "<f8>") #'toggle-input-method)
 
 ;; --- Activate / Deactivate modes ------------------------------------------
 (blink-cursor-mode -1) (kill-ring-deindent-mode 1)
-(run-with-idle-timer 0.1 nil #'fido-vertical-mode) ;; FIXME overkill?
+(run-with-idle-timer 0.1 nil #'fido-vertical-mode)
 (global-subword-mode 1) (global-eldoc-mode -1)
 (defun my-lazy-load-modes () (pixel-scroll-precision-mode 1) (winner-mode 1)
        (delete-selection-mode 1) (global-auto-revert-mode 1) (minibuffer-depth-indicate-mode)
@@ -30,7 +40,9 @@
 (setq modus-themes-common-palette-overrides
       '((fringe bg-main)
         (bg-line-number-inactive bg-main)
-        (bg-line-number-active bg-main)))
+        (bg-line-number-active bg-main))
+      modus-vivendi-palette-overrides
+      '((bg-main "#222323")))
 ;; (load-theme 'modus-operandi-deuteranopia)
 (load "~/.emacs.d/lisp/nano-theme" :noerr :no-message)
 
@@ -105,14 +117,15 @@
                 mode-line-format-right-align
                 (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
                   eglot-mode-line-progress)
-                (:eval (unless (or (eq major-mode 'dired-mode) (eq major-mode 'org-mode))
-                         (propertize (concat " " (format-mode-line
-                                                  (when which-function-mode which-func-current))
-                                             " ")
-                                     'face (if (or (display-graphic-p)
-                                                   (mode-line-window-selected-p))
-                                               'mode-line-active
-                                             'mode-line-inactive))))
+                (:eval (propertize
+                        (concat " "
+                                (if (derived-mode-p 'prog-mode)
+                                    (format-mode-line (when which-function-mode which-func-current))
+                                  (format-time-string "%a %H:%M"))
+                                " ")
+                        'face (if (or (display-graphic-p) (mode-line-window-selected-p))
+                                  'mode-line-active
+                                'mode-line-inactive)))
                 (:eval (when (mode-line-window-selected-p)
                          mode-line-end-spaces))))
 
@@ -121,6 +134,7 @@
 ;; --- Minibuffer completion ------------------------------------------------
 (setq tab-always-indent 'complete
       tab-first-completion 'word-or-paren
+      completions-detailed t
       icomplete-delay-completions-threshold 0
       icomplete-compute-delay 0
       icomplete-show-matches-on-no-input t
@@ -128,7 +142,7 @@
       icomplete-prospects-height 9
       icomplete-separator " . "
       icomplete-with-completion-tables t
-      icomplete-in-buffer t
+      icomplete-in-buffer nil; t
       icomplete-max-delay-chars 0
       icomplete-scroll t
       resize-mini-windows 'grow-only)
@@ -139,8 +153,7 @@
   (define-key icomplete-fido-mode-map (kbd "<escape>") #'minibuffer-keyboard-quit))
 
 (add-hook 'minibuffer-setup-hook
-          (lambda nil (setq-local truncate-lines t
-                                  line-spacing nil)))
+          (lambda nil (setq-local truncate-lines t line-spacing nil)))
 
 (defun file-capf ()
   "File completion at point function. src: eshelyaron."
@@ -185,29 +198,20 @@
                  ((eq mode 'doc-view-mode) (doc-view-scroll-down-or-previous-page 5))
                  (t (scroll-down-command 5))))))
 
-(define-key (current-global-map) (kbd "C-x C-m") #'execute-extended-command)
+(dolist (bind '(("C-x C-m" . execute-extended-command)
+                ("C-x x b" . ibuffer) ("C-x x e" . eval-last-sexp)
+                ("C-x x c" . save-buffers-kill-emacs)
+                ("C-x x f" . find-file) ("C-x x s" . save-buffer)
+                ("C-x x z" . restart-emacs) ("C-z" . delete-backward-char)
+                ("C-o" . other-window) ("C-x /" . project-find-regexp)
+                ("C-x ;" . comment-line) ("C-h ." . my-goto-doc)
+                ("C-h '" . describe-face) ("C-," . my-scroll-other-down)
+                ("C-." . my-scroll-other-up) ("C-<tab>" . tab-next)
+                ("C-S-<tab>" . tab-previous) ("C-x C-b" . ibuffer)
+                ("M-s r" . replace-regexp) ("C-x k" . kill-current-buffer)
+                ("C-x f" . recentf-open) ("C-g" . nano-quit)))
+  (define-key (current-global-map) (kbd (car bind)) (cdr bind)))
 (define-key (current-global-map) (kbd "C-x m") esc-map)
-(define-key (current-global-map) (kbd "C-x x b") #'ibuffer)
-(define-key (current-global-map) (kbd "C-x x c") #'save-buffers-kill-emacs)
-(define-key (current-global-map) (kbd "C-x x e") #'eval-last-sexp)
-(define-key (current-global-map) (kbd "C-x x f") #'find-file)
-(define-key (current-global-map) (kbd "C-x x s") #'save-buffer)
-(define-key (current-global-map) (kbd "C-x x z") #'restart-emacs)
-(define-key (current-global-map) (kbd "C-o") #'other-window)
-(define-key (current-global-map) (kbd "C-x /") #'project-find-regexp)
-(define-key (current-global-map) (kbd "C-x ;") #'comment-line)
-(define-key (current-global-map) (kbd "C-h .") #'my-goto-doc)
-(define-key (current-global-map) (kbd "C-h '") #'describe-face)
-(define-key (current-global-map) (kbd "C-,") #'my-scroll-other-down)
-(define-key (current-global-map) (kbd "C-.") #'my-scroll-other-up)
-(define-key (current-global-map) (kbd "C-<tab>") #'tab-next)
-(define-key (current-global-map) (kbd "C-S-<tab>") #'tab-previous)
-(define-key (current-global-map) (kbd "C-x C-b") #'ibuffer)
-(define-key (current-global-map) (kbd "M-s r") #'replace-regexp)
-(define-key (current-global-map) (kbd "C-x k") #'kill-current-buffer)
-(define-key (current-global-map) (kbd "C-x f") #'recentf-open)
-(define-key (current-global-map) (kbd "C-g") #'nano-quit)
-(define-key (current-global-map) (kbd "C-z")  #'restart-emacs)
 (define-key (current-global-map) (kbd "C-<wheel-up>") nil)
 (define-key (current-global-map) (kbd "C-<wheel-down>") nil)
 (define-key window-prefix-map (kbd "m") #'maximize-window)
@@ -218,11 +222,10 @@
 (set-default-coding-systems 'utf-8)
 (setq-default tab-width 4
               completion-styles
-              '(basic partial-completion substring flex emacs22)
+              '(basic substring initials flex) ;partial-completion
               completion-cycle-threshold t
               ;; cursor-type 'bar
               enable-recursive-minibuffers t
-              line-spacing 3
               imenu-flatten t
               display-line-numbers-width 4
               display-line-numbers-widen t
@@ -240,6 +243,12 @@
               use-dialog-box nil
               uniquify-buffer-name-style 'forward)
 
+(setq completion-category-defaults nil
+      completion-category-overrides
+      '((project-file (styles basic partial-completion substring initials flex))
+        (file (styles basic partial-completion substring initials flex))))
+
+(add-hook 'after-save-hook #'executable-make-buffer-file-executable-if-script-p)
 (when (featurep 'recentf)
   (add-hook 'kill-emacs-hook #'recentf-cleanup))
 (add-hook 'dired-mode-hook #'dired-hide-details-mode)
@@ -251,8 +260,7 @@
 (dolist (mode-hook '(prog-mode-hook conf-mode-hook yaml-ts-mode-hook))
   (add-hook mode-hook #'display-line-numbers-mode))
 ;;   (add-hook mode-hook #'hl-line-mode))
-;; (add-to-list 'auto-mode-alist
-;;              '("\\.log\\'" . (lambda () (hl-line-mode) (display-line-numbers-mode))))
+(add-to-list 'auto-mode-alist '("\\.log\\'" . (lambda () (display-line-numbers-mode))))
 ;; (add-hook 'emacs-lisp-mode-hook #'prettify-symbols-mode)
 
 (put 'narrow-to-region 'disabled nil)
@@ -267,6 +275,7 @@
       lock-file-name-transforms '(("\\`/.*/\\([^/]+\\)\\'" "/var/tmp/\\1" t))
       ;; ^^ https://emacs.stackexchange.com/a/81518/28970
       auto-revert-verbose nil
+      ;; auto-revert-avoid-polling t
       blink-cursor-delay 0.8
       comint-prompt-read-only t
       comint-buffer-maximum-size 2048
@@ -275,6 +284,8 @@
       completion-auto-help 'lazy;nil
       confirm-kill-emacs 'yes-or-no-p
       confirm-nonexistent-file-or-buffer nil
+      delete-pair-blink-delay t
+      delete-pair-push-mark t
       diff-default-read-only t
       dired-clean-confirm-killing-deleted-buffers nil
       dired-create-destination-dirs 'ask
@@ -371,14 +382,6 @@
   (define-key dired-mode-map (kbd "q") #'kill-current-buffer)
   (define-key dired-mode-map (kbd "RET") #'dired-find-alternate-file)
   (define-key dired-mode-map (kbd "C-o") #'other-window))
-
-(setq browse-url-browser-function 'eww-browse-url
-      browse-url-new-window-flag t)
-(with-eval-after-load 'eww
-  (define-key eww-mode-map (kbd "SPC") ctl-x-map)
-  (define-key eww-mode-map (kbd "#") #'definition-at-point)
-  (setq eww-header-line-format nil)
-  (setq eww-auto-rename-buffer 'title))
 
 (add-hook 'ediff-before-setup-hook #'tab-bar-new-tab)
 (add-hook 'ediff-quit-hook
@@ -655,15 +658,7 @@
 (define-key (current-global-map) (kbd"C-x '") #'foxy-run-all-tests)
 
 ;; --- Misc functions -------------------------------------------------------
-(setq-default fill-column 160)
-(setq-default shr-max-width 110 shr-width 110)
-(with-eval-after-load 'shr
-  (setq shr-max-width 110 shr-width 110)
-  (defun my-url-expand-file-name-fixed (orig-fun file &optional base)
-    "Preserve spaces when expanding file URLs."
-    (funcall orig-fun (url-encode-url file) base))
-  (advice-add 'url-expand-file-name :around #'my-url-expand-file-name-fixed))
-
+(setq-default fill-column 140)
 (setq dictionary-server "localhost")
 (with-eval-after-load 'dictionary
   (set-face-attribute 'dictionary-word-definition-face nil :family (face-attribute 'default :family)))
@@ -683,10 +678,10 @@
       (setq-local zen-buffer-enabled (> margin 0))
       (setq-local zen-buffer-margin margin)
       (when special-modes
-        (text-scale-set (if (eq text-scale-mode-amount 0) 2 0))
-        (setq-local line-spacing (if (eq line-spacing 3) 0.5 3))))
+        (text-scale-set (if (eq text-scale-mode-amount 0) 2.4 0))
+        (setq-local line-spacing (if (eq line-spacing 7) 0.7 7))))
     (setq-local scroll-margin (if (or (zerop scroll-margin) (> margin 0)) sm-half 0)))) ;99999
-(define-key (current-global-map) (kbd "<f9>") #'toggle-zen-buffer)
+(define-key (current-global-map) (kbd "C-x 9") #'toggle-zen-buffer)
 
 (defun zen-buffer-apply-margins ()
   "Apply zen margins if enabled for this buffer."
@@ -707,6 +702,16 @@
   (let ((map (make-sparse-keymap)))
     (define-key map [t] #'insert-pair)
     map))
+
+(defun mark-inner () ;; src: Signal-Syllabub3072
+  "Mark interior of the current list."
+  (interactive)
+  (condition-case nil
+      (progn
+        (backward-up-list) (down-list)
+        (set-mark (point))
+        (up-list) (backward-down-list))
+    (error (message "No inner list found."))))
 
 (defun my-select-fwd-line (arg)
   "Select ARG lines from current line and move cursor. src: Kaushal Modi."
@@ -860,7 +865,7 @@
                 ("g/" . xref-find-definitions-other-window) ("gd" . xref-find-definitions)
                 ("gb" . xref-go-back) ("K" . my-goto-doc) (":" . goto-line) ("gr" . xref-find-references)
                 ("gx" . flymake-show-buffer-diagnostics) ("gX" . flymake-show-project-diagnostics)
-                ("&" . align-regexp) ("C" . string-rectangle) ("p" . yank)
+                ("&" . align-regexp) ("C" . string-rectangle) ("mi" . mark-inner) ("p" . yank)
                 ("P" . yank-pop) ("+" . eglot-rename) ("mm" . file-to-register)
                 ("'" . register-to-point) ("md" . delete-pair) ("+" . eglot-code-actions)
                 ("Z" . undo-redo) ("u" . undo-only) ("R" . replace-regexp)
@@ -898,6 +903,14 @@
   (select-frame-set-input-focus (selected-frame)))
 
 ;; --- VC -------------------------------------------------------------------
+(with-eval-after-load 'smerge-mode
+  (define-key ctl-x-map (kbd ",") smerge-basic-map)
+  (repeat-mode 1)
+  (setq diff-refine 'navigation)
+  (map-keymap (lambda (_key cmd)
+                (when (symbolp cmd) (put cmd 'repeat-map 'smerge-basic-map)))
+              smerge-basic-map))
+
 (with-eval-after-load 'vc-dir
   (define-key vc-dir-mode-map (kbd "q") #'kill-current-buffer))
 (with-eval-after-load 'diff
@@ -989,6 +1002,7 @@
   (push '("ee" "find-file-other-window $1") eshell-command-aliases-list)
   (push '("ff" "find-file $1") eshell-command-aliases-list)
   (push '("e" "find-file $1") eshell-command-aliases-list)
+  (push '("rg" "rg --color=never --no-line-number $*") eshell-command-aliases-list)
   (push '("gd" "vc-diff") eshell-command-aliases-list)
   (push '("glog" "vc-print-root-log") eshell-command-aliases-list)
   (push '("groot" "cd ${git rev-parse --show-toplevel}") eshell-command-aliases-list)
@@ -1205,11 +1219,53 @@ any directory proferred by `consult-dir'."
     (define-key gnus-summary-mode-map (kbd "j") #'next-line)
     (define-key gnus-summary-mode-map (kbd "k") #'previous-line)))
 
+(defvar mini-ontop--stack nil) ;; inspired by hkjels/mini-ontop
+(defun mini-ontop--save ()
+  (let (saved)
+    (dolist (w (window-list))
+      (with-selected-window w
+        (when (and (not (minibufferp)) (<= (minibuffer-depth) 1)
+                   (< (- (line-number-at-pos (window-end w t))
+                         (line-number-at-pos (point)))
+                      15))
+          (push (list w (window-buffer w) (point)) saved)
+          (forward-line -15))))
+    (push saved mini-ontop--stack)))
+(defun mini-ontop--restore ()
+  (dolist (e (pop mini-ontop--stack))
+    (when (and (window-live-p (car e)) (buffer-live-p (cadr e)))
+      (set-window-point (car e) (caddr e)))))
+
+(add-hook 'minibuffer-setup-hook #'mini-ontop--save)
+(add-hook 'minibuffer-exit-hook #'mini-ontop--restore)
+
+;; eww
+(setq browse-url-browser-function 'eww-browse-url
+      browse-url-new-window-flag t
+      eww-default-download-directory "~/Downloads/eww/")
+(add-hook 'html-mode-hook
+          (lambda ()
+            (local-set-key (kbd "C-c C-v") 
+                           (lambda () (interactive)
+                             (shr-render-buffer (current-buffer))))))
+(setq-default shr-max-width 110 shr-width 110)
+(with-eval-after-load 'shr
+  (setq shr-max-width 110 shr-width 110)
+  (defun my-url-expand-file-name-fixed (orig-fun file &optional base)
+    "Preserve spaces when expanding file URLs."
+    (funcall orig-fun (url-encode-url file) base))
+  (advice-add 'url-expand-file-name :around #'my-url-expand-file-name-fixed))
+(with-eval-after-load 'eww
+  (define-key eww-mode-map (kbd "SPC") ctl-x-map)
+  (define-key eww-mode-map (kbd "#") #'definition-at-point)
+  (setq eww-header-line-format nil)
+  (setq eww-auto-rename-buffer 'title))
+
 ;; --- External -------------------------------------------------------------
 (run-with-idle-timer
  0.2 nil (lambda nil
-           (load "~/.emacs.d/lisp/dev-conf" nil :no-message)))
-;; (when (require 'corfu nil t) (global-corfu-mode)))) ;; FIXME
+           (load "~/.emacs.d/lisp/dev-conf" nil :no-message)
+           (when (require 'corfu nil t) (global-corfu-mode)))) ;; FIXME
 
 ;; --- 31 stuff -------------------------------------------------------------
 (when (string> emacs-version "31")

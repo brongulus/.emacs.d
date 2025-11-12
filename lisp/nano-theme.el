@@ -1,5 +1,5 @@
 ;;;; nano-theme -*- lexical-binding: t -*-
-(defvar nano-current-theme 'dark "Current nano variant being used.")
+(defvar nano-current-theme 'burn "Current nano variant being used.")
 (defvar nano-monochrome t "Should the font-locking have colours.")
 (setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
 (setq nano-bg-theme-map
@@ -83,7 +83,7 @@
   (set-face-attribute 'completions-common-part nil :underline t)
   (set-face-attribute 'region nil :extend nil)
   (set-face-attribute 'line-number-current-line nil :foreground (face-foreground 'default)
-		              :weight 'bold :background 'unspecified)
+		              :weight (face-attribute 'bold :weight) :background 'unspecified)
   (with-eval-after-load 'make-mode
     (set-face-attribute 'makefile-targets nil :inherit 'font-lock-keyword-face))
 
@@ -176,7 +176,7 @@
                               (alist-get theme-variant (alist-get (cdr fc) color-themes)))))
       (set-face-attribute 'font-lock-builtin-face nil :slant 'unspecified)
       (set-face-attribute 'font-lock-function-call-face nil :slant 'unspecified)
-      (set-face-attribute 'font-lock-function-name-face nil :weight 'demi-bold)))
+      (set-face-attribute 'font-lock-function-name-face nil :weight (face-attribute 'bold :weight))))
 
   (with-eval-after-load 'dired
     (set-face-attribute 'dired-marked nil :foreground (face-foreground 'font-lock-string-face))
@@ -208,7 +208,10 @@
   (with-eval-after-load 'org
     (dolist (face '(org-block org-block-begin-line org-block-end-line))
       (set-face-attribute face nil :background (face-background 'nano-highlight) :extend t :inherit 'default))
-    (set-face-attribute 'org-mode-line-clock nil :weight 'bold
+    (set-face-attribute 'org-document-title nil :foreground (face-foreground 'nano-salient))
+    (set-face-attribute 'org-todo nil :foreground (face-foreground 'org-scheduled-previously))
+    (set-face-attribute 'org-done nil :foreground (face-foreground 'font-lock-comment-face))
+    (set-face-attribute 'org-mode-line-clock nil :weight (face-attribute 'bold :weight)
                         :foreground (face-foreground 'warning)
                         :background (face-background 'highlight))
     (set-face-attribute 'org-drawer nil :foreground (face-foreground 'shadow))
@@ -226,7 +229,7 @@
     (set-face-attribute 'sh-quoted-exec nil :foreground (face-foreground 'nano-salient) :italic t))
   (with-eval-after-load 'shr
     (set-face-attribute 'shr-text nil :height (face-attribute 'default :height))
-    (set-face-attribute 'shr-code nil :weight 'bold))
+    (set-face-attribute 'shr-code nil :weight (face-attribute 'bold :weight)))
 
   ;; Mode & header lines
   (set-face-attribute 'header-line nil :background 'unspecified :underline nil
@@ -254,8 +257,8 @@
   (nano-set-face 'nano-highlight nil "#d0d0d0")
   (nano-set-face 'nano-subtle "#37474F" "#BAD7FB")
   (nano-set-face 'nano-faded "#949494")
-  (nano-set-face 'nano-salient "#1b2229" nil 'demi-bold)
-  (nano-set-face 'nano-critical "#eb9250" nil 'demi-bold)
+  (nano-set-face 'nano-salient "#1b2229" nil (face-attribute 'bold :weight))
+  (nano-set-face 'nano-critical "#eb9250" nil (face-attribute 'bold :weight))
   (nano-set-face 'nano-string "#767676")
   (setq nano-current-theme 'light)
   (nano-install-theme))
@@ -267,8 +270,8 @@
   (nano-set-face 'nano-highlight nil "#2b2b2b")
   (nano-set-face 'nano-subtle "#e8e8e8" "#005f87")
   (nano-set-face 'nano-faded "#707070")
-  (nano-set-face 'nano-salient "#ffffff" nil 'bold)
-  (nano-set-face 'nano-critical "#b77e64" nil 'bold)
+  (nano-set-face 'nano-salient "#ffffff" nil (face-attribute 'bold :weight))
+  (nano-set-face 'nano-critical "#b77e64" nil (face-attribute 'bold :weight))
   (nano-set-face 'nano-string "#bcd7d3")
   (setq nano-current-theme 'dark)
   (nano-install-theme))
@@ -290,7 +293,7 @@
   (nano-dark)
   (set-face-attribute 'nano-default nil :foreground "#ddc898" :background "#121213")
   (set-face-attribute 'nano-faded nil :foreground "#7a766e")
-  (set-face-attribute 'nano-subtle nil :foreground "#ddc898" :background "#005f87")
+  (set-face-attribute 'nano-subtle nil :foreground "#121213" :background "#BAD7FB")
   (set-face-attribute 'nano-string nil :foreground "#af9661")
   (set-face-attribute 'nano-salient nil :foreground "#d4af5a" :weight 'demi-bold)
   (set-face-attribute 'nano-highlight nil :background "#393939")
@@ -316,7 +319,7 @@
   (interactive)
   (setq nano-monochrome (not nano-monochrome)) (nano-install-theme))
 
-(define-key (current-global-map) (kbd "<f6>") #'nano-toggle-theme)
-(define-key (current-global-map) (kbd "<f7>") #'nano-monochrome)
+(define-key (current-global-map) (kbd "C-x 6") #'nano-toggle-theme)
+(define-key (current-global-map) (kbd "C-x 7") #'nano-monochrome)
 ;; Set current theme based on terminal
 (funcall (intern (concat "nano-" (symbol-name nano-current-theme))))

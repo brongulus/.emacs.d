@@ -14,36 +14,24 @@
   (defun my-toggle-org-markers nil (interactive)
          (setq org-hide-emphasis-markers (not org-hide-emphasis-markers))
          (revert-buffer-quick))
-  ;; Taken from rougier: org-outer-indent
-  (defun org-outer-indent--compute-prefixes ()
-    "Compute prefix strings for regular text and headlines."
+
+  (defun org-outer-indent--compute-prefixes () ; src: rougier
+    "Compute prefix strings with outer-aligned stars."
     (setq org-indent--heading-line-prefixes
+          (make-vector org-indent--deepest-level nil)
+          org-indent--inlinetask-line-prefixes
+          (make-vector org-indent--deepest-level nil)
+          org-indent--text-line-prefixes
           (make-vector org-indent--deepest-level nil))
-    (setq org-indent--inlinetask-line-prefixes
-          (make-vector org-indent--deepest-level nil))
-    (setq org-indent--text-line-prefixes
-          (make-vector org-indent--deepest-level nil))
-    ;; Find the lowest headline level (FIXME)
-    (let* (;; (headline-levels (or (org-element-map
-           ;;                          (org-element-parse-buffer) 'headline
-           ;;                        #'(lambda (item)
-           ;;                            (org-element-property :level item)))
-           ;;                      '()))
-           ;; (max-level (seq-max (if headline-levels
-           ;;                         headline-levels
-           ;;                       '(0))))
-           (line-indentation (+ 3 4))
-           (headline-indentation))
-      (dotimes (level org-indent--deepest-level)
-        (setq headline-indentation
-              (max 0 (- line-indentation (+ 1 level))))
-        (aset org-indent--inlinetask-line-prefixes level
-              (make-string line-indentation ?\s))
-        (aset org-indent--text-line-prefixes level
-              (make-string line-indentation ?\s))
-        (aset org-indent--heading-line-prefixes level
-              (make-string headline-indentation ?\s))))
-    (setq-local org-hide-leading-stars nil))
+    (let ((indent 7))  ; (+ 3 4)
+      (dotimes (n org-indent--deepest-level)
+        (aset org-indent--heading-line-prefixes n
+              (make-string (max 0 (- indent (1+ n))) ?\s))
+        (aset org-indent--inlinetask-line-prefixes n
+              (make-string indent ?\s))
+        (aset org-indent--text-line-prefixes n
+              (make-string indent ?\s)))
+      (setq-local org-hide-leading-stars nil)))
 
   (advice-add 'org-indent--compute-prefixes :override
               #'org-outer-indent--compute-prefixes)
@@ -72,6 +60,7 @@
         ;; org-export-with-sub-superscripts nil
         org-ellipsis "…" ; "  ·"
         org-pretty-entities t
+        org-blank-before-new-entry '((heading . t) (plain-list-item . auto))
         org-startup-indented t
         org-startup-truncated nil
         org-adapt-indentation t
@@ -106,9 +95,10 @@
 (define-key (current-global-map) (kbd "C-c o a")
             #'(lambda nil (interactive) (org-agenda nil "n")))
 (with-eval-after-load 'org-agenda
+  (define-key org-agenda-mode-map (kbd "SPC") ctl-x-map)
   (define-key org-agenda-mode-map (kbd "q") #'org-agenda-exit)
   (set-face-attribute 'org-agenda-clocking nil :inherit 'highlight)
-  (set-face-attribute 'org-agenda-date nil :inherit 'org-agenda-date-today)
+  (set-face-attribute 'org-agenda-date nil :weight 'bold :slant 'italic)
   (set-face-attribute 'org-time-grid nil :foreground (face-foreground 'font-lock-comment-face))
 
   (add-to-list 'display-buffer-alist
@@ -208,19 +198,22 @@
   (setq org-habit-show-habits-only-for-today t
         org-habit-show-done-always-green t
         org-habit-show-all-today t
-        org-habit-missed-glyph ?o ;?◌ ;; 9676
-        org-habit-completed-glyph ?* ;?● ;; 9679
-        org-habit-today-glyph ?o ;?○ ;; 9675
+        org-habit-missed-glyph ?◌ ;; 9676
+        org-habit-completed-glyph ?● ;; 9679
+        org-habit-today-glyph ?○ ;; 9675
         org-habit-following-days 1
         org-habit-preceding-days 21)
 
   (defun add-missed-day-glyph (graph)
-    (dotimes (i (length graph))
-      (when (char-equal ?\s (aref graph i))
-        (let ((face (get-char-property i 'face graph)))
-          (aset graph i org-habit-missed-glyph)
-          (put-text-property i (1+ i) 'face face graph))))
-    graph)
+    (let ((result (concat graph)))
+      (dotimes (i (length result))
+        (when (char-equal ?\s (aref result i))
+          (setq result (concat (substring result 0 i)
+                               (string org-habit-missed-glyph)
+                               (substring result (1+ i))))
+          (put-text-property i (1+ i) 'face 
+                             (get-char-property i 'face graph) result)))
+      result))
 
   (advice-add 'org-habit-build-graph :filter-return #'add-missed-day-glyph)
   (set-face-attribute 'org-habit-clear-face nil :background 'unspecified 

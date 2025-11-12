@@ -32,7 +32,9 @@
 (add-to-list 'auto-mode-alist '("\\.zig\\'" . zig-mode))
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
 (setq nov-header-line-format nil)
-(with-eval-after-load 'nov (define-key nov-mode-map (kbd "SPC") ctl-x-map))
+(with-eval-after-load 'nov
+  (define-key nov-mode-map (kbd "SPC") ctl-x-map)
+  (define-key nov-mode-map (kbd "#") #'definition-at-point))
 
 (with-eval-after-load 'corfu
   (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)
@@ -52,14 +54,14 @@
   (setq corfu-cycle t
         corfu-auto t
         corfu-auto-prefix 2
-        corfu-auto-delay 0.3
+        corfu-auto-delay 0.5
         corfu-separator 32
         corfu-max-width 80
         corfu-preselect 'prompt
         corfu-quit-no-match t
         corfu-quit-at-boundary 'separator
         corfu-preview-current nil
-        corfu-popupinfo-delay '(0.3 . 0.2)
+        corfu-popupinfo-delay '(0.5 . 0.3)
         corfu-preselect-first nil))
 
 (setq eldoc-box-clear-with-C-g t)
@@ -104,7 +106,7 @@
                                     (visual-line-mode t)
                                     (when (display-graphic-p) (markdown-toggle-inline-images))))
   (dolist (level '("1" "2" "3" "4" "5" "6"))
-    (set-face-attribute (intern (concat "markdown-header-face-" level)) nil :height 1.2 :inherit 'bold))
+    (set-face-attribute (intern (concat "markdown-header-face-" level)) nil :height 1.1 :inherit 'bold))
   (setq markdown-fontify-code-blocks-natively t
         markdown-max-image-size '(800 . 800)))
 
@@ -194,3 +196,40 @@
 ;;                                        (change . "█"))
 ;;         diff-hl-draw-borders nil))
 
+
+;; (autoload #'howm-menu "howm.el")
+;; (define-key (current-global-map) (kbd "C-x , ;") #'howm-menu)
+;; (setq howm-prefix (kbd "C-x ,")
+;;       howm-directory "~/Dropbox/denote"
+;;       howm-home-directory howm-directory
+;;       howm-file-name-format "%Y%m%dT%H%M%S.org"
+;;       howm-view-title-header "#+title:") ; "*"
+;;       ;; howm-view-title-regexp "^#\\+[tT][iI][tT][lL][eE]:\\( +\\(.*\\)\\|\\)$"
+;;       ;; howm-view-title-regexp-grep "^(#\\+[tT][iI][tT][lL][eE]:) +")
+;; (with-eval-after-load 'howm
+;;   ;; (setq howm-view-summary-sep "│"
+;;   ;;       howm-menu-reminder-format "❱ %s │ %s"
+;;   ;;       howm-menu-list-format
+;;   ;;       (let* ((path (format-time-string howm-file-name-format))
+;;   ;;              (width (length (file-name-sans-extension
+;;   ;;                              (file-name-nondirectory path)))))
+;;   ;;         (concat "❱ %-" (format "%s" width) "s │ %s"))
+;;   ;;       howm-menu-list-regexp "^\\(❱\\([^│\r\n]*│\\)\\) +\\(.*\\)$")
+
+;;   (advice-add 'howm-menu-copy-skel
+;;               :filter-args
+;;               (lambda (args)
+;;                 (list (replace-regexp-in-string "^-\\{2,\\}$"
+;;                   "─────────────────────────────────────────────────"
+;;                   (car args))))))
+
+;;; Kanata-mode?
+(define-generic-mode kbd-mode
+  '(";;" ("#|" . "|#"))
+  nil
+  '(("(\\(def[a-zA-Z-]+\\)\\>" 1 font-lock-builtin-face))
+  '("\\.kbd\\'")
+  (list (lambda () (run-hooks 'prog-mode-hook)))
+  "Simple mode for kanata files.")
+
+(add-to-list 'auto-mode-alist '("\\.kbd\\'" . kbd-mode))
