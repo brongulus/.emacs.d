@@ -66,31 +66,31 @@
                 " "))
 (setq-default mode-line-format
               '("%e"
-                (:eval (when (mode-line-window-selected-p)
-                         (let ((tabs (let* ((tabs (length (tab-bar-tabs)))
-                                            (active-tab (tab-bar--current-tab-index)))
-                                       (if (<= tabs 1) ""
-                                         (let ((result '()))
-                                           (dotimes (i tabs)
-                                             (let ((indicator (if (= i active-tab) "⦿" "○")))
-                                               (push (propertize
-                                                      indicator 'mouse-face 'mode-line-highlight
-                                                      'local-map
-                                                      (let ((map (make-sparse-keymap)))
-                                                        (define-key
-                                                         map [mode-line mouse-1]
-                                                         `(lambda () (interactive)
-                                                            (tab-bar-select-tab ,(1+ i))))
-                                                        map))
-                                                     result)))
-                                           (concat " " (mapconcat 'identity
-                                                                  (reverse result) " ")))))))
-                           (propertize tabs 'face 'bold))))
+                (:eval
+                 (when (mode-line-window-selected-p)
+                   (let* ((tabs (tab-bar-tabs))
+                          (count (length tabs))
+                          (active (tab-bar--current-tab-index)))
+                     (when (> count 1)
+                       (propertize
+                        (concat " "
+                                (mapconcat
+                                 (lambda (i)
+                                   (propertize (if (= i active) "⦿" "○") 'mouse-face 'mode-line-highlight
+                                               'local-map
+                                               (let ((map (make-sparse-keymap)))
+                                                 (define-key map [mode-line mouse-1]
+                                                             (lambda () (interactive) (tab-bar-select-tab (1+ i))))
+                                                 map)))
+                                 (number-sequence 0 (1- count))
+                                 " "))
+                        'face 'bold)))))
                 (:eval (when (and (buffer-narrowed-p) (not (derived-mode-p 'Info-mode)))
                          (propertize " (N)")))
-                (:eval (if (buffer-modified-p)
-                           (propertize " * %b" 'face 'bold-italic 'help-echo (buffer-file-name))
-                         (propertize "   %b" 'face 'bold 'help-echo (buffer-file-name))))
+                (:eval (propertize (format "%s%s" (if (buffer-modified-p) " * " "   ")
+                                           (replace-regexp-in-string "\\*" "" (buffer-name)))
+                                   'face (if (buffer-modified-p) 'bold-italic 'bold)
+                                   'help-echo (buffer-file-name)))
                 (:eval (propertize (string-trim-left
                                     (format-mode-line vc-mode))
                                    'face '(:weight light :slant italic)))
@@ -678,7 +678,7 @@
       (setq-local zen-buffer-enabled (> margin 0))
       (setq-local zen-buffer-margin margin)
       (when special-modes
-        (text-scale-set (if (eq text-scale-mode-amount 0) 2.4 0))
+        (text-scale-set (if (eq text-scale-mode-amount 0) 2 0))
         (setq-local line-spacing (if (eq line-spacing 7) 0.7 7))))
     (setq-local scroll-margin (if (or (zerop scroll-margin) (> margin 0)) sm-half 0)))) ;99999
 (define-key (current-global-map) (kbd "C-x 9") #'toggle-zen-buffer)
@@ -1220,17 +1220,24 @@ any directory proferred by `consult-dir'."
     (define-key gnus-summary-mode-map (kbd "k") #'previous-line)))
 
 (defvar mini-ontop--stack nil) ;; inspired by hkjels/mini-ontop
+(defun mini-ontop--should-activate-p ()
+  "Return non-nil if mini-ontop should activate for the current command."
+  (or (eq this-command 'execute-extended-command)
+      (eq this-command 'execute-extended-command-for-buffer)
+      (string-prefix-p "describe-" (symbol-name this-command))
+      (string-prefix-p "help-" (symbol-name this-command))))
 (defun mini-ontop--save ()
-  (let (saved)
-    (dolist (w (window-list))
-      (with-selected-window w
-        (when (and (not (minibufferp)) (<= (minibuffer-depth) 1)
-                   (< (- (line-number-at-pos (window-end w t))
-                         (line-number-at-pos (point)))
-                      15))
-          (push (list w (window-buffer w) (point)) saved)
-          (forward-line -15))))
-    (push saved mini-ontop--stack)))
+  (when (mini-ontop--should-activate-p)
+    (let (saved)
+      (dolist (w (window-list))
+        (with-selected-window w
+          (when (and (not (minibufferp)) (<= (minibuffer-depth) 1)
+                     (< (- (line-number-at-pos (window-end w t))
+                           (line-number-at-pos (point)))
+                        15))
+            (push (list w (window-buffer w) (point)) saved)
+            (forward-line -15))))
+      (push saved mini-ontop--stack))))
 (defun mini-ontop--restore ()
   (dolist (e (pop mini-ontop--stack))
     (when (and (window-live-p (car e)) (buffer-live-p (cadr e)))
@@ -1247,7 +1254,7 @@ any directory proferred by `consult-dir'."
           (lambda ()
             (local-set-key (kbd "C-c C-v") 
                            (lambda () (interactive)
-                             (shr-render-buffer (current-buffer))))))
+                             (eww (concat "file://" buffer-file-name))))))
 (setq-default shr-max-width 110 shr-width 110)
 (with-eval-after-load 'shr
   (setq shr-max-width 110 shr-width 110)
