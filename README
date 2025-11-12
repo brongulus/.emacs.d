@@ -1,12 +1,9 @@
 # -*- mode: org -*-
 * Emacs Config
 =foxy.el=: competitive programming package for emacs that I'm working on.
-Two themes: one personal fork of dracula based off of (vscode night shift theme) and alabaster theme.
-The themes have being ported to a zed one theme equivalent. Here are the results:
 
-[[./screenshots/dark.png]]
-[[./screenshots/light.png]]
+I have a custom minimal theme with different shades, here's one of them illustrated.
+They're targeted to be ~monochromatic~ with an optional toggle for when I need a rainbow salad.
+The different variants are /light/, /amber/ (inspired by plan9), /dark/ and /burn/; to be used in accordance with background light/environment.
 
-And I have added some custom setup to org as well, to emulate iA Writer.
-
-[[./screenshots/org.png]]
+[[./screenshots/burn.png]]
