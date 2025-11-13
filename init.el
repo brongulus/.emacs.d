@@ -9,6 +9,7 @@
 (defvar my-font-configs
   '((input :family "Input Mono Narrow" :weight light :bold-weight regular)
     (ioskeley :family "Ioskeley Mono" :weight regular :bold-weight bold)
+    (commit :family "CommitMono Nerd Font Mono" :weight regular :bold-weight bold)
     (victor :family "Victor Mono" :weight medium :bold-weight bold)))
 (let ((config (alist-get 'input my-font-configs)))
   (set-face-attribute 'default nil :family (plist-get config :family)
@@ -117,6 +118,12 @@
                 mode-line-format-right-align
                 (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
                   eglot-mode-line-progress)
+                (:eval (when (derived-mode-p 'text-mode)
+                         (let* ((beg (if (use-region-p) (region-beginning) (point-min)))
+                                (end (if (use-region-p) (region-end) (point-max)))
+                                (word-count (count-words beg end)))
+                           (propertize (format " %d Words" word-count)
+                                       'face 'font-lock-comment-face))))
                 (:eval (propertize
                         (concat " "
                                 (if (derived-mode-p 'prog-mode)
@@ -172,6 +179,16 @@
         ((derived-mode-p 'completion-list-mode) (delete-completion-window))
         ((> (minibuffer-depth) 0) (abort-recursive-edit))
         (t (keyboard-quit))))
+
+(with-eval-after-load 'project
+  (defun nano-project--temporarily-restore-quit (orig-fun &rest args)
+    "Temporarily restore C-g to keyboard-quit for project switching."
+    (let ((original-binding (global-key-binding (kbd "C-g"))))
+      (global-set-key (kbd "C-g") #'keyboard-quit)
+      (unwind-protect (apply orig-fun args)
+        (global-set-key (kbd "C-g") original-binding))))
+  (advice-add 'project--switch-project-command :around 
+              #'nano-project--temporarily-restore-quit))
 
 (defun my-goto-doc nil (interactive)
        (if (derived-mode-p 'emacs-lisp-mode)
@@ -308,6 +325,7 @@
       flymake-suppress-zero-counters t
       flymake-no-changes-timeout 2
       flymake-show-diagnostics-at-end-of-line 'short
+      flymake-indicator-type 'margins
       flymake-margin-indicators-string
       '((error "»" compilation-error)
         (warning "»" compilation-warning)
@@ -434,8 +452,8 @@
 ;; --- Window Management ----------------------------------------------------
 (dolist (pops '(("\\*eshell-pop\\*" . -2 ) ;; <-- prima donna
                 ("^\\*term.*\\*$" . -1) ("^\\*compilation.*\\*$" . -1)
-                ("vc-git :.\*" . 0) ("\\*vc.\*-log\\*" . 0) ("\\*eldoc\\*" . 0)
-                ("\\*Help\\*" . 0) ("\\*Warnings\\*" . 1) ("\\*log-edit-files\\*" . 1)
+                ("vc-git :.\*" . 0) ("\\*vc.\*-log\\*" . 0) ;("\\*eldoc\\*" . 0) ("\\*Help\\*" . 0)
+                ("\\*Warnings\\*" . 1) ("\\*log-edit-files\\*" . 1)
                 ("\\*Occur.*\\*$" . 1) ("\\*grep.*\\*$" . 1) ("CAPTURE-.*" . 1)
                 ("\\*Org Select\\*" . 1) ("\\*xref\\*" . 1) ;("^\\*Dictionary\\*" . 1)))
                 ("\\*Flymake diagnostics.*\\*$" . 1)))
@@ -452,8 +470,17 @@
                                                              "^\\*compilation.*\\*$")
                                               '(mode-line-format . ""))))))))
 (add-to-list 'display-buffer-alist
-             '("^\\*Dictionary\\*" display-buffer-in-side-window
-               (side . right) (window-width . 80)))
+             '("\\*\\(eldoc\\|Help\\|Dictionary\\)\\*" display-buffer-in-side-window
+               (body-function . select-window)
+               (window-parameters . ((split-window . #'ignore)))
+               (side . right) (slot . 1) (window-width . 82)))
+(with-eval-after-load 'eldoc
+  (when (fboundp 'eldoc-doc-buffer)
+    (advice-add 'eldoc-doc-buffer :after
+                (lambda (&rest _)
+                  (with-current-buffer (get-buffer "*eldoc*")
+                    (visual-line-mode 1))))))
+(add-hook 'help-mode-hook #'visual-line-mode)
 
 (defvar side-face-cookie nil)
 (defun toggle-side-normal-window ()
@@ -670,7 +697,7 @@
          (sm-half (ceiling (window-screen-lines) 2))
          (margin (if (or (equal (window-margins) '(0 . 0))
                          (null (car (window-margins))))
-                     (/ (- (window-total-width) (if special-modes 160 fill-column)) 2) 0)))
+                     (/ (- (window-total-width) (if special-modes 150 fill-column)) 2) 0)))
     (visual-line-mode 1)
     (when (>= margin 0)
       (set-window-margins nil margin margin)
@@ -1165,13 +1192,10 @@ any directory proferred by `consult-dir'."
     (interactive)
     (narrow-to-region
      (save-excursion
-       (forward-line)
-       (call-interactively #'eshell-previous-prompt)
-       (beginning-of-line)
-       (point))
+       (forward-line) (call-interactively #'eshell-previous-prompt)
+       (beginning-of-line) (point))
      (save-excursion
-       (forward-line)
-       (call-interactively #'eshell-next-prompt)
+       (forward-line) (call-interactively #'eshell-next-prompt)
        (re-search-backward eshell-prompt-regexp nil t)
        (when (and (require 'eshell-prompt-extras nil 'noerror)
                   (eq eshell-prompt-function #'epe-theme-multiline-with-status))
@@ -1271,8 +1295,8 @@ any directory proferred by `consult-dir'."
 ;; --- External -------------------------------------------------------------
 (run-with-idle-timer
  0.2 nil (lambda nil
-           (load "~/.emacs.d/lisp/dev-conf" nil :no-message)
-           (when (require 'corfu nil t) (global-corfu-mode)))) ;; FIXME
+           (load "~/.emacs.d/lisp/dev-conf" nil :no-message)))
+;; (when (require 'corfu nil t) (global-corfu-mode)))) ;; FIXME
 
 ;; --- 31 stuff -------------------------------------------------------------
 (when (string> emacs-version "31")
@@ -1280,7 +1304,7 @@ any directory proferred by `consult-dir'."
         treesit-font-lock-level 4)
   (setq kill-region-dwim 'emacs-word)
   (with-eval-after-load 'dired (setq dired-hide-details-hide-absolute-location t))
-  (with-eval-after-load 'eglot (setq eglot-code-action-indicator ""))
+  (with-eval-after-load 'eglot (setq eglot-code-action-indicator "+"))
   ;; (with-eval-after-load 'icomplete (setq icomplete-vertical-in-buffer-adjust-list t))
   (setq flymake-show-diagnostics-at-end-of-line 'short));fancy))
 

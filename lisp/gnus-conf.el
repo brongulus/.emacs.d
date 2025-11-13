@@ -53,7 +53,7 @@
           (not gnus-thread-sort-by-number)))
   ;; Better UI
   (gnus-add-configuration
-  '(article (vertical 1.0 (summary 0.2 point) (article 1.0))))
+   '(article (vertical 1.0 (summary 0.2 point) (article 1.0))))
   (setq gnus-unread-mark #x2022 ;; dot
         gnus-unseen-mark 32 ;; space
         gnus-read-mark 32
@@ -92,6 +92,9 @@
   :after gnus
   :hook (gnus-group-mode . gnus-topic-mode)
   :config
+  (with-eval-after-load 'gnus-art
+    (set-face-attribute 'gnus-header nil :height (face-attribute 'default :height)))
+  
   (with-eval-after-load 'gnus-cite
     (defun gnus-clean-citation nil
       (save-excursion

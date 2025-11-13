@@ -94,7 +94,7 @@
           '((black   . ((dark . "#30343d") (light . "#EEEEEE")))
             (red     . ((dark . "#c47779") (light . "#c56655")))
             (green   . ((dark . "#99c476") (light . "#427b58")))
-            (yellow  . ((dark . "#d9c18c") (light . "#b57614"))) ; dark FFBF00
+            (yellow  . ((dark . "#dab067") (light . "#b57614"))) ; dark FFBF00
             (blue    . ((dark . "#6eaadb") (light . "#04508c")))
             (magenta . ((dark . "#c9b1ca") (light . "#7646c1")))
             (cyan    . ((dark . "#6fcfd2") (light . "#076678")))
@@ -199,13 +199,13 @@
     (set-face-attribute 'whitespace-trailing nil :background 'unspecified :foreground (face-foreground 'nano-critical))
     (set-face-attribute 'whitespace-line nil :background 'unspecified :foreground 'unspecified))
 
-  (with-eval-after-load 'outline
-    (dolist (face '(outline-1 outline-2 outline-3 outline-4 outline-5 outline-6 outline-7 outline-8))
-      (set-face-attribute face nil :height 1.1 :inherit 'bold)))
   (with-eval-after-load 'markdown-mode
     (dolist (face '(markdown-pre-face)); markdown-code-face))
       (set-face-attribute face nil :background (face-background 'nano-highlight) :extend t)))
   (with-eval-after-load 'org
+    (dolist (face '(org-level-1 org-level-2 org-level-3 org-level-4
+                                org-level-5 org-level-6 org-level-7 org-level-8))
+      (set-face-attribute face nil :height 1.1 :inherit 'bold))
     (dolist (face '(org-block org-block-begin-line org-block-end-line))
       (set-face-attribute face nil :background (face-background 'nano-highlight) :extend t :inherit 'default))
     (set-face-attribute 'org-document-title nil :foreground (face-foreground 'nano-salient))
@@ -226,6 +226,7 @@
     (set-face-attribute 'org-agenda-done nil :foreground (face-foreground 'default)))
 
   (with-eval-after-load 'sh-script
+    (set-face-attribute 'sh-heredoc nil :foreground (face-foreground 'font-lock-constant-face))
     (set-face-attribute 'sh-quoted-exec nil :foreground (face-foreground 'nano-salient) :italic t))
   (with-eval-after-load 'shr
     (set-face-attribute 'shr-text nil :height (face-attribute 'default :height))

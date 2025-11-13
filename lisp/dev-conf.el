@@ -24,7 +24,7 @@
    packages))
 
 (my/ensure-package-installed
- 'consult-eglot 'corfu 'eldoc-box 'markdown-mode 'dape 'ox-hugo 'zig-mode 'nov) ;; 'diff-hl
+ 'consult-eglot 'corfu 'markdown-mode 'dape 'ox-hugo 'zig-mode 'nov) ;; 'diff-hl 'eldoc-box
 
 (define-key (current-global-map) (kbd "C-x S") #'consult-eglot-symbols)
 (with-eval-after-load 'ox
@@ -78,13 +78,7 @@
   (with-eval-after-load 'eldoc-box
     (setq eldoc-box-max-pixel-width 800
           eldoc-box-max-pixel-height 700
-          eldoc-box-only-multi-line t)
-    (setq eldoc-doc-buffer-separator
-          (concat "\n"
-                  (propertize "-" 'display '(space :align-to right)
-                              'face '(:strike-through t)
-                              'font-lock-face '(:strike-through t))
-                  "\n"))))
+          eldoc-box-only-multi-line t)))
 
 ;; Src: https://github.com/joaotavora/eglot/discussions/1238#discussioncomment-13365314
 (defun my-markdown-follow-help-or-link-at-point-advice (orig-fun &rest args)
@@ -101,7 +95,8 @@
 
 (push '("\\..?md\\'" . markdown-mode) auto-mode-alist)
 (with-eval-after-load 'markdown-mode
-  (advice-add 'markdown-follow-link-at-point :around #'my-markdown-follow-help-or-link-at-point-advice)
+  (advice-add 'markdown-follow-link-at-point
+              :around #'my-markdown-follow-help-or-link-at-point-advice)
   (add-hook 'markdown-mode-hook #'(lambda nil
                                     (visual-line-mode t)
                                     (when (display-graphic-p) (markdown-toggle-inline-images))))
