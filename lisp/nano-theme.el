@@ -2,8 +2,8 @@
 (defvar nano-current-theme 'burn "Current nano variant being used.")
 (defvar nano-monochrome t "Should the font-locking have colours.")
 (setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
-(setq nano-bg-theme-map
-      '(("#f7f7f7" . light) ("#F5E4C1" . amber) ("#222323" . dark) ("#121213" . burn)))
+(setq nano-bg-theme-map '(("#f7f7f7" . light) ("#c9ba96" . amber)
+                          ("#212121" . dark) ("#121213" . burn)))
 ;; FIXME: `shell-command-to-string' causes startup slowdown
 ;; (run-with-idle-timer
 ;;  0.5 nil
@@ -99,7 +99,8 @@
             (magenta . ((dark . "#c9b1ca") (light . "#7646c1")))
             (cyan    . ((dark . "#6fcfd2") (light . "#076678")))
             (white   . ((dark . "#cccccc") (light . "#1a1a1a")))))
-         (theme-variant (if (or (eq nano-current-theme 'light) (eq nano-current-theme 'amber))
+         (theme-variant (if (or (eq nano-current-theme 'light)
+				                (eq nano-current-theme 'amber))
                             'light 'dark)))
     (dolist (color-def color-themes)
       (let* ((color-name (car color-def))
@@ -123,7 +124,7 @@
     (with-eval-after-load 'compile
       (set-face-attribute 'compilation-warning nil
                           :foreground (alist-get theme-variant (alist-get 'yellow color-themes))))
-    (with-eval-after-load 'diff-hl
+    (with-eval-after-load 'diffhl
       (set-face-attribute 'diff-hl-insert nil :background (face-background 'default)
                           :foreground (alist-get theme-variant (alist-get 'green color-themes)))
       (set-face-attribute 'diff-hl-change nil :background (face-background 'default)
@@ -174,9 +175,10 @@
         (dolist (fc face-color-map)
           (set-face-attribute (car fc) nil :foreground
                               (alist-get theme-variant (alist-get (cdr fc) color-themes)))))
-      (set-face-attribute 'font-lock-builtin-face nil :slant 'unspecified)
-      (set-face-attribute 'font-lock-function-call-face nil :slant 'unspecified)
-      (set-face-attribute 'font-lock-function-name-face nil :weight (face-attribute 'bold :weight))))
+      (dolist (face '(font-lock-builtin-face font-lock-string-face font-lock-function-name-face))
+        (set-face-attribute face nil :slant 'unspecified))
+      (set-face-attribute 'font-lock-function-name-face nil
+                          :weight (face-attribute 'bold :weight))))
 
   (with-eval-after-load 'dired
     (set-face-attribute 'dired-marked nil :foreground (face-foreground 'font-lock-string-face))
@@ -249,7 +251,47 @@
   (unless (display-graphic-p)
     (set-face-attribute 'mode-line-active nil
                         :foreground (face-background 'default)
-                        :background (face-foreground 'nano-salient))))
+                        :background (face-foreground 'nano-salient)))
+
+  (with-eval-after-load 'diff
+    (if (or (eq nano-current-theme 'light) (eq nano-current-theme 'amber))
+        (set-face-attribute 'diff-header nil :background "grey75")
+      (set-face-attribute 'diff-header nil :background "grey45")))
+  (with-eval-after-load 'magit-section
+    (set-face-attribute 'magit-section-highlight nil
+                        :background (face-background 'highlight)))
+
+  (let* ((colors '((bg-added . ((dark . "#20493f") (light . "#b0e7b0")))
+                   (bg-added-fine . ((dark . "#136244") (light . "#9ad590")))
+                   (bg-changed . ((dark . "#888833") (light . "#f5e690")))
+                   (bg-changed-fine . ((dark . "#aaaa22") (light . "#edd482")))
+                   (bg-removed . ((dark . "#553333") (light . "#f8c8a6")))
+                   (bg-removed-fine . ((dark . "#882222") (light . "#f0aa90")))))
+         (diff-faces '((diff-removed . bg-removed) (diff-added . bg-added) (diff-changed . bg-changed)
+                       (diff-refine-removed . bg-removed-fine) (diff-refine-added . bg-added-fine)))
+	     (ediff-faces '((ediff-current-diff-A . bg-removed)
+			            (ediff-current-diff-B . bg-added)
+			            (ediff-current-diff-C . bg-changed)
+			            (ediff-fine-diff-A . bg-removed-fine)
+			            (ediff-fine-diff-B . bg-added-fine)
+			            (ediff-fine-diff-C . bg-changed-fine)))
+	     (theme-variant (if (or (eq nano-current-theme 'light)
+                                (eq nano-current-theme 'amber))
+                            'light 'dark)))
+    ;; set diff-mode faces
+    (dolist (color-def diff-faces)
+      (let* ((face-name (car color-def))
+             (color-name (cdr color-def))
+             (color-value (alist-get theme-variant (alist-get color-name colors))))
+	    (with-eval-after-load 'diff
+          (set-face-attribute face-name nil :background color-value))))
+    ;; set ediff-mode faces
+    (dolist (color-def ediff-faces)
+      (let* ((face-name (car color-def))
+	         (color-name (cdr color-def))
+	         (color-value (alist-get theme-variant (alist-get color-name colors))))
+	    (with-eval-after-load 'ediff
+	      (set-face-attribute face-name nil :background color-value))))))
 
 (defun nano-light (&rest args)
   "NANO light theme (was based on material colors)."
@@ -267,31 +309,32 @@
 (defun nano-dark (&rest args)
   "NANO dark theme (was based on nord colors)."
   (interactive)
-  (nano-set-face 'nano-default "#d0d0d0" "#222323")
+  (nano-set-face 'nano-default "#e3dac4" "#212121")
   (nano-set-face 'nano-highlight nil "#2b2b2b")
   (nano-set-face 'nano-subtle "#e8e8e8" "#005f87")
   (nano-set-face 'nano-faded "#707070")
-  (nano-set-face 'nano-salient "#ffffff" nil (face-attribute 'bold :weight))
+  (nano-set-face 'nano-salient "#ffffef" nil (face-attribute 'bold :weight))
   (nano-set-face 'nano-critical "#b77e64" nil (face-attribute 'bold :weight))
-  (nano-set-face 'nano-string "#bcd7d3")
+  (nano-set-face 'nano-string "wheat2")
   (setq nano-current-theme 'dark)
   (nano-install-theme))
 
 (defun nano-amber (&rest args)
-  "Change background of light theme to plan9"
-  (interactive)
-  (nano-light)
-  (set-face-attribute 'nano-default nil :foreground "#352f19" :background "#F5E4C1")
-  (set-face-attribute 'nano-highlight nil :background "wheat3")
+  "There once was a postcard."
+  (interactive) (nano-light); #cabda0
+  (set-face-attribute 'nano-default nil :foreground "#110e06" :background "#c9ba96")
+  (set-face-attribute 'nano-highlight nil :background "#af9f7d")
+  (set-face-attribute 'nano-string nil :foreground "#4a3c25")
   (set-face-attribute 'nano-subtle nil :foreground "#F7F7F7" :background "#005f87")
-  (set-face-attribute 'nano-faded nil :foreground "#a89984")
+  (set-face-attribute 'nano-faded nil :foreground "#695a40")
+  (set-face-attribute 'nano-critical nil :foreground "coral3"
+                      :weight (face-attribute 'bold :weight))
   (let ((nano-current-theme 'light)) (nano-install-theme))
   (setq nano-current-theme 'amber))
 
 (defun nano-burn (&rest args)
   "You know what it is, Black 'n Yellow"
-  (interactive)
-  (nano-dark)
+  (interactive) (nano-dark)
   (set-face-attribute 'nano-default nil :foreground "#ddc898" :background "#121213")
   (set-face-attribute 'nano-faded nil :foreground "#7a766e")
   (set-face-attribute 'nano-subtle nil :foreground "#121213" :background "#BAD7FB")
