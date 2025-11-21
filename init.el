@@ -10,7 +10,7 @@
   '((input :family "Input Mono Narrow" :weight light :bold-weight regular)
     (ioskeley :family "Ioskeley Mono" :weight regular :bold-weight bold)
     (commit :family "CommitMono Nerd Font Mono" :weight regular :bold-weight bold)
-    (victor :family "Victor Mono" :weight medium :bold-weight bold)))
+    (victor :family "Victor Mono" :weight regular :bold-weight demi-bold)))
 (let ((config (alist-get 'input my-font-configs)))
   (set-face-attribute 'default nil :family (plist-get config :family)
                       :weight (plist-get config :weight) :height (if is-android 160 150))
@@ -18,7 +18,7 @@
   (set-face-attribute 'bold-italic nil :weight (plist-get config :bold-weight))
   (dolist (face '(fixed-pitch-serif fixed-pitch variable-pitch variable-pitch-text))
     (set-face-attribute face nil :family (face-attribute 'default :family))))
-(setq-default line-spacing 7) ; 3
+(setq-default line-spacing 3) ; 7
 (set-face-attribute 'nobreak-space nil :underline nil)
 (set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
 (set-display-table-slot standard-display-table 'truncation (make-glyph-code ?…))
@@ -43,7 +43,7 @@
         (bg-line-number-inactive bg-main)
         (bg-line-number-active bg-main))
       modus-vivendi-palette-overrides
-      '((bg-main "#222323")))
+      '((bg-main "#212121")))
 ;; (load-theme 'modus-operandi-deuteranopia)
 (load "~/.emacs.d/lisp/nano-theme" :noerr :no-message)
 
@@ -118,12 +118,12 @@
                 mode-line-format-right-align
                 (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
                   eglot-mode-line-progress)
-                (:eval (when (derived-mode-p 'text-mode)
-                         (let* ((beg (if (use-region-p) (region-beginning) (point-min)))
-                                (end (if (use-region-p) (region-end) (point-max)))
-                                (word-count (count-words beg end)))
-                           (propertize (format " %d Words" word-count)
-                                       'face 'font-lock-comment-face))))
+                ;; (:eval (when (derived-mode-p 'text-mode)
+                ;;          (let* ((beg (if (use-region-p) (region-beginning) (point-min)))
+                ;;                 (end (if (use-region-p) (region-end) (point-max)))
+                ;;                 (word-count (count-words beg end)))
+                ;;            (propertize (format " %d Words" word-count)
+                ;;                        'face 'font-lock-comment-face))))
                 (:eval (propertize
                         (concat " "
                                 (if (derived-mode-p 'prog-mode)
@@ -325,11 +325,9 @@
       flymake-suppress-zero-counters t
       flymake-no-changes-timeout 2
       flymake-show-diagnostics-at-end-of-line 'short
-      flymake-indicator-type 'margins
-      flymake-margin-indicators-string
-      '((error "»" compilation-error)
-        (warning "»" compilation-warning)
-        (note "»" compilation-info))
+      flymake-warning-bitmap '(large-circle compilation-warning)
+      flymake-error-bitmap '(large-circle compilation-error)
+      flymake-note-bitmap '(large-circle compilation-info)
       help-window-select t
       hl-line-sticky-flag nil
       global-hl-line-sticky-flag nil
@@ -356,6 +354,14 @@
       xref-auto-jump-to-first-xref nil
       xref-show-definitions-function 'xref-show-definitions-buffer-at-bottom
       xref-show-xrefs-function 'xref-show-definitions-completing-read)
+
+(run-with-idle-timer
+ 0.9 nil (lambda nil
+           (file-to-register "~/Downloads/videos/" ?v)
+           (file-to-register "~/.emacs.d/init.el" ?i)
+           (file-to-register "~/dotfiles/flake.nix" ?n)
+           (file-to-register "~/Dropbox/org/log.org" ?l)
+           (file-to-register "/Volumes/PortableSSD/" ?p)))
 
 (when (executable-find "rg")
   (setq grep-command "rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)"
@@ -523,6 +529,11 @@
 (with-eval-after-load 'comint-mode
   (define-key comint-mode-map "q" #'kill-buffer-and-window))
 (with-eval-after-load 'compile
+  (push 'go-test compilation-error-regexp-alist)
+  (add-to-list 'compilation-error-regexp-alist-alist
+               '(go-test
+                 . (".*?\\([[:alnum:]_./-]+\\.go\\):\\([0-9]+\\)\\(?:\\(?::\\([0-9]+\\)\\)?\\| \\+0x[0-9a-f]+\\)"
+                    1 2 3 nil 1)))
   (setq compile-command (or (car-safe compile-history) ""))
   (define-key compilation-minor-mode-map "q" #'kill-buffer-and-window))
 
@@ -553,6 +564,7 @@
               (compilation-minor-mode))))
 
 (add-hook 'compilation-filter-hook (lambda nil
+                                     (goto-address-mode -1)
                                      (unless (eq major-mode 'grep-mode)
                                        (ansi-color-compilation-filter)
                                        (ansi-osc-compilation-filter))))
@@ -730,15 +742,19 @@
     (define-key map [t] #'insert-pair)
     map))
 
-(defun mark-inner () ;; src: Signal-Syllabub3072
-  "Mark interior of the current list."
+(defun mark-inner () ; src: Signal-Syllabub3072
+  "Mark interior of the current list or string."
   (interactive)
   (condition-case nil
-      (progn
+      (if (nth 3 (syntax-ppss)) ; string or list
+          (let ((start (nth 8 (syntax-ppss))))
+            (goto-char start)
+            (set-mark (point))
+            (forward-sexp))
         (backward-up-list) (down-list)
         (set-mark (point))
         (up-list) (backward-down-list))
-    (error (message "No inner list found."))))
+    (error (message "No inner list or string found."))))
 
 (defun my-select-fwd-line (arg)
   "Select ARG lines from current line and move cursor. src: Kaushal Modi."
@@ -812,6 +828,7 @@
 (define-key (current-global-map) (kbd "C-x d") #'dired-vc-left)
 
 ;; --- Mini Meow ------------------------------------------------------------
+(autoload 'viper-ex "viper")
 (define-key special-mode-map (kbd "j") #'next-line)
 (define-key special-mode-map (kbd "k") #'previous-line)
 (define-key special-mode-map (kbd "q") #'kill-buffer-and-window)
@@ -873,7 +890,7 @@
   (define-key meow-mode-map (int-to-string num) #'digit-argument))
 (dolist (pair '(("\\" . dired-jump) ("gl" . move-end-of-line) ("ge" . move-end-of-line)
                 ("gh" . back-to-indentation) ("gj" . end-of-buffer) ("gk" . beginning-of-buffer)
-                ("q" . quit-window) ("=" . mark-sexp) ("-" . negative-argument)
+                ("q" . quit-window) ("=" . mark-inner) ("-" . negative-argument)
                 ("/" . isearch-forward-regexp) ("e" . forward-word) ("b" . backward-word)
                 ("v" . set-mark-command) ("h" . backward-char) ("j" . next-line)
                 ("k" . previous-line) ("l" . forward-char) ("i" . meow-insert)
@@ -890,7 +907,7 @@
                 ("[" . backward-list) ("]" . forward-list) ("#" . definition-at-point)
                 ("{" . flymake-goto-prev-error) ("}" . flymake-goto-next-error)
                 ("g/" . xref-find-definitions-other-window) ("gd" . xref-find-definitions)
-                ("gb" . xref-go-back) ("K" . my-goto-doc) (":" . goto-line) ("gr" . xref-find-references)
+                ("gb" . xref-go-back) ("K" . my-goto-doc) (":" . viper-ex) ("gr" . xref-find-references)
                 ("gx" . flymake-show-buffer-diagnostics) ("gX" . flymake-show-project-diagnostics)
                 ("&" . align-regexp) ("C" . string-rectangle) ("mi" . mark-inner) ("p" . yank)
                 ("P" . yank-pop) ("+" . eglot-rename) ("mm" . file-to-register)
@@ -1012,7 +1029,7 @@
                 (silent-command 'eshell))))
 (setq eshell-aliases-file "~/.config/alias"
       eshell-scroll-to-bottom-on-input 'all
-      eshell-hist-ignoredups t
+      eshell-hist-ignoredups 'erase
       eshell-history-size 20000
       eshell-save-history-on-exit t
       eshell-glob-case-insensitive t)
@@ -1274,6 +1291,8 @@ any directory proferred by `consult-dir'."
 (setq browse-url-browser-function 'eww-browse-url
       browse-url-new-window-flag t
       eww-default-download-directory "~/Downloads/eww/")
+(dolist (url '("github\\.com" "github\\.tools" "youtube\\.com" "youtu\\.be"))
+  (push (cons url 'browse-url-default-browser) browse-url-handlers))
 (add-hook 'html-mode-hook
           (lambda ()
             (local-set-key (kbd "C-c C-v") 
@@ -1302,6 +1321,7 @@ any directory proferred by `consult-dir'."
 (when (string> emacs-version "31")
   (setq treesit-auto-install-grammar 'always
         treesit-font-lock-level 4)
+  ;; hs-show-indicators t)
   (setq kill-region-dwim 'emacs-word)
   (with-eval-after-load 'dired (setq dired-hide-details-hide-absolute-location t))
   (with-eval-after-load 'eglot (setq eglot-code-action-indicator "+"))

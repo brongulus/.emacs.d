@@ -6,8 +6,12 @@
   (package-initialize))
 
 (with-eval-after-load 'package
-  (push '("melpa" . "https://melpa.org/packages/") package-archives)
-  (push '("melpa-stable" . "https://stable.melpa.org/packages/") package-archives)
+  (setq package-archives '(("melpa-stable" . "https://stable.melpa.org/packages/")
+                           ("melpa" . "https://melpa.org/packages/")
+                           ("gnu" . "https://elpa.gnu.org/packages/")
+                           ("nongnu" . "https://elpa.nongnu.org/nongnu/"))
+        package-archive-priorities '(("gnu" . 3) ("nongnu" . 2)
+                                     ("melpa" . 1) ("melpa-stable" . 0)))
   (setq package-native-compile t
         package-install-upgrade-built-in t
         package-check-signature nil))
@@ -17,14 +21,41 @@
   "Ensure PACKAGES are installed, install if missing."
   (mapcar
    (lambda (package)
-     (unless (package-installed-p package)
-       (unless package-archive-contents
-         (package-refresh-contents))
-       (package-install package)))
+     (let* ((pkg-name (if (listp package) (car package) package))
+            (is-vc-package (or (stringp package)
+                               (and (listp package) (plist-get (cdr package) :url)))))
+       (unless (package-installed-p pkg-name)
+         (if is-vc-package
+             (if (listp package)
+                 (package-vc-install (plist-get (cdr package) :url))
+               (package-vc-install package))
+           (progn
+             (unless package-archive-contents
+               (package-refresh-contents))
+             (package-install package))))))
    packages))
 
-(my/ensure-package-installed
- 'consult-eglot 'corfu 'markdown-mode 'dape 'ox-hugo 'zig-mode 'nov) ;; 'diff-hl 'eldoc-box
+(my/ensure-package-installed ;; 'diff-hl 'eldoc-box
+ 'consult-eglot 'corfu 'markdown-mode 'dape 'ox-hugo 'zig-mode 'nov 'pr-review)
+
+;; pr-review needs (info "(forge) Setup for Githubcom")
+;; C-c C- {c (comment) s (action) e (edit) d (ediff) f (goto file)
+;;         j (react) l (label) o (browser) q (req-review) v (view file)}
+(setq pr-review-ghub-username "takoverflow")
+(with-eval-after-load 'viper-ex
+  (nconc ex-token-alist
+         '(("prr" (call-interactively 'pr-review))
+           ("prs" (call-interactively 'pr-review-search))
+           ("prn" (call-interactively 'pr-review-notification)))))
+(add-to-list 'browse-url-default-handlers
+             '(pr-review-url-parse . pr-review-open-url))
+(with-eval-after-load 'pr-review
+  (define-key pr-review-mode-map (kbd "SPC") ctl-x-map))
+(when (require 'magit nil t)
+  (with-eval-after-load 'project
+    (add-to-list 'project-switch-commands '(magit-project-status "Magit" ?m))))
+(with-eval-after-load 'magit
+  (transient-bind-q-to-quit))
 
 (define-key (current-global-map) (kbd "C-x S") #'consult-eglot-symbols)
 (with-eval-after-load 'ox

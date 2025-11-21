@@ -36,6 +36,20 @@
   (advice-add 'org-indent--compute-prefixes :override
               #'org-outer-indent--compute-prefixes)
 
+  (defun my/org-archive-existing-done-tasks ()
+    "Archive all existing DONE entries that aren't repeating tasks."
+    (interactive)
+    (save-excursion
+      (goto-char (point-min))
+      (let ((archived-count 0))
+        (while (re-search-forward "^\\*+ DONE " nil t)
+          (save-excursion
+            (org-back-to-heading t)
+            (when (not (org-get-repeat))
+              (org-archive-subtree)
+              (setq archived-count (1+ archived-count)))))
+        (message "Archived %d DONE task(s)" archived-count))))
+  
   ;; configure <s template for org-src-blocks
   (require 'org-tempo)
   (add-hook 'org-mode-hook
@@ -47,7 +61,7 @@
                                  t
                                (,electric-pair-inhibit-predicate c))))))
 
-  (org-clock-persistence-insinuate)
+  ;; (orig-clock-persistence-insinuate) ; lexical binding missing
   (setq org-global-properties ; org clock in effort times default
         '(("Effort_ALL" . "0:15 0:30 0:45 1:00 2:00 3:00 4:00 5:00 6:00 0:00"))
         org-clock-history-length 23

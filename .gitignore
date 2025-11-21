@@ -19,7 +19,8 @@ url/
 *.ADAPT
 *.SCORE
 .DS_Store
-forge-database.sqlite
+code-review*
+forge-database*
 history
 ido.last
 .emacs.desktop

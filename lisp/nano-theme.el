@@ -45,6 +45,7 @@
           (set-face-attribute face nil attribute (face-attribute sources attribute)))))))
 
 (defun nano-install-theme ()
+  (mapc #'disable-theme custom-enabled-themes)
   (set-face-attribute 'cursor nil :background "#00c2ff")
   (set-face-attribute 'default nil :foreground (face-foreground 'nano-default)
                       :background (face-background 'nano-default))

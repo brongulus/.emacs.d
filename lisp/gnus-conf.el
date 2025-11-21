@@ -98,11 +98,11 @@
   (with-eval-after-load 'gnus-cite
     (defun gnus-clean-citation nil
       (save-excursion
-        (let ((replacement "▎ "))
+        (let ((replacement "│ "))
           (put-text-property 0 2 'face 'font-lock-comment-face replacement)
           (replace-regexp-in-region
            "\\(>[ ]?\\)" replacement (point-min) (point-max)))
-        (replace-regexp-in-region "\\([^\s\n]\\)▎ " "\\1>" (point-min) (point-max))))
+        (replace-regexp-in-region "\\([^\s\n]\\)│ " "\\1>" (point-min) (point-max))))
 
     (nconc gnus-treatment-function-alist
            '((t gnus-clean-citation))))
