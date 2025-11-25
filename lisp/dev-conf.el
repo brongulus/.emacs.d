@@ -1,4 +1,7 @@
 ;;;; dev-conf -*- lexical-binding: t -*-
+(when t
+  (defvar package-quickstart)
+  (setq package-quickstart t))
 
 (if package-quickstart
     (let ((load-source-file-function nil))
@@ -35,8 +38,8 @@
              (package-install package))))))
    packages))
 
-(my/ensure-package-installed ;; 'diff-hl 'eldoc-box
- 'consult-eglot 'corfu 'markdown-mode 'dape 'ox-hugo 'zig-mode 'nov 'pr-review)
+(my/ensure-package-installed ;; 'diff-hl
+ 'consult-eglot 'corfu 'markdown-mode 'dape 'ox-hugo 'zig-mode 'nov 'pr-review 'eldoc-box)
 
 ;; pr-review needs (info "(forge) Setup for Githubcom")
 ;; C-c C- {c (comment) s (action) e (edit) d (ediff) f (goto file)

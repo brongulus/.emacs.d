@@ -33,7 +33,6 @@
                 (tool-bar-lines . 0)
                 (vertical-scroll-bars . nil)
                 (horizontal-scroll-bars . nil)
-                (fullscreen . maximized)
                 (left-fringe . 8) (right-fringe . 8) (internal-border-width . 10)
                 (bottom-divider-width . 0) (right-divider-width . 0)
                 (undecorated-round . t))
@@ -42,15 +41,16 @@
               bidi-inhibit-bpa t
               bidi-paragraph-direction 'left-to-right)
 
+;; breaks corfu/eldoc-box if added to default-frame-alist
+;; (add-to-list 'initial-frame-alist '(fullscreen . maximized))
+
 (setq menu-bar-mode nil
       tool-bar-mode nil
       scroll-bar-mode nil)
 
-;; Android
-(defconst is-android (eq system-type 'android))
 (defconst is-mac (eq system-type 'darwin))
 
-(when is-android
+(when (eq system-type 'android)
   (let ((termuxpath "/data/data/com.termux/files/usr/"))
     (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin")))
   ;; (push (concat termuxpath "bin") exec-path))
@@ -59,23 +59,19 @@
     (copy-directory "~/.emacs.d/fonts/" "~/fonts")))
 
 ;; doom
-(setq-default inhibit-redisplay t
-              inhibit-message t)
-(add-hook 'after-init-hook
-          (lambda nil
-            (setq-default inhibit-redisplay nil
-                          inhibit-message nil)
-            (redraw-frame))
-          :depth -105)
+;; (setq-default inhibit-redisplay t
+;;               inhibit-message t)
+;; (add-hook 'after-init-hook
+;;           (lambda nil
+;;             (setq-default inhibit-redisplay nil
+;;                           inhibit-message nil)
+;;             (redraw-frame))
+;;           :depth -105)
 ;;
 (fset 'display-startup-echo-area-message 'ignore)
 
 (setcdr (assq 'continuation fringe-indicator-alist)
         '(nil nil))
-
-(when t
-  (defvar package-quickstart)
-  (setq package-quickstart t))
 
 (setq package-enable-at-startup nil
       inhibit-startup-screen t

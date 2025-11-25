@@ -3,6 +3,7 @@
 ;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
 ;; (setq init-start-time (current-time))
 (setq inhibit-startup-screen t
+      ;; toggle-debug-on-error t
       custom-file (make-temp-file "emacs-custom"))
 
 ;; --- Typography stack -----------------------------------------------------
@@ -13,7 +14,8 @@
     (victor :family "Victor Mono" :weight regular :bold-weight demi-bold)))
 (let ((config (alist-get 'input my-font-configs)))
   (set-face-attribute 'default nil :family (plist-get config :family)
-                      :weight (plist-get config :weight) :height (if is-android 160 150))
+                      :weight (plist-get config :weight)
+                      :height (if (eq system-name 'android) 160 150))
   (set-face-attribute 'bold nil :weight (plist-get config :bold-weight))
   (set-face-attribute 'bold-italic nil :weight (plist-get config :bold-weight))
   (dolist (face '(fixed-pitch-serif fixed-pitch variable-pitch variable-pitch-text))
@@ -30,11 +32,12 @@
 (blink-cursor-mode -1) (kill-ring-deindent-mode 1)
 (run-with-idle-timer 0.1 nil #'fido-vertical-mode)
 (global-subword-mode 1) (global-eldoc-mode -1)
-(defun my-lazy-load-modes () (pixel-scroll-precision-mode 1) (winner-mode 1)
-       (delete-selection-mode 1) (global-auto-revert-mode 1) (minibuffer-depth-indicate-mode)
-       (which-key-mode 1) (savehist-mode 1) (which-function-mode 1)
-       (save-place-mode 1) (global-goto-address-mode) (tooltip-mode -1)
-       (unless (display-graphic-p) (xterm-mouse-mode)))
+(defun my-lazy-load-modes ()
+  (pixel-scroll-precision-mode 1) (winner-mode 1)
+  (delete-selection-mode 1) (global-auto-revert-mode 1) (which-key-mode 1)
+  (minibuffer-depth-indicate-mode) (savehist-mode 1) (which-function-mode 1)
+  (save-place-mode 1) (global-goto-address-mode) (tooltip-mode -1)
+  (unless (display-graphic-p) (xterm-mouse-mode)))
 (run-with-idle-timer 0.3 nil #'my-lazy-load-modes)
 
 ;; --- Minimal theme --------------------------------------
@@ -275,8 +278,6 @@
 (add-hook 'dired-mode-hook #'dired-hide-details-mode)
 (add-hook 'dired-mode-hook #'dired-omit-mode)
 (add-hook 'prog-mode-hook (electric-pair-mode t))
-(unless (require 'corfu nil t)
-  (add-hook 'prog-mode-hook #'completion-preview-mode))
 (add-hook 'prog-mode-hook #'hs-minor-mode)
 (dolist (mode-hook '(prog-mode-hook conf-mode-hook yaml-ts-mode-hook))
   (add-hook mode-hook #'display-line-numbers-mode))
@@ -479,8 +480,8 @@
                                            ,(unless (string= (car pops)
                                                              "^\\*compilation.*\\*$")
                                               '(mode-line-format . ""))))))))
-(add-to-list 'display-buffer-alist
-             '("\\*\\(eldoc\\|Help\\|Dictionary\\)\\*" display-buffer-in-side-window
+(add-to-list 'display-buffer-alist ; eldoc\\|Help\\|
+             '("\\*\\(Dictionary\\)\\*" display-buffer-in-side-window
                (body-function . select-window)
                (window-parameters . ((split-window . #'ignore)))
                (side . right) (slot . 1) (window-width . 82)))
@@ -1323,8 +1324,10 @@ any directory proferred by `consult-dir'."
 ;; --- External -------------------------------------------------------------
 (run-with-idle-timer
  0.2 nil (lambda nil
-           (load "~/.emacs.d/lisp/dev-conf" nil :no-message)))
-;; (when (require 'corfu nil t) (global-corfu-mode)))) ;; FIXME
+           (load "~/.emacs.d/lisp/dev-conf" nil :no-message)
+           (when (require 'corfu nil t) (global-corfu-mode))
+           (unless (require 'corfu nil t)
+             (add-hook 'prog-mode-hook #'completion-preview-mode))))
 
 ;; --- 31 stuff -------------------------------------------------------------
 (when (string> emacs-version "31")
