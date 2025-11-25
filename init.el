@@ -88,10 +88,13 @@
                         'face 'bold)))))
                 (:eval (when (and (buffer-narrowed-p) (not (derived-mode-p 'Info-mode)))
                          (propertize " (N)")))
-                (:eval (propertize (format "%s%s" (if (buffer-modified-p) " * " "   ")
-                                           (replace-regexp-in-string "\\*" "" (buffer-name)))
-                                   'face (if (buffer-modified-p) 'bold-italic 'bold)
-                                   'help-echo (buffer-file-name)))
+                (:eval (let ((prefix (cond ((buffer-modified-p) " ** ")
+                                           (buffer-read-only " RO ")
+                                           (t "    "))))
+                         (propertize (format "%s%s" prefix
+                                             (replace-regexp-in-string "\\*" "" (buffer-name)))
+                                     'face (if (buffer-modified-p) 'bold-italic 'bold)
+                                     'help-echo (buffer-file-name))))
                 (:eval (propertize (string-trim-left
                                     (format-mode-line vc-mode))
                                    'face '(:weight light :slant italic)))
@@ -110,10 +113,11 @@
                                       ((eq major-mode 'doc-view-mode)
                                        (format "[%d/%d]" (doc-view-current-page)
                                                (doc-view-last-page-number)))
-                                      ((or meow-mode (eq major-mode 'eww-mode)) "%p")
-                                      ((buffer-modified-p)       "**")
-                                      (buffer-read-only          "RO")
-                                      (t                         "--"))))
+                                      ((or meow-mode buffer-read-only
+                                           (eq major-mode 'eww-mode))
+                                       "%p")
+                                      ((buffer-modified-p) "**")
+                                      (t                   "--"))))
                          (propertize (concat "   " prefix " ") 'face 'shadow)))
                 mode-line-format-right-align
                 (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
@@ -1249,6 +1253,10 @@ any directory proferred by `consult-dir'."
 
 (with-eval-after-load 'gnus
   (load "~/.emacs.d/lisp/gnus-conf" nil :no-message)
+  (with-eval-after-load ' gnus-art
+    (define-key gnus-article-mode-map (kbd "SPC") ctl-x-map)
+    (define-key gnus-article-mode-map (kbd "j") #'next-line)
+    (define-key gnus-article-mode-map (kbd "k") #'previous-line))
   (with-eval-after-load 'gnus-group
     (define-key gnus-group-mode-map (kbd "SPC") ctl-x-map)
     (define-key gnus-group-mode-map (kbd "j") #'next-line)
@@ -1291,6 +1299,7 @@ any directory proferred by `consult-dir'."
 (setq browse-url-browser-function 'eww-browse-url
       browse-url-new-window-flag t
       eww-default-download-directory "~/Downloads/eww/")
+(setq browse-url-handlers nil)
 (dolist (url '("github\\.com" "github\\.tools" "youtube\\.com" "youtu\\.be"))
   (push (cons url 'browse-url-default-browser) browse-url-handlers))
 (add-hook 'html-mode-hook

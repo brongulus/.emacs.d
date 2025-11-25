@@ -70,6 +70,7 @@
         org-clock-out-remove-zero-time-clocks t)
   
   (setq org-directory (concat "~/Dropbox/" "org")
+        safe-local-variable-directories `(,org-directory)
         org-use-sub-superscripts '{}
         ;; org-export-with-sub-superscripts nil
         org-ellipsis "…" ; "  ·"
@@ -194,7 +195,7 @@
         org-agenda-skip-deadline-if-done t
         org-agenda-skip-deadline-prewarning-if-scheduled 'pre-scheduled
         org-agenda-scheduled-leaders '("" "")
-        org-agenda-deadline-leaders '("" "")
+        org-agenda-deadline-leaders '("" "" "")
         org-agenda-todo-keyword-format ""
         org-agenda-block-separator (string-to-char " ")
         org-agenda-current-time-string
@@ -230,21 +231,29 @@
       result))
 
   (advice-add 'org-habit-build-graph :filter-return #'add-missed-day-glyph)
-  (set-face-attribute 'org-habit-clear-face nil :background 'unspecified 
+  (set-face-attribute 'org-habit-clear-face nil :background 'unspecified
+                      :weight (face-attribute 'bold :weight)
                       :foreground (face-foreground 'font-lock-comment-face))
-  (set-face-attribute 'org-habit-clear-future-face nil :background 'unspecified 
+  (set-face-attribute 'org-habit-clear-future-face nil :background 'unspecified
+                      :weight (face-attribute 'bold :weight)
                       :foreground (face-foreground 'font-lock-comment-face))
-  (set-face-attribute 'org-habit-alert-face nil :background 'unspecified 
+  (set-face-attribute 'org-habit-alert-face nil :background 'unspecified
+                      :weight (face-attribute 'bold :weight)
                       :foreground (face-foreground 'ansi-color-yellow))
-  (set-face-attribute 'org-habit-alert-future-face nil :background 'unspecified 
+  (set-face-attribute 'org-habit-alert-future-face nil :background 'unspecified
+                      :weight (face-attribute 'bold :weight)
                       :foreground (face-foreground 'ansi-color-yellow))
-  (set-face-attribute 'org-habit-overdue-face nil :background 'unspecified 
+  (set-face-attribute 'org-habit-overdue-face nil :background 'unspecified
+                      :weight (face-attribute 'bold :weight)
                       :foreground (face-foreground 'ansi-color-red))
-  (set-face-attribute 'org-habit-overdue-future-face nil :background 'unspecified 
+  (set-face-attribute 'org-habit-overdue-future-face nil :background 'unspecified
+                      :weight (face-attribute 'bold :weight)
                       :foreground (face-foreground 'ansi-color-red))
-  (set-face-attribute 'org-habit-ready-face nil :background 'unspecified 
+  (set-face-attribute 'org-habit-ready-face nil :background 'unspecified
+                      :weight (face-attribute 'bold :weight)
                       :foreground (face-foreground 'ansi-color-green))
-  (set-face-attribute 'org-habit-ready-future-face nil :background 'unspecified 
+  (set-face-attribute 'org-habit-ready-future-face nil :background 'unspecified
+                      :weight (face-attribute 'bold :weight)
                       :foreground (face-foreground 'ansi-color-green)))
 
 (define-key (current-global-map) (kbd "C-c o c") #'org-capture)
