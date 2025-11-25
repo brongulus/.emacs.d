@@ -58,9 +58,29 @@
   (with-eval-after-load 'project
     (add-to-list 'project-switch-commands '(magit-project-status "Magit" ?m))))
 (with-eval-after-load 'magit
-  (transient-bind-q-to-quit))
+  (transient-bind-q-to-quit)
+  (defun magit-forge-kill-buffers () ;src: manuel-uberti
+    "Restore window configuration and kill all Magit & Forge buffers."
+    (interactive)
+    (let ((buffers (magit-mode-get-buffers))
+          (forge-buffers
+           (seq-filter (lambda (buf)
+                         (with-current-buffer buf
+                           (member major-mode '(forge-pullreq-mode
+                                                forge-issue-mode
+                                                forge-topics-mode
+                                                forge-post-mode
+                                                forge-motifications-mode
+                                                forge-repository-list-mode))))
+                       (buffer-list))))
+      (magit-restore-window-configuration)
+      (mapc #'kill-buffer buffers)
+      (mapc #'kill-buffer forge-buffers)))
+  (define-key magit-status-mode-map (kbd "q") #'magit-forge-kill-buffers))
 
 (define-key (current-global-map) (kbd "C-x S") #'consult-eglot-symbols)
+(with-eval-after-load 'eglot
+  (define-key eglot-mode-map [remap xref-find-apropos] #'consult-eglot-symbols))
 (with-eval-after-load 'ox
   (require 'ox-hugo))
 (add-to-list 'auto-mode-alist '("\\.zig\\'" . zig-mode))
@@ -110,6 +130,10 @@
       (eldoc-doc-buffer t))))
 (with-eval-after-load 'eldoc
   (with-eval-after-load 'eldoc-box
+    (define-key (current-global-map) (kbd "C-;")
+                (lambda nil (interactive) (eldoc-box-scroll-up 5)))
+    (define-key (current-global-map) (kbd "C-'")
+                (lambda nil (interactive) (eldoc-box-scroll-down 5)))
     (setq eldoc-box-max-pixel-width 800
           eldoc-box-max-pixel-height 700
           eldoc-box-only-multi-line t)))

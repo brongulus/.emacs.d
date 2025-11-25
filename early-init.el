@@ -42,7 +42,7 @@
               bidi-paragraph-direction 'left-to-right)
 
 ;; breaks corfu/eldoc-box if added to default-frame-alist
-;; (add-to-list 'initial-frame-alist '(fullscreen . maximized))
+(push '(fullscreen . maximized) initial-frame-alist)
 
 (setq menu-bar-mode nil
       tool-bar-mode nil
