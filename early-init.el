@@ -12,10 +12,10 @@
               (run-at-time
                2 nil
                (lambda nil            
-                 (setq gc-cons-threshold (* 32 1024 1024)
+                 (setq gc-cons-threshold (* 64 1024 1024)
                        gc-cons-percentage 0.1
-                       file-name-handler-alist my/saved-file-name-handler-alist)
-                 (garbage-collect))))
+                       file-name-handler-alist my/saved-file-name-handler-alist))))
+          ;; (garbage-collect))))
           105)
 
 ;; src: skangas

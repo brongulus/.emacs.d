@@ -27,7 +27,8 @@
      (let* ((pkg-name (if (listp package) (car package) package))
             (is-vc-package (or (stringp package)
                                (and (listp package) (plist-get (cdr package) :url)))))
-       (unless (package-installed-p pkg-name)
+       (unless (locate-library (symbol-name pkg-name))
+         ;; (package-installed-p pkg-name)
          (if is-vc-package
              (if (listp package)
                  (package-vc-install (plist-get (cdr package) :url))
@@ -54,8 +55,8 @@
              '(pr-review-url-parse . pr-review-open-url))
 (with-eval-after-load 'pr-review
   (define-key pr-review-mode-map (kbd "SPC") ctl-x-map))
-(when (require 'magit nil t)
-  (with-eval-after-load 'project
+(with-eval-after-load 'project
+  (when (locate-library "magit")
     (add-to-list 'project-switch-commands '(magit-project-status "Magit" ?m))))
 (with-eval-after-load 'magit
   (transient-bind-q-to-quit)

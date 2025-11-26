@@ -5,6 +5,7 @@
 (setq inhibit-startup-screen t
       ;; toggle-debug-on-error t
       custom-file (make-temp-file "emacs-custom"))
+;; (profiler-start 'cpu)
 
 ;; --- Typography stack -----------------------------------------------------
 (defvar my-font-configs
@@ -33,7 +34,7 @@
 (run-with-idle-timer 0.1 nil #'fido-vertical-mode)
 (global-subword-mode 1) (global-eldoc-mode -1)
 (defun my-lazy-load-modes ()
-  (pixel-scroll-precision-mode 1) (winner-mode 1)
+  (pixel-scroll-precision-mode 1) ;(winner-mode 1)
   (delete-selection-mode 1) (global-auto-revert-mode 1) (which-key-mode 1)
   (minibuffer-depth-indicate-mode) (savehist-mode 1) (which-function-mode 1)
   (save-place-mode 1) (global-goto-address-mode) (tooltip-mode -1)
@@ -179,31 +180,28 @@
 (add-hook 'completion-at-point-functions #'file-capf)
 
 ;; --- Minimal key bindings -------------------------------------------------
-(defun nano-quit ()
-  "Quit minibuffer from anywhere (code from Protesilaos Stavrou)."
-  (interactive)
-  (cond ((region-active-p) (keyboard-quit))
-        ((derived-mode-p 'completion-list-mode) (delete-completion-window))
-        ((> (minibuffer-depth) 0) (abort-recursive-edit))
-        (t (keyboard-quit))))
-
-(with-eval-after-load 'project
-  (defun nano-project--temporarily-restore-quit (orig-fun &rest args)
-    "Temporarily restore C-g to keyboard-quit for project switching."
-    (let ((original-binding (global-key-binding (kbd "C-g"))))
-      (global-set-key (kbd "C-g") #'keyboard-quit)
-      (unwind-protect (apply orig-fun args)
-        (global-set-key (kbd "C-g") original-binding))))
-  (advice-add 'project--switch-project-command :around 
-              #'nano-project--temporarily-restore-quit))
+(defun nano-quit (&optional interactive)
+  "A sensible `keyboard-quit'."
+  (interactive (list 'interactive))
+  (let ((inhibit-quit t))
+    (cond ((minibuffer-window-active-p (minibuffer-window))
+           (when interactive
+             (setq this-command 'abort-recursive-edit))
+           (abort-recursive-edit))
+          ((or defining-kbd-macro executing-kbd-macro) nil)
+          ((derived-mode-p 'completion-list-mode)
+           (delete-completion-window))
+          ((unwind-protect (keyboard-quit)
+             (when interactive
+               (setq this-command 'keyboard-quit)))))))
+(define-key (current-global-map) [remap keyboard-quit] #'nano-quit)
 
 (defun my-goto-doc nil (interactive)
-       (if (derived-mode-p 'emacs-lisp-mode)
-           (describe-symbol (symbol-at-point))
-         (if ;(and (display-graphic-p)
-             (require 'eldoc-box nil t);)
-             (eldoc-box-help-at-point)
-           (eldoc-doc-buffer t))))
+       (cond ((derived-mode-p 'emacs-lisp-mode)
+              (describe-symbol (symbol-at-point)))
+             ((locate-library "eldoc-box")
+              (eldoc-box-help-at-point))
+             (t (eldoc-doc-buffer t))))
 
 (defun my-scroll-other-down nil (interactive)
        (let ((mode (with-current-buffer (window-buffer (other-window-for-scrolling))
@@ -233,7 +231,7 @@
                 ("C-." . my-scroll-other-up) ("C-<tab>" . tab-next)
                 ("C-S-<tab>" . tab-previous) ("C-x C-b" . ibuffer)
                 ("M-s r" . replace-regexp) ("C-x k" . kill-current-buffer)
-                ("C-x f" . recentf-open) ("C-g" . nano-quit)))
+                ("C-x f" . recentf-open) ("C-g" . keyboard-quit)))
   (define-key (current-global-map) (kbd (car bind)) (cdr bind)))
 (define-key (current-global-map) (kbd "C-x m") esc-map)
 (define-key (current-global-map) (kbd "C-<wheel-up>") nil)
@@ -337,6 +335,8 @@
       hl-line-sticky-flag nil
       global-hl-line-sticky-flag nil
       kill-buffer-delete-auto-save-files t
+      kill-do-not-save-duplicates t
+      kill-ring-max 1000
       pixel-scroll-precision-interpolate-page t
       recentf-max-saved-items 200
       recentf-auto-cleanup 'never
@@ -351,6 +351,7 @@
       shell-kill-buffer-on-exit t
       shell-file-name (car (process-lines "which" "fish"))
       tab-bar-show nil
+      tramp-mode nil ;; FIXME
       vc-allow-rewriting-published-history 'ask
       vc-display-status 'no-backend
       vc-follow-symlinks t
@@ -463,7 +464,7 @@
 ;; --- Window Management ----------------------------------------------------
 (dolist (pops '(("\\*eshell-pop\\*" . -2 ) ;; <-- prima donna
                 ("^\\*term.*\\*$" . -1) ("^\\*compilation.*\\*$" . -1)
-                ("vc-git :.\*" . 0) ("\\*vc.\*-log\\*" . 0) ;("\\*eldoc\\*" . 0) ("\\*Help\\*" . 0)
+                ("vc-git :.\*" . 0) ("\\*vc.\*-log\\*" . 0) ("\\*eldoc\\*" . 0) ("\\*Help\\*" . 0)
                 ("\\*Warnings\\*" . 1) ("\\*log-edit-files\\*" . 1)
                 ("\\*Occur.*\\*$" . 1) ("\\*grep.*\\*$" . 1) ("CAPTURE-.*" . 1)
                 ("\\*Org Select\\*" . 1) ("\\*xref\\*" . 1) ;("^\\*Dictionary\\*" . 1)))
@@ -663,8 +664,9 @@
 (define-key (current-global-map) (kbd "C-x =") #'eglot-code-actions)
 (with-eval-after-load 'eglot
   (fset #'jsonrpc--log-event #'ignore)
-  (setq eglot-events-buffer-config '(:size 0 :format short)
-        eglot-sync-connect 0
+  (setq jsonrpc-event-hook nil
+        eglot-events-buffer-config '(:size 0 :format short)
+        eglot-sync-connect 2
         eglot-autoshutdown t
         eglot-inlay-hints-mode nil)
 
@@ -756,9 +758,8 @@
             (goto-char start)
             (set-mark (point))
             (forward-sexp))
-        (backward-up-list) (down-list)
-        (set-mark (point))
-        (up-list) (backward-down-list))
+        (backward-up-list) (set-mark (point))
+        (down-list) (up-list) (backward-down-list))
     (error (message "No inner list or string found."))))
 
 (defun my-select-fwd-line (arg)
@@ -883,6 +884,7 @@
     (dictionary-lookup-definition)))
 
 (define-key (current-global-map) (kbd "j") (lambda nil (interactive) (my-chord ?j ?k 'meow-mode)))
+(define-key (current-global-map) (kbd "C-j") (lambda nil (interactive) (meow-mode t)))
 (define-key (current-global-map) [escape] (lambda nil (interactive) (meow-mode t)))
 (define-key meow-mode-map (kbd "g") (make-sparse-keymap))
 (define-key meow-mode-map (kbd "m") (make-sparse-keymap))
@@ -904,18 +906,19 @@
                 ("gT" . tab-bar-switch-to-prev-tab) ("gt" . tab-bar-switch-to-next-tab)
                 ("x" . my-select-fwd-line) ("X" . exchange-point-and-mark) ("O" . occur)
                 ("w" . my-mark-word) ("," . my-scroll-other-down) ("s" . isearch-forward-regexp)
-                ("." . my-scroll-other-up) (";" . keyboard-quit) ("gf" . ffap)
+                ("." . my-scroll-other-up) (";" . comment-line) ("gf" . ffap)
                 ("gS" . scratch-buffer) ("*" . isearch-forward-symbol-at-point)
                 ("ga" . (lambda nil (interactive) (org-agenda nil "n"))) ("gc" . org-capture)
                 ("`" . window-toggle-side-windows) ("zz" . pop-to-mark-command)
-                ("gi" . eglot-find-implementation) ("gs" . imenu) ("(" . down-list) (")" . up-list)
-                ("[" . backward-list) ("]" . forward-list) ("#" . definition-at-point)
+                ("gi" . eglot-find-implementation) ("gs" . imenu) ("#" . definition-at-point)
                 ("{" . flymake-goto-prev-error) ("}" . flymake-goto-next-error)
                 ("g/" . xref-find-definitions-other-window) ("gd" . xref-find-definitions)
                 ("gb" . xref-go-back) ("K" . my-goto-doc) (":" . viper-ex) ("gr" . xref-find-references)
                 ("gx" . flymake-show-buffer-diagnostics) ("gX" . flymake-show-project-diagnostics)
                 ("&" . align-regexp) ("C" . string-rectangle) ("mi" . mark-inner) ("p" . yank)
                 ("P" . yank-pop) ("+" . eglot-rename) ("mm" . file-to-register)
+                ("ml" . down-list) ("mu" . up-list) ("mb" . backward-list) ("mf" . forward-list)
+                ("mj" . forward-sexp) ("mk" . backward-sexp)
                 ("'" . register-to-point) ("md" . delete-pair) ("+" . eglot-code-actions)
                 ("Z" . undo-redo) ("u" . undo-only) ("R" . replace-regexp)
                 ("zf" . hs-toggle-hiding) ("zc" . hs-hide-all) ("zs" . hs-show-all)
@@ -1082,6 +1085,7 @@
 (advice-add 'eshell-read-aliases-list :override #'my-eshell-read-aliases-list)
 
 (with-eval-after-load 'em-term
+  (setenv "PAGER" "cat")
   (dolist (cmd '("fzf" "yazi" "mpv" "emacsclient" "bat" "gh"))
     (add-to-list 'eshell-visual-commands cmd))
   (setq eshell-visual-options '(("git" "--help" "--paginate" "--patch")))
@@ -1325,8 +1329,8 @@ any directory proferred by `consult-dir'."
 (run-with-idle-timer
  0.2 nil (lambda nil
            (load "~/.emacs.d/lisp/dev-conf" nil :no-message)
-           (when (require 'corfu nil t) (global-corfu-mode))
-           (unless (require 'corfu nil t)
+           (if (locate-library "corfu")
+               (global-corfu-mode)
              (add-hook 'prog-mode-hook #'completion-preview-mode))))
 
 ;; --- 31 stuff -------------------------------------------------------------
