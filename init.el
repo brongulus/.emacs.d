@@ -102,11 +102,11 @@
                                    (lambda (i)
                                      (propertize (if (= i active) "⦿" "○") 'mouse-face 'mode-line-highlight
                                                  'local-map (aref tab-bar--tab-keymaps i)))
-                                   (number-sequence 0 (1- count))
-                                   " "))
+                                   (number-sequence 0 (1- count)) " ")
+                                  " ")
                           'face 'bold))))))
                 (:eval (when (and (buffer-narrowed-p) (not (derived-mode-p 'Info-mode)))
-                         (propertize "(N) ")))
+                         (propertize "(N)")))
                 (:eval (let ((prefix (cond ((buffer-modified-p) "** ")
                                            (buffer-read-only "RO ")
                                            (t "   "))))
@@ -160,6 +160,13 @@
                          mode-line-end-spaces))))
 
 (add-hook 'post-command-hook #'(lambda nil (when (region-active-p) (force-mode-line-update))))
+
+(defvar default-mode-line-format mode-line-format)
+(defun toggle-mode-line nil (interactive)
+       (if mode-line-format
+           (setq-local mode-line-format nil)
+         (setq-local mode-line-format default-mode-line-format)))
+(define-key (current-global-map) (kbd "C-x t m") #'toggle-mode-line)
 
 ;; --- Minibuffer completion ------------------------------------------------
 (setq tab-always-indent 'complete
@@ -322,6 +329,7 @@
       confirm-nonexistent-file-or-buffer nil
       delete-pair-blink-delay t
       delete-pair-push-mark t
+      delete-by-moving-to-trash t
       diff-default-read-only t
       dired-clean-confirm-killing-deleted-buffers nil
       dired-create-destination-dirs 'ask
@@ -1254,8 +1262,8 @@ any directory proferred by `consult-dir'."
 
 (defun direnv-update () ; src: claude and purcell/envrc
   (require 'json)
-  (if-let* ((dir (locate-dominating-file default-directory
-                  (lambda (d) (file-exists-p (expand-file-name ".envrc" d))))))
+  (if-let* ((dir (locate-dominating-file
+                  default-directory (lambda (d) (file-exists-p (expand-file-name ".envrc" d))))))
       (let* ((default-directory dir)
              (tmp (make-temp-file "direnv"))
              (env (unwind-protect
@@ -1330,51 +1338,55 @@ any directory proferred by `consult-dir'."
 ;;   :ensure nil
 ;;   :commands my/irc
 ;;   :hook (erc-join . hl-line-mode)
-;;   :hook (erc-join . (lambda nil
-;;                       (setq-local erc-fill-column (min (- (window-width) 3) 85))))
-;;   :hook (erc-kill-server . (lambda nil
-;;                              (erc-status-sidebar-kill)
-;;                              (tab-bar-close-tab)))
-;;   :custom
-;;   (erc-autojoin-channels-alist '(("libera.chat" "#emacs"))); "##rust")))
-;;   (erc-default-server "irc.libera.chat")
-;;   (erc-nick "brongulus")
-;;   (erc-nickserv-get-password nil)
-;;   (erc-use-auth-source-for-nickserv-password t)
-;;   (erc-fill-column (min (- (window-width) 3) 85))
-;;   (erc-status-side-bar-width 12)
-;;   (erc-autojoin-timing 'ident)
-;;   (erc-fill-function 'erc-fill-static)
-;;   (erc-fill-static-center 14)
-;;   (erc-format-nick-function 'erc-format-@nick)
-;;   (erc-header-line-face-method t)
-;;   (erc-track-position-in-mode-line t)
-;;   (erc-track-showcount t)
-;;   (erc-track-shorten-function nil)
-;;   (erc-track-exclude-server-buffer t)
-;;   (erc-join-buffer 'bury) ; window
-;;   (erc-kill-server-buffer-on-quit t)
-;;   (erc-kill-buffer-on-part t)
-;;   (erc-hide-list '("JOIN" "PART" "QUIT" "353")) ;; 353 hide names
-;;   (erc-lurker-hide-list '("JOIN" "PART" "QUIT" "NICK"))
-;;   (erc-track-exclude-types '("JOIN" "MODE" "NICK" "PART" "QUIT"
-;;                              "324" "329" "332" "333" "353" "477"))
+;;   ;; :hook (erc-join . (lambda nil
+;;   ;;                     (setq-local erc-fill-column (min (- (window-width) 3) 85))))
+;;   ;; :hook (erc-kill-server . (lambda nil ;; (erc-status-sidebar-kill)
+;;   ;;                            (tab-bar-close-tab)))
+;;   :init
+;;   (setq erc-autojoin-channels-alist '(("libera.chat" "#emacs")); "##rust")))
+;;         erc-default-server "irc.libera.chat"
+;;         erc-nick "brongulus"
+;;         erc-nickserv-get-password nil
+;;         erc-use-auth-source-for-nickserv-password t
+;;         ;; (erc-fill-column (min (- (window-width) 3) 85))
+;;         ;; (erc-status-side-bar-width 12)
+;;         erc-autojoin-timing 'ident
+;;         erc-fill-function 'erc-fill-static
+;;         erc-fill-static-center 14
+;;         erc-format-nick-function 'erc-format-@nick
+;;         erc-header-line-face-method t
+;;         erc-track-position-in-mode-line t
+;;         erc-track-showcount t
+;;         erc-track-shorten-function nil
+;;         erc-track-exclude-server-buffer t
+;;         erc-sasl-user "brongulus"
+;;         erc-sasl-auth-source-function #'erc-auth-source-search
+;;         erc-join-buffer 'bury ; window
+;;         erc-kill-server-buffer-on-quit t
+;;         erc-kill-buffer-on-part t
+;;         erc-hide-list '("JOIN" "PART" "QUIT" "353") ;; 353 hide names
+;;         erc-lurker-hide-list '("JOIN" "PART" "QUIT" "NICK")
+;;         erc-track-exclude-types '("JOIN" "MODE" "NICK" "PART" "QUIT"
+;;                                   "324" "329" "332" "333" "353" "477"))
 ;;   :config
 ;;   (defun my/irc nil
 ;;     "Setup ERC and connect if not already."
 ;;     (interactive)
-;;     (if (get-buffer "Libera.Chat") ;; ERC already active?
-;;         (pop-to-buffer "Libera.Chat")
-;;       (progn
-;;         (tab-bar-new-tab)
-;;         (erc-tls :server "irc.libera.chat" :port 6667 :nick "brongulus" :password nil)
-;;         (erc-track-switch-buffer 1)
-;;         (erc-status-sidebar-open))))
+;;     ;; (if (get-buffer "Libera.Chat") ;; ERC already active?
+;;     ;;     (pop-to-buffer "Libera.Chat")
+;;     ;;   (progn
+;;     ;;     (tab-bar-new-tab)
+;;     (erc-tls :server "irc.libera.chat" :port 6667 :nick "brongulus" :password nil))
+;;   ;; (erc-track-switch-buffer 1))
+;;   ;; (erc-status-sidebar-open))))
 ;;   (erc-services-mode 1)
 ;;   (erc-autojoin-mode)
 ;;   (erc-track-mode t)
-;;   (erc-timestamp-mode -1)
-;;   (push 'keep-place erc-modules)
+;;   (erc-timestamp-mode t)
+;;   (set-face-attribute 'erc-timestamp-face nil :foreground
+;;                       (face-foreground 'font-lock-comment-face))
+;;   (dolist (mod '(keep-place sasl log nickbar nicks services xdcc))
+;;     (push mod erc-modules))
 ;;   (erc-update-modules))
 
 ;; newsticker
