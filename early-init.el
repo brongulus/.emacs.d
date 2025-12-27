@@ -35,7 +35,7 @@
                 (horizontal-scroll-bars . nil)
                 (left-fringe . 8) (right-fringe . 8) (internal-border-width . 10)
                 (bottom-divider-width . 0) (right-divider-width . 0)
-                (undecorated-round . t))
+                (undecorated . t))
               cursor-in-non-selected-windows nil
               bidi-display-reordering 'left-to-right
               bidi-inhibit-bpa t
@@ -89,7 +89,7 @@
 
 (when is-mac
   (setq ns-use-proxy-icon nil
-        frame-title-format nil)
+        frame-title-format "")
   (add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
   (let ((home (getenv "HOME")))
     (setenv "PATH" (concat (getenv "PATH")
