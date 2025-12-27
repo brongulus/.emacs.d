@@ -1,5 +1,5 @@
 ;;;; nano-theme -*- lexical-binding: t -*-
-(defvar nano-current-theme 'burn "Current nano variant being used.")
+(defvar nano-current-theme 'dark "Current nano variant being used.")
 (defvar nano-monochrome t "Should the font-locking have colours.")
 (setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
 (setq nano-bg-theme-map '(("#f7f7f7" . light) ("#c9ba96" . amber)
@@ -21,6 +21,29 @@
 (defface fg-bold '((t)) ".")      (defface fg-bold-i '((t)) ".")
 (defface fg-critical '((t)) ".")  (defface fg-critical-i '((t)) ".")
 (defface fg-string '((t)) ".")    (defface fg-string-i '((t)) ".")
+
+(defface my/shr-pre '((t :extend t)) "Face for pre tags.")
+(defface my/shr-blockquote '((t)) "Face for blockquote tags.")
+(defface my/shr-h1 '((t :inherit bold :height 1.3)) "Face for h1 tags.")
+(defface my/shr-h2 '((t :inherit bold :height 1.2)) "Face for h2 tags.")
+(defface my/shr-h3 '((t :inherit bold :height 1.2)) "Face for h3 tags.")
+
+(defun my/shr-make-tag-renderer (tag face-name)
+  "Create a custom shr tag renderer for TAG that applies FACE-NAME."
+  (let ((default-renderer (intern (format "shr-tag-%s" tag)))
+        (face-symbol face-name))
+    (lambda (dom)
+      (let ((start (point)))
+        (funcall default-renderer dom)
+        (add-face-text-property start (point) face-symbol)))))
+
+(with-eval-after-load 'shr
+  (setq shr-external-rendering-functions
+        `((pre . ,(my/shr-make-tag-renderer 'pre 'my/shr-pre))
+          (blockquote . ,(my/shr-make-tag-renderer 'blockquote 'my/shr-blockquote))
+          (h1 . ,(my/shr-make-tag-renderer 'h1 'my/shr-h1))
+          (h2 . ,(my/shr-make-tag-renderer 'h2 'my/shr-h2))
+          (h3 . ,(my/shr-make-tag-renderer 'h3 'my/shr-h3)))))
 
 (defun nano-set-face (name &optional foreground background weight)
   "Set NAME and NAME-i faces with given FOREGROUND, BACKGROUND and WEIGHT."
@@ -96,7 +119,7 @@
             (red     . ((dark . "#c47779") (light . "#c56655")))
             (green   . ((dark . "#99c476") (light . "#427b58")))
             (yellow  . ((dark . "#dab067") (light . "#b57614"))) ; dark FFBF00
-            (blue    . ((dark . "#6eaadb") (light . "#04508c")))
+            (blue    . ((dark . "#80aadf") (light . "#04508c")))
             (magenta . ((dark . "#c9b1ca") (light . "#7646c1")))
             (cyan    . ((dark . "#6fcfd2") (light . "#076678")))
             (white   . ((dark . "#cccccc") (light . "#1a1a1a")))))
@@ -209,9 +232,14 @@
     (dolist (face '(org-level-1 org-level-2 org-level-3 org-level-4
                                 org-level-5 org-level-6 org-level-7 org-level-8))
       (set-face-attribute face nil :height 1.1 :weight (face-attribute 'bold :weight)))
+    (dolist (face '(org-level-1 org-document-title org-document-info))
+      (set-face-attribute face nil :inherit 'variable-pitch :height 1.3))
+    (set-face-attribute 'org-level-2 nil :inherit 'fixed-pitch-serif)
     (dolist (face '(org-block org-block-begin-line org-block-end-line))
       (set-face-attribute face nil :background (face-background 'bg-highlight) :extend t :inherit 'default))
+    (set-face-attribute 'org-link nil :family (face-attribute 'variable-pitch :family))
     (set-face-attribute 'org-document-title nil :foreground (face-foreground 'fg-bold))
+    (set-face-attribute 'org-document-info nil :foreground (face-foreground 'fg-bold))
     (set-face-attribute 'org-todo nil :foreground (face-foreground 'org-scheduled-previously))
     (set-face-attribute 'org-done nil :foreground (face-foreground 'font-lock-comment-face))
     (set-face-attribute 'org-mode-line-clock nil :weight (face-attribute 'bold :weight)
@@ -221,7 +249,7 @@
     (set-face-attribute 'org-footnote nil :foreground (face-foreground 'shadow) :underline t)
     (set-face-attribute 'org-date nil :foreground (face-foreground 'link))
     (set-face-attribute 'org-table nil :foreground (face-foreground 'fg-default))
-    (set-face-attribute 'org-ellipsis nil :foreground (face-foreground 'fg-default) :underline nil)
+    (set-face-attribute 'org-ellipsis nil :foreground (face-foreground 'fg-faded) :underline nil)
     (set-face-attribute 'org-verbatim nil :inherit 'org-latex-and-related)
     (set-face-attribute 'org-code nil :inherit 'org-latex-and-related))
   (with-eval-after-load 'org-agenda
@@ -232,13 +260,21 @@
     (set-face-attribute 'sh-heredoc nil :foreground (face-foreground 'font-lock-constant-face))
     (set-face-attribute 'sh-quoted-exec nil :foreground (face-foreground 'fg-bold) :italic t))
   (with-eval-after-load 'shr
-    (set-face-attribute 'shr-text nil :height (face-attribute 'default :height))
+    (set-face-attribute 'my/shr-pre nil :weight (face-attribute 'bold :weight)
+                        :background (face-background 'bg-highlight)
+                        :foreground (face-foreground 'fg-bold))
+    (set-face-attribute 'my/shr-blockquote nil :italic t
+                        :foreground (face-foreground 'font-lock-doc-face)
+                        :family (face-attribute 'fixed-pitch-serif :family))
+    (set-face-attribute 'shr-text nil :inherit 'variable-pitch-text
+                        :height (face-attribute 'default :height))
     (set-face-attribute 'shr-code nil :weight (face-attribute 'bold :weight)))
 
   ;; Mode & header lines
   (set-face-attribute 'header-line nil :background 'unspecified :underline nil
                       :overline (face-foreground 'shadow))
   (set-face-attribute 'mode-line nil
+                      :inherit 'variable-pitch
                       :foreground (face-foreground 'default)
                       :background 'unspecified
                       :box '(:line-width 1 :style flat-button)
@@ -306,7 +342,7 @@
   (nano-set-face 'fg-faded "#949494")
   (nano-set-face 'fg-bold "#1b2229" nil (face-attribute 'bold :weight))
   (nano-set-face 'fg-critical "#eb9250" nil (face-attribute 'bold :weight))
-  (nano-set-face 'fg-string "#767676")
+  (nano-set-face 'fg-string "#4a567a")
   (setq nano-current-theme 'light)
   (nano-install-theme))
 
