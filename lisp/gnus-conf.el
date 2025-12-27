@@ -2,7 +2,7 @@
 
 (use-package gnus
   :ensure nil
-  :hook (gnus-exit-gnus . tab-bar-close-tab)
+  :hook (gnus-after-exiting-gnus . tab-bar-close-tab)
   :hook (gnus-summary-mode . turn-on-gnus-mailing-list-mode)
   :bind (:map gnus-article-mode-map
               ("q" . kill-buffer-and-window)
@@ -127,7 +127,8 @@
                               ;; "gmane.emacs.devel" "gmane.emacs.tramp" "gmane.emacs.bugs"
                               ;; "gmane.emacs.gnus.general" "gmane.emacs.gnus.user"
                               "gwene.org.perlmonks.headlines" "gwene.com.perlweekly.perlweekly"
-                              "gmane.comp.lang.go.general" "gwene.com.iximiuz" "gwene.net.cheney.dave"
+                              "gmane.comp.lang.go.general" "gwene.com.iximiuz"
+                              "gwene.net.cheney.dave" "gwene.net.thegreenplace.eli.bendersky"
                               "gwene.com.golangweekly" "gwene.org.golang.blog"
                               "gwene.com.thisweekinrust" "gwene.org.rust-lang.blog"
                               "gwene.com.youtube.feeds.videos.xml.user.ethoslab"

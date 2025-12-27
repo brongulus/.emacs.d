@@ -7,7 +7,7 @@
   (define-key org-mode-map (kbd "C-c C-x C-m") #'my-toggle-org-markers)
 
   (add-hook 'org-mode-hook #'visual-line-mode)
-  (add-hook 'org-mode-hook #'variable-pitch-mode)
+  ;; (add-hook 'org-mode-hook #'variable-pitch-mode)
   (add-hook 'org-mode-hook (lambda () (org-cycle-hide-drawers 'all)))
 
   (setq org-modules '(ol-info ol-eww org-habit))
@@ -109,6 +109,26 @@
 
 (define-key (current-global-map) (kbd "C-c o a")
             #'(lambda nil (interactive) (org-agenda nil "n")))
+(defun jump-to-org-agenda ()
+  (interactive)
+  (let ((buf (get-buffer "*Org Agenda*"))
+        wind)
+    (if buf
+        (if (setq wind (get-buffer-window buf))
+            (select-window wind)
+          (if (called-interactively-p)
+              (progn
+                (select-window (display-buffer buf t t))
+                (org-fit-window-to-buffer)
+                ;; (org-agenda-redo)
+                )
+            (with-selected-window (display-buffer buf)
+              (org-fit-window-to-buffer)
+              ;; (org-agenda-redo)
+              )))
+      (org-agenda nil "n"))))
+(run-with-idle-timer 600 t 'jump-to-org-agenda)
+
 (with-eval-after-load 'org-agenda
   (define-key org-agenda-mode-map (kbd "SPC") ctl-x-map)
   (define-key org-agenda-mode-map (kbd "q") #'org-agenda-exit)

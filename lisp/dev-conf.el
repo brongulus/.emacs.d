@@ -54,6 +54,7 @@
 (add-to-list 'browse-url-default-handlers
              '(pr-review-url-parse . pr-review-open-url))
 (with-eval-after-load 'pr-review
+  (require 'magit)
   (define-key pr-review-mode-map (kbd "SPC") ctl-x-map))
 (with-eval-after-load 'project
   (when (locate-library "magit")
@@ -85,6 +86,12 @@
 (with-eval-after-load 'ox
   (require 'ox-hugo))
 (add-to-list 'auto-mode-alist '("\\.zig\\'" . zig-mode))
+(with-eval-after-load 'zig-mode
+  (add-hook 'zig-mode-hook
+            (lambda ()
+              (add-hook 'before-save-hook
+                        (lambda ()
+                          (eglot-code-actions (buffer-end -1) (buffer-end 1) "source.fixAll" t))))))
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
 (setq nov-header-line-format nil)
 (with-eval-after-load 'nov
