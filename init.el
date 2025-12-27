@@ -19,9 +19,15 @@
                       :height (if (eq system-name 'android) 160 150))
   (set-face-attribute 'bold nil :weight (plist-get config :bold-weight))
   (set-face-attribute 'bold-italic nil :weight (plist-get config :bold-weight))
-  (dolist (face '(fixed-pitch-serif fixed-pitch variable-pitch variable-pitch-text))
-    (set-face-attribute face nil :family (face-attribute 'default :family))))
-(setq-default line-spacing 3) ; 7
+  (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family))
+  
+  (if (not (string= (plist-get config :family) "Input Mono Narrow"))
+      (dolist (face '(fixed-pitch-serif variable-pitch variable-pitch-text))
+        (set-face-attribute face nil :family (face-attribute 'default :family)))
+    (dolist (face '(variable-pitch variable-pitch-text))
+      (set-face-attribute face nil :family "Input Sans Narrow"))
+    (set-face-attribute 'fixed-pitch-serif nil :family "Input Serif Condensed")))
+(setq-default line-spacing 5) ; 7
 (set-face-attribute 'nobreak-space nil :underline nil)
 (set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
 (set-display-table-slot standard-display-table 'truncation (make-glyph-code ?…))
@@ -49,9 +55,22 @@
       modus-vivendi-palette-overrides
       '((bg-main "#212121")))
 ;; (load-theme 'modus-operandi-deuteranopia)
+;; (setq custom-theme-directory "~/.emacs.d/themes/"
+;;       custom-safe-themes t)
+;; (load-theme 'stillpoint)
+(set-face-attribute 'fringe nil :background (face-background 'default))
 (load "~/.emacs.d/lisp/nano-theme" :noerr :no-message)
 
 ;; --- Header & mode lines --------------------------------------------------
+(defvar tab-bar--tab-keymaps (make-vector 20 nil)
+  "Pre-allocated keymaps for tabs.")
+(dotimes (i 20)
+  (let ((map (make-sparse-keymap))
+        (idx i))
+    (define-key map [mode-line mouse-1]
+                `(lambda () (interactive) (tab-bar-select-tab ,(1+ idx))))
+    (aset tab-bar--tab-keymaps i map)))
+
 (setq-default flymake-mode-line-counter-format
               '("" flymake-mode-line-error-counter
                 flymake-mode-line-warning-counter
@@ -74,27 +93,23 @@
                 (:eval
                  (when (mode-line-window-selected-p)
                    (let* ((tabs (tab-bar-tabs))
-                          (count (length tabs))
-                          (active (tab-bar--current-tab-index)))
+                          (count (length tabs)))
                      (when (> count 1)
-                       (propertize
-                        (concat " "
-                                (mapconcat
-                                 (lambda (i)
-                                   (propertize (if (= i active) "⦿" "○") 'mouse-face 'mode-line-highlight
-                                               'local-map
-                                               (let ((map (make-sparse-keymap)))
-                                                 (define-key map [mode-line mouse-1]
-                                                             (lambda () (interactive) (tab-bar-select-tab (1+ i))))
-                                                 map)))
-                                 (number-sequence 0 (1- count))
-                                 " "))
-                        'face 'bold)))))
+                       (let ((active (tab-bar--current-tab-index)))
+                         (propertize
+                          (concat " "
+                                  (mapconcat
+                                   (lambda (i)
+                                     (propertize (if (= i active) "⦿" "○") 'mouse-face 'mode-line-highlight
+                                                 'local-map (aref tab-bar--tab-keymaps i)))
+                                   (number-sequence 0 (1- count))
+                                   " "))
+                          'face 'bold))))))
                 (:eval (when (and (buffer-narrowed-p) (not (derived-mode-p 'Info-mode)))
-                         (propertize " (N)")))
-                (:eval (let ((prefix (cond ((buffer-modified-p) " ** ")
-                                           (buffer-read-only " RO ")
-                                           (t "    "))))
+                         (propertize "(N) ")))
+                (:eval (let ((prefix (cond ((buffer-modified-p) "** ")
+                                           (buffer-read-only "RO ")
+                                           (t "   "))))
                          (propertize (format "%s%s" prefix
                                              (replace-regexp-in-string "\\*" "" (buffer-name)))
                                      'face (if (buffer-modified-p) 'bold-italic 'bold)
@@ -220,6 +235,7 @@
                  ((eq mode 'doc-view-mode) (doc-view-scroll-down-or-previous-page 5))
                  (t (scroll-down-command 5))))))
 
+(define-key (current-global-map) (kbd "s-t") nil)
 (dolist (bind '(("C-x C-m" . execute-extended-command)
                 ("C-x x b" . ibuffer) ("C-x x e" . eval-last-sexp)
                 ("C-x x c" . save-buffers-kill-emacs)
@@ -324,6 +340,7 @@
       eldoc-idle-delay 0.2
       eldoc-echo-area-use-multiline-p nil
       eldoc-echo-area-display-truncation-message nil
+      find-function-C-source-directory "~/repos/emacs/src"
       ffap-machine-p-known 'reject
       flymake-suppress-zero-counters t
       flymake-no-changes-timeout 2
@@ -355,6 +372,7 @@
       vc-allow-rewriting-published-history 'ask
       vc-display-status 'no-backend
       vc-follow-symlinks t
+      widget-image-enable nil
       which-func-unknown ""
       xref-search-program (if (executable-find "rg") 'ripgrep 'grep)
       xref-auto-jump-to-first-xref nil
@@ -367,6 +385,7 @@
            (file-to-register "~/.emacs.d/init.el" ?i)
            (file-to-register "~/dotfiles/flake.nix" ?n)
            (file-to-register "~/Dropbox/org/log.org" ?l)
+           (file-to-register "~/Dropbox/org/jap_log.org" ?j)
            (file-to-register "/Volumes/PortableSSD/" ?p)))
 
 (when (executable-find "rg")
@@ -666,7 +685,7 @@
   (fset #'jsonrpc--log-event #'ignore)
   (setq jsonrpc-event-hook nil
         eglot-events-buffer-config '(:size 0 :format short)
-        eglot-sync-connect 2
+        eglot-sync-connect nil
         eglot-autoshutdown t
         eglot-inlay-hints-mode nil)
 
@@ -816,6 +835,7 @@
           dir `((side . left) (slot . 0) (window-width . 0.2)
                 (window-parameters . ((no-delete-other-windows . t)))))
          (with-current-buffer dir
+           (use-local-map (copy-keymap (current-local-map)))
            (select-window (get-buffer-window dir))
            (define-key (current-local-map) (kbd "\\")
                        (lambda nil (interactive)
@@ -883,6 +903,12 @@
        (cons (buffer-substring-no-properties (mark) (point)) dictionary-default-dictionary))
     (dictionary-lookup-definition)))
 
+(defun my/project-find-regexp-in-buffer ()
+  "Find regexp in project, showing results in buffer."
+  (interactive)
+  (let ((xref-show-xrefs-function 'xref--show-xref-buffer))
+    (call-interactively 'project-find-regexp)))
+
 (define-key (current-global-map) (kbd "j") (lambda nil (interactive) (my-chord ?j ?k 'meow-mode)))
 (define-key (current-global-map) (kbd "C-j") (lambda nil (interactive) (meow-mode t)))
 (define-key (current-global-map) [escape] (lambda nil (interactive) (meow-mode t)))
@@ -898,7 +924,7 @@
 (dolist (pair '(("\\" . dired-jump) ("gl" . move-end-of-line) ("ge" . move-end-of-line)
                 ("gh" . back-to-indentation) ("gj" . end-of-buffer) ("gk" . beginning-of-buffer)
                 ("q" . quit-window) ("=" . mark-inner) ("-" . negative-argument)
-                ("/" . isearch-forward-regexp) ("e" . forward-word) ("b" . backward-word)
+                ("e" . forward-word) ("b" . backward-word)
                 ("v" . set-mark-command) ("h" . backward-char) ("j" . next-line)
                 ("k" . previous-line) ("l" . forward-char) ("i" . meow-insert)
                 ("y" . kill-ring-save) ("%" . match-pair) ("o" . other-window)
@@ -906,7 +932,7 @@
                 ("gT" . tab-bar-switch-to-prev-tab) ("gt" . tab-bar-switch-to-next-tab)
                 ("x" . my-select-fwd-line) ("X" . exchange-point-and-mark) ("O" . occur)
                 ("w" . my-mark-word) ("," . my-scroll-other-down) ("s" . isearch-forward-regexp)
-                ("." . my-scroll-other-up) (";" . comment-line) ("gf" . ffap)
+                ("." . my-scroll-other-up) ("/" . comment-line) ("gf" . ffap)
                 ("gS" . scratch-buffer) ("*" . isearch-forward-symbol-at-point)
                 ("ga" . (lambda nil (interactive) (org-agenda nil "n"))) ("gc" . org-capture)
                 ("`" . window-toggle-side-windows) ("zz" . pop-to-mark-command)
@@ -918,10 +944,10 @@
                 ("&" . align-regexp) ("C" . string-rectangle) ("mi" . mark-inner) ("p" . yank)
                 ("P" . yank-pop) ("+" . eglot-rename) ("mm" . file-to-register)
                 ("ml" . down-list) ("mu" . up-list) ("mb" . backward-list) ("mf" . forward-list)
-                ("mj" . forward-sexp) ("mk" . backward-sexp)
+                ("mj" . forward-sexp) ("mk" . backward-sexp) (";" . keyboard-quit)
                 ("'" . register-to-point) ("md" . delete-pair) ("+" . eglot-code-actions)
-                ("Z" . undo-redo) ("u" . undo-only) ("R" . replace-regexp)
-                ("zf" . hs-toggle-hiding) ("zc" . hs-hide-all) ("zs" . hs-show-all)
+                ("F" . my/project-find-regexp-in-buffer) ("Z" . undo-redo) ("u" . undo-only)
+                ("R" . replace-regexp) ("zf" . hs-toggle-hiding) ("zc" . hs-hide-all) ("zs" . hs-show-all)
                 ("<" . indent-rigidly-left-to-tab-stop) (">" . indent-rigidly-right-to-tab-stop)
                 ("a" . (lambda nil (interactive) (meow-insert) (forward-char 1)))
                 ("c" . (lambda nil (interactive) (meow-insert)
@@ -933,9 +959,6 @@
                          (call-interactively 'indent-for-tab-command)))
                 ("d" . (lambda nil (interactive)
                          (if (use-region-p) (call-interactively 'kill-region) (delete-char 1))))
-                ("F" . (lambda nil (interactive)
-                         (let ((xref-show-xrefs-function 'xref--show-xref-buffer))
-                           (call-interactively 'project-find-regexp))))
                 ("f". (lambda nil (interactive) ;; (forward-char 1)
                         (call-interactively 'set-mark-command)
                         (let ((start-point (point))
@@ -1054,6 +1077,7 @@
   (push '("ee" "find-file-other-window $1") eshell-command-aliases-list)
   (push '("ff" "find-file $1") eshell-command-aliases-list)
   (push '("e" "find-file $1") eshell-command-aliases-list)
+  (push '("jq" "jq -M $*") eshell-command-aliases-list)
   (push '("rg" "rg --color=never --no-line-number $*") eshell-command-aliases-list)
   (push '("gd" "vc-diff") eshell-command-aliases-list)
   (push '("glog" "vc-print-root-log") eshell-command-aliases-list)
@@ -1228,10 +1252,37 @@ any directory proferred by `consult-dir'."
          (previous-line))
        (point)))))
 
+(defun direnv-update () ; src: claude and purcell/envrc
+  (require 'json)
+  (if-let* ((dir (locate-dominating-file default-directory
+                  (lambda (d) (file-exists-p (expand-file-name ".envrc" d))))))
+      (let* ((default-directory dir)
+             (tmp (make-temp-file "direnv"))
+             (env (unwind-protect
+                      (with-temp-buffer
+                        (when (and (zerop (call-process "direnv" nil (list t tmp) nil "export" "json"))
+                                   (> (buffer-size) 0))
+                          (goto-char 1)
+                          (let ((json-key-type 'string)) (json-read-object))))
+                    (delete-file tmp))))
+        (when env
+          (let* ((merged (append (mapcar (lambda (p) (if (cdr p) (format "%s=%s" (car p) (cdr p)) (car p))) env)
+                                 (default-value 'process-environment)))
+                 (path (getenv-internal "PATH" merged)))
+            (setq-local process-environment merged exec-path (parse-colon-path path))
+            (if (fboundp 'eshell-set-path) (eshell-set-path path) (setq-local eshell-path-env path)))))
+    (kill-local-variable 'process-environment)
+    (kill-local-variable 'exec-path)
+    (when (derived-mode-p 'eshell-mode)
+      (if (fboundp 'eshell-set-path) (eshell-set-path (butlast exec-path))
+        (kill-local-variable 'eshell-path-env)))))
+
 (add-hook 'eshell-mode-hook
           #'(lambda ()
               (setq-local global-hl-line-mode nil)
               (setenv "TERM" "xterm-256color")
+              (add-hook 'eshell-directory-change-hook #'direnv-update nil t)
+              (direnv-update)
               (define-key eshell-hist-mode-map (kbd "<up>") nil t)
               (define-key eshell-hist-mode-map (kbd "<down>") nil t)
               (define-key eshell-hist-mode-map (kbd "C-p")
@@ -1258,7 +1309,7 @@ any directory proferred by `consult-dir'."
 
 (with-eval-after-load 'gnus
   (load "~/.emacs.d/lisp/gnus-conf" nil :no-message)
-  (with-eval-after-load ' gnus-art
+  (with-eval-after-load 'gnus-art
     (define-key gnus-article-mode-map (kbd "SPC") ctl-x-map)
     (define-key gnus-article-mode-map (kbd "j") #'next-line)
     (define-key gnus-article-mode-map (kbd "k") #'previous-line))
@@ -1273,6 +1324,96 @@ any directory proferred by `consult-dir'."
     (define-key gnus-summary-mode-map (kbd "j") #'next-line)
     (define-key gnus-summary-mode-map (kbd "k") #'previous-line)))
 
+;; erc
+;; (use-package erc
+;;   ;; auth: machine irc.libera.chat login "USER" password PASSWORD
+;;   :ensure nil
+;;   :commands my/irc
+;;   :hook (erc-join . hl-line-mode)
+;;   :hook (erc-join . (lambda nil
+;;                       (setq-local erc-fill-column (min (- (window-width) 3) 85))))
+;;   :hook (erc-kill-server . (lambda nil
+;;                              (erc-status-sidebar-kill)
+;;                              (tab-bar-close-tab)))
+;;   :custom
+;;   (erc-autojoin-channels-alist '(("libera.chat" "#emacs"))); "##rust")))
+;;   (erc-default-server "irc.libera.chat")
+;;   (erc-nick "brongulus")
+;;   (erc-nickserv-get-password nil)
+;;   (erc-use-auth-source-for-nickserv-password t)
+;;   (erc-fill-column (min (- (window-width) 3) 85))
+;;   (erc-status-side-bar-width 12)
+;;   (erc-autojoin-timing 'ident)
+;;   (erc-fill-function 'erc-fill-static)
+;;   (erc-fill-static-center 14)
+;;   (erc-format-nick-function 'erc-format-@nick)
+;;   (erc-header-line-face-method t)
+;;   (erc-track-position-in-mode-line t)
+;;   (erc-track-showcount t)
+;;   (erc-track-shorten-function nil)
+;;   (erc-track-exclude-server-buffer t)
+;;   (erc-join-buffer 'bury) ; window
+;;   (erc-kill-server-buffer-on-quit t)
+;;   (erc-kill-buffer-on-part t)
+;;   (erc-hide-list '("JOIN" "PART" "QUIT" "353")) ;; 353 hide names
+;;   (erc-lurker-hide-list '("JOIN" "PART" "QUIT" "NICK"))
+;;   (erc-track-exclude-types '("JOIN" "MODE" "NICK" "PART" "QUIT"
+;;                              "324" "329" "332" "333" "353" "477"))
+;;   :config
+;;   (defun my/irc nil
+;;     "Setup ERC and connect if not already."
+;;     (interactive)
+;;     (if (get-buffer "Libera.Chat") ;; ERC already active?
+;;         (pop-to-buffer "Libera.Chat")
+;;       (progn
+;;         (tab-bar-new-tab)
+;;         (erc-tls :server "irc.libera.chat" :port 6667 :nick "brongulus" :password nil)
+;;         (erc-track-switch-buffer 1)
+;;         (erc-status-sidebar-open))))
+;;   (erc-services-mode 1)
+;;   (erc-autojoin-mode)
+;;   (erc-track-mode t)
+;;   (erc-timestamp-mode -1)
+;;   (push 'keep-place erc-modules)
+;;   (erc-update-modules))
+
+;; newsticker
+(setq newsticker-retrieval-interval 0
+      newsticker-url-list
+      '(("Planet Emacslife" "https://planet.emacslife.com/atom.xml")
+        ("Gluer" "https://gluer.org/atom")
+        ("DDV" "https://drewdevault.com/blog/index.xml")
+        ("Nawaz" "https://blog.nawaz.org/feeds/all.atom.xml")
+        ("Arch" "https://archlinux.org/feeds/news/")
+        ("Andrewk" "https://vimeo.com/andrewrk/videos/rss")
+        ("ikechan"
+         "https://www.youtube.com/feeds/videos.xml?channel_id=UCpGJxlhKXfdOKkBhuDH6ujA")
+        ("kotatsugame"
+         "https://www.youtube.com/feeds/videos.xml?channel_id=UCL8EOznhSyreT9O0-KFxgZQ")
+        ("kaname"
+         "https://www.youtube.com/feeds/videos.xml?channel_id=UC2_krAagEXVPftDXZCDiVZA")
+        ("joshua"
+         "https://www.youtube.com/feeds/videos.xml?channel_id=UCqnP1HkcAnueBjyKCdaoNHg")
+        ("HLTV" "https://www.hltv.org/rss/news")
+        ("PSA" "https://psa.wf/feed/")))
+
+(defun my/close-newsticker ()
+  "Kill all tree-view related buffers."
+  (tab-bar-close-tab)
+  (dolist (buf '("*Newsticker List*" "*Newsticker Item*" "*Newsticker Tree*"))
+    (kill-buffer buf)))
+
+(with-eval-after-load 'newst-reader
+  (advice-add 'newsticker-show-news :around
+              (lambda (orig-fun &rest args) (tab-bar-new-tab) (apply orig-fun args))))
+
+(with-eval-after-load 'newst-treeview
+  (dolist (map (list newsticker-treeview-mode-map newsticker-treeview-list-mode-map))
+    (define-key map (kbd "SPC") ctl-x-map)
+    (define-key map (kbd ",") #'newsticker-treeview-next-page))
+  (advice-add 'newsticker-treeview-quit :after 'my/close-newsticker))
+
+;; mini-ontop
 (defvar mini-ontop--stack nil) ;; inspired by hkjels/mini-ontop
 (defun mini-ontop--should-activate-p ()
   "Return non-nil if mini-ontop should activate for the current command."
