@@ -1,4 +1,4 @@
-;; init.el --- NANO Emacs (minimal version)  -*- lexical-binding: t -*-
+;;; init.el --- NANO Emacs (minimal version) -*- lexical-binding: t; -*-
 ;; --- Speed benchmarking ---------------------------------------------------
 ;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
 ;; (setq init-start-time (current-time))
@@ -177,70 +177,55 @@
 (define-key (current-global-map) (kbd "C-x t m") #'toggle-mode-line)
 
 ;; --- Minibuffer completion ------------------------------------------------
-;; Use ido for M-x, find-file and buffers
+;; Use ido for switching buffers
 (setq ido-enable-flex-matching t
-      ;; ido-enable-regexp t
-      ido-everywhere t
+      ido-everywhere nil
+      ido-ignore-buffers '("\\` " "\\*Messages\\*" "\\*scratch\\*")
       ido-create-new-buffer 'always
       ido-use-virtual-buffers 'auto
       ido-show-dot-for-dired t
       ido-max-prospects 10
-      ido-auto-merge-work-directories-length -1
-      ido-decorations
-      '("{" "}" " • " " • …" " [" "]" " [No match]" " [Matched]"
-        " [Not readable]" " [Too big]" " [Confirm]"))
-(run-with-idle-timer 0.1 nil #'ido-mode)
+      ido-auto-merge-work-directories-length -1)
+(run-with-idle-timer 0.1 nil #'(lambda nil (ido-mode 'buffers)))
 (add-hook 'ido-setup-hook
           (lambda nil
             (define-key ido-completion-map (kbd "TAB") #'ido-next-match)
             (define-key ido-completion-map (kbd "<backtab>") #'ido-prev-match)))
+;; Use icomplete for M-x and find-file and icomplete-vertical for everything else
+(run-with-idle-timer 0.1 nil #'icomplete-mode)
+(add-hook 'minibuffer-setup-hook
+          (lambda nil
+            (unless (memq this-command
+                          '(find-file find-file-other-window execute-extended-command))
+              (setq-local icomplete-vertical-mode t)))
+          -100)
 
-(defun ido-execute-extended-command ()
-  "Use ido to execute extended commands (M-x) with extended-command-history."
-  (interactive)
-  (let* ((all-commands (all-completions "" obarray 'commandp))
-         (history-commands
-          (delq nil
-                (mapcar (lambda (hist-item)
-                          (when (member hist-item all-commands)
-                            hist-item))
-                        extended-command-history)))
-         (sorted-commands
-          (append (delete-dups history-commands)
-                  (cl-set-difference all-commands history-commands
-                                     :test 'string=)))
-         (cmd-name (ido-completing-read
-                    "M-x "
-                    sorted-commands
-                    nil nil nil
-                    'extended-command-history)))
-    (command-execute (intern cmd-name) 'record)))
-
-(global-set-key "\M-x" 'ido-execute-extended-command)
-;; Use fido-vertical for everything else
-(run-with-idle-timer 0.1 nil #'fido-vertical-mode)
 (setq tab-always-indent 'complete
       tab-first-completion 'word-or-paren
       completions-detailed t
-      icomplete-delay-completions-threshold 0
-      icomplete-compute-delay 0
+      icomplete-tidy-shadowed-file-names t
       icomplete-show-matches-on-no-input t
-      icomplete-hide-common-prefix nil
-      icomplete-prospects-height 9
-      icomplete-separator " . "
+      icomplete-hide-common-prefix t;nil
+      icomplete-separator " • "
       icomplete-with-completion-tables t
       icomplete-in-buffer nil; t
       icomplete-max-delay-chars 0
       icomplete-scroll t
       resize-mini-windows 'grow-only)
 (with-eval-after-load 'icomplete
+  (define-key icomplete-minibuffer-map (kbd "RET") #'icomplete-fido-ret)
+  (define-key icomplete-minibuffer-map (kbd "DEL") #'icomplete-fido-backward-updir)
   (define-key icomplete-minibuffer-map (kbd "C-j") #'icomplete-fido-exit)
-  (define-key icomplete-fido-mode-map (kbd "TAB") #'icomplete-forward-completions)
-  (define-key icomplete-fido-mode-map (kbd "<backtab>") #'icomplete-backward-completions)
-  (define-key icomplete-fido-mode-map (kbd "<escape>") #'minibuffer-keyboard-quit))
+  (define-key icomplete-minibuffer-map (kbd "TAB") #'icomplete-forward-completions)
+  (define-key icomplete-minibuffer-map (kbd "<backtab>") #'icomplete-backward-completions)
+  (define-key icomplete-minibuffer-map (kbd "<escape>") #'minibuffer-keyboard-quit))
 
 (add-hook 'icomplete-minibuffer-setup-hook
-          (lambda nil (setq-local truncate-lines t line-spacing nil)))
+          (lambda nil
+            (setq-local truncate-lines icomplete-vertical-mode line-spacing nil
+                        icomplete-prospects-height (if icomplete-vertical-mode 11 1))))
+(add-hook 'eval-expression-minibuffer-setup-hook
+          (lambda nil (setq-local show-paren-mode nil)))
 
 (defun file-capf ()
   "File completion at point function. src: eshelyaron."
@@ -293,7 +278,7 @@
                  (t (scroll-down-command 5))))))
 
 (define-key (current-global-map) (kbd "s-t") nil)
-(dolist (bind '(("C-x C-m" . ido-execute-extended-command)
+(dolist (bind '(("C-x C-m" . execute-extended-command)
                 ("C-x x b" . ibuffer) ("C-x x e" . eval-last-sexp)
                 ("C-x x c" . save-buffers-kill-emacs)
                 ("C-x x f" . find-file) ("C-x x s" . save-buffer)
@@ -317,7 +302,7 @@
 (set-default-coding-systems 'utf-8)
 (setq-default tab-width 4
               completion-styles
-              '(basic partial-completion substring initials flex) ;partial-completion
+              '(basic substring initials flex) ;partial-completion
               completion-cycle-threshold t
               ;; cursor-type 'bar
               enable-recursive-minibuffers t
@@ -361,8 +346,8 @@
 ;;     (ignore-errors
 ;;       (when global-hl-line-mode
 ;;         (global-hl-line-unhighlight)))))
-(add-to-list 'auto-mode-alist '("\\.log\\'" . (lambda () (display-line-numbers-mode))))
 ;; (add-hook 'emacs-lisp-mode-hook #'prettify-symbols-mode)
+(add-to-list 'auto-mode-alist '("\\.log\\'" . (lambda () (display-line-numbers-mode))))
 
 (put 'narrow-to-region 'disabled nil)
 
@@ -558,7 +543,7 @@
 ;; --- Window Management ----------------------------------------------------
 (dolist (pops '(("\\*eshell-pop\\*" . -2 ) ;; <-- prima donna
                 ("^\\*term.*\\*$" . -1) ("^\\*compilation.*\\*$" . -1)
-                ("vc-git :.\*" . 0) ("\\*vc.\*-log\\*" . 0) ("\\*eldoc\\*" . 0) ("\\*Help\\*" . 0)
+                ("vc-git :.*" . 0) ("\\*vc.*-log\\*" . 0) ("\\*eldoc\\*" . 0) ("\\*Help\\*" . 0)
                 ("\\*Warnings\\*" . 1) ("\\*log-edit-files\\*" . 1)
                 ("\\*Occur.*\\*$" . 1) ("\\*grep.*\\*$" . 1) ("CAPTURE-.*" . 1)
                 ("\\*Org Select\\*" . 1) ("\\*xref\\*" . 1) ;("^\\*Dictionary\\*" . 1)))
