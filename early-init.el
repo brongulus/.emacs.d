@@ -29,6 +29,7 @@
 
 (setq-default default-frame-alist
               '((alpha . 100)
+                (font . "Input Mono Narrow-15:weight=light")
                 (menu-bar-lines . 0)
                 (tool-bar-lines . 0)
                 (vertical-scroll-bars . nil)

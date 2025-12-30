@@ -8,25 +8,30 @@
 ;; (profiler-start 'cpu)
 
 ;; --- Typography stack -----------------------------------------------------
-(defvar my-font-configs
-  '((input :family "Input Mono Narrow" :weight light :bold-weight regular)
-    (victor :family "Victor Mono" :weight regular :bold-weight demi-bold)
-    (ioskeley :family "Ioskeley Mono" :weight regular :bold-weight bold)
-    (commit :family "CommitMono Nerd Font Mono" :weight regular :bold-weight bold)))
-(let ((config (alist-get 'input my-font-configs)))
-  (set-face-attribute 'default nil :family (plist-get config :family)
-                      :weight (plist-get config :weight)
-                      :height (if (eq system-name 'android) 160 150))
-  (set-face-attribute 'bold nil :weight (plist-get config :bold-weight))
-  (set-face-attribute 'bold-italic nil :weight (plist-get config :bold-weight))
-  (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family))
-  
-  (if (not (string= (plist-get config :family) "Input Mono Narrow"))
-      (dolist (face '(fixed-pitch-serif variable-pitch variable-pitch-text))
-        (set-face-attribute face nil :family (face-attribute 'default :family)))
-    (dolist (face '(variable-pitch variable-pitch-text))
-      (set-face-attribute face nil :family "Input Sans Narrow"))
-    (set-face-attribute 'fixed-pitch-serif nil :family "Input Serif Condensed")))
+;; (defvar my-font-configs
+;;   '((input :family "Input Mono Narrow" :weight light :bold-weight regular)
+;;     (victor :family "Victor Mono" :weight regular :bold-weight demi-bold)
+;;     (ioskeley :family "Ioskeley Mono" :weight regular :bold-weight bold)
+;;     (commit :family "CommitMono Nerd Font Mono" :weight regular :bold-weight bold)))
+;; (let ((config (alist-get 'input my-font-configs)))
+;;   (set-face-attribute 'default nil :family (plist-get config :family)
+;;                       :weight (plist-get config :weight)
+;;                       :height (if (eq system-name 'android) 160 150))
+;;   (set-face-attribute 'bold nil :weight (plist-get config :bold-weight))
+;;   (set-face-attribute 'bold-italic nil :weight (plist-get config :bold-weight))
+;;   (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family))
+;;   (if (not (string= (plist-get config :family) "Input Mono Narrow"))
+;;       (dolist (face '(fixed-pitch-serif variable-pitch variable-pitch-text))
+;;         (set-face-attribute face nil :family (face-attribute 'default :family)))
+;;     (dolist (face '(variable-pitch variable-pitch-text))
+;;       (set-face-attribute face nil :family "Input Sans Narrow"))
+;;     (set-face-attribute 'fixed-pitch-serif nil :family "Input Serif Condensed")))
+(set-face-attribute 'bold nil :weight 'regular)
+(set-face-attribute 'bold-italic nil :weight 'regular)
+(set-face-attribute 'fixed-pitch nil :family "Input Mono Narrow")
+(dolist (face '(variable-pitch variable-pitch-text))
+  (set-face-attribute face nil :family "Input Sans Narrow"))
+(set-face-attribute 'fixed-pitch-serif nil :family "Input Serif Condensed")
 (setq-default line-spacing 5) ; 7
 (set-face-attribute 'nobreak-space nil :underline nil)
 (set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
@@ -278,7 +283,7 @@
                  (t (scroll-down-command 5))))))
 
 (define-key (current-global-map) (kbd "s-t") nil)
-(dolist (bind '(("C-x C-m" . execute-extended-command)
+(dolist (bind '(("C-x C-m" . execute-extended-command) ("M-;" . eval-expression)
                 ("C-x x b" . ibuffer) ("C-x x e" . eval-last-sexp)
                 ("C-x x c" . save-buffers-kill-emacs) ("C-j" . duplicate-line)
                 ("C-x x f" . find-file) ("C-x x s" . save-buffer)
@@ -721,7 +726,7 @@
 ;;  '("\\.md\\'" . markdown-ts-mode))))
 
 (dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook zig-mode-hook c++-mode-hook))
-  (add-hook mode #'eglot-ensure))
+  (add-hook mode #'(lambda nil (run-with-timer 0.5 nil #'eglot-ensure))))
 ;; (add-hook 'go-ts-mode-hook #'whitespace-mode)
 (add-hook 'rust-ts-mode-hook
           (lambda nil (add-to-list 'process-environment "CARGO_TERM_COLOR=always" :append)))
@@ -1387,6 +1392,8 @@ any directory proferred by `consult-dir'."
   (with-eval-after-load 'gnus-topic
     (define-key gnus-topic-mode-map (kbd "SPC") ctl-x-map))
   (with-eval-after-load 'gnus-sum
+    (define-key gnus-summary-mode-map (kbd ",") #'my-scroll-other-down)
+    (define-key gnus-summary-mode-map (kbd ".") #'my-scroll-other-up)
     (define-key gnus-summary-mode-map (kbd "SPC") ctl-x-map)
     (define-key gnus-summary-mode-map (kbd "j") #'next-line)
     (define-key gnus-summary-mode-map (kbd "k") #'previous-line)))
@@ -1449,40 +1456,40 @@ any directory proferred by `consult-dir'."
 ;;   (erc-update-modules))
 
 ;; newsticker
-(setq newsticker-retrieval-interval 0
-      newsticker-url-list
-      '(("Planet Emacslife" "https://planet.emacslife.com/atom.xml")
-        ("Gluer" "https://gluer.org/atom")
-        ("DDV" "https://drewdevault.com/blog/index.xml")
-        ("Nawaz" "https://blog.nawaz.org/feeds/all.atom.xml")
-        ("Arch" "https://archlinux.org/feeds/news/")
-        ("Andrewk" "https://vimeo.com/andrewrk/videos/rss")
-        ("ikechan"
-         "https://www.youtube.com/feeds/videos.xml?channel_id=UCpGJxlhKXfdOKkBhuDH6ujA")
-        ("kotatsugame"
-         "https://www.youtube.com/feeds/videos.xml?channel_id=UCL8EOznhSyreT9O0-KFxgZQ")
-        ("kaname"
-         "https://www.youtube.com/feeds/videos.xml?channel_id=UC2_krAagEXVPftDXZCDiVZA")
-        ("joshua"
-         "https://www.youtube.com/feeds/videos.xml?channel_id=UCqnP1HkcAnueBjyKCdaoNHg")
-        ("HLTV" "https://www.hltv.org/rss/news")
-        ("PSA" "https://psa.wf/feed/")))
+;; (setq newsticker-retrieval-interval 0
+;;       newsticker-url-list
+;;       '(("Planet Emacslife" "https://planet.emacslife.com/atom.xml")
+;;         ("Gluer" "https://gluer.org/atom")
+;;         ("DDV" "https://drewdevault.com/blog/index.xml")
+;;         ("Nawaz" "https://blog.nawaz.org/feeds/all.atom.xml")
+;;         ("Arch" "https://archlinux.org/feeds/news/")
+;;         ("Andrewk" "https://vimeo.com/andrewrk/videos/rss")
+;;         ("ikechan"
+;;          "https://www.youtube.com/feeds/videos.xml?channel_id=UCpGJxlhKXfdOKkBhuDH6ujA")
+;;         ("kotatsugame"
+;;          "https://www.youtube.com/feeds/videos.xml?channel_id=UCL8EOznhSyreT9O0-KFxgZQ")
+;;         ("kaname"
+;;          "https://www.youtube.com/feeds/videos.xml?channel_id=UC2_krAagEXVPftDXZCDiVZA")
+;;         ("joshua"
+;;          "https://www.youtube.com/feeds/videos.xml?channel_id=UCqnP1HkcAnueBjyKCdaoNHg")
+;;         ("HLTV" "https://www.hltv.org/rss/news")
+;;         ("PSA" "https://psa.wf/feed/")))
 
-(defun my/close-newsticker ()
-  "Kill all tree-view related buffers."
-  (tab-bar-close-tab)
-  (dolist (buf '("*Newsticker List*" "*Newsticker Item*" "*Newsticker Tree*"))
-    (kill-buffer buf)))
+;; (defun my/close-newsticker ()
+;;   "Kill all tree-view related buffers."
+;;   (tab-bar-close-tab)
+;;   (dolist (buf '("*Newsticker List*" "*Newsticker Item*" "*Newsticker Tree*"))
+;;     (kill-buffer buf)))
 
-(with-eval-after-load 'newst-reader
-  (advice-add 'newsticker-show-news :around
-              (lambda (orig-fun &rest args) (tab-bar-new-tab) (apply orig-fun args))))
+;; (with-eval-after-load 'newst-reader
+;;   (advice-add 'newsticker-show-news :around
+;;               (lambda (orig-fun &rest args) (tab-bar-new-tab) (apply orig-fun args))))
 
-(with-eval-after-load 'newst-treeview
-  (dolist (map (list newsticker-treeview-mode-map newsticker-treeview-list-mode-map))
-    (define-key map (kbd "SPC") ctl-x-map)
-    (define-key map (kbd ",") #'newsticker-treeview-next-page))
-  (advice-add 'newsticker-treeview-quit :after 'my/close-newsticker))
+;; (with-eval-after-load 'newst-treeview
+;;   (dolist (map (list newsticker-treeview-mode-map newsticker-treeview-list-mode-map))
+;;     (define-key map (kbd "SPC") ctl-x-map)
+;;     (define-key map (kbd ",") #'newsticker-treeview-next-page))
+;;   (advice-add 'newsticker-treeview-quit :after 'my/close-newsticker))
 
 ;; mini-ontop
 (defvar mini-ontop--stack nil) ;; inspired by hkjels/mini-ontop

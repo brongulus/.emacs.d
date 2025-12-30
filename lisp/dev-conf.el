@@ -1,7 +1,5 @@
 ;;;; dev-conf -*- lexical-binding: t -*-
-(when t
-  (defvar package-quickstart)
-  (setq package-quickstart t))
+(setq package-quickstart t)
 
 (if package-quickstart
     (let ((load-source-file-function nil))
@@ -20,6 +18,7 @@
         package-check-signature nil))
 
 ;; Auto-install function
+(setq package-archive-contents nil)
 (defun my/ensure-package-installed (&rest packages)
   "Ensure PACKAGES are installed, install if missing."
   (mapcar
@@ -53,6 +52,7 @@
            ("prn" (call-interactively 'pr-review-notification)))))
 (add-to-list 'browse-url-default-handlers
              '(pr-review-url-parse . pr-review-open-url))
+(setq magit-auto-revert-mode nil)
 (with-eval-after-load 'pr-review
   (require 'magit)
   (define-key pr-review-mode-map (kbd "SPC") ctl-x-map))

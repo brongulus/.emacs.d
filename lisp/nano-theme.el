@@ -1,9 +1,9 @@
 ;;;; nano-theme -*- lexical-binding: t -*-
-(defvar nano-current-theme 'dark "Current nano variant being used.")
-(defvar nano-monochrome t "Should the font-locking have colours.")
-(setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
+(setq nano-current-theme 'dark)
+(setq nano-monochrome t)
 (setq nano-bg-theme-map '(("#f7f7f7" . light) ("#c9ba96" . amber)
                           ("#212121" . dark) ("#121213" . burn)))
+;; (setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
 ;; FIXME: `shell-command-to-string' causes startup slowdown
 ;; (run-with-idle-timer
 ;;  0.5 nil
