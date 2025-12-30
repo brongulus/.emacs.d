@@ -32,7 +32,7 @@
 (dolist (face '(variable-pitch variable-pitch-text))
   (set-face-attribute face nil :family "Input Sans Narrow"))
 (set-face-attribute 'fixed-pitch-serif nil :family "Input Serif Condensed")
-(setq-default line-spacing 5) ; 7
+(setq-default line-spacing (if (eq system-type 'android) 7 5)) ; 7
 (set-face-attribute 'nobreak-space nil :underline nil)
 (set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
 (set-display-table-slot standard-display-table 'truncation (make-glyph-code ?…))
@@ -801,16 +801,17 @@
          (sm-half (ceiling (window-screen-lines) 2))
          (margin (if (or (equal (window-margins) '(0 . 0))
                          (null (car (window-margins))))
-                     (/ (- (window-total-width) fill-column) 2) 0)))
+                     (/ (- (window-total-width) fill-column) 2) 0))
+         (lmargin (if special-modes (max 0 (- margin 10)) margin)))
     (visual-line-mode 1)
     (when (>= margin 0)
-      (set-window-margins nil margin margin)
+      (set-window-margins nil lmargin margin)
       ;; persist for the buffer
       (setq-local zen-buffer-enabled (> margin 0))
       (setq-local zen-buffer-margin margin)
       (when special-modes
-        (text-scale-set (if (eq text-scale-mode-amount 0) 2 0))
-        (setq-local line-spacing (if (eq line-spacing 7) 0.7 7))))
+        (text-scale-set (if (eq text-scale-mode-amount 0) 2 0))))
+        ;; (setq-local line-spacing (if (eq line-spacing 5) 0.7 5))))
     (setq-local scroll-margin (if (or (zerop scroll-margin) (> margin 0)) sm-half 0)))) ;99999
 (define-key (current-global-map) (kbd "C-x 9") #'toggle-zen-buffer)
 
