@@ -73,8 +73,7 @@
   (set-face-attribute 'default nil :foreground (face-foreground 'fg-default)
                       :background (face-background 'fg-default))
   (dolist (item '((bg-highlight  . (hl-line highlight custom-button-mouse lazy-highlight))
-                  (bg-region     . (match region isearch widget-field custom-button
-                                          completions-common-part icomplete-selected-match))
+                  (bg-region     . (match region isearch widget-field custom-button))
                   (fg-faded      . (shadow font-lock-comment-face icomplete-section
                                            completions-annotations line-number))
                   (fg-faded-i    . (show-paren-match))
@@ -108,7 +107,8 @@
                                          font-lock-property-name-face))
     (set-face-attribute face nil :foreground (face-foreground 'default) :inherit nil))
   (set-face-attribute 'link nil :underline t)
-  (set-face-attribute 'completions-common-part nil :underline t)
+  (set-face-attribute 'completions-common-part nil :underline t
+                      :foreground (face-foreground 'default))
   (set-face-attribute 'region nil :extend nil)
   (set-face-attribute 'line-number-current-line nil :foreground (face-foreground 'default)
 		              :weight (face-attribute 'bold :weight) :background 'unspecified)
@@ -121,9 +121,9 @@
   (let* ((color-themes ;; ansi-colors
           '((black   . ((dark . "#30343d") (light . "#EEEEEE")))
             (red     . ((dark . "#c47779") (light . "#c56655")))
-            (green   . ((dark . "#99c476") (light . "#427b58")))
+            (green   . ((dark . "#7F9F7F") (light . "#427b58")))
             (yellow  . ((dark . "#dab067") (light . "#b57614"))) ; dark FFBF00
-            (blue    . ((dark . "#80aadf") (light . "#04508c")))
+            (blue    . ((dark . "#96a6c8") (light . "#04508c")))
             (magenta . ((dark . "#c9b1ca") (light . "#7646c1")))
             (cyan    . ((dark . "#6fcfd2") (light . "#076678")))
             (white   . ((dark . "#cccccc") (light . "#1a1a1a")))))
@@ -139,6 +139,8 @@
           (set-face-attribute (intern (format "ansi-color-bright-%s" color-name)) nil
                               :foreground color-value :background color-value))))
     (with-eval-after-load 'icomplete
+      (set-face-attribute 'icomplete-selected-match nil :underline t
+                          :foreground (face-foreground 'default))
       (set-face-attribute 'icomplete-first-match nil :foreground
                           (alist-get theme-variant (alist-get 'blue color-themes))))
     (with-eval-after-load 'ido
@@ -355,12 +357,12 @@
   "NANO dark theme (was based on nord colors)."
   (interactive)
   (nano-set-face 'fg-default "#e3dac4" "#212121")
-  (nano-set-face 'bg-highlight nil "#2b2b2b")
+  (nano-set-face 'bg-highlight nil "#383838")
   (nano-set-face 'bg-region "#e8e8e8" "#005f87")
   (nano-set-face 'fg-faded "#707070")
   (nano-set-face 'fg-bold "#ffffef" nil (face-attribute 'bold :weight))
   (nano-set-face 'fg-critical "#b77e64" nil (face-attribute 'bold :weight))
-  (nano-set-face 'fg-string "wheat2")
+  (nano-set-face 'fg-string "#abbaad")
   (setq nano-current-theme 'dark)
   (nano-install-theme))
 
@@ -384,7 +386,7 @@
   (set-face-attribute 'fg-faded nil :foreground "#7a766e")
   (set-face-attribute 'bg-region nil :foreground "#121213" :background "#BAD7FB")
   (set-face-attribute 'fg-string nil :foreground "#af9661")
-  (set-face-attribute 'fg-bold nil :foreground "#d4af5a" :weight 'demi-bold)
+  (set-face-attribute 'fg-bold nil :foreground "#dbb754" :weight (face-attribute 'bold :weight))
   (set-face-attribute 'bg-highlight nil :background "#393939")
   (let ((nano-current-theme 'dark)) (nano-install-theme))
   (set-face-attribute 'font-lock-variable-name-face nil :weight 'regular)

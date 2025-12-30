@@ -5,7 +5,7 @@
 (setq inhibit-startup-screen t
       ;; toggle-debug-on-error t
       custom-file (make-temp-file "emacs-custom"))
-(profiler-start 'cpu)
+;; (profiler-start 'cpu)
 
 ;; --- Typography stack -----------------------------------------------------
 (defvar my-font-configs
@@ -131,7 +131,8 @@
                                                        (count-lines (region-beginning)
                                                                     (region-end)))))
                                       ((eq major-mode 'nov-mode)
-                                       (format "[%d/%d]" ;(/ (window-start) 0.01 (point-max))
+                                       (format "[%d/%d]"
+                                        ;(/ (window-start) 0.01 (point-max))
                                                (1+ nov-documents-index)
                                                (length nov-documents)))
                                       ((eq major-mode 'doc-view-mode)
@@ -178,12 +179,16 @@
 ;; --- Minibuffer completion ------------------------------------------------
 ;; Use ido for M-x, find-file and buffers
 (setq ido-enable-flex-matching t
+      ;; ido-enable-regexp t
+      ido-everywhere t
       ido-create-new-buffer 'always
       ido-use-virtual-buffers 'auto
       ido-show-dot-for-dired t
-      ido-auto-merge-work-directories-length -1
       ido-max-prospects 10
-      ido-everywhere t)
+      ido-auto-merge-work-directories-length -1
+      ido-decorations
+      '("{" "}" " • " " • …" " [" "]" " [No match]" " [Matched]"
+        " [Not readable]" " [Too big]" " [Confirm]"))
 (run-with-idle-timer 0.1 nil #'ido-mode)
 (add-hook 'ido-setup-hook
           (lambda nil
@@ -348,14 +353,14 @@
 (dolist (mode-hook '(prog-mode-hook conf-mode-hook yaml-ts-mode-hook))
   (add-hook mode-hook #'display-line-numbers-mode))
 ;;   (add-hook mode-hook #'hl-line-mode))
-(with-eval-after-load 'hl-line ; src: DarwinAwardWinner/dotemacs
-  (define-advice face-at-point (:before (&rest _ignored) avoid-hl-line)
-    (ignore-errors
-      (when hl-line-mode
-        (hl-line-unhighlight)))
-    (ignore-errors
-      (when global-hl-line-mode
-        (global-hl-line-unhighlight)))))
+;; (with-eval-after-load 'hl-line ; src: DarwinAwardWinner/dotemacs
+;;   (define-advice face-at-point (:before (&rest _ignored) avoid-hl-line)
+;;     (ignore-errors
+;;       (when hl-line-mode
+;;         (hl-line-unhighlight)))
+;;     (ignore-errors
+;;       (when global-hl-line-mode
+;;         (global-hl-line-unhighlight)))))
 (add-to-list 'auto-mode-alist '("\\.log\\'" . (lambda () (display-line-numbers-mode))))
 ;; (add-hook 'emacs-lisp-mode-hook #'prettify-symbols-mode)
 
@@ -860,6 +865,18 @@
     (set-mark-command nil))
   (forward-line arg))
 
+(defun rc/duplicate-line () ;src: rexim/dotfiles/.emacs.rc/misc-rc.el
+  "Duplicate current line"
+  (interactive)
+  (let ((column (- (point) (point-at-bol)))
+        (line (let ((s (thing-at-point 'line t)))
+                (if s (string-remove-suffix "\n" s) ""))))
+    (move-end-of-line 1) (newline)
+    (insert line)
+    (move-beginning-of-line 1) (forward-char column)))
+
+(define-key (current-global-map) (kbd "C-j") 'rc/duplicate-line)
+
 (defun my-chord (initial-key final-key fn)
   (interactive) ;; src: wasamasa
   (let* ((timeout 0.4)
@@ -980,7 +997,6 @@
     (call-interactively 'project-find-regexp)))
 
 (define-key (current-global-map) (kbd "j") (lambda nil (interactive) (my-chord ?j ?k 'meow-mode)))
-(define-key (current-global-map) (kbd "C-j") (lambda nil (interactive) (meow-mode t)))
 (define-key (current-global-map) [escape] (lambda nil (interactive) (meow-mode t)))
 (define-key meow-mode-map (kbd "g") (make-sparse-keymap))
 (define-key meow-mode-map (kbd "m") (make-sparse-keymap))
