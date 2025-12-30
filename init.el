@@ -5,14 +5,14 @@
 (setq inhibit-startup-screen t
       ;; toggle-debug-on-error t
       custom-file (make-temp-file "emacs-custom"))
-;; (profiler-start 'cpu)
+(profiler-start 'cpu)
 
 ;; --- Typography stack -----------------------------------------------------
 (defvar my-font-configs
   '((input :family "Input Mono Narrow" :weight light :bold-weight regular)
+    (victor :family "Victor Mono" :weight regular :bold-weight demi-bold)
     (ioskeley :family "Ioskeley Mono" :weight regular :bold-weight bold)
-    (commit :family "CommitMono Nerd Font Mono" :weight regular :bold-weight bold)
-    (victor :family "Victor Mono" :weight regular :bold-weight demi-bold)))
+    (commit :family "CommitMono Nerd Font Mono" :weight regular :bold-weight bold)))
 (let ((config (alist-get 'input my-font-configs)))
   (set-face-attribute 'default nil :family (plist-get config :family)
                       :weight (plist-get config :weight)
@@ -37,7 +37,6 @@
 
 ;; --- Activate / Deactivate modes ------------------------------------------
 (blink-cursor-mode -1) (kill-ring-deindent-mode 1)
-(run-with-idle-timer 0.1 nil #'fido-vertical-mode)
 (global-subword-mode 1) (global-eldoc-mode -1)
 (defun my-lazy-load-modes ()
   (pixel-scroll-precision-mode 1) ;(winner-mode 1)
@@ -100,18 +99,22 @@
                           (concat " "
                                   (mapconcat
                                    (lambda (i)
-                                     (propertize (if (= i active) "⦿" "○") 'mouse-face 'mode-line-highlight
-                                                 'local-map (aref tab-bar--tab-keymaps i)))
+                                     (propertize (if (= i active) "⦿" "○")
+                                                 'mouse-face 'mode-line-highlight
+                                                 'local-map
+                                                 (aref tab-bar--tab-keymaps i)))
                                    (number-sequence 0 (1- count)) " ")
                                   " ")
                           'face 'bold))))))
-                (:eval (when (and (buffer-narrowed-p) (not (derived-mode-p 'Info-mode)))
+                (:eval (when (and (buffer-narrowed-p)
+                                  (not (derived-mode-p 'Info-mode)))
                          (propertize "(N)")))
                 (:eval (let ((prefix (cond ((buffer-modified-p) "** ")
                                            (buffer-read-only "RO ")
                                            (t "   "))))
                          (propertize (format "%s%s" prefix
-                                             (replace-regexp-in-string "\\*" "" (buffer-name)))
+                                             (replace-regexp-in-string
+                                              "\\*" "" (buffer-name)))
                                      'face (if (buffer-modified-p) 'bold-italic 'bold)
                                      'help-echo (buffer-file-name))))
                 (:eval (propertize (string-trim-left
@@ -120,11 +123,13 @@
                 (:eval (unless display-line-numbers
                          (propertize "   L%l" 'face 'shadow)))
                 (:eval (let ((prefix (cond
-                                      ((or defining-kbd-macro executing-kbd-macro) "▶▶")
+                                      ((or defining-kbd-macro executing-kbd-macro)
+                                       "▶▶")
                                       ((region-active-p)
-                                       (concat "%p " (format "{%d}"
-                                                             (count-lines (region-beginning)
-                                                                          (region-end)))))
+                                       (concat "%p "
+                                               (format "{%d}"
+                                                       (count-lines (region-beginning)
+                                                                    (region-end)))))
                                       ((eq major-mode 'nov-mode)
                                        (format "[%d/%d]" ;(/ (window-start) 0.01 (point-max))
                                                (1+ nov-documents-index)
@@ -150,10 +155,12 @@
                 (:eval (propertize
                         (concat " "
                                 (if (derived-mode-p 'prog-mode)
-                                    (format-mode-line (when which-function-mode which-func-current))
+                                    (format-mode-line
+                                     (when which-function-mode which-func-current))
                                   (format-time-string "%a %H:%M"))
                                 " ")
-                        'face (if (or (display-graphic-p) (mode-line-window-selected-p))
+                        'face (if (or (display-graphic-p)
+                                      (mode-line-window-selected-p))
                                   'mode-line-active
                                 'mode-line-inactive)))
                 (:eval (when (mode-line-window-selected-p)
@@ -169,6 +176,44 @@
 (define-key (current-global-map) (kbd "C-x t m") #'toggle-mode-line)
 
 ;; --- Minibuffer completion ------------------------------------------------
+;; Use ido for M-x, find-file and buffers
+(setq ido-enable-flex-matching t
+      ido-create-new-buffer 'always
+      ido-use-virtual-buffers 'auto
+      ido-show-dot-for-dired t
+      ido-auto-merge-work-directories-length -1
+      ido-max-prospects 10
+      ido-everywhere t)
+(run-with-idle-timer 0.1 nil #'ido-mode)
+(add-hook 'ido-setup-hook
+          (lambda nil
+            (define-key ido-completion-map (kbd "TAB") #'ido-next-match)
+            (define-key ido-completion-map (kbd "<backtab>") #'ido-prev-match)))
+
+(defun ido-execute-extended-command ()
+  "Use ido to execute extended commands (M-x) with extended-command-history."
+  (interactive)
+  (let* ((all-commands (all-completions "" obarray 'commandp))
+         (history-commands
+          (delq nil
+                (mapcar (lambda (hist-item)
+                          (when (member hist-item all-commands)
+                            hist-item))
+                        extended-command-history)))
+         (sorted-commands
+          (append (delete-dups history-commands)
+                  (cl-set-difference all-commands history-commands
+                                     :test 'string=)))
+         (cmd-name (ido-completing-read
+                    "M-x "
+                    sorted-commands
+                    nil nil nil
+                    'extended-command-history)))
+    (command-execute (intern cmd-name) 'record)))
+
+(global-set-key "\M-x" 'ido-execute-extended-command)
+;; Use fido-vertical for everything else
+(run-with-idle-timer 0.1 nil #'fido-vertical-mode)
 (setq tab-always-indent 'complete
       tab-first-completion 'word-or-paren
       completions-detailed t
@@ -189,7 +234,7 @@
   (define-key icomplete-fido-mode-map (kbd "<backtab>") #'icomplete-backward-completions)
   (define-key icomplete-fido-mode-map (kbd "<escape>") #'minibuffer-keyboard-quit))
 
-(add-hook 'minibuffer-setup-hook
+(add-hook 'icomplete-minibuffer-setup-hook
           (lambda nil (setq-local truncate-lines t line-spacing nil)))
 
 (defun file-capf ()
@@ -243,7 +288,7 @@
                  (t (scroll-down-command 5))))))
 
 (define-key (current-global-map) (kbd "s-t") nil)
-(dolist (bind '(("C-x C-m" . execute-extended-command)
+(dolist (bind '(("C-x C-m" . ido-execute-extended-command)
                 ("C-x x b" . ibuffer) ("C-x x e" . eval-last-sexp)
                 ("C-x x c" . save-buffers-kill-emacs)
                 ("C-x x f" . find-file) ("C-x x s" . save-buffer)
@@ -267,7 +312,7 @@
 (set-default-coding-systems 'utf-8)
 (setq-default tab-width 4
               completion-styles
-              '(basic substring initials flex) ;partial-completion
+              '(basic partial-completion substring initials flex) ;partial-completion
               completion-cycle-threshold t
               ;; cursor-type 'bar
               enable-recursive-minibuffers t
@@ -303,6 +348,14 @@
 (dolist (mode-hook '(prog-mode-hook conf-mode-hook yaml-ts-mode-hook))
   (add-hook mode-hook #'display-line-numbers-mode))
 ;;   (add-hook mode-hook #'hl-line-mode))
+(with-eval-after-load 'hl-line ; src: DarwinAwardWinner/dotemacs
+  (define-advice face-at-point (:before (&rest _ignored) avoid-hl-line)
+    (ignore-errors
+      (when hl-line-mode
+        (hl-line-unhighlight)))
+    (ignore-errors
+      (when global-hl-line-mode
+        (global-hl-line-unhighlight)))))
 (add-to-list 'auto-mode-alist '("\\.log\\'" . (lambda () (display-line-numbers-mode))))
 ;; (add-hook 'emacs-lisp-mode-hook #'prettify-symbols-mode)
 
@@ -471,6 +524,15 @@
 
 (define-advice load-theme (:before (&rest _args) theme-dont-propagate)
   (mapc #'disable-theme custom-enabled-themes))
+
+(define-advice indent-region (:around (orig-fun &rest args) indent-defun)
+  "Indent defun if mark inactive." ;src: DarwinAwardWinner/dotemacs
+  (if (and transient-mark-mode
+           (not mark-active))
+      (save-excursion
+        (mark-defun)
+        (call-interactively #'indent-region))
+    (apply orig-fun args)))
 ;; terminal stuff
 (unless (display-graphic-p)
   (setq interprogram-cut-function
@@ -1307,6 +1369,13 @@ any directory proferred by `consult-dir'."
       doc-view-mupdf-use-svg t
       large-file-warning-threshold (* 50 (expt 2 20)))
 (with-eval-after-load 'doc-view ;; requires `'gs', `mupdf-tools'
+  ;; FIXME
+  ;; (add-hook 'doc-view-minor-mode-hook 
+  ;;         (lambda () 
+  ;;           (setq-local pixel-scroll-precision-mode nil)
+  ;;           (pixel-scroll-precision-mode -1)))
+  ;; (add-hook 'doc-view-minor-mode-hook
+  ;;           (lambda () (pixel-scroll-precision-mode -1)))
   (define-key doc-view-mode-map (kbd "SPC") ctl-x-map)
   (define-key doc-view-mode-map (kbd "j") #'doc-view-scroll-up-or-next-page)
   (define-key doc-view-mode-map (kbd "k") #'doc-view-scroll-down-or-previous-page))
@@ -1458,7 +1527,7 @@ any directory proferred by `consult-dir'."
       browse-url-new-window-flag t
       eww-default-download-directory "~/Downloads/eww/")
 (setq browse-url-handlers nil)
-(dolist (url '("github\\.com" "github\\.tools" "youtube\\.com" "youtu\\.be"))
+(dolist (url '("github\\.com" "github\\.tools" "youtube\\.com" "youtu\\.be" "melpa\\.org"))
   (push (cons url 'browse-url-default-browser) browse-url-handlers))
 (add-hook 'html-mode-hook
           (lambda ()
