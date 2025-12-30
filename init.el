@@ -4,7 +4,9 @@
 ;; (setq init-start-time (current-time))
 (setq inhibit-startup-screen t
       ;; toggle-debug-on-error t
-      custom-file (make-temp-file "emacs-custom"))
+      custom-file (make-temp-file "emacs-custom")
+      is-android (eq system-type 'android)
+      is-mac (eq system-type 'darwin))
 ;; (profiler-start 'cpu)
 
 ;; --- Typography stack -----------------------------------------------------
@@ -32,7 +34,7 @@
 (dolist (face '(variable-pitch variable-pitch-text))
   (set-face-attribute face nil :family "Input Sans Narrow"))
 (set-face-attribute 'fixed-pitch-serif nil :family "Input Serif Condensed")
-(setq-default line-spacing (if (eq system-type 'android) 7 5)) ; 7
+(setq-default line-spacing (if is-android 7 5)) ; 7
 (set-face-attribute 'nobreak-space nil :underline nil)
 (set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
 (set-display-table-slot standard-display-table 'truncation (make-glyph-code ?…))
@@ -200,6 +202,7 @@
 (run-with-idle-timer 0.1 nil #'icomplete-mode)
 (add-hook 'minibuffer-setup-hook
           (lambda nil
+            (setq-local show-paren-mode nil)
             (unless (memq this-command
                           '(find-file find-file-other-window execute-extended-command))
               (setq-local icomplete-vertical-mode t)))
@@ -229,8 +232,6 @@
           (lambda nil
             (setq-local truncate-lines icomplete-vertical-mode line-spacing nil
                         icomplete-prospects-height (if icomplete-vertical-mode 11 1))))
-(add-hook 'eval-expression-minibuffer-setup-hook
-          (lambda nil (setq-local show-paren-mode nil)))
 
 (defun file-capf ()
   "File completion at point function. src: eshelyaron."
@@ -384,7 +385,7 @@
       dired-deletion-confirmer 'y-or-n-p
       dired-dwim-target t
       dired-omit-verbose nil
-      dired-use-ls-dired (not (eq system-type 'darwin))
+      dired-use-ls-dired (not is-mac)
       dired-kill-when-opening-new-dired-buffer t
       dired-recursive-copies 'always
       dired-recursive-deletes 'always
@@ -438,6 +439,8 @@
 
 (run-with-idle-timer
  0.9 nil (lambda nil
+           (when is-android
+             (file-to-register "/sdcard/Download/" ?d))
            (file-to-register "~/Downloads/videos/" ?v)
            (file-to-register "~/.emacs.d/init.el" ?i)
            (file-to-register "~/dotfiles/flake.nix" ?n)
@@ -473,7 +476,7 @@
 ;;   (add-hook 'completion-at-point-functions #'dabbrev-capf 100))
 
 (with-eval-after-load 'dired
-  (when (eq system-type 'darwin)
+  (when is-mac
     (require 'ls-lisp)
     (setq ls-lisp-use-insert-directory-program nil
           dired-listing-switches
@@ -789,7 +792,7 @@
 (define-key (current-global-map) (kbd"C-x '") #'foxy-run-all-tests)
 
 ;; --- Misc functions -------------------------------------------------------
-(setq-default fill-column (if (eq system-type 'android) 120 140))
+(setq-default fill-column (if is-android 120 140))
 (setq dictionary-server "localhost")
 (with-eval-after-load 'dictionary
   (set-face-attribute 'dictionary-word-definition-face nil :family (face-attribute 'default :family)))
@@ -1040,7 +1043,7 @@
                 ("J" . (lambda nil (interactive) (delete-indentation t)))))
   (define-key meow-mode-map (kbd (car pair)) (cdr pair)))
 
-(when (eq system-type 'darwin)
+(when is-mac
   (select-frame-set-input-focus (selected-frame)))
 
 ;; --- VC -------------------------------------------------------------------
