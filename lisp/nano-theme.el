@@ -95,13 +95,17 @@
   (with-eval-after-load 'xref
     (set-face-attribute 'xref-match nil :underline t :inherit nil)
     (set-face-attribute 'xref-file-header nil :background (face-background 'bg-highlight)))
-  (dolist (face '(font-lock-string-face font-lock-doc-face font-lock-builtin-face))
+  (dolist (face '(font-lock-doc-face font-lock-builtin-face))
     (set-face-attribute face nil :slant 'italic))
   (set-face-attribute 'font-lock-function-call-face nil :slant 'italic :weight 'regular)
+  (set-face-attribute 'font-lock-keyword-face nil
+                      :foreground (face-foreground 'fg-bold)
+                      :weight (face-attribute 'bold :weight))
   (set-face-attribute 'font-lock-variable-use-face nil :weight 'regular
                       :foreground (face-foreground 'default))
-  (dolist (face '(font-lock-builtin-face font-lock-constant-face font-lock-keyword-face
-                                         font-lock-property-use-face font-lock-property-name-face))
+  (dolist (face '(font-lock-builtin-face font-lock-constant-face
+                                         font-lock-property-use-face
+                                         font-lock-property-name-face))
     (set-face-attribute face nil :foreground (face-foreground 'default) :inherit nil))
   (set-face-attribute 'link nil :underline t)
   (set-face-attribute 'completions-common-part nil :underline t)
@@ -138,6 +142,7 @@
       (set-face-attribute 'icomplete-first-match nil :foreground
                           (alist-get theme-variant (alist-get 'blue color-themes))))
     (with-eval-after-load 'ido
+      (set-face-attribute 'ido-virtual nil :foreground (face-foreground 'font-lock-comment-face))
       (set-face-attribute 'ido-subdir nil :foreground (face-foreground 'warning))
       (set-face-attribute 'ido-first-match nil :foreground
                           (alist-get theme-variant (alist-get 'blue color-themes)))
@@ -199,7 +204,7 @@
         (dolist (fc face-color-map)
           (set-face-attribute (car fc) nil :foreground
                               (alist-get theme-variant (alist-get (cdr fc) color-themes)))))
-      (dolist (face '(font-lock-builtin-face font-lock-string-face font-lock-function-name-face))
+      (dolist (face '(font-lock-builtin-face font-lock-function-name-face))
         (set-face-attribute face nil :slant 'unspecified))
       (set-face-attribute 'font-lock-function-name-face nil
                           :weight (face-attribute 'bold :weight))))
@@ -263,7 +268,7 @@
     (set-face-attribute 'my/shr-pre nil :weight (face-attribute 'bold :weight)
                         :background (face-background 'bg-highlight)
                         :foreground (face-foreground 'fg-bold))
-    (set-face-attribute 'my/shr-blockquote nil :italic t
+    (set-face-attribute 'my/shr-blockquote nil :italic nil
                         :foreground (face-foreground 'font-lock-doc-face)
                         :family (face-attribute 'fixed-pitch-serif :family))
     (set-face-attribute 'shr-text nil :inherit 'variable-pitch-text
@@ -274,7 +279,7 @@
   (set-face-attribute 'header-line nil :background 'unspecified :underline nil
                       :overline (face-foreground 'shadow))
   (set-face-attribute 'mode-line nil
-                      :inherit 'variable-pitch
+                      ;; :inherit 'variable-pitch ; slowdown?
                       :foreground (face-foreground 'default)
                       :background 'unspecified
                       :box '(:line-width 1 :style flat-button)
