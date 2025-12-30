@@ -52,9 +52,16 @@
 (defconst is-mac (eq system-type 'darwin))
 
 (when (eq system-type 'android)
+  ;; Install termux first, "pkg update && pkg upgrade"
+  ;; Install git, fish: "pkg install git fish"
+  ;; Setup git global user and email
+  ;; ssh-keygen -t ed25519 -C "email"
+  ;; cat /data/data/com.termux/files/home/.ssh/id_ed25519.pub to GH
+  ;; Install emacs, clone .emacs.d repo
+  ;; git remote set-url --push origin git@github.com:brongulus/.emacs.d.git
   (let ((termuxpath "/data/data/com.termux/files/usr/"))
-    (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin")))
-  ;; (push (concat termuxpath "bin") exec-path))
+    (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin"))
+  (push (concat termuxpath "bin") exec-path))
   (set-face-attribute 'default nil :height 160)
   (unless (file-directory-p "~/fonts")
     (copy-directory "~/.emacs.d/fonts/" "~/fonts")))
