@@ -97,6 +97,7 @@
   (dolist (face '(font-lock-doc-face font-lock-builtin-face))
     (set-face-attribute face nil :slant 'italic))
   (set-face-attribute 'font-lock-function-call-face nil :slant 'italic :weight 'regular)
+  (set-face-attribute 'font-lock-warning-face nil :background (face-background 'highlight))
   (set-face-attribute 'font-lock-keyword-face nil
                       :foreground (face-foreground 'fg-bold)
                       :weight (face-attribute 'bold :weight))

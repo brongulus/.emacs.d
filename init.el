@@ -184,7 +184,7 @@
       ido-create-new-buffer 'always
       ido-use-virtual-buffers 'auto
       ido-show-dot-for-dired t
-      ido-max-prospects 10
+      ido-max-prospects 6
       ido-auto-merge-work-directories-length -1)
 (run-with-idle-timer 0.1 nil #'(lambda nil (ido-mode 'buffers)))
 (add-hook 'ido-setup-hook
@@ -280,7 +280,7 @@
 (define-key (current-global-map) (kbd "s-t") nil)
 (dolist (bind '(("C-x C-m" . execute-extended-command)
                 ("C-x x b" . ibuffer) ("C-x x e" . eval-last-sexp)
-                ("C-x x c" . save-buffers-kill-emacs)
+                ("C-x x c" . save-buffers-kill-emacs) ("C-j" . duplicate-line)
                 ("C-x x f" . find-file) ("C-x x s" . save-buffer)
                 ("C-x x z" . restart-emacs) ("C-z" . delete-backward-char)
                 ("C-o" . other-window) ("C-x /" . project-find-regexp)
@@ -383,6 +383,7 @@
       dired-kill-when-opening-new-dired-buffer t
       dired-recursive-copies 'always
       dired-recursive-deletes 'always
+      duplicate-line-final-position -1
       electric-pair-preserve-balance 'electric-pair-inhibit-predicate
       electric-pair-delete-adjacent-pairs t
       ;; electric-pair-open-newline-between-pairs nil
@@ -849,18 +850,6 @@
     (forward-line 0)
     (set-mark-command nil))
   (forward-line arg))
-
-(defun rc/duplicate-line () ;src: rexim/dotfiles/.emacs.rc/misc-rc.el
-  "Duplicate current line"
-  (interactive)
-  (let ((column (- (point) (point-at-bol)))
-        (line (let ((s (thing-at-point 'line t)))
-                (if s (string-remove-suffix "\n" s) ""))))
-    (move-end-of-line 1) (newline)
-    (insert line)
-    (move-beginning-of-line 1) (forward-char column)))
-
-(define-key (current-global-map) (kbd "C-j") 'rc/duplicate-line)
 
 (defun my-chord (initial-key final-key fn)
   (interactive) ;; src: wasamasa
