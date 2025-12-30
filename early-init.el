@@ -62,7 +62,7 @@
   (let ((termuxpath "/data/data/com.termux/files/usr/"))
     (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin"))
   (push (concat termuxpath "bin") exec-path))
-  (set-face-attribute 'default nil :height 160)
+  (set-face-attribute 'default nil :height 170)
   (unless (file-directory-p "~/fonts")
     (copy-directory "~/.emacs.d/fonts/" "~/fonts")))
 

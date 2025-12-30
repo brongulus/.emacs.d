@@ -789,7 +789,7 @@
 (define-key (current-global-map) (kbd"C-x '") #'foxy-run-all-tests)
 
 ;; --- Misc functions -------------------------------------------------------
-(setq-default fill-column 140)
+(setq-default fill-column (if (eq system-type 'android) 120 140))
 (setq dictionary-server "localhost")
 (with-eval-after-load 'dictionary
   (set-face-attribute 'dictionary-word-definition-face nil :family (face-attribute 'default :family)))
@@ -801,7 +801,7 @@
          (sm-half (ceiling (window-screen-lines) 2))
          (margin (if (or (equal (window-margins) '(0 . 0))
                          (null (car (window-margins))))
-                     (/ (- (window-total-width) (if special-modes 150 fill-column)) 2) 0)))
+                     (/ (- (window-total-width) fill-column) 2) 0)))
     (visual-line-mode 1)
     (when (>= margin 0)
       (set-window-margins nil margin margin)
@@ -1052,6 +1052,7 @@
               smerge-basic-map))
 
 (with-eval-after-load 'vc-dir
+  (define-key vc-dir-mode-map (kbd "SPC") ctl-x-map)
   (define-key vc-dir-mode-map (kbd "q") #'kill-current-buffer))
 (with-eval-after-load 'diff
   (define-key diff-mode-shared-map (kbd "q") #'kill-current-buffer))
