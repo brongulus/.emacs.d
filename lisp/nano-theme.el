@@ -259,6 +259,9 @@
     (set-face-attribute 'org-table nil :foreground (face-foreground 'fg-default))
     (set-face-attribute 'org-ellipsis nil :foreground (face-foreground 'fg-faded) :underline nil)
     (set-face-attribute 'org-verbatim nil :inherit 'org-latex-and-related)
+    (set-face-attribute 'org-quote nil
+                        :foreground (face-foreground 'font-lock-doc-face)
+                        :family (face-attribute 'fixed-pitch-serif :family))
     (set-face-attribute 'org-code nil :inherit 'org-latex-and-related))
   (with-eval-after-load 'org-agenda
     (set-face-attribute 'org-agenda-structure nil :height 1.2 :foreground (face-foreground 'default))

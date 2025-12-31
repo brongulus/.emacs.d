@@ -40,7 +40,7 @@
         mm-inline-large-images 'resize
         shr-use-colors nil
         shr-max-width fill-column
-        shr-indentation 2
+        ;; shr-indentation 2
         gnus-article-x-face-too-ugly ".*"
         gnus-interactive-exit nil
         gnus-novice-user nil

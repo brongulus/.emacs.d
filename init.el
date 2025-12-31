@@ -174,7 +174,10 @@
                 (:eval (when (mode-line-window-selected-p)
                          mode-line-end-spaces))))
 
-(add-hook 'post-command-hook #'(lambda nil (when (region-active-p) (force-mode-line-update))))
+(add-hook 'post-command-hook
+          #'(lambda nil
+              (when (region-active-p) (force-mode-line-update))
+              (set-cursor-color (if (buffer-modified-p) "coral3" "#00c2ff"))))
 
 (defvar default-mode-line-format mode-line-format)
 (defun toggle-mode-line nil (interactive)
@@ -792,38 +795,9 @@
 (define-key (current-global-map) (kbd"C-x '") #'foxy-run-all-tests)
 
 ;; --- Misc functions -------------------------------------------------------
-(setq-default fill-column (if is-android 120 140))
 (setq dictionary-server "localhost")
 (with-eval-after-load 'dictionary
   (set-face-attribute 'dictionary-word-definition-face nil :family (face-attribute 'default :family)))
-
-(defun toggle-zen-buffer ()
-  "Toggle center alignment of the buffer. Inspired by: jamesdyer."
-  (interactive)
-  (let* ((special-modes (or (eq major-mode 'org-mode) (eq major-mode 'markdown-mode)))
-         (sm-half (ceiling (window-screen-lines) 2))
-         (margin (if (or (equal (window-margins) '(0 . 0))
-                         (null (car (window-margins))))
-                     (/ (- (window-total-width) fill-column) 2) 0))
-         (lmargin (if special-modes (max 0 (- margin 10)) margin)))
-    (visual-line-mode 1)
-    (when (>= margin 0)
-      (set-window-margins nil lmargin margin)
-      ;; persist for the buffer
-      (setq-local zen-buffer-enabled (> margin 0))
-      (setq-local zen-buffer-margin margin)
-      (when special-modes
-        (text-scale-set (if (eq text-scale-mode-amount 0) 2 0))))
-        ;; (setq-local line-spacing (if (eq line-spacing 5) 0.7 5))))
-    (setq-local scroll-margin (if (or (zerop scroll-margin) (> margin 0)) sm-half 0)))) ;99999
-(define-key (current-global-map) (kbd "C-x 9") #'toggle-zen-buffer)
-
-(defun zen-buffer-apply-margins ()
-  "Apply zen margins if enabled for this buffer."
-  (when (and (bound-and-true-p zen-buffer-enabled)
-             (bound-and-true-p zen-buffer-margin))
-    (set-window-margins nil zen-buffer-margin zen-buffer-margin)))
-(add-hook 'buffer-list-update-hook #'zen-buffer-apply-margins)
 
 (defun match-pair nil
   (interactive)
@@ -1045,6 +1019,37 @@
 
 (when is-mac
   (select-frame-set-input-focus (selected-frame)))
+
+;; --- zen ------------------------------------------------------------------
+(setq-default fill-column (if is-android 120 140))
+(defvar-local zen-buffer-enabled nil)
+(defun toggle-zen-buffer ()
+  "Toggle center alignment of the buffer. Inspired by: olivetti."
+  (interactive)
+  (setq zen-buffer-enabled (not zen-buffer-enabled))
+  (zen-buffer-apply-margins))
+(define-key (current-global-map) (kbd "C-x 9") #'toggle-zen-buffer)
+
+(defun zen-buffer-apply-margins ()
+  "Apply zen margins if enabled for this buffer."
+  (dolist (win (get-buffer-window-list (current-buffer) nil t))
+    (let* ((special-modes (or (eq major-mode 'org-mode) (eq major-mode 'markdown-mode)))
+           (margin (max 0 (/ (- (window-total-width win) fill-column) 2)))
+           (lmargin (if special-modes (max 0 (- margin 10)) margin))
+           (sm-half (ceiling (window-screen-lines) 2))
+           (zen-margin-need-sm (or (zerop scroll-margin) (> margin 0))))
+      (if (and zen-buffer-enabled (> (window-total-width) fill-column))
+          (progn
+            (visual-line-mode 1)
+            (set-window-margins win lmargin margin)
+            (when special-modes (text-scale-set 2))
+            (setq-local scroll-margin (if zen-margin-need-sm sm-half 0)))
+        (progn
+          (set-window-margins win nil)
+          (when special-modes (text-scale-set 0))
+          (setq-local scroll-margin (if zen-buffer-enabled sm-half 0)))))))
+
+(add-hook 'window-configuration-change-hook #'zen-buffer-apply-margins)
 
 ;; --- VC -------------------------------------------------------------------
 (with-eval-after-load 'smerge-mode
@@ -1536,7 +1541,7 @@ any directory proferred by `consult-dir'."
             (local-set-key (kbd "C-c C-v") 
                            (lambda () (interactive)
                              (eww (concat "file://" buffer-file-name))))))
-(setq-default shr-max-width 110 shr-width 110)
+(setq-default shr-max-width 110 shr-width 110 shr-indentation 0)
 (with-eval-after-load 'shr
   (setq shr-max-width 110 shr-width 110)
   (defun my-url-expand-file-name-fixed (orig-fun file &optional base)
