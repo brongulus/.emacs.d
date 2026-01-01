@@ -3,6 +3,11 @@
 ;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
 ;; (setq init-start-time (current-time))
 (setq inhibit-startup-screen t
+      fast-but-imprecise-scrolling t
+      jit-lock-defer-time 0
+      after-init-hook nil
+      lisp-el-font-lock-keywords-2 nil
+      font-lock-maximum-decoration '((emacs-lisp-mode . 1) (t . 2))
       ;; toggle-debug-on-error t
       custom-file (make-temp-file "emacs-custom")
       is-android (eq system-type 'android)
@@ -45,14 +50,13 @@
 ;; --- Activate / Deactivate modes ------------------------------------------
 (blink-cursor-mode -1) (kill-ring-deindent-mode 1)
 (global-subword-mode 1) (global-eldoc-mode -1)
-(defun my-lazy-load-modes ()
-  (pixel-scroll-precision-mode 1) ;(winner-mode 1)
-  (delete-selection-mode 1) (global-auto-revert-mode 1) (which-key-mode 1)
-  (minibuffer-depth-indicate-mode) (savehist-mode 1) (which-function-mode 1)
-  (save-place-mode 1) (global-goto-address-mode) (tooltip-mode -1)
-  (unless (display-graphic-p) (xterm-mouse-mode)))
-(run-with-idle-timer 0.3 nil #'my-lazy-load-modes)
-
+(add-hook 'emacs-startup-hook
+          (lambda nil
+            (pixel-scroll-precision-mode 1) ;(winner-mode 1)
+            (delete-selection-mode 1) (global-auto-revert-mode 1) (which-key-mode 1)
+            (minibuffer-depth-indicate-mode) (savehist-mode 1) (which-function-mode 1)
+            (save-place-mode 1) (global-goto-address-mode) (tooltip-mode -1)
+            (unless (display-graphic-p) (xterm-mouse-mode))))
 ;; --- Minimal theme --------------------------------------
 (setq modus-themes-common-palette-overrides
       '((fringe bg-main)
@@ -61,11 +65,14 @@
       modus-vivendi-palette-overrides
       '((bg-main "#212121")))
 ;; (load-theme 'modus-operandi-deuteranopia)
-;; (setq custom-theme-directory "~/.emacs.d/themes/"
-;;       custom-safe-themes t)
+;; (setq custom-theme-directory "~/.emacs.d/themes/" custom-safe-themes t)
 ;; (load-theme 'stillpoint)
 (set-face-attribute 'fringe nil :background (face-background 'default))
 (load "~/.emacs.d/lisp/nano-theme" :noerr :no-message)
+(define-advice load-theme (:before (&rest _args) theme-dont-propagate)
+  (mapc #'disable-theme custom-enabled-themes))
+(define-advice load-theme (:after (&rest _args) fringe-fix)
+  (set-face-attribute 'fringe nil :background (face-background 'default)))
 
 ;; --- Header & mode lines --------------------------------------------------
 (defvar tab-bar--tab-keymaps (make-vector 20 nil)
@@ -119,9 +126,7 @@
                 (:eval (let ((prefix (cond ((buffer-modified-p) "** ")
                                            (buffer-read-only "RO ")
                                            (t "   "))))
-                         (propertize (format "%s%s" prefix
-                                             (replace-regexp-in-string
-                                              "\\*" "" (buffer-name)))
+                         (propertize (format "%s%s" prefix (buffer-name))
                                      'face (if (buffer-modified-p) 'bold-italic 'bold)
                                      'help-echo (buffer-file-name))))
                 (:eval (propertize (string-trim-left
@@ -196,13 +201,13 @@
       ido-show-dot-for-dired t
       ido-max-prospects 6
       ido-auto-merge-work-directories-length -1)
-(run-with-idle-timer 0.1 nil #'(lambda nil (ido-mode 'buffers)))
+(ido-mode 'buffers)
 (add-hook 'ido-setup-hook
           (lambda nil
             (define-key ido-completion-map (kbd "TAB") #'ido-next-match)
             (define-key ido-completion-map (kbd "<backtab>") #'ido-prev-match)))
 ;; Use icomplete for M-x and find-file and icomplete-vertical for everything else
-(run-with-idle-timer 0.1 nil #'icomplete-mode)
+(icomplete-mode)
 (add-hook 'minibuffer-setup-hook
           (lambda nil
             (setq-local show-paren-mode nil)
@@ -440,16 +445,14 @@
       xref-show-definitions-function 'xref-show-definitions-buffer-at-bottom
       xref-show-xrefs-function 'xref-show-definitions-completing-read)
 
-(run-with-idle-timer
- 0.9 nil (lambda nil
-           (when is-android
-             (file-to-register "/sdcard/Download/" ?d))
-           (file-to-register "~/Downloads/videos/" ?v)
-           (file-to-register "~/.emacs.d/init.el" ?i)
-           (file-to-register "~/dotfiles/flake.nix" ?n)
-           (file-to-register "~/Dropbox/org/log.org" ?l)
-           (file-to-register "~/Dropbox/org/jap_log.org" ?j)
-           (file-to-register "/Volumes/PortableSSD/" ?p)))
+(when is-android
+  (file-to-register "/sdcard/Download/" ?d))
+(file-to-register "~/Downloads/videos/" ?v)
+(file-to-register "~/.emacs.d/init.el" ?i)
+(file-to-register "~/dotfiles/flake.nix" ?n)
+(file-to-register "~/Dropbox/org/log.org" ?l)
+(file-to-register "~/Dropbox/org/jap_log.org" ?j)
+(file-to-register "/Volumes/PortableSSD/" ?p)
 
 (when (executable-find "rg")
   (setq grep-command "rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)"
@@ -523,9 +526,6 @@
 
 (add-to-list 'write-file-functions
              '(lambda () (when (derived-mode-p 'emacs-lisp-mode) (check-parens)) nil))
-
-(define-advice load-theme (:before (&rest _args) theme-dont-propagate)
-  (mapc #'disable-theme custom-enabled-themes))
 
 (define-advice indent-region (:around (orig-fun &rest args) indent-defun)
   "Indent defun if mark inactive." ;src: DarwinAwardWinner/dotemacs
@@ -1555,12 +1555,10 @@ any directory proferred by `consult-dir'."
   (setq eww-auto-rename-buffer 'title))
 
 ;; --- External -------------------------------------------------------------
-(run-with-idle-timer
- 0.2 nil (lambda nil
-           (load "~/.emacs.d/lisp/dev-conf" nil :no-message)
-           (if (locate-library "corfu")
-               (global-corfu-mode)
-             (add-hook 'prog-mode-hook #'completion-preview-mode))))
+(load "~/.emacs.d/lisp/dev-conf" nil :no-message)
+(if (locate-library "corfu")
+    (global-corfu-mode)
+  (add-hook 'prog-mode-hook #'completion-preview-mode))
 
 ;; --- 31 stuff -------------------------------------------------------------
 (when (string> emacs-version "31")
