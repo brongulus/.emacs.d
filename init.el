@@ -306,7 +306,7 @@
                 ("C-." . my-scroll-other-up) ("C-<tab>" . tab-next)
                 ("C-S-<tab>" . tab-previous) ("C-x C-b" . ibuffer)
                 ("M-s r" . replace-regexp) ("C-x k" . kill-current-buffer)
-                ("C-x f" . recentf-open) ("C-x t d" . toggle-debug-on-error)
+                ("C-x f" . find-file) ("C-x t d" . toggle-debug-on-error)
                 ("C-g" . keyboard-quit)))
   (define-key (current-global-map) (kbd (car bind)) (cdr bind)))
 (define-key (current-global-map) (kbd "C-x m") esc-map)
@@ -910,6 +910,27 @@
                                (find-file file))
                              (windmove-right))))))))
 (define-key (current-global-map) (kbd "C-x d") #'dired-vc-left)
+
+(defun my/narrow-or-widen-dwim (p)
+  ;; src: https://endlessparentheses.com/emacs-narrow-or-widen-dwim.html
+  "Widen if buffer is narrowed, narrow-dwim otherwise.
+Dwim means: region, org-src-block, org-subtree, or
+defun, whichever applies first.
+With prefix P, don't widen, just narrow even if buffer
+is already narrowed."
+  (interactive "P")
+  (cond ((and (buffer-narrowed-p) (not p)) (widen))
+        ((region-active-p)
+         (narrow-to-region (region-beginning)
+                           (region-end)))
+        ((derived-mode-p 'org-mode)
+         (cond ((ignore-errors (org-narrow-to-block) t))
+               (t (org-narrow-to-subtree))))
+        ((derived-mode-p 'latex-mode)
+         (LaTeX-narrow-to-environment))
+        (t (narrow-to-defun))))
+
+(define-key (current-global-map) (kbd "C-x n") #'my/narrow-or-widen-dwim)
 
 ;; --- Mini Meow ------------------------------------------------------------
 (autoload 'viper-ex "viper")

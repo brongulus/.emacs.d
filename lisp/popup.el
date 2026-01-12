@@ -9,8 +9,9 @@
   "Define interactive function to call COMMAND in frame with TITLE."
   `(defun ,(intern (format "popup-frame-%s" command)) ()
      (interactive)
-     (let* ((display-buffer-alist '(("")
-                                    (display-buffer-full-frame)))
+     (let* ((display-buffer-alist '(("\\*Org Select\\*" display-buffer-full-frame)
+                                    ("") (display-buffer-full-frame)))
+            (mode-line-format nil)
             (frame (make-frame
                     '((title . ,title)
                       (window-system . ns)
