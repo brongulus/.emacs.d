@@ -49,6 +49,15 @@
               (org-archive-subtree)
               (setq archived-count (1+ archived-count)))))
         (message "Archived %d DONE task(s)" archived-count))))
+
+  (with-eval-after-load 'org-src
+    (nconc org-src-lang-modes
+         '(("rust" . rust-ts) ("python" . python-ts)
+           ("go" . go-ts) ("bash" . bash-ts)
+           ("typescript" . typescript-ts)
+           ("javascript" . js-ts) ("json" . json-ts)
+           ("yaml" . yaml-ts) ("toml" . toml-ts)
+           ("c" . c-ts) ("cpp" . c++-ts))))
   
   ;; configure <s template for org-src-blocks
   (require 'org-tempo)

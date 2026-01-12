@@ -38,8 +38,17 @@
              (package-install package))))))
    packages))
 
-(my/ensure-package-installed ;; 'diff-hl
+(my/ensure-package-installed ;; 'diff-hl 'multiple-cursors
  'consult-eglot 'corfu 'markdown-mode 'dape 'ox-hugo 'zig-mode 'nov 'pr-review 'eldoc-box)
+
+;; (dolist (bind '(("M-p" . mc/mark-previous-like-this-symbol)
+;;                 ("M-n" . mc/mark-next-like-this-symbol)
+;;                 ("M-'" . mc/mark-all-like-this-dwim)
+;;                 ("M-r" . set-rectangular-region-anchor)))
+;;   (define-key (current-global-map) (kbd (car bind)) (cdr bind)))
+;; (with-eval-after-load 'multiple-cursors
+;;   (set-face-attribute 'mc/cursor-bar-face nil :height 'unspecified
+;;                       :background "SpringGreen4"))
 
 ;; pr-review needs (info "(forge) Setup for Githubcom")
 ;; C-c C- {c (comment) s (action) e (edit) d (ediff) f (goto file)
@@ -159,15 +168,25 @@
         (browse-url help-echo)
       (apply orig-fun args))))
 
-(push '("\\..?md\\'" . markdown-mode) auto-mode-alist)
+;; (push '("\\..?md\\'" . markdown-mode) auto-mode-alist)
+(add-to-list 'auto-mode-alist
+             '("\\.md\\'" . (lambda ()
+                              (markdown-mode)
+                              (face-remap-add-relative 'markdown-code-face :extend t
+                                                       :inherit 'bg-highlight))))
 (with-eval-after-load 'markdown-mode
+  (nconc markdown-code-lang-modes
+         '(("rust" . rust-ts-mode) ("python" . python-ts-mode)
+           ("go" . go-ts-mode) ("bash" . bash-ts-mode)
+           ("typescript" . typescript-ts-mode)
+           ("javascript" . js-ts-mode) ("json" . json-ts-mode)
+           ("yaml" . yaml-ts-mode) ("toml" . toml-ts-mode)
+           ("c" . c-ts-mode) ("cpp" . c++-ts-mode)))
   (advice-add 'markdown-follow-link-at-point
               :around #'my-markdown-follow-help-or-link-at-point-advice)
   (add-hook 'markdown-mode-hook #'(lambda nil
                                     (visual-line-mode t)
                                     (when (display-graphic-p) (markdown-toggle-inline-images))))
-  (dolist (level '("1" "2" "3" "4" "5" "6"))
-    (set-face-attribute (intern (concat "markdown-header-face-" level)) nil :height 1.1 :inherit 'bold))
   (setq markdown-fontify-code-blocks-natively t
         markdown-max-image-size '(800 . 800)))
 

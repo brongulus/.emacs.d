@@ -27,6 +27,7 @@
 (defface my/shr-h1 '((t :inherit bold :height 1.3)) "Face for h1 tags.")
 (defface my/shr-h2 '((t :inherit bold :height 1.2)) "Face for h2 tags.")
 (defface my/shr-h3 '((t :inherit bold :height 1.2)) "Face for h3 tags.")
+(defface my/todo `((t :foreground "coral3" :background ,(face-background 'highlight))) ".")
 
 (defun my/shr-make-tag-renderer (tag face-name)
   "Create a custom shr tag renderer for TAG that applies FACE-NAME."
@@ -97,7 +98,8 @@
   (dolist (face '(font-lock-doc-face font-lock-builtin-face))
     (set-face-attribute face nil :slant 'italic))
   (set-face-attribute 'font-lock-function-call-face nil :slant 'italic :weight 'regular)
-  (set-face-attribute 'font-lock-warning-face nil :background (face-background 'highlight))
+  (set-face-attribute 'my/todo nil :foreground (face-foreground 'fg-critical)
+                      :background (face-background 'highlight))
   (set-face-attribute 'font-lock-keyword-face nil
                       :foreground (face-foreground 'fg-bold)
                       :weight (face-attribute 'bold :weight))
@@ -234,20 +236,23 @@
     (set-face-attribute 'whitespace-line nil :background 'unspecified :foreground 'unspecified))
 
   (with-eval-after-load 'markdown-mode
-    (dolist (face '(markdown-pre-face)); markdown-code-face))
-      (set-face-attribute face nil :background (face-background 'bg-highlight) :extend t)))
+    (set-face-attribute 'markdown-inline-code-face nil :inherit 'font-lock-constant-face)
+    (set-face-attribute 'markdown-table-face nil :inherit 'unspecified)
+    (dolist (level '("1" "2" "3" "4" "5" "6"))
+      (set-face-attribute (intern (concat "markdown-header-face-" level)) nil :height 1.1 :inherit 'bold))
+    (set-face-attribute 'markdown-pre-face nil :extend t
+                        :background (face-background 'bg-highlight)))
   (with-eval-after-load 'org
     (dolist (face '(org-level-1 org-level-2 org-level-3 org-level-4
                                 org-level-5 org-level-6 org-level-7 org-level-8))
       (set-face-attribute face nil :height 1.1 :weight (face-attribute 'bold :weight)))
     (dolist (face '(org-level-1 org-document-title org-document-info))
-      (set-face-attribute face nil :inherit 'variable-pitch :height 1.3))
+      (set-face-attribute face nil :inherit 'variable-pitch :height 1.1
+                          :foreground (face-foreground 'fg-bold)))
     (set-face-attribute 'org-level-2 nil :inherit 'fixed-pitch-serif)
     (dolist (face '(org-block org-block-begin-line org-block-end-line))
       (set-face-attribute face nil :background (face-background 'bg-highlight) :extend t :inherit 'default))
-    (set-face-attribute 'org-link nil :family (face-attribute 'variable-pitch :family))
-    (set-face-attribute 'org-document-title nil :foreground (face-foreground 'fg-bold))
-    (set-face-attribute 'org-document-info nil :foreground (face-foreground 'fg-bold))
+    (set-face-attribute 'org-document-info-keyword nil :height 1.1)
     (set-face-attribute 'org-todo nil :foreground (face-foreground 'org-scheduled-previously))
     (set-face-attribute 'org-done nil :foreground (face-foreground 'font-lock-comment-face))
     (set-face-attribute 'org-mode-line-clock nil :weight (face-attribute 'bold :weight)
@@ -418,3 +423,11 @@
 (define-key (current-global-map) (kbd "C-x 7") #'nano-monochrome)
 ;; Set current theme based on terminal
 (funcall (intern (concat "nano-" (symbol-name nano-current-theme))))
+
+(add-hook 'prog-mode-hook
+          (lambda ()
+            (font-lock-add-keywords
+             nil
+             '(("\\<\\(FIXME\\|HACK\\|TODO\\|WIP\\|BUG\\|DONE\\)"
+                1 'my/todo t)
+               (";" . 'shadow)))))

@@ -9,7 +9,7 @@
       lisp-el-font-lock-keywords-2 nil
       font-lock-maximum-decoration '((emacs-lisp-mode . 1) (t . 2))
       ;; toggle-debug-on-error t
-      custom-file (make-temp-file "emacs-custom")
+      custom-file null-device ;(make-temp-file "emacs-custom")
       is-android (eq system-type 'android)
       is-mac (eq system-type 'darwin))
 ;; (profiler-start 'cpu)
@@ -39,6 +39,9 @@
 (dolist (face '(variable-pitch variable-pitch-text))
   (set-face-attribute face nil :family "Input Sans Narrow"))
 (set-face-attribute 'fixed-pitch-serif nil :family "Input Serif Condensed")
+(when is-mac ; Apple Emoji font is larger than usual
+  (dolist (cat '(unicode emoji))
+    (set-fontset-font t cat (font-spec :family "Noto Color Emoji") nil 'prepend)))
 (setq-default line-spacing (if is-android 7 5)) ; 7
 (set-face-attribute 'nobreak-space nil :underline nil)
 (set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
@@ -50,13 +53,13 @@
 ;; --- Activate / Deactivate modes ------------------------------------------
 (blink-cursor-mode -1) (kill-ring-deindent-mode 1)
 (global-subword-mode 1) (global-eldoc-mode -1)
-(add-hook 'emacs-startup-hook
-          (lambda nil
-            (pixel-scroll-precision-mode 1) ;(winner-mode 1)
-            (delete-selection-mode 1) (global-auto-revert-mode 1) (which-key-mode 1)
-            (minibuffer-depth-indicate-mode) (savehist-mode 1) (which-function-mode 1)
-            (save-place-mode 1) (global-goto-address-mode) (tooltip-mode -1)
-            (unless (display-graphic-p) (xterm-mouse-mode))))
+;; (add-hook 'emacs-startup-hook
+;;           (lambda nil
+(pixel-scroll-precision-mode 1) ;(winner-mode 1)
+(delete-selection-mode 1) (global-auto-revert-mode 1) (which-key-mode 1)
+(minibuffer-depth-indicate-mode) (savehist-mode 1) (which-function-mode 1)
+(save-place-mode 1) (global-goto-address-mode) (tooltip-mode -1)
+(unless (display-graphic-p) (xterm-mouse-mode));))
 ;; --- Minimal theme --------------------------------------
 (setq modus-themes-common-palette-overrides
       '((fringe bg-main)
@@ -123,39 +126,39 @@
                 (:eval (when (and (buffer-narrowed-p)
                                   (not (derived-mode-p 'Info-mode)))
                          (propertize "(N)")))
-                (:eval (let ((prefix (cond ((buffer-modified-p) "** ")
-                                           (buffer-read-only "RO ")
-                                           (t "   "))))
-                         (propertize (format "%s%s" prefix (buffer-name))
-                                     'face (if (buffer-modified-p) 'bold-italic 'bold)
-                                     'help-echo (buffer-file-name))))
+                (:eval (propertize (format " %s" (buffer-name))
+                                   'face (if (buffer-modified-p) 'bold-italic 'bold)
+                                   'help-echo (buffer-file-name)))
                 (:eval (propertize (string-trim-left
                                     (format-mode-line vc-mode))
                                    'face '(:weight light :slant italic)))
-                (:eval (unless display-line-numbers
-                         (propertize "   L%l" 'face 'shadow)))
                 (:eval (let ((prefix (cond
-                                      ((or defining-kbd-macro executing-kbd-macro)
-                                       "▶▶")
-                                      ((region-active-p)
+                                      ((or defining-kbd-macro executing-kbd-macro) "[MACRO]")
+                                      ((or (and (locate-library "multiple-cursors") multiple-cursors-mode)
+                                           (region-active-p))
                                        (concat "%p "
-                                               (format "{%d}"
-                                                       (count-lines (region-beginning)
-                                                                    (region-end)))))
-                                      ((eq major-mode 'nov-mode)
-                                       (format "[%d/%d]"
+                                               (format
+                                                "{%d}" (if multiple-cursors-mode
+                                                           (mc/num-cursors)
+                                                         (count-lines (region-beginning)
+                                                                      (region-end))))))
+                                      ((eq major-mode 'nov-mode) (format "[%d/%d]"
                                         ;(/ (window-start) 0.01 (point-max))
-                                               (1+ nov-documents-index)
-                                               (length nov-documents)))
+                                                                         (1+ nov-documents-index)
+                                                                         (length nov-documents)))
                                       ((eq major-mode 'doc-view-mode)
                                        (format "[%d/%d]" (doc-view-current-page)
                                                (doc-view-last-page-number)))
-                                      ((or meow-mode buffer-read-only
-                                           (eq major-mode 'eww-mode))
+                                      ((member major-mode
+                                               '(eww-mode gnus-article-mode
+                                                          gnus-group-mode gnus-summary-mode))
                                        "%p")
                                       ((buffer-modified-p) "**")
-                                      (t                   "--"))))
+                                      (buffer-read-only    "%p RO")
+                                      (t                   "%p"))))
                          (propertize (concat "   " prefix " ") 'face 'shadow)))
+                (:eval (unless display-line-numbers
+                         (propertize "   L%l" 'face 'shadow)))
                 mode-line-format-right-align
                 (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
                   eglot-mode-line-progress)
@@ -303,7 +306,8 @@
                 ("C-." . my-scroll-other-up) ("C-<tab>" . tab-next)
                 ("C-S-<tab>" . tab-previous) ("C-x C-b" . ibuffer)
                 ("M-s r" . replace-regexp) ("C-x k" . kill-current-buffer)
-                ("C-x f" . recentf-open) ("C-g" . keyboard-quit)))
+                ("C-x f" . recentf-open) ("C-x t d" . toggle-debug-on-error)
+                ("C-g" . keyboard-quit)))
   (define-key (current-global-map) (kbd (car bind)) (cdr bind)))
 (define-key (current-global-map) (kbd "C-x m") esc-map)
 (define-key (current-global-map) (kbd "C-<wheel-up>") nil)
@@ -344,8 +348,9 @@
 
 (add-hook 'after-save-hook #'executable-make-buffer-file-executable-if-script-p)
 (when (featurep 'recentf)
+  ;; (advice-add #'recentf-cleanup :around #'silent-command)
   (add-hook 'kill-emacs-hook #'recentf-cleanup))
-(add-hook 'dired-mode-hook #'dired-hide-details-mode)
+;; (add-hook 'dired-mode-hook #'dired-hide-details-mode)
 (add-hook 'dired-mode-hook #'dired-omit-mode)
 (add-hook 'prog-mode-hook (electric-pair-mode t))
 (add-hook 'prog-mode-hook #'hs-minor-mode)
@@ -368,7 +373,8 @@
 (advice-add #'server-force-delete :around #'silent-command)
 (run-with-idle-timer 1 nil
                      #'(lambda nil
-                         (unless server-mode (server-force-delete) (server-mode))))
+                         (unless server-mode (server-force-delete) (server-mode))
+                         (load "~/.emacs.d/lisp/popup.el" nil :no-message)))
 
 (setq auto-save-file-name-transforms `((".*" "~/.emacs.d/backup/" t))
       backup-directory-alist `(("." . "~/.emacs.d/backup/"))
@@ -466,6 +472,7 @@
       sentence-end-double-space nil)
 
 (with-eval-after-load 'isearch
+  (define-key isearch-mode-map (kbd "<backspace>") #'isearch-del-char)
   (define-key isearch-mode-map (kbd "M-o") #'isearch-occur)
   (define-key isearch-mode-map (kbd "M-<") #'isearch-beginning-of-buffer)
   (define-key isearch-mode-map (kbd "M->") #'isearch-end-of-buffer)
@@ -480,6 +487,15 @@
 ;; (with-eval-after-load 'dabbrev
 ;;   (advice-add #'dabbrev-capf :before #'dabbrev--reset-global-variables)
 ;;   (add-hook 'completion-at-point-functions #'dabbrev-capf 100))
+(define-key (current-global-map) [remap dabbrev-expand] #'hippie-expand)
+(setq hippie-expand-verbose nil
+      hippie-expand-try-functions-list
+      '(try-expand-dabbrev
+        try-expand-dabbrev-all-buffers
+        try-complete-file-name-partially
+        try-complete-file-name
+        try-expand-dabbrev-from-kill
+        try-expand-list try-expand-line))
 
 (with-eval-after-load 'dired
   (when is-mac
@@ -670,14 +686,6 @@
 (define-key (current-global-map) (kbd "C-x c c") #'compile)
 (define-key (current-global-map) (kbd "C-x c r") #'recompile)
 
-(add-hook 'prog-mode-hook
-          (lambda ()
-            (font-lock-add-keywords
-             nil
-             '(("\\<\\(FIXME\\|HACK\\|TODO\\|WIP\\|BUG\\|DONE\\)"
-                1 font-lock-warning-face t)
-               (";" . 'shadow)))))
-
 (with-eval-after-load 'treesit
   (defun my/setup-install-grammars ()
     "Install Tree-sitter grammars if they are absent."
@@ -732,7 +740,7 @@
 ;;  '("\\.md\\'" . markdown-ts-mode))))
 
 (dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook zig-mode-hook c++-mode-hook))
-  (add-hook mode #'(lambda nil (run-with-timer 0.5 nil #'eglot-ensure))))
+  (add-hook mode #'(lambda nil (run-with-timer 0.3 nil #'eglot-ensure))))
 ;; (add-hook 'go-ts-mode-hook #'whitespace-mode)
 (add-hook 'rust-ts-mode-hook
           (lambda nil (add-to-list 'process-environment "CARGO_TERM_COLOR=always" :append)))
@@ -760,9 +768,14 @@
         eglot-sync-connect nil
         eglot-autoshutdown t
         eglot-inlay-hints-mode nil)
-
+  
   (setq python-flymake-command '("ruff" "check" "--output-format=concise" 
                                  "--stdin-filename" "stdin" "-"))
+  (setq-default eglot-workspace-configuration
+                ;; Ref: https://github.com/golang/tools/blob/master/gopls/doc/analyzers.md
+                '((:gopls . (:analyses (:ST1000 :json-false
+                                                :any :json-false)
+                                       :staticcheck t))))
   (add-to-list 'eglot-server-programs
                '((ruby-mode ruby-ts-mode) . ("ruby-lsp")))
   (push '(zig-mode . ("zls")) eglot-server-programs)
@@ -879,6 +892,7 @@
           dir `((side . left) (slot . 0) (window-width . 0.2)
                 (window-parameters . ((no-delete-other-windows . t)))))
          (with-current-buffer dir
+           (dired-hide-details-mode 1)
            (use-local-map (copy-keymap (current-local-map)))
            (select-window (get-buffer-window dir))
            (define-key (current-local-map) (kbd "\\")
@@ -1021,7 +1035,8 @@
   (select-frame-set-input-focus (selected-frame)))
 
 ;; --- zen ------------------------------------------------------------------
-(setq-default fill-column (if is-android 120 140))
+(setq-default fill-column (if is-android 120 140)
+              text-scale-mode-step 1.3)
 (defvar-local zen-buffer-enabled nil)
 (defun toggle-zen-buffer ()
   "Toggle center alignment of the buffer. Inspired by: olivetti."
@@ -1029,6 +1044,8 @@
   (setq zen-buffer-enabled (not zen-buffer-enabled))
   (zen-buffer-apply-margins))
 (define-key (current-global-map) (kbd "C-x 9") #'toggle-zen-buffer)
+(with-eval-after-load 'org
+  (add-hook 'org-mode-hook #'toggle-zen-buffer))
 
 (defun zen-buffer-apply-margins ()
   "Apply zen margins if enabled for this buffer."
@@ -1042,11 +1059,11 @@
           (progn
             (visual-line-mode 1)
             (set-window-margins win lmargin margin)
-            (when special-modes (text-scale-set 2))
+            (when special-modes (text-scale-set 1) (setq-local line-spacing 0.6))
             (setq-local scroll-margin (if zen-margin-need-sm sm-half 0)))
         (progn
           (set-window-margins win nil)
-          (when special-modes (text-scale-set 0))
+          (when special-modes (text-scale-set 0) (setq-local line-spacing 5))
           (setq-local scroll-margin (if zen-buffer-enabled sm-half 0)))))))
 
 (add-hook 'window-configuration-change-hook #'zen-buffer-apply-margins)
@@ -1299,9 +1316,10 @@
   (defun eshell-insert-history () ; src: howard abrams
     "Displays the eshell history to select and insert back into your eshell."
     (interactive)
-    (insert (completing-read "Eshell history: "
-                             (delete-dups
-                              (ring-elements eshell-history-ring)))))
+    (let ((cmd (completing-read "Eshell history: "
+                                (delete-dups
+                                 (ring-elements eshell-history-ring)))))
+      (when cmd (kill-line 0) (insert cmd))))
 
   (defun eshell/z (&optional regexp) ; src: karthink
     "Navigate to a previously visited directory in eshell, or to
@@ -1534,7 +1552,8 @@ any directory proferred by `consult-dir'."
       browse-url-new-window-flag t
       eww-default-download-directory "~/Downloads/eww/")
 (setq browse-url-handlers nil)
-(dolist (url '("github\\.com" "github\\.tools" "youtube\\.com" "youtu\\.be" "melpa\\.org"))
+(dolist (url '("github\\.com" "github\\.tools" "youtube\\.com"
+               "youtu\\.be" "melpa\\.org" "reddit\\.com"))
   (push (cons url 'browse-url-default-browser) browse-url-handlers))
 (add-hook 'html-mode-hook
           (lambda ()
@@ -1550,9 +1569,32 @@ any directory proferred by `consult-dir'."
   (advice-add 'url-expand-file-name :around #'my-url-expand-file-name-fixed))
 (with-eval-after-load 'eww
   (define-key eww-mode-map (kbd "SPC") ctl-x-map)
+  (define-key eww-mode-map (kbd "C-j") #'hoagie-eww-jump)
   (define-key eww-mode-map (kbd "#") #'definition-at-point)
   (setq eww-header-line-format nil)
   (setq eww-auto-rename-buffer 'title))
+
+;; src: https://git.sr.ht/~sebasmonia/dotfiles/tree/main/item/.config/emacs/init.el
+(defun hoagie-eww-jump ()
+  "Similar `elpher-jump', but for EWW.
+It is based on the elpher code, but instead of opening the link,
+it moves point to it, to take advantage of links'
+`eww-follow-link' binding (using prefix or double prefix for
+external browser and new eww buffer, respectively)."
+  (interactive)
+  (let ((all-links
+         (save-excursion
+           (goto-char (point-min))
+           (cl-loop for link = (text-property-search-forward 'shr-url nil nil t)
+                    while link
+                    for position = (prop-match-beginning link)
+                    for text = (buffer-substring position
+                                                 (prop-match-end link))
+                    collect
+                    (cons text position)))))
+    (goto-char (alist-get (completing-read "Link: " all-links nil)
+                          all-links nil nil #'string=))
+    (eww-follow-link)))
 
 ;; --- External -------------------------------------------------------------
 (load "~/.emacs.d/lisp/dev-conf" nil :no-message)

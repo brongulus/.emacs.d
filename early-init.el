@@ -12,7 +12,7 @@
               (run-at-time
                2 nil
                (lambda nil            
-                 (setq gc-cons-threshold (* 64 1024 1024)
+                 (setq gc-cons-threshold (* 8 1024 1024)
                        gc-cons-percentage 0.1
                        file-name-handler-alist my/saved-file-name-handler-alist))))
           ;; (garbage-collect))))
@@ -77,6 +77,13 @@
 ;;             (redraw-frame))
 ;;           :depth -105)
 ;;
+(unless (daemonp)
+  (advice-add #'tty-run-terminal-initialization :override #'ignore)
+  (add-hook 'window-setup-hook
+            (lambda nil ; doom-init-tty-h
+              (advice-remove #'tty-run-terminal-initialization #'ignore)
+              (tty-run-terminal-initialization (selected-frame) nil t))))
+
 (fset 'display-startup-echo-area-message 'ignore)
 
 (setcdr (assq 'continuation fringe-indicator-alist)
