@@ -38,8 +38,8 @@
              (package-install package))))))
    packages))
 
-(my/ensure-package-installed ;; 'diff-hl 'multiple-cursors
- 'consult-eglot 'corfu 'markdown-mode 'dape 'ox-hugo 'zig-mode 'nov 'pr-review 'eldoc-box)
+(my/ensure-package-installed ;; 'diff-hl 'multiple-cursors 'consult-eglot
+ 'corfu 'dape 'markdown-mode 'ox-hugo 'zig-mode 'nov 'pr-review 'eldoc-box)
 
 ;; (dolist (bind '(("M-p" . mc/mark-previous-like-this-symbol)
 ;;                 ("M-n" . mc/mark-next-like-this-symbol)
@@ -64,7 +64,13 @@
 (setq magit-auto-revert-mode nil)
 (with-eval-after-load 'pr-review
   (require 'magit)
-  (define-key pr-review-mode-map (kbd "SPC") ctl-x-map))
+  (define-key pr-review-mode-map (kbd "SPC") ctl-x-map)
+  (add-hook 'pr-review-mode-hook
+            (lambda nil
+              (face-remap-add-relative
+               'font-lock-warning-face
+               :foreground (face-foreground 'font-lock-punctuation-face)))))
+
 (with-eval-after-load 'project
   (when (locate-library "magit")
     (add-to-list 'project-switch-commands '(magit-project-status "Magit" ?m))))
@@ -89,9 +95,9 @@
       (mapc #'kill-buffer forge-buffers)))
   (define-key magit-status-mode-map (kbd "q") #'magit-forge-kill-buffers))
 
-(define-key (current-global-map) (kbd "C-x S") #'consult-eglot-symbols)
-(with-eval-after-load 'eglot
-  (define-key eglot-mode-map [remap xref-find-apropos] #'consult-eglot-symbols))
+;; (define-key (current-global-map) (kbd "C-x S") #'consult-eglot-symbols)
+;; (with-eval-after-load 'eglot
+;;   (define-key eglot-mode-map [remap xref-find-apropos] #'consult-eglot-symbols))
 (with-eval-after-load 'ox
   (require 'ox-hugo))
 (add-to-list 'auto-mode-alist '("\\.zig\\'" . zig-mode))
@@ -168,7 +174,6 @@
         (browse-url help-echo)
       (apply orig-fun args))))
 
-;; (push '("\\..?md\\'" . markdown-mode) auto-mode-alist)
 (add-to-list 'auto-mode-alist
              '("\\.md\\'" . (lambda ()
                               (markdown-mode)
@@ -187,6 +192,7 @@
   (add-hook 'markdown-mode-hook #'(lambda nil
                                     (visual-line-mode t)
                                     (when (display-graphic-p) (markdown-toggle-inline-images))))
+  (set-face-attribute 'markdown-header-delimiter-face nil :inherit 'bold)
   (setq markdown-fontify-code-blocks-natively t
         markdown-max-image-size '(800 . 800)))
 

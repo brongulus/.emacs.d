@@ -165,6 +165,12 @@
                           :foreground (alist-get theme-variant (alist-get 'yellow color-themes)))
       (set-face-attribute 'diff-hl-delete nil :background (face-background 'default)
                           :foreground (alist-get theme-variant (alist-get 'red color-themes))))
+    (with-eval-after-load 'corfu
+      (set-face-attribute 'corfu-border nil :background (face-foreground 'vertical-border))
+      (set-face-attribute 'corfu-current nil :foreground (face-foreground 'default)
+                          :inherit 'highlight :background 'unspecified)
+      (set-face-attribute 'corfu-default nil :background 'unspecified
+                          :inherit 'solaire-default-face))
     (with-eval-after-load 'howm
       (set-face-attribute 'action-lock-face nil :underline
                           (alist-get theme-variant (alist-get 'blue color-themes)))
@@ -275,6 +281,8 @@
   (with-eval-after-load 'sh-script
     (set-face-attribute 'sh-heredoc nil :foreground (face-foreground 'font-lock-constant-face))
     (set-face-attribute 'sh-quoted-exec nil :foreground (face-foreground 'fg-bold) :italic t))
+  (with-eval-after-load 'hideshow
+    (set-face-attribute 'hs-ellipsis nil :box 'unspecified :underline t))
   (with-eval-after-load 'shr
     (set-face-attribute 'my/shr-pre nil :weight (face-attribute 'bold :weight)
                         :background (face-background 'bg-highlight)
@@ -290,7 +298,6 @@
   (set-face-attribute 'header-line nil :background 'unspecified :underline nil
                       :overline (face-foreground 'shadow))
   (set-face-attribute 'mode-line nil
-                      ;; :inherit 'variable-pitch ; slowdown?
                       :foreground (face-foreground 'default)
                       :background 'unspecified
                       :box '(:line-width 1 :style flat-button)

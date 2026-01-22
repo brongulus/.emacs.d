@@ -9,14 +9,14 @@
       lisp-el-font-lock-keywords-2 nil
       font-lock-maximum-decoration '((emacs-lisp-mode . 1) (t . 2))
       ;; toggle-debug-on-error t
-      custom-file null-device ;(make-temp-file "emacs-custom")
+      custom-file (make-temp-file "emacs-custom")
       is-android (eq system-type 'android)
       is-mac (eq system-type 'darwin))
 ;; (profiler-start 'cpu)
 
 ;; --- Typography stack -----------------------------------------------------
 ;; (defvar my-font-configs
-;;   '((input :family "Input Mono Narrow" :weight light :bold-weight regular)
+;;   '((input :family "Input Mono Narrow" :weight light :bold-weight medium)
 ;;     (victor :family "Victor Mono" :weight regular :bold-weight demi-bold)
 ;;     (ioskeley :family "Ioskeley Mono" :weight regular :bold-weight bold)
 ;;     (commit :family "CommitMono Nerd Font Mono" :weight regular :bold-weight bold)))
@@ -33,16 +33,16 @@
 ;;     (dolist (face '(variable-pitch variable-pitch-text))
 ;;       (set-face-attribute face nil :family "Input Sans Narrow"))
 ;;     (set-face-attribute 'fixed-pitch-serif nil :family "Input Serif Condensed")))
-(set-face-attribute 'bold nil :weight 'regular)
-(set-face-attribute 'bold-italic nil :weight 'regular)
+(setq-default line-spacing (if is-android 7 5)) ; 7
+(set-face-attribute 'bold nil :weight 'medium)
+(set-face-attribute 'bold-italic nil :weight 'medium)
 (set-face-attribute 'fixed-pitch nil :family "Input Mono Narrow")
 (dolist (face '(variable-pitch variable-pitch-text))
   (set-face-attribute face nil :family "Input Sans Narrow"))
-(set-face-attribute 'fixed-pitch-serif nil :family "Input Serif Condensed")
+(set-face-attribute 'fixed-pitch-serif nil :family "Iosevka Etoile")
 (when is-mac ; Apple Emoji font is larger than usual
   (dolist (cat '(unicode emoji))
     (set-fontset-font t cat (font-spec :family "Noto Color Emoji") nil 'prepend)))
-(setq-default line-spacing (if is-android 7 5)) ; 7
 (set-face-attribute 'nobreak-space nil :underline nil)
 (set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
 (set-display-table-slot standard-display-table 'truncation (make-glyph-code ?…))
@@ -57,10 +57,11 @@
 ;;           (lambda nil
 (pixel-scroll-precision-mode 1) ;(winner-mode 1)
 (delete-selection-mode 1) (global-auto-revert-mode 1) (which-key-mode 1)
-(minibuffer-depth-indicate-mode) (savehist-mode 1) (which-function-mode 1)
+(minibuffer-depth-indicate-mode) (savehist-mode 1)
 (save-place-mode 1) (global-goto-address-mode) (tooltip-mode -1)
 (unless (display-graphic-p) (xterm-mouse-mode));))
 ;; --- Minimal theme --------------------------------------
+(setq custom-theme-directory "~/.emacs.d/themes/" custom-safe-themes t)
 (setq modus-themes-common-palette-overrides
       '((fringe bg-main)
         (bg-line-number-inactive bg-main)
@@ -68,7 +69,6 @@
       modus-vivendi-palette-overrides
       '((bg-main "#212121")))
 ;; (load-theme 'modus-operandi-deuteranopia)
-;; (setq custom-theme-directory "~/.emacs.d/themes/" custom-safe-themes t)
 ;; (load-theme 'stillpoint)
 (set-face-attribute 'fringe nil :background (face-background 'default))
 (load "~/.emacs.d/lisp/nano-theme" :noerr :no-message)
@@ -76,6 +76,36 @@
   (mapc #'disable-theme custom-enabled-themes))
 (define-advice load-theme (:after (&rest _args) fringe-fix)
   (set-face-attribute 'fringe nil :background (face-background 'default)))
+
+(defun adjust-color (color alpha lighten)
+  "Darken or lighten COLOR (hex string) by ALPHA (0.0-1.0).
+If lighten is non-nil, lighten; otherwise darken"
+  (if (string-prefix-p "#" color)
+      (let ((div (float (car (tty-color-standard-values "#ffffff")))))
+        (apply (lambda (r g b) (format "#%02x%02x%02x" (* r 255) (* g 255) (* b 255)))
+               (seq-mapn (lambda (c w)
+                           (if lighten
+                               (* (- 1 alpha) (/ c div))
+                             (+ (* (- 1 alpha) (/ c div)) (* alpha (/ w div)))))
+                         (tty-color-standard-values color)
+                         (tty-color-standard-values "#ffffff"))))
+    color))
+
+(defface solaire-default-face '((t :inherit default)) "Tinted backgrounds.")
+(defun solaire-update-face () "Update solaire face based on current theme."
+       (let* ((bg (face-background 'default nil t))
+              (is-light (< (color-distance bg "white")
+                           (color-distance bg "black")))
+              (alpha (if is-light 0.03 0.02))
+              (new-bg (adjust-color bg alpha is-light)))
+         (set-face-attribute 'solaire-default-face nil :background new-bg)))
+
+(defun solaire-background () "Remap faces to use solaire background."
+       (solaire-update-face)
+       (dolist (face '(default fringe header-line))
+         (face-remap-add-relative face 'solaire-default-face)))
+
+(advice-add 'nano-toggle-theme :after (lambda (&rest _) (solaire-update-face)))
 
 ;; --- Header & mode lines --------------------------------------------------
 (defvar tab-bar--tab-keymaps (make-vector 20 nil)
@@ -86,6 +116,15 @@
     (define-key map [mode-line mouse-1]
                 `(lambda () (interactive) (tab-bar-select-tab ,(1+ idx))))
     (aset tab-bar--tab-keymaps i map)))
+
+(defvar-local my-word-count-cache nil)
+(defun my-update-word-count ()
+  "Update cached word count."
+  (when (derived-mode-p 'text-mode)
+    (let* ((beg (if (use-region-p) (region-beginning) (point-min)))
+           (end (if (use-region-p) (region-end) (point-max))))
+      (setq my-word-count-cache (count-words beg end)))))
+(run-with-idle-timer 1 t #'my-update-word-count)
 
 (setq-default flymake-mode-line-counter-format
               '("" flymake-mode-line-error-counter
@@ -98,8 +137,7 @@
               '((:eval (when (and (featurep 'org-clock)
                                   (org-clock-is-active))
                          org-mode-line-string))
-                (:eval (when (or (eq major-mode 'compilation-mode)
-                                 (eq major-mode 'comint-mode))
+                (:eval (when (member major-mode '(comint-mode compilation-mode))
                          compilation-mode-line-errors))
                 (:eval (when (bound-and-true-p flymake-mode)
                          flymake-mode-line-format))
@@ -134,14 +172,10 @@
                                    'face '(:weight light :slant italic)))
                 (:eval (let ((prefix (cond
                                       ((or defining-kbd-macro executing-kbd-macro) "[MACRO]")
-                                      ((or (and (locate-library "multiple-cursors") multiple-cursors-mode)
-                                           (region-active-p))
-                                       (concat "%p "
-                                               (format
-                                                "{%d}" (if multiple-cursors-mode
-                                                           (mc/num-cursors)
-                                                         (count-lines (region-beginning)
-                                                                      (region-end))))))
+                                      ((region-active-p)
+                                       (concat "%p " (format "{%d}"
+                                                             (count-lines (region-beginning)
+                                                                          (region-end)))))
                                       ((eq major-mode 'nov-mode) (format "[%d/%d]"
                                         ;(/ (window-start) 0.01 (point-max))
                                                                          (1+ nov-documents-index)
@@ -162,12 +196,9 @@
                 mode-line-format-right-align
                 (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
                   eglot-mode-line-progress)
-                ;; (:eval (when (derived-mode-p 'text-mode)
-                ;;          (let* ((beg (if (use-region-p) (region-beginning) (point-min)))
-                ;;                 (end (if (use-region-p) (region-end) (point-max)))
-                ;;                 (word-count (count-words beg end)))
-                ;;            (propertize (format " %d Words" word-count)
-                ;;                        'face 'font-lock-comment-face))))
+                (:eval (when (derived-mode-p 'text-mode)
+                         (propertize (format " %d Words" my-word-count-cache)
+                                     'face 'font-lock-comment-face)))
                 (:eval (propertize
                         (concat " "
                                 (if (derived-mode-p 'prog-mode)
@@ -198,7 +229,9 @@
 ;; Use ido for switching buffers
 (setq ido-enable-flex-matching t
       ido-everywhere nil
-      ido-ignore-buffers '("\\` " "\\*Messages\\*" "\\*scratch\\*")
+      ido-ignore-buffers
+      '("\\` " "\\*Messages\\*" "\\*scratch\\*" "\\*Native-compile-Log\\*"
+        "\\*Async-native-compile-log\\*" "\\*Eglot.*events\\*" "\\*nov unzip\\*")
       ido-create-new-buffer 'always
       ido-use-virtual-buffers 'auto
       ido-show-dot-for-dired t
@@ -241,7 +274,8 @@
 
 (add-hook 'icomplete-minibuffer-setup-hook
           (lambda nil
-            (setq-local truncate-lines icomplete-vertical-mode line-spacing nil
+            (setq-local truncate-lines icomplete-vertical-mode
+                        line-spacing nil
                         icomplete-prospects-height (if icomplete-vertical-mode 11 1))))
 
 (defun file-capf ()
@@ -353,6 +387,7 @@
 ;; (add-hook 'dired-mode-hook #'dired-hide-details-mode)
 (add-hook 'dired-mode-hook #'dired-omit-mode)
 (add-hook 'prog-mode-hook (electric-pair-mode t))
+(add-hook 'prog-mode-hook #'which-function-mode)
 (add-hook 'prog-mode-hook #'hs-minor-mode)
 (dolist (mode-hook '(prog-mode-hook conf-mode-hook yaml-ts-mode-hook))
   (add-hook mode-hook #'display-line-numbers-mode))
@@ -371,10 +406,10 @@
 (put 'narrow-to-region 'disabled nil)
 
 (advice-add #'server-force-delete :around #'silent-command)
-(run-with-idle-timer 1 nil
-                     #'(lambda nil
-                         (unless server-mode (server-force-delete) (server-mode))
-                         (load "~/.emacs.d/lisp/popup.el" nil :no-message)))
+(run-with-timer 2 nil
+                #'(lambda nil
+                    (unless server-mode (server-force-delete) (server-mode))
+                    (load "~/.emacs.d/lisp/popup.el" nil :no-message)))
 
 (setq auto-save-file-name-transforms `((".*" "~/.emacs.d/backup/" t))
       backup-directory-alist `(("." . "~/.emacs.d/backup/"))
@@ -454,6 +489,7 @@
 (when is-android
   (file-to-register "/sdcard/Download/" ?d))
 (file-to-register "~/Downloads/videos/" ?v)
+(file-to-register "~/Downloads/eww" ?b)
 (file-to-register "~/.emacs.d/init.el" ?i)
 (file-to-register "~/dotfiles/flake.nix" ?n)
 (file-to-register "~/Dropbox/org/log.org" ?l)
@@ -529,7 +565,7 @@
 (define-key occur-mode-map (kbd "TAB") #'occur-mode-display-occurrence)
 
 ;; install-info --dir-file=./dir --info-file=
-(push "~/.emacs.d/info" Info-default-directory-list)
+(setq Info-default-directory-list '("~/.emacs.d/info"))
 (setq Info-use-header-line nil)
 (add-hook 'Info-mode-hook #'(lambda nil (setq-local left-margin-width 5)))
 
@@ -569,8 +605,7 @@
   (menu-bar-mode -1))
 
 ;; --- Window Management ----------------------------------------------------
-(dolist (pops '(("\\*eshell-pop\\*" . -2 ) ;; <-- prima donna
-                ("^\\*term.*\\*$" . -1) ("^\\*compilation.*\\*$" . -1)
+(dolist (pops '(("^\\*term.*\\*$" . -1) ("^\\*compilation.*\\*$" . -1)
                 ("vc-git :.*" . 0) ("\\*vc.*-log\\*" . 0) ("\\*eldoc\\*" . 0) ("\\*Help\\*" . 0)
                 ("\\*Warnings\\*" . 1) ("\\*log-edit-files\\*" . 1)
                 ("\\*Occur.*\\*$" . 1) ("\\*grep.*\\*$" . 1) ("CAPTURE-.*" . 1)
@@ -579,15 +614,14 @@
   (add-to-list 'display-buffer-alist
                `(,(car pops)
                  display-buffer-in-side-window
-                 (body-function . select-window)
-                 (side . bottom)
-                 (slot . ,(cdr pops))
-                 (window-height . 0.33)
+                 (body-function . ,(lambda (window) (select-window window)
+                                     (solaire-background)))
+                 (side . bottom) (window-height . 0.33) (slot . ,(cdr pops))
                  ,(when (display-graphic-p)
                     `(window-parameters . ((header-line-format . "")
                                            ,(unless (string= (car pops)
                                                              "^\\*compilation.*\\*$")
-                                              '(mode-line-format . ""))))))))
+                                              '(mode-line-format . none))))))))
 (add-to-list 'display-buffer-alist ; eldoc\\|Help\\|
              '("\\*\\(Dictionary\\)\\*" display-buffer-in-side-window
                (body-function . select-window)
@@ -890,9 +924,13 @@
        (let ((dir (dired-noselect (or dir-path (vc-root-dir) default-directory))))
          (display-buffer-in-side-window
           dir `((side . left) (slot . 0) (window-width . 0.2)
-                (window-parameters . ((no-delete-other-windows . t)))))
+                (window-parameters . ((no-delete-other-windows . t)
+                                      (mode-line-format "%b")))))
          (with-current-buffer dir
            (dired-hide-details-mode 1)
+           (variable-pitch-mode 1)
+           (solaire-background)
+           (let ((text-scale-mode-step 1.05)) (text-scale-set -1))
            (use-local-map (copy-keymap (current-local-map)))
            (select-window (get-buffer-window dir))
            (define-key (current-local-map) (kbd "\\")
@@ -1070,7 +1108,7 @@ is already narrowed."
 
 (defun zen-buffer-apply-margins ()
   "Apply zen margins if enabled for this buffer."
-  (dolist (win (get-buffer-window-list (current-buffer) nil t))
+  (dolist (win (get-buffer-window-list (current-buffer) nil t)) ;; maybe change this to walk-windows
     (let* ((special-modes (or (eq major-mode 'org-mode) (eq major-mode 'markdown-mode)))
            (margin (max 0 (/ (- (window-total-width win) fill-column) 2)))
            (lmargin (if special-modes (max 0 (- margin 10)) margin))
@@ -1166,11 +1204,19 @@ is already narrowed."
 ;; Eshell refs:
 ;; https://github.com/howardabrams/dot-files/blob/master/emacs-eshell.org
 ;; https://www.masteringemacs.org/article/complete-guide-mastering-eshell
-(define-key (current-global-map) (kbd "C-\\")
-            (lambda nil (interactive)
-              (defvar eshell-buffer-name)
-              (let ((eshell-buffer-name "*eshell-pop*"))
-                (silent-command 'eshell))))
+(defun eshell-pop nil (interactive)
+       (defvar eshell-buffer-name)
+       (let ((display-buffer-alist
+              '(("\\*eshell-pop\\*"
+                 (display-buffer-in-side-window)
+                 (body-function . select-window)
+                 (side . bottom) (slot . -2) (window-height . 0.33)
+                 (window-parameters . ((mode-line-format . none))))))
+             (eshell-buffer-name "*eshell-pop*"))
+         (silent-command 'eshell))
+       (solaire-background))
+(define-key (current-global-map) (kbd "C-\\") #'eshell-pop)
+
 (setq eshell-aliases-file "~/.config/alias"
       eshell-scroll-to-bottom-on-input 'all
       eshell-hist-ignoredups 'erase

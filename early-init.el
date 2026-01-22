@@ -4,7 +4,7 @@
 (setq gc-cons-threshold most-positive-fixnum
       gc-cons-percentage 0.6
       file-name-handler-alist nil
-      load-prefer-newer noninteractive
+      load-prefer-newer t ;noninteractive
       garbage-collection-messages nil)
 
 (add-hook 'emacs-startup-hook
@@ -12,7 +12,7 @@
               (run-at-time
                2 nil
                (lambda nil            
-                 (setq gc-cons-threshold (* 8 1024 1024)
+                 (setq gc-cons-threshold (* 16 1024 1024)
                        gc-cons-percentage 0.1
                        file-name-handler-alist my/saved-file-name-handler-alist))))
           ;; (garbage-collect))))
@@ -109,8 +109,10 @@
   (add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
   (let ((home (getenv "HOME")))
     (setenv "PATH" (concat (getenv "PATH")
-                           ":" home "/.nix-profile/bin:/usr/bin"))
+                           ":" home "/.nix-profile/bin:/usr/bin"
+                           ":/opt/homebrew/bin"))
     (setq exec-path (append `(,(concat home "/.nix-profile/bin")
+                              "/opt/homebrew/bin"
                               "/nix/var/nix/profiles/default/bin")
                             exec-path))))
 
@@ -127,7 +129,7 @@
     ;; Activate `native-compile'
     (setq native-comp-jit-compilation t
           native-comp-enable-subr-trampolines t
-          native-comp-async-report-warnings-errors nil
+          native-comp-async-report-warnings-errors 'silent
           package-native-compile t)
   ;; Deactivate the `native-compile' feature if it is not available
   (setq features (delq 'native-compile features)))

@@ -42,8 +42,8 @@
   (with-current-buffer (get-buffer-create "*Load History*")
     (erase-buffer)
     (insert; (pp-to-string load-history))
-     (mapconcat #'prin1-to-string load-history "\n"))
-    (display-buffer (current-buffer))))
+     (mapconcat #'prin1-to-string load-history "\n"))))
+    ;; (display-buffer (current-buffer))))
 
 (add-hook 'emacs-startup-hook #'elemacs-dump-load-history)
 
