@@ -191,8 +191,8 @@ If lighten is non-nil, lighten; otherwise darken"
                                       (buffer-read-only    "%p RO")
                                       (t                   "%p"))))
                          (propertize (concat "   " prefix " ") 'face 'shadow)))
-                (:eval (unless display-line-numbers
-                         (propertize "   L%l" 'face 'shadow)))
+                ;; (:eval (unless display-line-numbers
+                ;;          (propertize "   L%l" 'face 'shadow)))
                 mode-line-format-right-align
                 (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
                   eglot-mode-line-progress)
@@ -615,13 +615,12 @@ If lighten is non-nil, lighten; otherwise darken"
                `(,(car pops)
                  display-buffer-in-side-window
                  (body-function . ,(lambda (window) (select-window window)
-                                     (solaire-background)))
+                                     (solaire-background)
+                                     (unless (string= (car pops) "^\\*compilation.*\\*$")
+                                       (setq-local mode-line-format nil))))
                  (side . bottom) (window-height . 0.33) (slot . ,(cdr pops))
                  ,(when (display-graphic-p)
-                    `(window-parameters . ((header-line-format . "")
-                                           ,(unless (string= (car pops)
-                                                             "^\\*compilation.*\\*$")
-                                              '(mode-line-format . none))))))))
+                    `(window-parameters . ((header-line-format . "")))))))
 (add-to-list 'display-buffer-alist ; eldoc\\|Help\\|
              '("\\*\\(Dictionary\\)\\*" display-buffer-in-side-window
                (body-function . select-window)
@@ -924,12 +923,13 @@ If lighten is non-nil, lighten; otherwise darken"
        (let ((dir (dired-noselect (or dir-path (vc-root-dir) default-directory))))
          (display-buffer-in-side-window
           dir `((side . left) (slot . 0) (window-width . 0.2)
-                (window-parameters . ((no-delete-other-windows . t)
-                                      (mode-line-format "%b")))))
+                (body-function )
+                (window-parameters . ((no-delete-other-windows . t)))))
          (with-current-buffer dir
            (dired-hide-details-mode 1)
            (variable-pitch-mode 1)
            (solaire-background)
+           (setq-local mode-line-format "%b")
            (let ((text-scale-mode-step 1.05)) (text-scale-set -1))
            (use-local-map (copy-keymap (current-local-map)))
            (select-window (get-buffer-window dir))
@@ -1207,13 +1207,12 @@ is already narrowed."
 (defun eshell-pop nil (interactive)
        (defvar eshell-buffer-name)
        (let ((display-buffer-alist
-              '(("\\*eshell-pop\\*"
+              `(("\\*eshell-pop\\*"
                  (display-buffer-in-side-window)
-                 (body-function . select-window)
-                 (side . bottom) (slot . -2) (window-height . 0.33)
-                 (window-parameters . ((mode-line-format . none))))))
+                 (side . bottom) (slot . -2) (window-height . 0.33))))
              (eshell-buffer-name "*eshell-pop*"))
          (silent-command 'eshell))
+       (setq-local mode-line-format nil)
        (solaire-background))
 (define-key (current-global-map) (kbd "C-\\") #'eshell-pop)
 
@@ -1242,6 +1241,7 @@ is already narrowed."
   (push '("glog" "vc-print-root-log") eshell-command-aliases-list)
   (push '("groot" "cd ${git rev-parse --show-toplevel}") eshell-command-aliases-list)
   (push '("gpr" "git fetch origin pull/$1/head:$2; git checkout $2") eshell-command-aliases-list)
+  (push '("gogrep" "go list -f '{{.Dir}}' -deps ./... | xargs rg -g '*.go' $1") eshell-command-aliases-list)
   (push '("nix-update-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} nix build .#darwinConfigurations.${hostname -s}.system --impure && cd -") eshell-command-aliases-list)
   (push '("darwin-rebuild-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} sudo ./result/sw/bin/darwin-rebuild switch --flake . --impure && cd -") eshell-command-aliases-list)
   (push '("gk" "export KUBECONFIG=${gardenctl kubectl-env zsh | awk -F\"'\" '/export KUBECONFIG/ {print \$2}'} && test -n \"$TMUX\" && (shell-command \"tmux set-option -p @kubeconfig \\\"$KUBECONFIG\\\"  && tmux refresh-client -S\")") eshell-command-aliases-list))
