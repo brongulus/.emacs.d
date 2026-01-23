@@ -196,8 +196,8 @@ If lighten is non-nil, lighten; otherwise darken"
                 mode-line-format-right-align
                 (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
                   eglot-mode-line-progress)
-                (:eval (when (derived-mode-p 'text-mode)
-                         (propertize (format " %d Words" my-word-count-cache)
+                (:eval (when (and (derived-mode-p 'text-mode) my-word-count-cache)
+                         (propertize (format " %s Words" my-word-count-cache)
                                      'face 'font-lock-comment-face)))
                 (:eval (propertize
                         (concat " "
@@ -244,11 +244,13 @@ If lighten is non-nil, lighten; otherwise darken"
             (define-key ido-completion-map (kbd "<backtab>") #'ido-prev-match)))
 ;; Use icomplete for M-x and find-file and icomplete-vertical for everything else
 (icomplete-mode)
+(setq icomplete-non-vertical-fns
+      '(find-file find-file-other-window execute-extended-command
+           project-switch-to-buffer project-switch-project remove-hook))
 (add-hook 'minibuffer-setup-hook
           (lambda nil
             (setq-local show-paren-mode nil)
-            (unless (memq this-command
-                          '(find-file find-file-other-window execute-extended-command))
+            (unless (memq this-command icomplete-non-vertical-fns)
               (setq-local icomplete-vertical-mode t)))
           -100)
 
