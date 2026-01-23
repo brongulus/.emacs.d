@@ -2,7 +2,7 @@
 (setq nano-current-theme 'dark)
 (setq nano-monochrome t)
 (setq nano-bg-theme-map '(("#f7f7f7" . light) ("#c9ba96" . amber)
-                          ("#212121" . dark) ("#121213" . burn)))
+                          ("#212121" . dark) ("#120e08" . burn)))
 ;; (setq kitty-send-command "kitty @ --to=\"unix:/tmp/$(ls /tmp | grep mykitty)\" ")
 ;; FIXME: `shell-command-to-string' causes startup slowdown
 ;; (run-with-idle-timer
@@ -122,13 +122,13 @@
     (modify-all-frames-parameters `((ns-appearance . ,nano-current-theme))))
 
   (let* ((color-themes ;; ansi-colors
-          '((black   . ((dark . "#30343d") (light . "#EEEEEE")))
+          `((black   . ((dark . "#30343d") (light . "#EEEEEE")))
             (red     . ((dark . "#c47779") (light . "#c56655")))
-            (green   . ((dark . "#7F9F7F") (light . "#427b58")))
+            (green   . ((dark . "#8dbb81") (light . "#516c35")))
             (yellow  . ((dark . "#dab067") (light . "#b57614"))) ; dark FFBF00
-            (blue    . ((dark . "#96a6c8") (light . "#04508c")))
+            (blue    . ((dark . "#769aae") (light . "#04508c")))
             (magenta . ((dark . "#c9b1ca") (light . "#7646c1")))
-            (cyan    . ((dark . "#6fcfd2") (light . "#076678")))
+            (cyan    . ((dark . "#7cb3ab") (light . "#076678")))
             (white   . ((dark . "#cccccc") (light . "#1a1a1a")))))
          (theme-variant (if (or (eq nano-current-theme 'light)
 				                (eq nano-current-theme 'amber))
@@ -218,7 +218,9 @@
       (dolist (face '(font-lock-builtin-face font-lock-function-name-face))
         (set-face-attribute face nil :slant 'unspecified))
       (set-face-attribute 'font-lock-function-name-face nil
-                          :weight (face-attribute 'bold :weight))))
+                          :weight (face-attribute 'bold :weight))
+      (when (eq theme-variant 'light)
+        (set-face-attribute 'font-lock-string-face nil :weight 'regular))))
 
   (with-eval-after-load 'dired
     (set-face-attribute 'dired-marked nil :foreground (face-foreground 'font-lock-string-face))
@@ -398,11 +400,11 @@
 (defun nano-burn (&rest args)
   "You know what it is, Black 'n Yellow"
   (interactive) (nano-dark)
-  (set-face-attribute 'fg-default nil :foreground "#ddc898" :background "#121213")
-  (set-face-attribute 'fg-faded nil :foreground "#7a766e")
+  (set-face-attribute 'fg-default nil :foreground "#d1b994" :background "#120e08")
+  (set-face-attribute 'fg-faded nil :foreground "#8c734e")
   (set-face-attribute 'bg-region nil :foreground "#121213" :background "#BAD7FB")
-  (set-face-attribute 'fg-string nil :foreground "#af9661")
-  (set-face-attribute 'fg-bold nil :foreground "#dbb754" :weight (face-attribute 'bold :weight))
+  (set-face-attribute 'fg-string nil :foreground "#dbb754")
+  (set-face-attribute 'fg-bold nil :foreground "#fbf1c7" :weight (face-attribute 'bold :weight))
   (set-face-attribute 'bg-highlight nil :background "#393939")
   (let ((nano-current-theme 'dark)) (nano-install-theme))
   (set-face-attribute 'font-lock-variable-name-face nil :weight 'regular)
