@@ -80,9 +80,7 @@
                   (fg-faded-i    . (show-paren-match))
                   (fg-string     . (font-lock-string-face font-lock-doc-face icomplete-first-match))
                   (fg-bold       . (link help-argument-name custom-visibility
-                                         minibuffer-prompt font-lock-type-face
-                                         font-lock-variable-name-face
-                                         font-lock-function-name-face))
+                                         minibuffer-prompt font-lock-function-name-face))
                   (fg-critical   . (error warning help-key-binding))
                   (fg-critical-i . (secondary-selection isearch-fail))))
     (nano-link-face (car item) (cdr item)))
@@ -100,9 +98,13 @@
   (set-face-attribute 'font-lock-function-call-face nil :slant 'italic :weight 'regular)
   (set-face-attribute 'my/todo nil :foreground (face-foreground 'fg-critical)
                       :background (face-background 'highlight))
+  (set-face-attribute 'font-lock-type-face nil :foreground (face-foreground 'fg-bold))
   (set-face-attribute 'font-lock-keyword-face nil
                       :foreground (face-foreground 'fg-bold)
                       :weight (face-attribute 'bold :weight))
+  (set-face-attribute 'font-lock-variable-name-face nil
+                      :weight (face-attribute 'bold :weight)
+                      :foreground (face-foreground 'default))
   (set-face-attribute 'font-lock-variable-use-face nil :weight 'regular
                       :foreground (face-foreground 'default))
   (dolist (face '(font-lock-builtin-face font-lock-constant-face
@@ -285,6 +287,9 @@
     (set-face-attribute 'sh-quoted-exec nil :foreground (face-foreground 'fg-bold) :italic t))
   (with-eval-after-load 'hideshow
     (set-face-attribute 'hs-ellipsis nil :box 'unspecified :underline t))
+  (with-eval-after-load 'flymake
+    (dolist (face '(flymake-error flymake-warning flymake-note))
+      (set-face-attribute face nil :underline t)))
   (with-eval-after-load 'shr
     (set-face-attribute 'my/shr-pre nil :weight (face-attribute 'bold :weight)
                         :background (face-background 'bg-highlight)
@@ -298,6 +303,7 @@
 
   ;; Mode & header lines
   (set-face-attribute 'header-line nil :background 'unspecified :underline nil
+                      :foreground (face-foreground 'default)
                       :overline (face-foreground 'shadow))
   (set-face-attribute 'mode-line nil
                       :foreground (face-foreground 'default)
@@ -374,7 +380,7 @@
 (defun nano-dark (&rest args)
   "NANO dark theme (was based on nord colors)."
   (interactive)
-  (nano-set-face 'fg-default "#e3dac4" "#212121")
+  (nano-set-face 'fg-default "#ded5c0" "#212121")
   (nano-set-face 'bg-highlight nil "#383838")
   (nano-set-face 'bg-region "#e8e8e8" "#005f87")
   (nano-set-face 'fg-faded "#707070")

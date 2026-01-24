@@ -42,14 +42,21 @@
 (set-face-attribute 'fixed-pitch-serif nil :family "Iosevka Etoile")
 (when is-mac ; Apple Emoji font is larger than usual
   (dolist (cat '(unicode emoji))
-    (set-fontset-font t cat (font-spec :family "Noto Color Emoji") nil 'prepend)))
+    (set-fontset-font t cat (font-spec :family "Noto Color Emoji") nil 'prepend))
+  (set-fontset-font t 'han "Noto Sans CJK SC" nil 'prepend)
+  (set-fontset-font t 'kana "Noto Sans CJK JP" nil 'prepend)
+  (set-fontset-font t 'hangul "Noto Sans CJK KR" nil 'prepend))
 (set-face-attribute 'nobreak-space nil :underline nil)
 (set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
 (set-display-table-slot standard-display-table 'truncation (make-glyph-code ?…))
 (set-display-table-slot standard-display-table 'vertical-border (make-glyph-code ?│))
 ;; (setq default-input-method 'english-dvorak)
 ;; (define-key (current-global-map) (kbd "<f8>") #'toggle-input-method)
-
+(setq standard-display-table (make-display-table))
+(dolist (pair '((?： . ?:) (?｜ . ?|) (?！ . ?!) (?？ . ??)
+                (?（ . ?\() (?） . ?\)) (?『 . ?\") (?』 . ?\")
+                (?「 . ?\") (?」 . ?\")))
+  (aset standard-display-table (car pair) (vector (cdr pair))))
 ;; --- Activate / Deactivate modes ------------------------------------------
 (blink-cursor-mode -1) (kill-ring-deindent-mode 1)
 (global-subword-mode 1) (global-eldoc-mode -1)
@@ -126,41 +133,37 @@ If lighten is non-nil, lighten; otherwise darken"
       (setq my-word-count-cache (count-words beg end)))))
 (run-with-idle-timer 1 t #'my-update-word-count)
 
-(setq-default flymake-mode-line-counter-format
+(setq-default flymake-mode-line-title ""
+              flymake-mode-line-counter-format
               '("" flymake-mode-line-error-counter
                 flymake-mode-line-warning-counter
                 flymake-mode-line-note-counter " ")
-              flymake-mode-line-format
-              '(" " flymake-mode-line-exception flymake-mode-line-counters)
               global-mode-string nil)
 (setq-default mode-line-end-spaces
               '((:eval (when (and (featurep 'org-clock)
                                   (org-clock-is-active))
                          org-mode-line-string))
                 (:eval (when (member major-mode '(comint-mode compilation-mode))
-                         compilation-mode-line-errors))
-                (:eval (when (bound-and-true-p flymake-mode)
-                         flymake-mode-line-format))
-                " "))
+                         compilation-mode-line-errors))))
 (setq-default mode-line-format
               '("%e"
                 (:eval
-                 (when (mode-line-window-selected-p)
-                   (let* ((tabs (tab-bar-tabs))
-                          (count (length tabs)))
-                     (when (> count 1)
-                       (let ((active (tab-bar--current-tab-index)))
-                         (propertize
-                          (concat " "
-                                  (mapconcat
-                                   (lambda (i)
-                                     (propertize (if (= i active) "⦿" "○")
-                                                 'mouse-face 'mode-line-highlight
-                                                 'local-map
-                                                 (aref tab-bar--tab-keymaps i)))
-                                   (number-sequence 0 (1- count)) " ")
-                                  " ")
-                          'face 'bold))))))
+                 ;; (when (mode-line-window-selected-p)
+                 (let* ((tabs (tab-bar-tabs))
+                        (count (length tabs)))
+                   (when (> count 1)
+                     (let ((active (tab-bar--current-tab-index)))
+                       (propertize
+                        (concat " "
+                                (mapconcat
+                                 (lambda (i)
+                                   (propertize (if (= i active) "⦿" "○")
+                                               'mouse-face 'mode-line-highlight
+                                               'local-map
+                                               (aref tab-bar--tab-keymaps i)))
+                                 (number-sequence 0 (1- count)) " ")
+                                " ")
+                        'face 'bold)))));)
                 (:eval (when (and (buffer-narrowed-p)
                                   (not (derived-mode-p 'Info-mode)))
                          (propertize "(N)")))
@@ -193,6 +196,8 @@ If lighten is non-nil, lighten; otherwise darken"
                          (propertize (concat "   " prefix " ") 'face 'shadow)))
                 ;; (:eval (unless display-line-numbers
                 ;;          (propertize "   L%l" 'face 'shadow)))
+                (:eval (when (bound-and-true-p flymake-mode)
+                         (format-mode-line flymake-mode-line-format)))
                 mode-line-format-right-align
                 (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
                   eglot-mode-line-progress)
@@ -246,7 +251,7 @@ If lighten is non-nil, lighten; otherwise darken"
 (icomplete-mode)
 (setq icomplete-non-vertical-fns
       '(find-file find-file-other-window execute-extended-command
-           project-switch-to-buffer project-switch-project remove-hook))
+                  project-switch-to-buffer project-switch-project remove-hook))
 (add-hook 'minibuffer-setup-hook
           (lambda nil
             (setq-local show-paren-mode nil)
@@ -410,7 +415,7 @@ If lighten is non-nil, lighten; otherwise darken"
 (advice-add #'server-force-delete :around #'silent-command)
 (run-with-timer 2 nil
                 #'(lambda nil
-                    (unless server-mode (server-force-delete) (server-mode))
+                    (unless server-mode (server-force-delete) (server-start))
                     (load "~/.emacs.d/lisp/popup.el" nil :no-message)))
 
 (setq auto-save-file-name-transforms `((".*" "~/.emacs.d/backup/" t))
@@ -570,6 +575,9 @@ If lighten is non-nil, lighten; otherwise darken"
 (setq Info-default-directory-list '("~/.emacs.d/info"))
 (setq Info-use-header-line nil)
 (add-hook 'Info-mode-hook #'(lambda nil (setq-local left-margin-width 5)))
+(with-eval-after-load 'info
+  (define-key Info-mode-map (kbd "SPC") ctl-x-map)
+  (define-key Info-mode-map (kbd "v") #'Info-scroll-up))
 
 (defun silent-command (fn &rest args)
   "Used to suppress output of FN."
@@ -656,8 +664,8 @@ If lighten is non-nil, lighten; otherwise darken"
 (define-key (current-global-map) (kbd "<f10>") #'toggle-side-normal-window)
 (when (display-graphic-p)
   (dolist (modes '(occur-hook vc-git-log-edit-mode-hook
-                              compilation-mode-hook term-mode-hook eshell-mode-hook
-                              help-mode-hook grep-mode-hook special-mode-hook))
+                              compilation-mode-hook term-mode-hook
+                              eshell-mode-hook help-mode-hook grep-mode-hook))
     (add-hook modes (lambda () (setq-local header-line-format "")))))
 
 (defun my-smart-window-selection-advice (orig-fun &rest args)
@@ -1495,6 +1503,16 @@ any directory proferred by `consult-dir'."
     (define-key gnus-summary-mode-map (kbd "j") #'next-line)
     (define-key gnus-summary-mode-map (kbd "k") #'previous-line)))
 
+;; mpc
+(with-eval-after-load 'mpc
+  (setq mpc-browser-tags '(Directory)
+        mpc-mpd-music-directory "~/Downloads/music")
+  (advice-add 'mpc :before (lambda (&rest _args) (tab-bar-new-tab)))
+  (advice-add 'mpc :after (lambda (&rest _args)
+                            (call-interactively 'window-layout-transpose)))
+  (advice-add 'mpc-quit :after (lambda (&rest _args) (tab-bar-close-tab)))
+  (load "~/.emacs.d/lisp/mpc-conf" nil :no-message))
+
 ;; erc
 ;; (use-package erc
 ;;   ;; auth: machine irc.libera.chat login "USER" password PASSWORD
@@ -1678,9 +1696,9 @@ external browser and new eww buffer, respectively)."
   ;; hs-show-indicators t)
   (setq kill-region-dwim 'emacs-word)
   (with-eval-after-load 'dired (setq dired-hide-details-hide-absolute-location t))
-  (with-eval-after-load 'eglot (setq eglot-code-action-indicator "+"))
+  (with-eval-after-load 'eglot (setq eglot-code-action-indicator ""))
   ;; (with-eval-after-load 'icomplete (setq icomplete-vertical-in-buffer-adjust-list t))
-  (setq flymake-show-diagnostics-at-end-of-line 'short));fancy))
+  (setq flymake-show-diagnostics-at-end-of-line 'fancy));short))
 
 ;; --- Speed benchmarking ---------------------------------------------------
 ;; (let ((init-time (float-time (time-subtract (current-time) init-start-time)))

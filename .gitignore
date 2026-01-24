@@ -9,6 +9,7 @@ eln-cache/
 elpa/
 eshell/
 gnus/cache/
+mpc/
 multisession/
 newsticker/
 org-persist/
