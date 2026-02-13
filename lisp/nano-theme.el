@@ -79,7 +79,7 @@
                                            completions-annotations line-number))
                   (fg-faded-i    . (show-paren-match))
                   (fg-string     . (font-lock-string-face font-lock-doc-face icomplete-first-match))
-                  (fg-bold       . (link help-argument-name custom-visibility
+                  (fg-bold       . (link custom-visibility help-argument-name
                                          minibuffer-prompt font-lock-function-name-face))
                   (fg-critical   . (error warning help-key-binding))
                   (fg-critical-i . (secondary-selection isearch-fail))))
@@ -89,13 +89,16 @@
   (set-face-attribute 'vertical-border nil :inherit nil
                       :background (face-background 'default)
                       :foreground (face-foreground 'shadow))
+  (set-face-attribute 'window-divider nil :inherit nil
+                      :background (face-background 'default)
+                      :foreground (face-foreground 'shadow))
   ;; (set-face-attribute 'font-lock-doc-face nil :background (face-background 'highlight))
   (with-eval-after-load 'xref
     (set-face-attribute 'xref-match nil :underline t :inherit nil)
     (set-face-attribute 'xref-file-header nil :background (face-background 'bg-highlight)))
   (dolist (face '(font-lock-doc-face font-lock-builtin-face))
     (set-face-attribute face nil :slant 'italic))
-  (set-face-attribute 'font-lock-function-call-face nil :slant 'italic :weight 'regular)
+  (set-face-attribute 'font-lock-function-call-face nil :weight 'regular)
   (set-face-attribute 'my/todo nil :foreground (face-foreground 'fg-critical)
                       :background (face-background 'highlight))
   (set-face-attribute 'font-lock-type-face nil :foreground (face-foreground 'fg-bold))
@@ -111,7 +114,6 @@
                                          font-lock-property-use-face
                                          font-lock-property-name-face))
     (set-face-attribute face nil :foreground (face-foreground 'default) :inherit nil))
-  (set-face-attribute 'link nil :underline t)
   (set-face-attribute 'completions-common-part nil :underline t
                       :foreground (face-foreground 'default))
   (set-face-attribute 'region nil :extend nil)
@@ -128,7 +130,7 @@
             (red     . ((dark . "#c47779") (light . "#c56655")))
             (green   . ((dark . "#8dbb81") (light . "#516c35")))
             (yellow  . ((dark . "#dab067") (light . "#b57614"))) ; dark FFBF00
-            (blue    . ((dark . "#769aae") (light . "#04508c")))
+            (blue    . ((dark . "#80A0C2") (light . "#04508c")))
             (magenta . ((dark . "#c9b1ca") (light . "#7646c1")))
             (cyan    . ((dark . "#7cb3ab") (light . "#076678")))
             (white   . ((dark . "#cccccc") (light . "#1a1a1a")))))
@@ -143,6 +145,7 @@
                               :foreground color-value :background color-value)
           (set-face-attribute (intern (format "ansi-color-bright-%s" color-name)) nil
                               :foreground color-value :background color-value))))
+    (set-face-attribute 'link nil :underline t)
     (with-eval-after-load 'icomplete
       (set-face-attribute 'icomplete-selected-match nil :underline t
                           :foreground (face-foreground 'default))
@@ -203,9 +206,7 @@
       (set-face-attribute 'howm-view-hilit-face nil :underline
                           (alist-get theme-variant (alist-get 'blue color-themes))
                           :foreground 'unspecified)
-      (set-face-attribute 'howm-view-empty-face nil :background 'unspecified)
-      )
-    
+      (set-face-attribute 'howm-view-empty-face nil :background 'unspecified))
     ;; (font-lock-variable-name-face . blue) (font-lock-keyword-face . magenta)
     ;; (font-lock-type-face . cyan) (font-lock-property-name-face . magenta)
     (unless nano-monochrome
@@ -255,7 +256,8 @@
   (with-eval-after-load 'org
     (dolist (face '(org-level-1 org-level-2 org-level-3 org-level-4
                                 org-level-5 org-level-6 org-level-7 org-level-8))
-      (set-face-attribute face nil :height 1.1 :weight (face-attribute 'bold :weight)))
+      (set-face-attribute face nil :height 1.1 :weight (face-attribute 'bold :weight)
+                          :foreground (face-foreground 'fg-bold)))
     (dolist (face '(org-level-1 org-document-title org-document-info))
       (set-face-attribute face nil :inherit 'variable-pitch :height 1.1
                           :foreground (face-foreground 'fg-bold)))
@@ -300,6 +302,9 @@
     (set-face-attribute 'shr-text nil :inherit 'variable-pitch-text
                         :height (face-attribute 'default :height))
     (set-face-attribute 'shr-code nil :weight (face-attribute 'bold :weight)))
+  (with-eval-after-load 'eww
+    (set-face-attribute 'eww-form-submit nil :background (face-background 'bg-highlight)
+                        :box '(:line-width -1)))
 
   ;; Mode & header lines
   (set-face-attribute 'header-line nil :background 'unspecified :underline nil
@@ -373,7 +378,7 @@
   (nano-set-face 'fg-faded "#949494")
   (nano-set-face 'fg-bold "#1b2229" nil (face-attribute 'bold :weight))
   (nano-set-face 'fg-critical "#eb9250" nil (face-attribute 'bold :weight))
-  (nano-set-face 'fg-string "#4a567a")
+  (nano-set-face 'fg-string "#1E3867")
   (setq nano-current-theme 'light)
   (nano-install-theme))
 

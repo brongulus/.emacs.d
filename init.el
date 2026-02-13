@@ -1,14 +1,14 @@
 ;;; init.el --- NANO Emacs (minimal version) -*- lexical-binding: t; -*-
 ;; --- Speed benchmarking ---------------------------------------------------
 ;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
-;; (setq init-start-time (current-time))
+(setq-default mode-line-format nil)
+(setq init-start-time (current-time))
 (setq inhibit-startup-screen t
       fast-but-imprecise-scrolling t
       jit-lock-defer-time 0
       after-init-hook nil
       lisp-el-font-lock-keywords-2 nil
       font-lock-maximum-decoration '((emacs-lisp-mode . 1) (t . 2))
-      ;; toggle-debug-on-error t
       custom-file (make-temp-file "emacs-custom")
       is-android (eq system-type 'android)
       is-mac (eq system-type 'darwin))
@@ -43,30 +43,35 @@
 (when is-mac ; Apple Emoji font is larger than usual
   (dolist (cat '(unicode emoji))
     (set-fontset-font t cat (font-spec :family "Noto Color Emoji") nil 'prepend))
-  (set-fontset-font t 'han "Noto Sans CJK SC" nil 'prepend)
-  (set-fontset-font t 'kana "Noto Sans CJK JP" nil 'prepend)
-  (set-fontset-font t 'hangul "Noto Sans CJK KR" nil 'prepend))
+  (set-fontset-font t 'cjk-misc "Noto Sans Mono CJK JP" nil 'prepend)
+  (set-fontset-font t 'han "Noto Sans Mono CJK SC" nil 'prepend)
+  (set-fontset-font t 'kana "Noto Sans Mono CJK JP" nil 'prepend)
+  (set-fontset-font t 'hangul "Noto Sans Mono CJK KR" nil 'prepend))
 (set-face-attribute 'nobreak-space nil :underline nil)
 (set-display-table-slot standard-display-table 'wrap (make-glyph-code ?→))
 (set-display-table-slot standard-display-table 'truncation (make-glyph-code ?…))
 (set-display-table-slot standard-display-table 'vertical-border (make-glyph-code ?│))
+(setq window-divider-default-right-width 1
+      window-divider-default-bottom-width 0
+      window-divider-default-places 'right-only)
 ;; (setq default-input-method 'english-dvorak)
 ;; (define-key (current-global-map) (kbd "<f8>") #'toggle-input-method)
-(setq standard-display-table (make-display-table))
-(dolist (pair '((?： . ?:) (?｜ . ?|) (?！ . ?!) (?？ . ??)
-                (?（ . ?\() (?） . ?\)) (?『 . ?\") (?』 . ?\")
-                (?「 . ?\") (?」 . ?\")))
-  (aset standard-display-table (car pair) (vector (cdr pair))))
+;; (setq standard-display-table (make-display-table))
+;; (dolist (pair '((?： . ?:) (?｜ . ?|) (?！ . ?!) (?？ . ??)
+;;                 (?（ . ?\() (?） . ?\)) (?『 . ?\") (?』 . ?\")
+;;                 (?「 . ?\") (?」 . ?\")))
+;;   (aset standard-display-table (car pair) (vector (cdr pair))))
 ;; --- Activate / Deactivate modes ------------------------------------------
 (blink-cursor-mode -1) (kill-ring-deindent-mode 1)
 (global-subword-mode 1) (global-eldoc-mode -1)
-;; (add-hook 'emacs-startup-hook
-;;           (lambda nil
-(pixel-scroll-precision-mode 1) ;(winner-mode 1)
-(delete-selection-mode 1) (global-auto-revert-mode 1) (which-key-mode 1)
-(minibuffer-depth-indicate-mode) (savehist-mode 1)
-(save-place-mode 1) (global-goto-address-mode) (tooltip-mode -1)
-(unless (display-graphic-p) (xterm-mouse-mode));))
+(add-hook 'emacs-startup-hook
+          (lambda nil
+            (pixel-scroll-precision-mode 1) ;(winner-mode 1)
+            (window-divider-mode 1)
+            (delete-selection-mode 1) (global-auto-revert-mode 1) (which-key-mode 1)
+            (minibuffer-depth-indicate-mode) (savehist-mode 1)
+            (save-place-mode 1) (global-goto-address-mode) (tooltip-mode -1)
+            (unless (display-graphic-p) (xterm-mouse-mode))))
 ;; --- Minimal theme --------------------------------------
 (setq custom-theme-directory "~/.emacs.d/themes/" custom-safe-themes t)
 (setq modus-themes-common-palette-overrides
@@ -127,7 +132,7 @@ If lighten is non-nil, lighten; otherwise darken"
 (defvar-local my-word-count-cache nil)
 (defun my-update-word-count ()
   "Update cached word count."
-  (when (derived-mode-p 'text-mode)
+  (when (and (derived-mode-p 'text-mode) (not (eq major-mode 'yaml-ts-mode)))
     (let* ((beg (if (use-region-p) (region-beginning) (point-min)))
            (end (if (use-region-p) (region-end) (point-max))))
       (setq my-word-count-cache (count-words beg end)))))
@@ -145,90 +150,98 @@ If lighten is non-nil, lighten; otherwise darken"
                          org-mode-line-string))
                 (:eval (when (member major-mode '(comint-mode compilation-mode))
                          compilation-mode-line-errors))))
-(setq-default mode-line-format
-              '("%e"
-                (:eval
-                 ;; (when (mode-line-window-selected-p)
-                 (let* ((tabs (tab-bar-tabs))
-                        (count (length tabs)))
-                   (when (> count 1)
-                     (let ((active (tab-bar--current-tab-index)))
-                       (propertize
-                        (concat " "
-                                (mapconcat
-                                 (lambda (i)
-                                   (propertize (if (= i active) "⦿" "○")
-                                               'mouse-face 'mode-line-highlight
-                                               'local-map
-                                               (aref tab-bar--tab-keymaps i)))
-                                 (number-sequence 0 (1- count)) " ")
-                                " ")
-                        'face 'bold)))));)
-                (:eval (when (and (buffer-narrowed-p)
-                                  (not (derived-mode-p 'Info-mode)))
-                         (propertize "(N)")))
-                (:eval (propertize (format " %s" (buffer-name))
-                                   'face (if (buffer-modified-p) 'bold-italic 'bold)
-                                   'help-echo (buffer-file-name)))
-                (:eval (propertize (string-trim-left
-                                    (format-mode-line vc-mode))
-                                   'face '(:weight light :slant italic)))
-                (:eval (let ((prefix (cond
-                                      ((or defining-kbd-macro executing-kbd-macro) "[MACRO]")
-                                      ((region-active-p)
-                                       (concat "%p " (format "{%d}"
-                                                             (count-lines (region-beginning)
-                                                                          (region-end)))))
-                                      ((eq major-mode 'nov-mode) (format "[%d/%d]"
+(defvar default-mode-line-format
+  '("%e"
+    (:eval
+     ;; (when (mode-line-window-selected-p)
+     (let* ((tabs (tab-bar-tabs))
+            (count (length tabs)))
+       (when (> count 1)
+         (let ((active (tab-bar--current-tab-index)))
+           (propertize
+            (concat " "
+                    (mapconcat
+                     (lambda (i)
+                       (propertize (if (= i active) "⦿" "○")
+                                   'mouse-face 'mode-line-highlight
+                                   'local-map
+                                   (aref tab-bar--tab-keymaps i)))
+                     (number-sequence 0 (1- count)) " ")
+                    " ")
+            'face 'bold)))));)
+    (:eval (when (and (buffer-narrowed-p)
+                      (not (derived-mode-p 'Info-mode)))
+             (propertize "(N)")))
+    " "
+    (:eval (propertize (format "%s" (buffer-name))
+                       'face (if (buffer-modified-p) 'bold-italic 'bold)
+                       'help-echo (buffer-file-name)))
+    (:eval (propertize (string-trim-left
+                        (format-mode-line vc-mode))
+                       'face '(:weight light :slant italic)))
+    (:eval (let ((prefix (cond
+                          ((or defining-kbd-macro executing-kbd-macro) "[MACRO]")
+                          ((region-active-p)
+                           (concat "%p " (format "{%d}"
+                                                 (count-lines (region-beginning)
+                                                              (region-end)))))
+                          ((eq major-mode 'nov-mode) (format "[%d/%d]"
                                         ;(/ (window-start) 0.01 (point-max))
-                                                                         (1+ nov-documents-index)
-                                                                         (length nov-documents)))
-                                      ((eq major-mode 'doc-view-mode)
-                                       (format "[%d/%d]" (doc-view-current-page)
-                                               (doc-view-last-page-number)))
-                                      ((member major-mode
-                                               '(eww-mode gnus-article-mode
-                                                          gnus-group-mode gnus-summary-mode))
-                                       "%p")
-                                      ((buffer-modified-p) "**")
-                                      (buffer-read-only    "%p RO")
-                                      (t                   "%p"))))
-                         (propertize (concat "   " prefix " ") 'face 'shadow)))
-                ;; (:eval (unless display-line-numbers
-                ;;          (propertize "   L%l" 'face 'shadow)))
-                (:eval (when (bound-and-true-p flymake-mode)
-                         (format-mode-line flymake-mode-line-format)))
-                mode-line-format-right-align
-                (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
-                  eglot-mode-line-progress)
-                (:eval (when (and (derived-mode-p 'text-mode) my-word-count-cache)
-                         (propertize (format " %s Words" my-word-count-cache)
-                                     'face 'font-lock-comment-face)))
-                (:eval (propertize
-                        (concat " "
-                                (if (derived-mode-p 'prog-mode)
-                                    (format-mode-line
-                                     (when which-function-mode which-func-current))
-                                  (format-time-string "%a %H:%M"))
-                                " ")
-                        'face (if (or (display-graphic-p)
-                                      (mode-line-window-selected-p))
-                                  'mode-line-active
-                                'mode-line-inactive)))
-                (:eval (when (mode-line-window-selected-p)
-                         mode-line-end-spaces))))
+                                                             (1+ nov-documents-index)
+                                                             (length nov-documents)))
+                          ((eq major-mode 'doc-view-mode)
+                           (format "[%d/%d]" (doc-view-current-page)
+                                   (doc-view-last-page-number)))
+                          ((member major-mode
+                                   '(eww-mode gnus-article-mode
+                                              gnus-group-mode gnus-summary-mode))
+                           "%p")
+                          ((buffer-modified-p) "**")
+                          (buffer-read-only    "%p RO")
+                          (t                   "%p"))))
+             (propertize (concat "   " prefix " ") 'face 'shadow)))
+    ;; (:eval (unless display-line-numbers
+    ;;          (propertize "   L%l" 'face 'shadow)))
+    (:eval (when (bound-and-true-p flymake-mode)
+             (format-mode-line flymake-mode-line-format)))
+    mode-line-format-right-align
+    (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
+      eglot-mode-line-progress)
+    (:eval (when (and (derived-mode-p 'text-mode)
+                      (not (eq major-mode 'yaml-ts-mode)) my-word-count-cache)
+             (propertize (format " %s Words" my-word-count-cache)
+                         'face 'font-lock-comment-face)))
+    (:eval (propertize
+            (concat " "
+                    (if (derived-mode-p 'prog-mode)
+                        (format-mode-line
+                         (when which-function-mode which-func-current))
+                      (format-time-string "%a %H:%M"))
+                    " ")
+            'face (if (or (display-graphic-p)
+                          (mode-line-window-selected-p))
+                      'mode-line-active
+                    'mode-line-inactive)))
+    (:eval (when (mode-line-window-selected-p)
+             mode-line-end-spaces))))
 
-(add-hook 'post-command-hook
-          #'(lambda nil
-              (when (region-active-p) (force-mode-line-update))
-              (set-cursor-color (if (buffer-modified-p) "coral3" "#00c2ff"))))
+(defun my-set-mode-line-once ()
+  (setq-default mode-line-format default-mode-line-format)
+  (remove-hook 'find-file-hook #'my-set-mode-line-once)
+  (remove-hook 'minibuffer-setup-hook #'my-set-mode-line-once))
+(add-hook 'find-file-hook #'my-set-mode-line-once)
+(add-hook 'minibuffer-setup-hook #'my-set-mode-line-once)
 
-(defvar default-mode-line-format mode-line-format)
 (defun toggle-mode-line nil (interactive)
        (if mode-line-format
            (setq-local mode-line-format nil)
          (setq-local mode-line-format default-mode-line-format)))
 (define-key (current-global-map) (kbd "C-x t m") #'toggle-mode-line)
+
+(add-hook 'post-command-hook
+          #'(lambda nil
+              (when (region-active-p) (force-mode-line-update))
+              (set-cursor-color (if (buffer-modified-p) "coral3" "#00c2ff"))))
 
 ;; --- Minibuffer completion ------------------------------------------------
 ;; Use ido for switching buffers
@@ -236,7 +249,8 @@ If lighten is non-nil, lighten; otherwise darken"
       ido-everywhere nil
       ido-ignore-buffers
       '("\\` " "\\*Messages\\*" "\\*scratch\\*" "\\*Native-compile-Log\\*"
-        "\\*Async-native-compile-log\\*" "\\*Eglot.*events\\*" "\\*nov unzip\\*")
+        "\\*Async-native-compile-log\\*" "\\*Eglot.*events\\*" "\\*nov unzip\\*"
+        "\\*MPC.*\\*")
       ido-create-new-buffer 'always
       ido-use-virtual-buffers 'auto
       ido-show-dot-for-dired t
@@ -251,7 +265,7 @@ If lighten is non-nil, lighten; otherwise darken"
 (icomplete-mode)
 (setq icomplete-non-vertical-fns
       '(find-file find-file-other-window execute-extended-command
-                  project-switch-to-buffer project-switch-project remove-hook))
+                  project-switch-to-buffer remove-hook))
 (add-hook 'minibuffer-setup-hook
           (lambda nil
             (setq-local show-paren-mode nil)
@@ -338,17 +352,17 @@ If lighten is non-nil, lighten; otherwise darken"
 (define-key (current-global-map) (kbd "s-t") nil)
 (dolist (bind '(("C-x C-m" . execute-extended-command) ("M-;" . eval-expression)
                 ("C-x x b" . ibuffer) ("C-x x e" . eval-last-sexp)
-                ("C-x x c" . save-buffers-kill-emacs) ("C-j" . duplicate-line)
+                ("C-x x c" . save-buffers-kill-emacs); ("C-j" . duplicate-line)
                 ("C-x x f" . find-file) ("C-x x s" . save-buffer)
                 ("C-x x z" . restart-emacs) ("C-z" . delete-backward-char)
                 ("C-o" . other-window) ("C-x /" . project-find-regexp)
                 ("C-x ;" . comment-line) ("C-h ." . my-goto-doc)
-                ("C-h '" . describe-face) ("C-," . my-scroll-other-down)
-                ("C-." . my-scroll-other-up) ("C-<tab>" . tab-next)
-                ("C-S-<tab>" . tab-previous) ("C-x C-b" . ibuffer)
+                ("C-h '" . describe-face) ("C-h c" . describe-char)
+                ("C-," . my-scroll-other-down) ("C-." . my-scroll-other-up)
+                ("C-<tab>" . tab-next) ("C-S-<tab>" . tab-previous)
                 ("M-s r" . replace-regexp) ("C-x k" . kill-current-buffer)
                 ("C-x f" . find-file) ("C-x t d" . toggle-debug-on-error)
-                ("C-g" . keyboard-quit)))
+                ("C-x C-b" . ibuffer) ("C-g" . keyboard-quit)))
   (define-key (current-global-map) (kbd (car bind)) (cdr bind)))
 (define-key (current-global-map) (kbd "C-x m") esc-map)
 (define-key (current-global-map) (kbd "C-<wheel-up>") nil)
@@ -398,6 +412,8 @@ If lighten is non-nil, lighten; otherwise darken"
 (add-hook 'prog-mode-hook #'hs-minor-mode)
 (dolist (mode-hook '(prog-mode-hook conf-mode-hook yaml-ts-mode-hook))
   (add-hook mode-hook #'display-line-numbers-mode))
+(dolist (hook '(css-mode-hook yaml-ts-mode-hook sh-mode-hook conf-mode-hook))
+  (add-hook hook #'(lambda nil (setq-local tab-width 2))))
 ;;   (add-hook mode-hook #'hl-line-mode))
 ;; (with-eval-after-load 'hl-line ; src: DarwinAwardWinner/dotemacs
 ;;   (define-advice face-at-point (:before (&rest _ignored) avoid-hl-line)
@@ -410,6 +426,7 @@ If lighten is non-nil, lighten; otherwise darken"
 ;; (add-hook 'emacs-lisp-mode-hook #'prettify-symbols-mode)
 (add-to-list 'auto-mode-alist '("\\.log\\'" . (lambda () (display-line-numbers-mode))))
 
+(defalias #'view-hello-file #'ignore)
 (put 'narrow-to-region 'disabled nil)
 
 (advice-add #'server-force-delete :around #'silent-command)
@@ -436,10 +453,12 @@ If lighten is non-nil, lighten; otherwise darken"
       delete-pair-push-mark t
       delete-by-moving-to-trash t
       diff-default-read-only t
+      dired-auto-revert-buffer 'dired-buffer-stale-p
       dired-clean-confirm-killing-deleted-buffers nil
       dired-create-destination-dirs 'ask
       dired-deletion-confirmer 'y-or-n-p
       dired-dwim-target t
+      dired-isearch-filenames t
       dired-omit-verbose nil
       dired-use-ls-dired (not is-mac)
       dired-kill-when-opening-new-dired-buffer t
@@ -475,6 +494,7 @@ If lighten is non-nil, lighten; otherwise darken"
       save-interprogram-paste-before-kill t
       savehist-additional-variables '(register-alist kill-ring)
       maximum-scroll-margin 0.5
+      auto-window-vscroll nil
       scroll-conservatively 101
       scroll-preserve-screen-position t
       set-mark-command-repeat-pop t
@@ -486,8 +506,10 @@ If lighten is non-nil, lighten; otherwise darken"
       vc-allow-rewriting-published-history 'ask
       vc-display-status 'no-backend
       vc-follow-symlinks t
+      vc-git-diff-switches '("--histogram")
       widget-image-enable nil
       which-func-unknown ""
+      which-func-update-delay 1
       xref-search-program (if (executable-find "rg") 'ripgrep 'grep)
       xref-auto-jump-to-first-xref nil
       xref-show-definitions-function 'xref-show-definitions-buffer-at-bottom
@@ -512,6 +534,7 @@ If lighten is non-nil, lighten; otherwise darken"
       isearch-allow-scroll 'unlimited
       isearch-regexp-lax-whitespace t
       search-whitespace-regexp ".*?"
+      lazy-highlight-initial-delay 0
       sentence-end-double-space nil)
 
 (with-eval-after-load 'isearch
@@ -617,10 +640,10 @@ If lighten is non-nil, lighten; otherwise darken"
 ;; --- Window Management ----------------------------------------------------
 (dolist (pops '(("^\\*term.*\\*$" . -1) ("^\\*compilation.*\\*$" . -1)
                 ("vc-git :.*" . 0) ("\\*vc.*-log\\*" . 0) ("\\*eldoc\\*" . 0) ("\\*Help\\*" . 0)
-                ("\\*Warnings\\*" . 1) ("\\*log-edit-files\\*" . 1)
-                ("\\*Occur.*\\*$" . 1) ("\\*grep.*\\*$" . 1) ("CAPTURE-.*" . 1)
-                ("\\*Org Select\\*" . 1) ("\\*xref\\*" . 1) ;("^\\*Dictionary\\*" . 1)))
-                ("\\*Flymake diagnostics.*\\*$" . 1)))
+                ("\\*Warnings\\*" . 1) ("\\*log-edit-files\\*" . 1) ("\\*Occur.*\\*$" . 1)
+                ("\\*grep.*\\*$" . 1) ("CAPTURE-.*" . 1) ("\\*Org Select\\*" . 1)
+                ("\\*Org-Babel Error Output\\*" . 1) ("\\*xref\\*" . 1)
+                ("\\*pr-review input\\*" . 1) ("\\*Flymake diagnostics.*\\*$" . 1)))
   (add-to-list 'display-buffer-alist
                `(,(car pops)
                  display-buffer-in-side-window
@@ -682,16 +705,6 @@ If lighten is non-nil, lighten; otherwise darken"
 
 (with-eval-after-load 'flymake
   (define-key flymake-project-diagnostics-mode-map (kbd "q") #'quit-window))
-(with-eval-after-load 'comint-mode
-  (define-key comint-mode-map "q" #'kill-buffer-and-window))
-(with-eval-after-load 'compile
-  (push 'go-test compilation-error-regexp-alist)
-  (add-to-list 'compilation-error-regexp-alist-alist
-               '(go-test
-                 . (".*?\\([[:alnum:]_./-]+\\.go\\):\\([0-9]+\\)\\(?:\\(?::\\([0-9]+\\)\\)?\\| \\+0x[0-9a-f]+\\)"
-                    1 2 3 nil 1)))
-  (setq compile-command (or (car-safe compile-history) ""))
-  (define-key compilation-minor-mode-map "q" #'kill-buffer-and-window))
 
 (setq switch-to-buffer-obey-display-actions t)
 (setq display-buffer-base-action
@@ -704,14 +717,22 @@ If lighten is non-nil, lighten; otherwise darken"
 (define-advice term-handle-exit (:after (&rest _args) term-kill-on-exit)
   (kill-buffer))
 
-(with-eval-after-load 'comint
-  (add-hook 'comint-mode-hook #'completion-preview-mode))
-
 (with-eval-after-load 'compile
   (setq compilation-scroll-output t)
   (define-key compilation-mode-map (kbd "i") (lambda nil (interactive)
                                                (comint-mode)
-                                               (setq-local buffer-read-only nil))))
+                                               (setq-local buffer-read-only nil)))
+  (push 'go-test compilation-error-regexp-alist)
+  (add-to-list 'compilation-error-regexp-alist-alist
+               '(go-test
+                 . (".*?\\([[:alnum:]_./-]+\\.go\\):\\([0-9]+\\)\\(?:\\(?::\\([0-9]+\\)\\)?\\| \\+0x[0-9a-f]+\\)"
+                    1 2 3 nil 1)))
+  (setq compile-command (or (car-safe compile-history) ""))
+  (define-key compilation-minor-mode-map "q" #'kill-buffer-and-window))
+
+(with-eval-after-load 'comint
+  (define-key comint-mode-map "q" #'kill-buffer-and-window)
+  (add-hook 'comint-mode-hook #'completion-preview-mode))
 
 (add-hook 'compilation-finish-functions
           (lambda (buffer status)
@@ -939,7 +960,7 @@ If lighten is non-nil, lighten; otherwise darken"
            (dired-hide-details-mode 1)
            (variable-pitch-mode 1)
            (solaire-background)
-           (setq-local mode-line-format "%b")
+           (setq-local mode-line-format nil) ;"%b")
            (let ((text-scale-mode-step 1.05)) (text-scale-set -1))
            (use-local-map (copy-keymap (current-local-map)))
            (select-window (get-buffer-window dir))
@@ -1030,6 +1051,8 @@ is already narrowed."
        (cons (buffer-substring-no-properties (mark) (point)) dictionary-default-dictionary))
     (dictionary-lookup-definition)))
 
+(with-eval-after-load 'xref
+  (define-key xref--xref-buffer-mode-map (kbd "SPC") ctl-x-map))
 (defun my/project-find-regexp-in-buffer ()
   "Find regexp in project, showing results in buffer."
   (interactive)
@@ -1128,7 +1151,8 @@ is already narrowed."
           (progn
             (visual-line-mode 1)
             (set-window-margins win lmargin margin)
-            (when special-modes (text-scale-set 1) (setq-local line-spacing 0.6))
+            (when special-modes (text-scale-set 1) (setq-local line-spacing 0.6)
+                  (setq markdown-marginalize-headers-margin-width (- lmargin 4)))
             (setq-local scroll-margin (if zen-margin-need-sm sm-half 0)))
         (progn
           (set-window-margins win nil)
@@ -1251,7 +1275,8 @@ is already narrowed."
   (push '("glog" "vc-print-root-log") eshell-command-aliases-list)
   (push '("groot" "cd ${git rev-parse --show-toplevel}") eshell-command-aliases-list)
   (push '("gpr" "git fetch origin pull/$1/head:$2; git checkout $2") eshell-command-aliases-list)
-  (push '("gogrep" "go list -f '{{.Dir}}' -deps ./... | xargs rg -g '*.go' $1") eshell-command-aliases-list)
+  (push '("gogrep" "grep -E $2 ${go list -f '{{.Dir}}' -deps ./... | xargs rg -g '*.go' -l $1 | sort | uniq}") eshell-command-aliases-list)
+  (push '("gofiles" "grep -r --include='*.go' $1 ${go list -f '{{.Dir}}' -deps ./... | sort | uniq}") eshell-command-aliases-list)
   (push '("nix-update-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} nix build .#darwinConfigurations.${hostname -s}.system --impure && cd -") eshell-command-aliases-list)
   (push '("darwin-rebuild-mac" "cd ~/dotfiles && HOSTNAME=${hostname -s} sudo ./result/sw/bin/darwin-rebuild switch --flake . --impure && cd -") eshell-command-aliases-list)
   (push '("gk" "export KUBECONFIG=${gardenctl kubectl-env zsh | awk -F\"'\" '/export KUBECONFIG/ {print \$2}'} && test -n \"$TMUX\" && (shell-command \"tmux set-option -p @kubeconfig \\\"$KUBECONFIG\\\"  && tmux refresh-client -S\")") eshell-command-aliases-list))
@@ -1288,16 +1313,17 @@ is already narrowed."
   (set-face-attribute 'eshell-ls-directory nil :inherit font-lock-keyword-face))
 
 (with-eval-after-load 'eshell
+  ;; (add-to-list 'eshell-expand-input-functions #'eshell-expand-history-references) ; !n
   (add-hook 'eshell-mode-hook #'completion-preview-mode)
-  (add-hook 'eshell-mode-hook
-            (lambda nil
-              (when (not (or (getenv "GCTL_SESSION_ID") (getenv "TERM_SESSION_ID")))
-                (setenv "GCTL_SESSION_ID" (string-trim
-                                           (shell-command-to-string "uuidgen"))))
-              (setenv "GOPATH" (concat (getenv "HOME") "/go"))
-              (eshell/addpath (concat (getenv "GOPATH") "/bin"))
-              (eshell/addpath (concat (getenv "HOME") "/.krew/bin"))
-              (add-to-list 'process-environment "KUBECTX_IGNORE_FZF=1" :append)))
+  ;; (add-hook 'eshell-mode-hook
+  ;;           (lambda nil
+  (when (not (or (getenv "GCTL_SESSION_ID") (getenv "TERM_SESSION_ID")))
+    (setenv "GCTL_SESSION_ID" (string-trim
+                               (shell-command-to-string "uuidgen"))))
+  (setenv "GOPATH" (concat (getenv "HOME") "/go"))
+  (eshell/addpath (concat (getenv "GOPATH") "/bin"))
+  (eshell/addpath (concat (getenv "HOME") "/.krew/bin"))
+  (add-to-list 'process-environment "KUBECTX_IGNORE_FZF=1" :append);))
   (push 'file-capf completion-at-point-functions)
   ;; src: doom
   (setq eshell-prompt-regexp "^.* λ "
@@ -1513,6 +1539,73 @@ any directory proferred by `consult-dir'."
   (advice-add 'mpc-quit :after (lambda (&rest _args) (tab-bar-close-tab)))
   (load "~/.emacs.d/lisp/mpc-conf" nil :no-message))
 
+;; flash - Claude and https://github.com/JiaweiChenC/flash-emacs
+(defvar flash--overlays nil) (defvar flash--timer nil) (defvar flash--show-labels nil)
+(defface flash-label '((t (:background "red" :foreground "white" :weight bold))) "Jump labels.")
+(defface flash-match '((t (:background "yellow" :foreground "black"))) "Search matches.")
+(defun flash--search (pattern)
+  (when (>= (length pattern) 1)
+    (let ((matches '()) (case-fold-search (string= pattern (downcase pattern))))
+      (dolist (win (window-list))
+        (when (window-live-p win)
+          (with-current-buffer (window-buffer win)
+            (save-excursion
+              (let ((start (window-start win)) (end (window-end win)))
+                (goto-char start)
+                (while (search-forward pattern end t)
+                  (push (list :pos (match-beginning 0) :end (match-end 0) :win win :buf (current-buffer)) matches)))))))
+      (nreverse matches))))
+(defun flash--assign (matches pos win)
+  (let ((sorted (sort matches (lambda (a b)
+                                (< (abs (- (plist-get a :pos) pos))
+                                   (abs (- (plist-get b :pos) pos))))))
+        (labels (mapcar #'char-to-string (string-to-list "asdghklqwertyuiopzxcvbnmfj")))
+        (result '()))
+    (dolist (m sorted)
+      (when labels
+        (plist-put m :label (car labels))
+        (setq labels (cdr labels))
+        (push m result)))
+    (nreverse result)))
+(defun flash--show (all labeled)
+  (dolist (ov flash--overlays) (delete-overlay ov)) (setq flash--overlays nil)
+  (dolist (m all)
+    (let ((ov (make-overlay (plist-get m :pos) (plist-get m :end) (plist-get m :buf))))
+      (overlay-put ov 'face 'flash-match) (push ov flash--overlays)))
+  (when flash--show-labels
+    (dolist (m labeled)
+      (when-let* ((lbl (plist-get m :label))
+                  (ov (make-overlay (plist-get m :pos) (1+ (plist-get m :pos)) (plist-get m :buf))))
+        (overlay-put ov 'display (propertize lbl 'face 'flash-label))
+        (push ov flash--overlays)))))
+(defun flash--find (label matches) (cl-find-if (lambda (m) (string= (plist-get m :label) label)) matches))
+(defun flash--jump (match) (push-mark) (select-window (plist-get match :win)) (goto-char (plist-get match :pos)))
+
+(defun flash-jump () "Flash jump navigation." (interactive)
+       (push-mark)
+       (setq flash--show-labels nil)
+       (when flash--timer (cancel-timer flash--timer) (setq flash--timer nil))
+       (let ((pattern "") matches labeled)
+         (unwind-protect
+             (catch 'exit
+               (while t
+                 (let* ((prompt (if (> (length pattern) 0) (concat "Flash:" pattern) "Flash:")) (char (read-char-exclusive prompt)))
+                   (when flash--timer (cancel-timer flash--timer) (setq flash--timer nil))
+                   (cond ((or (= char 27) (= char 7)) (message "Cancelled") (throw 'exit nil)) ;; ESC or C-g - exit
+                         ((= char 13) (when (car labeled) (flash--jump (car labeled))) (throw 'exit nil)) ;; Enter - jump to first match
+                         ((or (= char 127) (= char 8)) ;; Backspace - remove last character
+                          (if (> (length pattern) 0) (progn (setq pattern (substring pattern 0 -1) flash--show-labels nil)) (throw 'exit nil)))
+                         ((and (>= char 32) (<= char 126)) ;; Printable ASCII
+                          (let* ((c (char-to-string char)) (target (and flash--show-labels (flash--find c labeled))))
+                            (if target (progn (flash--jump target) (throw 'exit nil)) (setq pattern (concat pattern c) flash--show-labels nil)))))
+                   (setq matches (flash--search pattern)) (when (and (> (length pattern) 0) (= (length matches) 0)) (throw 'exit nil))
+                   (setq labeled (flash--assign matches (point) (selected-window))) (flash--show matches labeled)
+                   (setq flash--timer
+                         (run-with-timer 0.5 nil (lambda () (setq flash--show-labels t) (flash--show matches labeled)))))))
+           (when flash--timer (cancel-timer flash--timer) (setq flash--timer nil)) (dolist (ov flash--overlays) (delete-overlay ov))
+           (setq flash--overlays nil))))
+(define-key (current-global-map) (kbd "C-j") #'flash-jump)
+
 ;; erc
 ;; (use-package erc
 ;;   ;; auth: machine irc.libera.chat login "USER" password PASSWORD
@@ -1685,8 +1778,7 @@ external browser and new eww buffer, respectively)."
 
 ;; --- External -------------------------------------------------------------
 (load "~/.emacs.d/lisp/dev-conf" nil :no-message)
-(if (locate-library "corfu")
-    (global-corfu-mode)
+(unless (locate-library "corfu")
   (add-hook 'prog-mode-hook #'completion-preview-mode))
 
 ;; --- 31 stuff -------------------------------------------------------------
@@ -1701,10 +1793,10 @@ external browser and new eww buffer, respectively)."
   (setq flymake-show-diagnostics-at-end-of-line 'fancy));short))
 
 ;; --- Speed benchmarking ---------------------------------------------------
-;; (let ((init-time (float-time (time-subtract (current-time) init-start-time)))
-;;       (total-time (string-to-number (emacs-init-time "%f"))))
-;;   (message (concat
-;;             (propertize "Startup time: " 'face 'bold)
-;;             (format "%.2fs " init-time)
-;;             (propertize (format "(+ %.2fs system time)"
-;;                                 (- total-time init-time))))))
+(let ((init-time (float-time (time-subtract (current-time) init-start-time)))
+      (total-time (string-to-number (emacs-init-time "%f"))))
+  (message (concat
+            (propertize "Startup time: " 'face 'bold)
+            (format "%.2fs " init-time)
+            (propertize (format "(+ %.2fs system time)"
+                                (- total-time init-time))))))

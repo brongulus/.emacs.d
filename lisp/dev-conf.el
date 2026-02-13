@@ -39,7 +39,7 @@
    packages))
 
 (my/ensure-package-installed ;; 'diff-hl 'multiple-cursors 'consult-eglot
- 'corfu 'dape 'markdown-mode 'ox-hugo 'zig-mode 'nov 'pr-review 'eldoc-box)
+ 'corfu 'dape 'markdown-mode 'zig-mode 'nov 'pr-review 'eldoc-box)
 
 ;; (dolist (bind '(("M-p" . mc/mark-previous-like-this-symbol)
 ;;                 ("M-n" . mc/mark-next-like-this-symbol)
@@ -61,7 +61,16 @@
            ("prn" (call-interactively 'pr-review-notification)))))
 (add-to-list 'browse-url-default-handlers
              '(pr-review-url-parse . pr-review-open-url))
-(setq magit-auto-revert-mode nil)
+(setq magit-auto-revert-mode nil
+      magit-status-sections-hook
+      '(magit-insert-status-headers
+        magit-insert-untracked-files
+        magit-insert-unstaged-changes
+        magit-insert-staged-changes
+        magit-insert-unpushed-to-pushremote
+        magit-insert-unpushed-to-upstream-or-recent
+        magit-insert-unpulled-from-pushremote
+        magit-insert-unpulled-from-upstream))
 (with-eval-after-load 'pr-review
   (require 'magit)
   (define-key pr-review-mode-map (kbd "SPC") ctl-x-map)
@@ -98,8 +107,6 @@
 ;; (define-key (current-global-map) (kbd "C-x S") #'consult-eglot-symbols)
 ;; (with-eval-after-load 'eglot
 ;;   (define-key eglot-mode-map [remap xref-find-apropos] #'consult-eglot-symbols))
-(with-eval-after-load 'ox
-  (require 'ox-hugo))
 (add-to-list 'auto-mode-alist '("\\.zig\\'" . zig-mode))
 (with-eval-after-load 'zig-mode
   (add-hook 'zig-mode-hook
@@ -107,12 +114,18 @@
               (add-hook 'before-save-hook
                         (lambda ()
                           (eglot-code-actions (buffer-end -1) (buffer-end 1) "source.fixAll" t))))))
-(add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
+(add-to-list 'auto-mode-alist
+             '("\\.epub\\'" . (lambda () (nov-mode)
+                                (face-remap-add-relative 'shr-text :height 160
+                                                         :inherit 'fixed-pitch-serif))))
 (setq nov-header-line-format nil)
 (with-eval-after-load 'nov
   (define-key nov-mode-map (kbd "SPC") ctl-x-map)
   (define-key nov-mode-map (kbd "#") #'definition-at-point))
 
+(dolist (hook '(prog-mode-hook text-mode-hook conf-mode-hook
+                               eval-expression-minibuffer-setup-hook))
+  (add-hook hook #'corfu-mode))
 (with-eval-after-load 'corfu
   (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)
   (define-key corfu-map (kbd "TAB") #'corfu-next)
@@ -179,6 +192,11 @@
                               (markdown-mode)
                               (face-remap-add-relative 'markdown-code-face :extend t
                                                        :inherit 'bg-highlight))))
+(setq markdown-marginalize-headers t ; FIXME zen and this needs to interact nicely
+      markdown-asymmetric-header nil;t
+      markdown-marginalize-headers-margin-width 8
+      markdown-fontify-code-blocks-natively t
+      markdown-max-image-size '(800 . 800))
 (with-eval-after-load 'markdown-mode
   (nconc markdown-code-lang-modes
          '(("rust" . rust-ts-mode) ("python" . python-ts-mode)
@@ -192,9 +210,7 @@
   (add-hook 'markdown-mode-hook #'(lambda nil
                                     (visual-line-mode t)
                                     (when (display-graphic-p) (markdown-toggle-inline-images))))
-  (set-face-attribute 'markdown-header-delimiter-face nil :inherit 'bold)
-  (setq markdown-fontify-code-blocks-natively t
-        markdown-max-image-size '(800 . 800)))
+  (set-face-attribute 'markdown-header-delimiter-face nil :inherit 'bold))
 
 (setq dape-key-prefix "a")
 (setq dape-debug t)

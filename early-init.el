@@ -5,6 +5,7 @@
       gc-cons-percentage 0.6
       file-name-handler-alist nil
       load-prefer-newer t ;noninteractive
+      vc-handled-backends '(Git)
       garbage-collection-messages nil)
 
 (add-hook 'emacs-startup-hook
@@ -12,7 +13,7 @@
               (run-at-time
                2 nil
                (lambda nil            
-                 (setq gc-cons-threshold (* 16 1024 1024)
+                 (setq gc-cons-threshold (* 32 1024 1024)
                        gc-cons-percentage 0.1
                        file-name-handler-alist my/saved-file-name-handler-alist))))
           ;; (garbage-collect))))
@@ -34,10 +35,11 @@
                 (tool-bar-lines . 0)
                 (vertical-scroll-bars . nil)
                 (horizontal-scroll-bars . nil)
-                (left-fringe . 8) (right-fringe . 8) (internal-border-width . 10)
+                (left-fringe . 8) (right-fringe . 8) (internal-border-width . 12)
                 (bottom-divider-width . 0) (right-divider-width . 0)
-                (undecorated . t))
+                (undecorated-round . t))
               cursor-in-non-selected-windows nil
+              mode-line-format nil
               bidi-display-reordering 'left-to-right
               bidi-inhibit-bpa t
               bidi-paragraph-direction 'left-to-right)
@@ -100,19 +102,34 @@
 
 (advice-add 'display-startup-screen :override #'ignore)
 
+; src: minimal-emacs.d
+(when (fboundp 'tool-bar-setup)
+  ;; Temporarily override the tool-bar-setup function to prevent it from
+  ;; running during the initial stages of startup
+  (advice-add 'tool-bar-setup :override #'ignore)
+  (advice-add 'startup--load-user-init-file :after
+              (lambda (&rest _)
+                (when (fboundp 'tool-bar-setup)
+                  (advice-remove 'tool-bar-setup #'ignore)
+                  (when (bound-and-true-p tool-bar-mode)
+                    (funcall 'tool-bar-setup))))))
+
 (when (string> emacs-version "31")
   (setq load-path-filter-function #'load-path-filter-cache-directory-files))
 
 (when is-mac
+  (setq process-connection-type nil)
   (setq ns-use-proxy-icon nil
         frame-title-format "")
   (add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
   (let ((home (getenv "HOME")))
     (setenv "PATH" (concat (getenv "PATH")
                            ":" home "/.nix-profile/bin:/usr/bin"
-                           ":/opt/homebrew/bin"))
+                           ":/opt/homebrew/bin"
+                           ":/usr/local/bin"))
     (setq exec-path (append `(,(concat home "/.nix-profile/bin")
                               "/opt/homebrew/bin"
+                              "/usr/local/bin"
                               "/nix/var/nix/profiles/default/bin")
                             exec-path))))
 
@@ -128,6 +145,8 @@
          (native-comp-available-p))
     ;; Activate `native-compile'
     (setq native-comp-jit-compilation t
+          native-comp-jit-compilation-deny-list
+          '("/emacs-lisp/cl-loaddefs\\.el")
           native-comp-enable-subr-trampolines t
           native-comp-async-report-warnings-errors 'silent
           package-native-compile t)

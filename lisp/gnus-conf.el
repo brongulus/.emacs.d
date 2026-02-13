@@ -64,7 +64,8 @@
         gnus-ticked-mark ?!
         gnus-low-score-mark #x2193 ;; down arrow
         ;; see (info "(gnus) Summary Score Commands")
-        gnus-use-adaptive-scoring t
+        ;; https://cce.whatthefuck.computer/gnus-adaptive
+        gnus-use-adaptive-scoring '(word line)
         gnus-summary-expunge-below 0
         gnus-sum-thread-tree-false-root ""
         gnus-sum-thread-tree-indent " "
@@ -80,7 +81,7 @@
         gnus-group-line-format (concat "%S%4y: %(%-40,40c%)\n") ;; %E (gnus-group-icon-list)
         ;;  06-Jan   Sender Name    Email Subject
         gnus-summary-line-format (concat " %0{%U%R%}"
-                                         ;; "%1{%-4,4i%}" " "
+                                         "%1{%-4,4i%}" " "
                                          "%1{%&user-date;%}" "%3{ %}" " "
                                          "%4{%-16,16f%}" " "
                                          "%3{ %}" " "

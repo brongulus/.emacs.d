@@ -52,13 +52,20 @@
 
   (with-eval-after-load 'org-src
     (nconc org-src-lang-modes
-         '(("rust" . rust-ts) ("python" . python-ts)
-           ("go" . go-ts) ("bash" . bash-ts)
-           ("typescript" . typescript-ts)
-           ("javascript" . js-ts) ("json" . json-ts)
-           ("yaml" . yaml-ts) ("toml" . toml-ts)
-           ("c" . c-ts) ("cpp" . c++-ts))))
-  
+           '(("rust" . rust-ts) ("python" . python-ts)
+             ("go" . go-ts) ("bash" . bash-ts)
+             ("typescript" . typescript-ts)
+             ("javascript" . js-ts) ("json" . json-ts)
+             ("yaml" . yaml-ts) ("toml" . toml-ts)
+             ("c" . c-ts) ("cpp" . c++-ts))))
+
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((C . t) (shell . t)
+     (python . t)
+     (emacs-lisp . t)))
+  (setq org-confirm-babel-evaluate nil)
+
   ;; configure <s template for org-src-blocks
   (require 'org-tempo)
   (add-hook 'org-mode-hook
@@ -136,7 +143,7 @@
               ;; (org-agenda-redo)
               )))
       (org-agenda nil "n"))))
-(run-with-idle-timer 600 t 'jump-to-org-agenda)
+(run-with-idle-timer 1800 t 'jump-to-org-agenda)
 
 (with-eval-after-load 'org-agenda
   (define-key org-agenda-mode-map (kbd "SPC") ctl-x-map)
