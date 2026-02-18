@@ -3,7 +3,6 @@
 (setq gc-cons-threshold most-positive-fixnum
       gc-cons-percentage 1.0
       file-name-handler-alist nil
-      load-prefer-newer t
       vc-handled-backends '(Git))
 (add-hook 'emacs-startup-hook
           #'(lambda ()
@@ -14,6 +13,13 @@
                        gc-cons-percentage 0.1
                        file-name-handler-alist my/saved-file-name-handler-alist))))
           105)
+(setq inhibit-redisplay t)
+(setq inhibit-message t)
+(add-hook 'window-setup-hook
+          (lambda ()
+            (setq inhibit-redisplay nil inhibit-message nil)
+            (redisplay))
+          105)
 (setq menu-bar-mode nil
       tool-bar-mode nil
       scroll-bar-mode nil)
@@ -23,7 +29,11 @@
       inhibit-x-resources t
       initial-major-mode 'fundamental-mode
       initial-scratch-message nil
-      package-enable-at-startup nil)
+      package-enable-at-startup nil
+      ns-pop-up-frames nil
+      inhibit-compacting-font-caches t
+      frame-inhibit-implied-resize t
+      redisplay-skip-fontification-on-input t)
 (setq-default bidi-display-reordering 'left-to-right
               bidi-paragraph-direction 'left-to-right)
 (setq default-frame-alist '((internal-border-width . 12) (undecorated-round . t)

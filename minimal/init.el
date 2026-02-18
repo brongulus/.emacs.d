@@ -9,7 +9,8 @@
       viper-inhibit-startup-message t
       viper-want-ctl-h-help t
       viper-want-emacs-keys-in-insert t
-      viper-want-emacs-keys-in-vi t)
+      viper-want-emacs-keys-in-vi t
+      viper-insert-state-cursor-color "coral3")
 (add-hook 'emacs-startup-hook #'viper-mode)
 (with-eval-after-load 'viper
   (dolist (pair '((viper-exec-Yank . kill-ring-save) (viper-exec-Delete . kill-region)))
@@ -37,11 +38,19 @@
   (keymap-global-set (car binding) (cdr binding)))
 (keymap-global-set "C-x m" esc-map)
 (keymap-global-set "<f6>" #'(lambda nil (interactive) (invert-face 'default)))
+(keymap-global-set "j" #'(lambda nil (interactive)
+                           (let* ((event (read-event nil nil 0.4)))
+                             (if event ;; timeout met
+                                 (if (and (characterp event) (= event ?k))
+                                     (viper-change-state-to-vi)
+                                   (insert ?j) (push event unread-command-events))
+                               (insert ?j)))))
 ;;; Visuals ---
 (dolist (face '(default fixed-pitch variable-pitch))
   (set-face-attribute face nil :font "Input Mono Narrow" :height 140))
 (add-hook 'post-command-hook
-          #'(lambda nil (set-cursor-color (if (buffer-modified-p) "coral3" "#00c2ff"))))
+          (lambda () (unless (eq (buffer-modified-p) (bound-and-true-p my/cursor--modified))
+                       (set-cursor-color (if (setq my/cursor--modified (buffer-modified-p)) "coral3" "#00c2ff")))))
 (dolist (face '(vertical-border font-lock-comment-face))
   (set-face-attribute face nil :foreground 'unspecified :inherit '(shadow default)))
 (set-face-attribute 'fringe nil :background 'unspecified)
@@ -53,7 +62,7 @@
          :inherit 'default common)
   (apply #'set-face-attribute 'mode-line-inactive nil
          :inherit 'shadow common))
-(set-face-attribute 'default nil :background "#222323" :foreground "#eae8e1")
+(set-face-attribute 'default nil :foreground "#222323" :background "#eae8e1")
 (dolist (spec '((font-lock-string-face :foreground nil) (show-paren-match :background t)))
   (let* ((face (car spec)) (prop (cadr spec)) (invert (caddr spec))
          (dark "#26BF96") (light "#0C9671"))
@@ -64,8 +73,8 @@
                                   font-lock-function-name-face font-lock-type-face))
   (set-face-attribute face nil :foreground 'unspecified :weight 'bold))
 (custom-set-faces '(eglot-highlight-symbol-face
-                    ((((background dark))  :background "grey10")
-                     (((background light)) :background "grey95"))))
+                    ((((background dark))  :background "#2a2c2c")
+                     (((background light)) :background "#d9d7d0"))))
 (defvar tab-bar--tab-keymaps
   (let ((v (make-vector 20 nil)))
     (dotimes (i 20 v)
@@ -84,7 +93,7 @@
                           (number-sequence 0 (1- (length (tab-bar-tabs)))) " ")
                          " ")))))
 ;;; Programming stuff ---
-(add-hook 'prog-mode-hook (electric-pair-mode t))
+(add-hook 'prog-mode-hook #'electric-pair-local-mode)
 (add-hook 'prog-mode-hook #'which-function-mode)
 (add-hook 'prog-mode-hook #'hs-minor-mode)
 (dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook c++-mode-hook))
@@ -139,7 +148,7 @@
 	  org-fontify-whole-heading-line t
 	  org-pretty-entities t
 	  org-src-fontify-natively t
-	  ;; treesit-enabled-modes t
+	  treesit-enabled-modes t
 	  treesit-font-lock-level 4
 	  isearch-lax-whitespace t
 	  isearch-lazy-count t
@@ -156,7 +165,7 @@
 	  jsonrpc-event-hook nil
 	  require-final-newline t
 	  resize-mini-windows t
-      show-paren-when-point-in-periphery t
+      ;; show-paren-when-point-in-periphery t
       maximum-scroll-margin 0.5
 	  scroll-margin 9999
       scroll-conservatively 101
@@ -216,9 +225,11 @@
 
 (defun my/show-paren-data ()
   (or (and (boundp 'treesit-show-paren-data) (treesit-show-paren-data))
-      (when-let* ((open (and (not (nth 4 (syntax-ppss))) (nth 1 (syntax-ppss))))
-                  (end (save-excursion (goto-char open)
-                                       (ignore-errors (forward-sexp) (point))))
+      (when-let* ((open (cond ((eq (car (syntax-after (point))) 4) (point))
+                              ((eq (car (syntax-after (1- (point)))) 5)
+                               (save-excursion (backward-sexp) (point)))
+                              ((nth 1 (syntax-ppss)))))
+                  (end (save-excursion (goto-char open) (forward-sexp) (point)))
                   ((> end open)))
         (list open (1+ open) (1- end) end))))
 (add-hook 'prog-mode-hook
@@ -231,11 +242,11 @@
        (walk-windows
         (lambda (win)
           (with-current-buffer (window-buffer win)
-            (when (derived-mode-p 'prog-mode 'text-mode)
-              (let* ((special-modes (or (eq major-mode 'org-mode) (eq major-mode 'markdown-mode)))
+            (when (or (derived-mode-p '(prog-mode text-mode)) (eq major-mode 'eww-mode))
+              (let* ((special-modes (member major-mode '(org-mode markdown-mode)))
                      (margin (max 0 (/ (- (window-total-width win) fill-column) 2)))
                      (lmargin (if special-modes (max 0 (- margin 10)) margin)))
-                (if (> (window-total-width win) fill-column)
+                (if (> (window-total-width win) 140)
                     (progn (visual-line-mode 1) (set-window-margins win lmargin margin)
                            (when special-modes (text-scale-set 1) (setq-local line-spacing 0.6)
                                  (setq markdown-marginalize-headers-margin-width (- lmargin 4))))
@@ -245,15 +256,13 @@
 (add-hook 'window-configuration-change-hook #'zen-buffer-apply-margins)
 
 (defun my-scroll-other-down nil (interactive)
-       (let ((mode (with-current-buffer (window-buffer (other-window-for-scrolling))
-                     major-mode)))
+       (let ((mode (with-current-buffer (window-buffer (other-window-for-scrolling)) major-mode)))
          (with-selected-window (other-window-for-scrolling)
            (cond ((eq mode 'Info-mode) (Info-scroll-up))
                  ((eq mode 'doc-view-mode) (doc-view-scroll-up-or-next-page 5))
                  (t (scroll-up-command 5))))))
 (defun my-scroll-other-up nil (interactive)
-       (let ((mode (with-current-buffer (window-buffer (other-window-for-scrolling))
-                     major-mode)))
+       (let ((mode (with-current-buffer (window-buffer (other-window-for-scrolling)) major-mode)))
          (with-selected-window (other-window-for-scrolling)
            (cond ((eq mode 'Info-mode) (Info-scroll-down))
                  ((eq mode 'doc-view-mode) (doc-view-scroll-down-or-previous-page 5))
