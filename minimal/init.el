@@ -1,6 +1,4 @@
 ;;; init.el --- 🦬 -*- lexical-binding: t; -*
-(setq default-frame-alist '((internal-border-width . 12) (undecorated-round . t)))
-(fringe-mode '(8 . 0))
 (setcdr (assq 'continuation fringe-indicator-alist) '(nil nil))
 (set-display-table-slot standard-display-table 'vertical-border (make-glyph-code ?│))
 (blink-cursor-mode -1) (tooltip-mode -1) (menu-bar-mode -1) (scroll-bar-mode -1) (tool-bar-mode -1)
@@ -25,7 +23,8 @@
   (dolist (binding
            '(("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all)
              ("<" . beginning-of-buffer) (">" . end-of-buffer) ("o" . other-window)
-             ("v" . set-mark-command) ("s" . isearch-forward-regexp)))
+             ("v" . set-mark-command) ("s" . isearch-forward-regexp) ("u" . undo-only)
+             ("Z" . undo-redo) ("," . my-scroll-other-down) ("." . my-scroll-other-up)))
     (keymap-set viper-vi-basic-map (car binding) (cdr binding))))
 (dolist (binding
          '(("<escape>" . keyboard-escape-quit)
@@ -47,14 +46,14 @@
   (set-face-attribute face nil :foreground 'unspecified :inherit '(shadow default)))
 (set-face-attribute 'fringe nil :background 'unspecified)
 (let ((common (list :background 'unspecified :foreground 'unspecified
-                    :inverse-video (not (display-graphic-p))
+                    :inverse-video (not (display-graphic-p)) :height 140
                     :box '(:line-width 1 :style flat-button)
                     :overline (face-foreground 'shadow))))
   (apply #'set-face-attribute 'mode-line nil
          :inherit 'default common)
   (apply #'set-face-attribute 'mode-line-inactive nil
          :inherit 'shadow common))
-(set-face-attribute 'default nil :background "#21211e" :foreground "#f5f2eb")
+(set-face-attribute 'default nil :background "#222323" :foreground "#eae8e1")
 (dolist (spec '((font-lock-string-face :foreground nil) (show-paren-match :background t)))
   (let* ((face (car spec)) (prop (cadr spec)) (invert (caddr spec))
          (dark "#26BF96") (light "#0C9671"))
@@ -67,6 +66,23 @@
 (custom-set-faces '(eglot-highlight-symbol-face
                     ((((background dark))  :background "grey10")
                      (((background light)) :background "grey95"))))
+(defvar tab-bar--tab-keymaps
+  (let ((v (make-vector 20 nil)))
+    (dotimes (i 20 v)
+      (let ((m (make-sparse-keymap)))
+        (define-key m [mode-line mouse-1]
+                    `(lambda () (interactive) (tab-bar-select-tab ,(1+ i))))
+        (aset v i m)))))
+(setq mode-line-front-space
+      '(:eval (when (> (length (tab-bar-tabs)) 1)
+                (propertize
+                 (concat " "
+                         (mapconcat
+                          (lambda (i) (propertize (if (= i (tab-bar--current-tab-index)) "⦿" "○")
+                                                  'mouse-face 'mode-line-highlight
+                                                  'local-map (aref tab-bar--tab-keymaps i)))
+                          (number-sequence 0 (1- (length (tab-bar-tabs)))) " ")
+                         " ")))))
 ;;; Programming stuff ---
 (add-hook 'prog-mode-hook (electric-pair-mode t))
 (add-hook 'prog-mode-hook #'which-function-mode)
@@ -85,6 +101,12 @@
               "C-s" #'completion-preview-next-candidate)
   (keymap-set completion-preview-active-mode-map
               "C-r" #'completion-preview-prev-candidate))
+(with-eval-after-load 'eshell
+  (add-hook 'eshell-mode-hook #'completion-preview-mode)
+  (when (not (or (getenv "GCTL_SESSION_ID") (getenv "TERM_SESSION_ID")))
+    (setenv "GCTL_SESSION_ID" (string-trim (shell-command-to-string "uuidgen"))))
+  (setenv "GOPATH" (concat (getenv "HOME") "/go"))
+  (eshell/addpath (concat (getenv "GOPATH") "/bin")))
 ;;; Better defaults ---
 (setq-default auto-save-default nil
               auto-save-list-file-prefix nil
@@ -100,7 +122,7 @@
               copy-region-blink-delay 0
               display-line-numbers-width 4
               truncate-lines nil
-              tab-bar-show 1
+              tab-bar-show nil
               ediff-split-window-function 'split-window-horizontally
               ediff-window-setup-function 'ediff-setup-windows-plain
               warning-minimum-level :error
@@ -139,12 +161,17 @@
 	  scroll-margin 9999
       scroll-conservatively 101
       scroll-preserve-screen-position t
+      doc-view-continuous t
       ring-bell-function 'ignore
 	  tab-always-indent 'complete
       vc-allow-rewriting-published-history t
 	  vc-follow-symlinks t
 	  vc-git-diff-switches '("--patch-with-stat" "--histogram")
 	  vc-git-shortlog-switches '("--stat"))
+(with-eval-after-load 'eww
+  (add-hook 'eww-after-render-hook #'viper-mode)
+  (setq eww-header-line-format nil)
+  (setq eww-auto-rename-buffer 'title))
 ;;; Completion ---
 (setopt minibuffer-completion-auto-choose t
         completion-ignore-case t
@@ -167,7 +194,7 @@
       ido-ignore-buffers
       '("\\` " "\\*Messages\\*" "\\*scratch\\*" "\\*Completions\\*" "\\*Native-compile-Log\\*"
         "\\*Async-native-compile-log\\*" "\\*EGLOT.*events\\*" "\\*Flymake.*\\*"
-        "\\*Buffer List\\*" "\\*Help\\*")
+        "\\*Buffer List\\*" "\\*Help\\*" "\\*Minibuf-.*\\*" "\\*vc-.*\\*")
       ido-create-new-buffer 'always
       ido-use-virtual-buffers 'auto
       ido-show-dot-for-dired t ido-max-prospects 6
@@ -198,3 +225,36 @@
           (lambda () (when (treesit-parser-list)
                        (setq-local show-paren-data-function #'my/show-paren-data))))
 (setq show-paren-data-function #'my/show-paren-data)
+
+(setq-default fill-column 140 text-scale-mode-step 1.3)
+(defun zen-buffer-apply-margins () "Apply zen margins to all windows."
+       (walk-windows
+        (lambda (win)
+          (with-current-buffer (window-buffer win)
+            (when (derived-mode-p 'prog-mode 'text-mode)
+              (let* ((special-modes (or (eq major-mode 'org-mode) (eq major-mode 'markdown-mode)))
+                     (margin (max 0 (/ (- (window-total-width win) fill-column) 2)))
+                     (lmargin (if special-modes (max 0 (- margin 10)) margin)))
+                (if (> (window-total-width win) fill-column)
+                    (progn (visual-line-mode 1) (set-window-margins win lmargin margin)
+                           (when special-modes (text-scale-set 1) (setq-local line-spacing 0.6)
+                                 (setq markdown-marginalize-headers-margin-width (- lmargin 4))))
+                  (progn (set-window-margins win nil)
+                         (when special-modes (text-scale-set 0) (setq-local line-spacing 5))))))))
+        nil t))
+(add-hook 'window-configuration-change-hook #'zen-buffer-apply-margins)
+
+(defun my-scroll-other-down nil (interactive)
+       (let ((mode (with-current-buffer (window-buffer (other-window-for-scrolling))
+                     major-mode)))
+         (with-selected-window (other-window-for-scrolling)
+           (cond ((eq mode 'Info-mode) (Info-scroll-up))
+                 ((eq mode 'doc-view-mode) (doc-view-scroll-up-or-next-page 5))
+                 (t (scroll-up-command 5))))))
+(defun my-scroll-other-up nil (interactive)
+       (let ((mode (with-current-buffer (window-buffer (other-window-for-scrolling))
+                     major-mode)))
+         (with-selected-window (other-window-for-scrolling)
+           (cond ((eq mode 'Info-mode) (Info-scroll-down))
+                 ((eq mode 'doc-view-mode) (doc-view-scroll-down-or-previous-page 5))
+                 (t (scroll-down-command 5))))))
