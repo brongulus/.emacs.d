@@ -18,19 +18,19 @@
               use-short-answers t uniquify-buffer-name-style 'forward
               tab-width 4 line-spacing 5 indent-tabs-mode nil
               fill-column 140 text-scale-mode-step 1.3)
-(setq enable-recursive-minibuffers t
+(setq enable-recursive-minibuffers t savehist-additional-variables '(register-alist kill-ring)
 	  minibuffer-default-prompt-format " [%s]" minibuffer-visible-completions t
 	  read-buffer-completion-ignore-case t read-file-name-completion-ignore-case t
 	  org-fontify-quote-and-verse-blocks t org-fontify-whole-heading-line t
 	  org-pretty-entities t org-src-fontify-natively t
-	  treesit-enabled-modes t treesit-font-lock-level 4
+	  treesit-enabled-modes t treesit-font-lock-level 4 go-ts-mode-indent-offset 4
 	  isearch-lax-whitespace t isearch-lazy-count t
 	  isearch-repeat-on-direction-change t isearch-wrap-pause 'no-ding
 	  search-whitespace-regexp ".*?" copy-region-blink-predicate 'always
 	  dired-kill-when-opening-new-dired-buffer t delete-by-moving-to-trash t
       help-window-select t kill-region-dwim 'emacs-word
-	  eglot-autoshutdown t eglot-ignored-server-capabilities '(:inlayHintProvider)
-	  jsonrpc-event-hook nil flymake-mode-line-title nil
+      eglot-ignored-server-capabilities '(:inlayHintProvider :workspace.didChangeWatchedFiles)
+	  eglot-autoshutdown t jsonrpc-event-hook nil flymake-mode-line-title nil
 	  require-final-newline t resize-mini-windows t
       maximum-scroll-margin 0.5 scroll-margin 9999 scroll-conservatively 101
       scroll-preserve-screen-position t doc-view-continuous t
@@ -39,10 +39,10 @@
 	  vc-git-diff-switches '("--patch-with-stat" "--histogram")
 	  vc-git-shortlog-switches '("--stat")
       project-vc-extra-root-markers '("Cargo.toml" "build.zig" "go.work")
-      shell-file-name "~/.nix-profile/bin/fish"
+      eshell-hist-ignoredups 'erase eshell-history-size 20000
+      eshell-save-history-on-exit t eshell-glob-case-insensitive t
       grep-command "rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)"
-      grep-command-position 27
-      ido-enable-flex-matching t ido-everywhere t
+      grep-command-position 27 ido-enable-flex-matching t ido-everywhere t
       ido-ignore-buffers
       '("\\` " "\\*Messages\\*" "\\*scratch\\*" "\\*Completions\\*" "\\*Native-compile-Log\\*"
         "\\*Async-native-compile-log\\*" "\\*EGLOT.*events\\*" "\\*Flymake.*\\*"
@@ -50,11 +50,15 @@
       ido-create-new-buffer 'always ido-use-virtual-buffers 'auto
       ido-show-dot-for-dired t ido-max-prospects 6
       ido-auto-merge-work-directories-length -1)
+(unless (eq system-type 'android) (setq shell-file-name "~/.nix-profile/bin/fish"))
+(put 'narrow-to-region 'disabled nil)
 (setcdr (assq 'continuation fringe-indicator-alist) '(nil nil))
 (set-display-table-slot standard-display-table 'vertical-border (make-glyph-code ?│))
 (blink-cursor-mode -1) (tooltip-mode -1) (menu-bar-mode -1) (scroll-bar-mode -1) (tool-bar-mode -1)
 (kill-ring-deindent-mode 1) (save-place-mode 1) (global-visual-line-mode 1) (repeat-mode 1)
-(add-hook 'emacs-startup-hook (lambda () (ido-mode 'both) (which-key-mode 1) (global-auto-revert-mode 1) (viper-mode)))
+(add-hook 'emacs-startup-hook
+          (lambda () (ido-mode 'both) (which-key-mode 1) (global-auto-revert-mode 1)
+            (savehist-mode 1) (viper-mode)))
 ;;; Keys ---
 (setq viper-mode t viper-expert-level 5
       viper-inhibit-startup-message t viper-want-ctl-h-help t
@@ -95,7 +99,7 @@
 (keymap-set vc-prefix-map "e" #'vc-ediff)
 ;;; Visuals ---
 (dolist (face '(default fixed-pitch variable-pitch))
-  (set-face-attribute face nil :font "Input Mono Narrow" :height 140))
+  (set-face-attribute face nil :font "Input Mono Narrow" :height (if (eq system-type 'android) 150 140)))
 (dolist (face '(vertical-border font-lock-comment-face))
   (set-face-attribute face nil :foreground 'unspecified :inherit '(shadow default)))
 (set-face-attribute 'fringe nil :background 'unspecified)
@@ -105,7 +109,7 @@
                     :overline (face-foreground 'shadow))))
   (apply #'set-face-attribute 'mode-line nil
          :inherit 'default common)
-  (apply #'set-face-attribute 'mode-line-inactive nil
+  (apply #'set-face-attribute 'mode-line-inactive nilq 
          :inherit 'shadow common))
 (set-face-attribute 'default nil :foreground "#222323" :background "#eae8e1")
 (add-hook 'post-command-hook
@@ -167,12 +171,18 @@
   (keymap-set completion-preview-active-mode-map
               "C-r" #'completion-preview-prev-candidate))
 (with-eval-after-load 'eshell
+  (defun eshell-insert-history () (interactive) ; src: habrams
+         (let ((cmd (completing-read "Eshell history: "
+                                     (delete-dups (ring-elements eshell-history-ring)))))
+           (when cmd (kill-line 0) (insert cmd))))
   (add-hook 'eshell-mode-hook #'completion-preview-mode)
   (when (not (or (getenv "GCTL_SESSION_ID") (getenv "TERM_SESSION_ID")))
     (setenv "GCTL_SESSION_ID" (string-trim (shell-command-to-string "uuidgen"))))
   (setenv "GOPATH" (concat (getenv "HOME") "/go"))
   (eshell/addpath (concat (getenv "GOPATH") "/bin")))
-
+(add-hook #'eshell-mode-hook 
+          (lambda nil (define-key eshell-hist-mode-map (kbd "C-r") #'eshell-insert-history)))
+;;; Miscellaneous ---
 (with-eval-after-load 'eww
   (add-hook 'eww-after-render-hook #'viper-mode)
   (setq eww-header-line-format nil)
@@ -181,10 +191,11 @@
   (define-key doc-view-mode-map (kbd "SPC") ctl-x-map)
   (define-key doc-view-mode-map (kbd "j") #'doc-view-scroll-up-or-next-page)
   (define-key doc-view-mode-map (kbd "k") #'doc-view-scroll-down-or-previous-page))
-;;; Completion ---
+
 (setopt minibuffer-completion-auto-choose t completion-ignore-case t
         completions-format 'one-column completions-header-format nil
         completion-show-help nil completions-max-height 13
+        completion-preview-minimum-symbol-length 2
         completions-sort 'historical completions-detailed t
         completion-eager-update t completion-auto-help 'visible
         completion-styles '(partial-completion basic flex))
@@ -194,7 +205,6 @@
              '("\\*\\(Completions\\|xref\\|Occur.*\\|eldoc\\|vc.*-log\\|compilation.*\\|Flymake.*\\)\\*"
                (display-buffer-in-side-window) (side . bottom) (window-height . 0.30)
                (window-parameters . ((mode-line-format . none)))))
-
 ;;; Sensible changes ---
 (defun prot-quit (&optional interactive)
   "A sensible `keyboard-quit'."

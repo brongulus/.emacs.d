@@ -51,3 +51,17 @@
           native-comp-async-report-warnings-errors 'silent
           package-native-compile t)
   (setq features (delq 'native-compile features)))
+(when (eq system-type 'android)
+  ;; Install termux first, "pkg update && pkg upgrade"
+  ;; Install git, fish: "pkg install git fish"
+  ;; Setup git global user and email
+  ;; ssh-keygen -t ed25519 -C "email"
+  ;; cat /data/data/com.termux/files/home/.ssh/id_ed25519.pub to GH
+  ;; Install emacs, clone .emacs.d repo
+  ;; git remote set-url --push origin git@github.com:brongulus/.emacs.d.git
+  ;; For doc-view: "pkg install ghostscript mupdf-tools"
+  (let ((termuxpath "/data/data/com.termux/files/usr/"))
+    (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin"))
+  (push (concat termuxpath "bin") exec-path))
+  (unless (file-directory-p "~/fonts")
+    (copy-directory "~/.emacs.d/fonts/" "~/fonts")))
