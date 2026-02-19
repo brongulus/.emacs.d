@@ -123,9 +123,15 @@
 (dolist (face '(minibuffer-prompt font-lock-keyword-face
                                   font-lock-function-name-face font-lock-type-face))
   (set-face-attribute face nil :foreground 'unspecified :weight 'bold))
-(custom-set-faces '(eglot-highlight-symbol-face
-                    ((((background dark))  :background "#2a2c2c")
-                     (((background light)) :background "#d9d7d0"))))
+(custom-set-faces '(eglot-highlight-symbol-face ((((background dark))  :background "#2a2c2c")
+                                                 (((background light)) :background "#d9d7d0"))))
+(custom-set-faces '(region ((((background light)) :background "lightgoldenrod2" :extend nil)
+                            (((background dark))  :background "#6b6236" :extend nil))))
+(add-hook 'prog-mode-hook
+          (lambda ()
+            (font-lock-add-keywords nil '(("\\<\\(FIXME\\|HACK\\|TODO\\|WIP\\|BUG\\|DONE\\)"
+                                           1 'highlight t)
+                                          (";" . 'shadow)))))
 (defvar tab-bar--tab-keymaps
   (let ((v (make-vector 20 nil)))
     (dotimes (i 20 v)
@@ -233,7 +239,7 @@
        (walk-windows
         (lambda (win)
           (with-current-buffer (window-buffer win)
-            (when (or (derived-mode-p '(prog-mode text-mode)) (eq major-mode 'eww-mode))
+            (when (or (derived-mode-p '(prog-mode text-mode)) (member major-mode '(Info-mode eww-mode)))
               (let* ((special-modes (member major-mode '(org-mode markdown-ts-mode)))
                      (margin (max 0 (/ (- (window-total-width win) fill-column) 2)))
                      (lmargin (if special-modes (max 0 (- margin 10)) margin)))
