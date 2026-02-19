@@ -50,7 +50,8 @@
       ido-create-new-buffer 'always ido-use-virtual-buffers 'auto
       ido-show-dot-for-dired t ido-max-prospects 6
       ido-auto-merge-work-directories-length -1)
-(unless (eq system-type 'android) (setq shell-file-name "~/.nix-profile/bin/fish"))
+(if (not (eq system-type 'android)) (setq shell-file-name "~/.nix-profile/bin/fish")
+  (setq-default fill-column 120 line-spacing 7))
 (put 'narrow-to-region 'disabled nil)
 (setcdr (assq 'continuation fringe-indicator-alist) '(nil nil))
 (set-display-table-slot standard-display-table 'vertical-border (make-glyph-code ?│))
@@ -87,7 +88,7 @@
                    ("C-." . my-scroll-other-up) ("C-x x x" . flymake-show-project-diagnostics)))
   (keymap-global-set (car binding) (cdr binding)))
 (keymap-global-set "C-x m" esc-map)
-(keymap-global-set "<f6>" #'(lambda nil (interactive) (invert-face 'default)))
+(keymap-global-set "C-x 6" #'(lambda nil (interactive) (invert-face 'default)))
 (keymap-global-set "j" #'(lambda nil (interactive)
                            (let* ((event (read-event nil nil 0.4)))
                              (if event (if (and (characterp event) (= event ?k))
@@ -99,12 +100,12 @@
 (keymap-set vc-prefix-map "e" #'vc-ediff)
 ;;; Visuals ---
 (dolist (face '(default fixed-pitch variable-pitch))
-  (set-face-attribute face nil :font "Input Mono Narrow" :height (if (eq system-type 'android) 150 140)))
+  (set-face-attribute face nil :font "Input Mono Narrow" :height (if (eq system-type 'android) 160 140)))
 (dolist (face '(vertical-border font-lock-comment-face))
   (set-face-attribute face nil :foreground 'unspecified :inherit '(shadow default)))
 (set-face-attribute 'fringe nil :background 'unspecified)
 (let ((common (list :background 'unspecified :foreground 'unspecified
-                    :inverse-video (not (display-graphic-p)) :height 140
+                    :inverse-video (not (display-graphic-p))
                     :box '(:line-width 1 :style flat-button)
                     :overline (face-foreground 'shadow))))
   (apply #'set-face-attribute 'mode-line nil :inherit 'default common)
