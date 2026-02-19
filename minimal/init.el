@@ -3,14 +3,15 @@
 (set-display-table-slot standard-display-table 'vertical-border (make-glyph-code ?│))
 (blink-cursor-mode -1) (tooltip-mode -1) (menu-bar-mode -1) (scroll-bar-mode -1) (tool-bar-mode -1)
 (which-key-mode 1) (global-auto-revert-mode 1) (kill-ring-deindent-mode 1) (save-place-mode 1)
-(global-visual-line-mode 1) (global-goto-address-mode 1)
+(global-visual-line-mode 1) (global-goto-address-mode 1) (repeat-mode 1)
 ;;; Keys ---
 (setq viper-mode t viper-expert-level 5
       viper-inhibit-startup-message t
       viper-want-ctl-h-help t
       viper-want-emacs-keys-in-insert t
       viper-want-emacs-keys-in-vi t
-      viper-insert-state-cursor-color "coral3")
+      viper-ex-style-editing nil
+      viper-insert-state-cursor-color nil)
 (add-hook 'emacs-startup-hook #'viper-mode)
 (with-eval-after-load 'viper
   (dolist (pair '((viper-exec-Yank . kill-ring-save) (viper-exec-Delete . kill-region)))
@@ -21,11 +22,10 @@
   (dolist (key '("\C-b" "\C-d" "\C-e" "\C-f" "\C-u" "\C-y" "\C-v"))
     (define-key viper-vi-basic-map key nil))
   (define-key viper-vi-basic-map (kbd "SPC") ctl-x-map)
-  (dolist (binding
-           '(("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all)
-             ("<" . beginning-of-buffer) (">" . end-of-buffer) ("o" . other-window)
-             ("v" . set-mark-command) ("s" . isearch-forward-regexp) ("u" . undo-only)
-             ("Z" . undo-redo) ("," . my-scroll-other-down) ("." . my-scroll-other-up)))
+  (dolist (binding '(("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all)
+                     ("<" . beginning-of-buffer) (">" . end-of-buffer) ("o" . other-window)
+                     ("v" . set-mark-command) ("s" . isearch-forward-regexp) ("u" . undo-only)
+                     ("Z" . undo-redo) ("," . my-scroll-other-down) ("." . my-scroll-other-up)))
     (keymap-set viper-vi-basic-map (car binding) (cdr binding))))
 (dolist (binding
          '(("<escape>" . keyboard-escape-quit)
@@ -34,23 +34,22 @@
            ("C-x ;" . comment-line) ("C-x x c" . save-buffers-kill-emacs)
            ("C-x x f" . find-file) ("C-x x s" . save-buffer)
            ("C-x x e" . eval-defun) ("C-x x z" . restart-emacs)
-           ("C-x x x" . flymake-show-buffer-diagnostics)))
+           ("C-x x x" . flymake-show-project-diagnostics)))
   (keymap-global-set (car binding) (cdr binding)))
 (keymap-global-set "C-x m" esc-map)
 (keymap-global-set "<f6>" #'(lambda nil (interactive) (invert-face 'default)))
 (keymap-global-set "j" #'(lambda nil (interactive)
                            (let* ((event (read-event nil nil 0.4)))
-                             (if event ;; timeout met
-                                 (if (and (characterp event) (= event ?k))
-                                     (viper-change-state-to-vi)
-                                   (insert ?j) (push event unread-command-events))
+                             (if event (if (and (characterp event) (= event ?k))
+                                           (viper-change-state-to-vi)
+                                         (insert ?j) (push event unread-command-events))
                                (insert ?j)))))
 ;;; Visuals ---
 (dolist (face '(default fixed-pitch variable-pitch))
   (set-face-attribute face nil :font "Input Mono Narrow" :height 140))
 (add-hook 'post-command-hook
-          (lambda () (unless (eq (buffer-modified-p) (bound-and-true-p my/cursor--modified))
-                       (set-cursor-color (if (setq my/cursor--modified (buffer-modified-p)) "coral3" "#00c2ff")))))
+          (lambda () (unless (eq (buffer-modified-p) (bound-and-true-p curs-mod))
+                       (set-cursor-color (if (setq curs-mod (buffer-modified-p)) "coral3" "#00c2ff")))))
 (dolist (face '(vertical-border font-lock-comment-face))
   (set-face-attribute face nil :foreground 'unspecified :inherit '(shadow default)))
 (set-face-attribute 'fringe nil :background 'unspecified)
@@ -92,9 +91,14 @@
                                                   'local-map (aref tab-bar--tab-keymaps i)))
                           (number-sequence 0 (1- (length (tab-bar-tabs)))) " ")
                          " ")))))
+(let ((cell (memq 'mode-line-modes mode-line-format)))
+  (setcar cell 'mode-line-format-right-align) (setcdr cell (cons 'mode-line-modes (cdr cell))))
 ;;; Programming stuff ---
 (add-hook 'prog-mode-hook #'electric-pair-local-mode)
 (add-hook 'prog-mode-hook #'which-function-mode)
+(with-eval-after-load 'which-func
+  (setq which-func-format (list (cadr which-func-format)) which-func-unknown "")
+  (set-face-attribute 'which-func nil :foreground 'unspecified :weight 'bold))
 (add-hook 'prog-mode-hook #'hs-minor-mode)
 (dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook c++-mode-hook))
   (add-hook mode #'(lambda nil (run-with-timer 0.3 nil #'eglot-ensure))))
@@ -125,7 +129,7 @@
               frame-resize-pixelwise t
               inhibit-startup-screen t
               make-backup-files nil
-              mode-line-collapse-minor-modes t
+              mode-line-collapse-minor-modes '(not flymake-mode)
               mode-line-end-spaces nil
               mode-line-compact t
               copy-region-blink-delay 0
@@ -163,9 +167,9 @@
 	  eglot-autoshutdown t
 	  eglot-ignored-server-capabilities '(:inlayHintProvider)
 	  jsonrpc-event-hook nil
+      flymake-mode-line-title nil
 	  require-final-newline t
 	  resize-mini-windows t
-      ;; show-paren-when-point-in-periphery t
       maximum-scroll-margin 0.5
 	  scroll-margin 9999
       scroll-conservatively 101
@@ -181,6 +185,10 @@
   (add-hook 'eww-after-render-hook #'viper-mode)
   (setq eww-header-line-format nil)
   (setq eww-auto-rename-buffer 'title))
+(with-eval-after-load 'doc-view
+  (define-key doc-view-mode-map (kbd "SPC") ctl-x-map)
+  (define-key doc-view-mode-map (kbd "j") #'doc-view-scroll-up-or-next-page)
+  (define-key doc-view-mode-map (kbd "k") #'doc-view-scroll-down-or-previous-page))
 ;;; Completion ---
 (setopt minibuffer-completion-auto-choose t
         completion-ignore-case t
@@ -232,10 +240,7 @@
                   (end (save-excursion (goto-char open) (forward-sexp) (point)))
                   ((> end open)))
         (list open (1+ open) (1- end) end))))
-(add-hook 'prog-mode-hook
-          (lambda () (when (treesit-parser-list)
-                       (setq-local show-paren-data-function #'my/show-paren-data))))
-(setq show-paren-data-function #'my/show-paren-data)
+(add-hook 'prog-mode-hook (lambda () (setq-local show-paren-data-function #'my/show-paren-data)))
 
 (setq-default fill-column 140 text-scale-mode-step 1.3)
 (defun zen-buffer-apply-margins () "Apply zen margins to all windows."
