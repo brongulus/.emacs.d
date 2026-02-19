@@ -30,6 +30,7 @@
       initial-major-mode 'fundamental-mode
       initial-scratch-message nil
       package-enable-at-startup nil
+      after-init-hook nil
       ns-pop-up-frames nil
       inhibit-compacting-font-caches t
       frame-inhibit-implied-resize t
@@ -42,3 +43,11 @@
                             (horizontal-scroll-bar . nil)))
 (fset 'display-startup-echo-area-message 'ignore)
 (push '(fullscreen . maximized) initial-frame-alist)
+(if (and (featurep 'native-compile) (fboundp 'native-comp-available-p) (native-comp-available-p))
+    (setq native-comp-jit-compilation t
+          native-comp-jit-compilation-deny-list
+          '("/emacs-lisp/cl-loaddefs\\.el" "org-loaddefs\\.el")
+          native-comp-enable-subr-trampolines t
+          native-comp-async-report-warnings-errors 'silent
+          package-native-compile t)
+  (setq features (delq 'native-compile features)))
