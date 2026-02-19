@@ -107,10 +107,8 @@
                     :inverse-video (not (display-graphic-p)) :height 140
                     :box '(:line-width 1 :style flat-button)
                     :overline (face-foreground 'shadow))))
-  (apply #'set-face-attribute 'mode-line nil
-         :inherit 'default common)
-  (apply #'set-face-attribute 'mode-line-inactive nilq 
-         :inherit 'shadow common))
+  (apply #'set-face-attribute 'mode-line nil :inherit 'default common)
+  (apply #'set-face-attribute 'mode-line-inactive nil :inherit 'shadow common))
 (set-face-attribute 'default nil :foreground "#222323" :background "#eae8e1")
 (add-hook 'post-command-hook
           (lambda () (unless (eq (buffer-modified-p) (bound-and-true-p curs-mod))
@@ -202,7 +200,7 @@
 (define-key minibuffer-local-completion-map [remap previous-line] #'minibuffer-previous-completion)
 (define-key minibuffer-local-completion-map [remap next-line]     #'minibuffer-next-completion)
 (add-to-list 'display-buffer-alist
-             '("\\*\\(Completions\\|xref\\|Occur.*\\|eldoc\\|vc.*-log\\|compilation.*\\|Flymake.*\\)\\*"
+             '("\\*\\(Completions\\|xref\\|Occur.*\\|eldoc\\|vc.*\\|compilation.*\\|Flymake.*\\)\\*"
                (display-buffer-in-side-window) (side . bottom) (window-height . 0.30)
                (window-parameters . ((mode-line-format . none)))))
 ;;; Sensible changes ---
@@ -246,14 +244,16 @@
         nil t))
 (add-hook 'window-configuration-change-hook #'zen-buffer-apply-margins)
 
-(defun epop nil (interactive)
-       (defvar eshell-buffer-name)
-       (let ((display-buffer-alist `(("\\*eshell-pop\\*"
-                                      (display-buffer-in-side-window)
-                                      (side . bottom) (slot . -2) (window-height . 0.30))))
-             (eshell-buffer-name "*eshell-pop*") (inhibit-message t))
-         (eshell))
-       (setq-local mode-line-format nil))
+(defun epop nil (interactive) (defvar eshell-buffer-name)
+       (let* ((display-buffer-alist `(("\\*eshell-pop.*\\*"
+                                       (display-buffer-in-side-window)
+                                       (side . bottom) (slot . -2) (window-height . 0.30))))
+              (dir (if-let* ((proj (project-current)))
+                       (file-name-nondirectory (directory-file-name (project-root proj)))
+                     default-directory))
+              (eshell-buffer-name (concat "*eshell-pop:*" dir))
+              (inhibit-message t) (mode-line-format nil))
+         (eshell)))
 (defun my-scroll-other-down nil (interactive)
        (let ((mode (with-current-buffer (window-buffer (other-window-for-scrolling)) major-mode)))
          (with-selected-window (other-window-for-scrolling)
