@@ -48,8 +48,8 @@
         "\\*Async-native-compile-log\\*" "\\*EGLOT.*events\\*" "\\*Flymake.*\\*"
         "\\*Buffer List\\*" "\\*Help\\*" "\\*Minibuf-.*\\*" "\\*vc-.*\\*")
       ido-create-new-buffer 'always ido-use-virtual-buffers 'auto
-      ido-show-dot-for-dired t ido-max-prospects 6
-      ido-auto-merge-work-directories-length -1)
+      ido-show-dot-for-dired t ido-max-prospects 6 ido-auto-merge-work-directories-length -1
+      Info-default-directory-list '("~/.emacs.d/info") Info-use-header-line nil)
 (if (not (eq system-type 'android)) (setq shell-file-name "~/.nix-profile/bin/fish")
   (setq-default fill-column 120 line-spacing 7))
 (put 'narrow-to-region 'disabled nil)
@@ -76,7 +76,8 @@
                      ("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all)
                      ("<" . beginning-of-buffer) (">" . end-of-buffer) ("o" . other-window)
                      ("v" . set-mark-command) ("s" . isearch-forward-regexp) ("u" . undo-only)
-                     ("Z" . undo-redo) ("," . my-scroll-other-down) ("." . my-scroll-other-up)))
+                     ("Z" . undo-redo) ("," . my-scroll-other-down) ("." . my-scroll-other-up)
+                     ("g /" . xref-find-definitions-other-window) ("q" . quit-window)))
     (keymap-set viper-vi-basic-map (car binding) (cdr binding))))
 (dolist (binding '(("C-x c c" . compile) ("C-x c r" . recompile) ("C-h '" . describe-face)
                    ("C-x C-m" . execute-extended-command) ("C-x k" . kill-current-buffer)
@@ -95,8 +96,7 @@
                                            (viper-change-state-to-vi)
                                          (insert ?j) (push event unread-command-events))
                                (insert ?j)))))
-(keymap-set vc-prefix-map "f"
-            (lambda () (interactive) (vc-git--pushpull "push" nil '("--force-with-lease"))))
+(keymap-set vc-prefix-map "f" (lambda () (interactive) (vc-git--pushpull "push" nil '("--force-with-lease"))))
 (keymap-set vc-prefix-map "e" #'vc-ediff)
 ;;; Visuals ---
 (dolist (face '(default fixed-pitch variable-pitch))
@@ -125,20 +125,19 @@
   (set-face-attribute face nil :foreground 'unspecified :weight 'bold))
 (custom-set-faces '(eglot-highlight-symbol-face ((((background dark))  :background "#2a2c2c")
                                                  (((background light)) :background "#d9d7d0"))))
+(custom-set-faces '(link ((((background light)) :foreground "RoyalBlue3" :underline t)
+                          (((background dark))  :foreground "#80A0C2" :underline t))))
 (custom-set-faces '(region ((((background light)) :background "lightgoldenrod2" :extend nil)
                             (((background dark))  :background "#6b6236" :extend nil))))
 (add-hook 'prog-mode-hook
           (lambda ()
-            (font-lock-add-keywords nil '(("\\<\\(FIXME\\|HACK\\|TODO\\|WIP\\|BUG\\|DONE\\)"
-                                           1 'highlight t)
+            (font-lock-add-keywords nil '(("\\<\\(FIXME\\|HACK\\|TODO\\|WIP\\|BUG\\|DONE\\)" 1 'highlight t)
                                           (";" . 'shadow)))))
 (defvar tab-bar--tab-keymaps
   (let ((v (make-vector 20 nil)))
-    (dotimes (i 20 v)
-      (let ((m (make-sparse-keymap)))
-        (define-key m [mode-line mouse-1]
-                    `(lambda () (interactive) (tab-bar-select-tab ,(1+ i))))
-        (aset v i m)))))
+    (dotimes (i 20 v) (let ((m (make-sparse-keymap)))
+                        (define-key m [mode-line mouse-1] `(lambda () (interactive) (tab-bar-select-tab ,(1+ i))))
+                        (aset v i m)))))
 (setq mode-line-front-space
       '(:eval (when (> (length (tab-bar-tabs)) 1)
                 (propertize
@@ -150,20 +149,20 @@
                           (number-sequence 0 (1- (length (tab-bar-tabs)))) " ")
                          " ")))))
 (setq-default mode-line-format (remove '(project-mode-line project-mode-line-format) mode-line-format))
-(setq mode-line-misc-info nil)
 (with-eval-after-load 'eglot
   (setq mode-line-misc-info
-        '(:eval (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p)) eglot-mode-line-progress))))
+        '((which-function-mode (which-func-mode (which-func--use-mode-line ("" which-func-format " "))))
+          (:eval (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p)) eglot-mode-line-progress)))))
 (with-eval-after-load 'viper
   (let ((cell (memq 'mode-line-modes mode-line-format)))
     (setcar cell 'viper-mode-string) (setcdr cell (cons 'mode-line-format-right-align (cons 'mode-line-modes (cdr cell))))))
 ;;; Programming stuff ---
-(dolist (fn '(electric-pair-local-mode hs-minor-mode display-line-numbers-mode
-                                       completion-preview-mode goto-address-mode))
+(dolist (fn '(hs-minor-mode which-function-mode display-line-numbers-mode electric-pair-local-mode
+                            completion-preview-mode goto-address-mode))
   (add-hook 'prog-mode-hook fn))
 (add-hook 'text-mode-hook #'goto-address-mode)
 (with-eval-after-load 'which-func ; disabled because this causes scroll slowdown
-  (setq which-func-format (list (cadr which-func-format)) which-func-unknown "")
+  (setq which-func-format (list (cadr which-func-format)) which-func-unknown "" which-func-update-delay 1)
   (set-face-attribute 'which-func nil :foreground 'unspecified :weight 'bold))
 (dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook c++-mode-hook))
   (add-hook mode #'(lambda nil (run-with-timer 0.1 nil #'eglot-ensure))))
@@ -196,7 +195,6 @@
   (define-key doc-view-mode-map (kbd "SPC") ctl-x-map)
   (define-key doc-view-mode-map (kbd "j") #'doc-view-scroll-up-or-next-page)
   (define-key doc-view-mode-map (kbd "k") #'doc-view-scroll-down-or-previous-page))
-
 (setopt minibuffer-completion-auto-choose t completion-ignore-case t
         completions-format 'one-column completions-header-format nil
         completion-show-help nil completions-max-height 13
@@ -211,20 +209,19 @@
                (display-buffer-in-side-window) (side . bottom) (window-height . 0.30)
                (window-parameters . ((mode-line-format . none)))))
 ;;; Sensible changes ---
-(defun prot-quit (&optional interactive)
-  "A sensible `keyboard-quit'."
-  (interactive (list 'interactive))
-  (let ((inhibit-quit t))
-    (cond ((minibuffer-window-active-p (minibuffer-window))
-           (when interactive (setq this-command 'abort-recursive-edit))
-           (abort-recursive-edit))
-          ((or defining-kbd-macro executing-kbd-macro) nil)
-          ((derived-mode-p 'completion-list-mode) (delete-completion-window))
-          ((unwind-protect (keyboard-quit)
-             (when interactive (setq this-command 'keyboard-quit)))))))
+(defun prot-quit (&optional interactive) "A sensible `keyboard-quit'."
+       (interactive (list 'interactive))
+       (let ((inhibit-quit t))
+         (cond ((minibuffer-window-active-p (minibuffer-window))
+                (when interactive (setq this-command 'abort-recursive-edit))
+                (abort-recursive-edit))
+               ((or defining-kbd-macro executing-kbd-macro) nil)
+               ((derived-mode-p 'completion-list-mode) (delete-completion-window))
+               ((unwind-protect (keyboard-quit)
+                  (when interactive (setq this-command 'keyboard-quit)))))))
 (define-key (current-global-map) [remap keyboard-quit] #'prot-quit)
 
-(defun my/show-paren-data ()
+(defun my/show-paren-data nil
   (or (and (boundp 'treesit-show-paren-data) (treesit-show-paren-data))
       (when-let* ((open (cond ((eq (car (syntax-after (point))) 4) (point))
                               ((eq (car (syntax-after (1- (point)))) 5)
@@ -233,9 +230,9 @@
                   (end (save-excursion (goto-char open) (forward-sexp) (point)))
                   ((> end open)))
         (list open (1+ open) (1- end) end))))
-(add-hook 'prog-mode-hook (lambda () (setq-local show-paren-data-function #'my/show-paren-data)))
+(add-hook 'prog-mode-hook (lambda nil (setq-local show-paren-data-function #'my/show-paren-data)))
 
-(defun zen-buffer-apply-margins () "Apply zen margins to all windows."
+(defun zen-buffer-apply-margins nil "Apply zen margins to all windows."
        (walk-windows
         (lambda (win)
           (with-current-buffer (window-buffer win)
@@ -273,7 +270,7 @@
            (cond ((eq mode 'Info-mode) (Info-scroll-down))
                  ((eq mode 'doc-view-mode) (doc-view-scroll-down-or-previous-page 5))
                  (t (scroll-down-command 5))))))
-(defun mark-inner () (interactive)
+(defun mark-inner nil (interactive)
        (condition-case nil (if (nth 3 (syntax-ppss)) ; string or list
                                (let ((start (nth 8 (syntax-ppss))))
                                  (goto-char start) (set-mark (point)) (forward-sexp))
