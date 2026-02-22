@@ -27,7 +27,7 @@
 	  org-fontify-quote-and-verse-blocks t org-fontify-whole-heading-line t
 	  org-pretty-entities t org-src-fontify-natively t
 	  treesit-enabled-modes t treesit-font-lock-level 4 go-ts-mode-indent-offset 4
-	  isearch-lax-whitespace t isearch-lazy-count t
+	  isearch-regexp-lax-whitespace t isearch-lazy-count t lazy-highlight-initial-delay 0
 	  isearch-repeat-on-direction-change t isearch-wrap-pause 'no-ding
 	  search-whitespace-regexp ".*?" copy-region-blink-predicate 'always
 	  dired-kill-when-opening-new-dired-buffer t delete-by-moving-to-trash t
@@ -40,7 +40,6 @@
       ring-bell-function 'ignore tab-always-indent 'complete
       vc-allow-rewriting-published-history t vc-follow-symlinks t
 	  vc-git-diff-switches '("--patch-with-stat" "--histogram")
-	  vc-git-shortlog-switches '("--stat")
       project-vc-extra-root-markers '("Cargo.toml" "build.zig" "go.work")
       eshell-banner-message "\n" eshell-hist-ignoredups 'erase eshell-history-size 20000
       eshell-save-history-on-exit t eshell-glob-case-insensitive t
@@ -64,7 +63,7 @@
           (lambda () (ido-mode 'both) (which-key-mode 1) (global-auto-revert-mode 1)
             (delete-selection-mode 1) (savehist-mode 1) (viper-mode)))
 ;;; Keys ---
-(setq viper-mode t viper-expert-level 5
+(setq viper-mode t viper-expert-level 5 viper-ex-style-motion nil
       viper-inhibit-startup-message t viper-want-ctl-h-help t
       viper-want-emacs-keys-in-insert t viper-want-emacs-keys-in-vi t
       viper-ex-style-editing nil viper-insert-state-cursor-color nil)
@@ -77,6 +76,7 @@
                      ("g i" . eglot-find-implementation) ("g r" . xref-find-references)
                      ("C" . string-rectangle) ("p" . yank) ("+" . eglot-rename) ("g s" . imenu)
                      ("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all)
+                     ("[" . flymake-goto-prev-error) ("]" . flymake-goto-next-error)
                      ("<" . beginning-of-buffer) (">" . end-of-buffer) ("o" . other-window)
                      ("v" . set-mark-command) ("s" . isearch-forward-regexp) ("u" . undo-only)
                      ("Z" . undo-redo) ("," . my-scroll-other-down) ("." . my-scroll-other-up)
@@ -113,6 +113,7 @@
   (set-face-attribute face nil :foreground 'unspecified :inherit '(shadow default)))
 (set-face-attribute 'fringe nil :background 'unspecified)
 (set-face-attribute 'default nil :foreground "#222323" :background "#eae8e1")
+(custom-set-faces '(bold ((((background dark)) :foreground "white" :weight bold) (((background light)) :weight bold))))
 (add-hook 'post-command-hook
           (lambda () (unless (eq (buffer-modified-p) (bound-and-true-p curs-mod))
                        (set-cursor-color (if (setq curs-mod (buffer-modified-p)) "coral3" "#00c2ff")))))
@@ -122,10 +123,10 @@
     (custom-set-faces `(,face ((((background dark))  ,prop ,(if invert light dark))
                                (((background light)) ,prop ,(if invert dark light)))))))
 (set-face-attribute 'font-lock-variable-name-face nil :foreground 'unspecified)
-(dolist (face '(minibuffer-prompt font-lock-keyword-face
+(dolist (face '(minibuffer-prompt eshell-prompt font-lock-keyword-face
                                   font-lock-function-name-face font-lock-type-face))
-  (set-face-attribute face nil :foreground 'unspecified :weight 'bold))
-(custom-set-faces '(highlight ((((background dark))  :background "#2a2c2c")
+  (custom-set-faces `(,face ((t :foreground unspecified :inherit bold)))))
+(custom-set-faces '(highlight ((((background dark))  :background "#383838")
                                (((background light)) :background "#d9d7d0"))))
 (custom-set-faces '(eglot-highlight-symbol-face ((t :inherit highlight))))
 (custom-set-faces '(link ((((background light)) :foreground "RoyalBlue3" :underline t)
@@ -143,8 +144,7 @@
 (with-eval-after-load 'which-func ; disabled because this causes scroll slowdown
   (setq which-func-format (list (cadr which-func-format)) which-func-unknown "" which-func-update-delay 1)
   (set-face-attribute 'which-func nil :foreground 'unspecified :weight 'bold))
-(dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook c++-mode-hook))
-  (add-hook mode #'(lambda nil (run-with-timer 0.1 nil #'eglot-ensure))))
+(dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook c++-mode-hook)) (add-hook mode #'eglot-ensure))
 (dolist (mode-hook '(conf-mode-hook yaml-ts-mode-hook))
   (add-hook mode-hook #'display-line-numbers-mode)
   (add-hook mode-hook #'completion-preview-mode))
@@ -172,6 +172,7 @@
     (lambda (dom) (let ((start (point)))
                     (funcall default-renderer dom) (add-face-text-property start (point) face-spec)))))
 (with-eval-after-load 'shr
+  (set-face-attribute 'shr-mark nil :foreground 'unspecified :background 'unspecified)
   (setq shr-external-rendering-functions
         `((pre        . ,(my-shr-tag-render 'pre        '(:inherit highlight :extend t)))
           (blockquote . ,(my-shr-tag-render 'blockquote '(:slant italic)))
@@ -192,7 +193,7 @@
 (keymap-set minibuffer-local-completion-map "C-r" #'minibuffer-previous-completion)
 (keymap-set minibuffer-local-completion-map "C-s" #'minibuffer-next-completion)
 (add-to-list 'display-buffer-alist
-             '("\\*\\(Completions\\|xref\\|Occur.*\\|eldoc\\|vc.*\\|compilation.*\\|Flymake.*\\)\\*"
+             '("\\*\\(Completions\\|xref\\|Occur.*\\|eldoc\\|compilation.*\\|Flymake.*\\)\\*"
                (display-buffer-in-side-window) (side . bottom) (window-height . 0.30)
                (window-parameters . ((mode-line-format . none)))))
 ;;; Sensible changes ---
@@ -223,7 +224,7 @@
        (walk-windows
         (lambda (win)
           (with-current-buffer (window-buffer win)
-            (when (or (derived-mode-p '(prog-mode text-mode)) (member major-mode '(Info-mode eww-mode)))
+            (when (or (derived-mode-p '(prog-mode text-mode)) (member major-mode '(Info-mode diff-mode eww-mode)))
               (let* ((special-modes (member major-mode '(org-mode markdown-ts-mode)))
                      (margin (max 0 (/ (- (window-total-width win) fill-column) 2)))
                      (lmargin (if special-modes (max 0 (- margin 10)) margin)))
@@ -270,6 +271,30 @@
        (forward-line arg))
 (defun del-vi nil (interactive)
        (if (use-region-p) (call-interactively 'kill-region) (delete-char 1)))
+
+(define-advice ediff-vc-internal (:around (orig-fun &rest args) custom-quit)
+  (apply orig-fun args) (switch-to-buffer "*Ediff Control Panel*")
+  (define-key ediff-mode-map (kbd "q")
+              (lambda () (interactive)
+                (let ((rev (if (string-match-p "\\*vc-\\|\\*ediff-revision" (buffer-name ediff-buffer-A))
+                               ediff-buffer-B ediff-buffer-A))
+                      (a ediff-buffer-A) (b ediff-buffer-B))
+                  (ediff-really-quit nil) (kill-buffer rev) (switch-to-buffer (if (eq rev b) a b))))))
+(add-hook 'ediff-before-setup-hook #'tab-bar-new-tab)
+(add-hook 'ediff-quit-hook (lambda nil (tab-bar-close-tab) (kill-buffer ediff-registry-buffer)))
+(with-eval-after-load 'ediff (advice-add 'ediff-quit :around (lambda (&rest args) (ediff-really-quit args))))
+
+(with-eval-after-load 'org
+  (require 'org-tempo)
+  (with-eval-after-load 'org-src
+    (nconc org-src-lang-modes
+           '(("rust" . rust-ts) ("python" . python-ts) ("go" . go-ts) ("bash" . bash-ts)
+             ("typescript" . typescript-ts) ("javascript" . js-ts) ("json" . json-ts)
+             ("yaml" . yaml-ts) ("toml" . toml-ts) ("c" . c-ts) ("cpp" . c++-ts))))
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((C . t) (shell . t) (python . t) (emacs-lisp . t)))
+  (setq org-confirm-babel-evaluate nil))
 ;;; Nov.el alternative (claude)
 (defun epub--xml (path)
   (with-temp-buffer (insert-file-contents path) (libxml-parse-xml-region (point-min) (point-max))))
