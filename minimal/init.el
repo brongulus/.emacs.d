@@ -1,47 +1,45 @@
 ;;; init.el - 🦬 ---  -*- lexical-binding: t; -*
 ;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
-;;; Better defaults ---
 (if (display-graphic-p) (setq-default mode-line-format (list ""))
   (setq-default mode-line-format (make-string (window-width) ?─ t)))
 (if (display-graphic-p) (set-face-attribute 'mode-line nil :height 0.1)
   (dolist (fc '(mode-line mode-line-inactive)) (set-face-attribute fc nil :background 'unspecified)))
+;;; Better defaults ---
 (setq-default auto-save-file-name-transforms `((".*" "~/.emacs.d/backup/" t))
               backup-directory-alist `(("." . "~/.emacs.d/backup/"))
               create-lockfiles nil custom-file "/tmp/emacs-custom"
               warning-minimum-level :error cursor-in-non-selected-windows nil
-              frame-resize-pixelwise t make-backup-files nil
-              eldoc-echo-area-use-multiline-p nil
-              imenu-flatten t inhibit-startup-screen t
-              mode-line-collapse-minor-modes '(not flymake-mode)
+              frame-resize-pixelwise t show-paren-mode nil
+              eldoc-echo-area-use-multiline-p nil imenu-flatten t
+              inhibit-startup-screen t mode-line-collapse-minor-modes '(not flymake-mode)
               mode-line-end-spaces nil mode-line-compact t
               copy-region-blink-delay 0 display-line-numbers-width 4
               truncate-lines nil tab-bar-show nil sentence-end-double-space nil
               ediff-split-window-function 'split-window-horizontally
               ediff-window-setup-function 'ediff-setup-windows-plain
               use-short-answers t uniquify-buffer-name-style 'forward
-              tab-width 4 line-spacing 5 indent-tabs-mode nil
-              fill-column 140 text-scale-mode-step 1.3)
+              tab-width 4 line-spacing '(3 . 3) indent-tabs-mode nil
+              split-width-threshold 130 fill-column 140 text-scale-mode-step 1.3)
 (setq enable-recursive-minibuffers t savehist-additional-variables '(register-alist kill-ring)
 	  minibuffer-default-prompt-format " [%s]" minibuffer-visible-completions t
 	  read-buffer-completion-ignore-case t read-file-name-completion-ignore-case t
+      org-modules nil org-pretty-entities t org-src-fontify-natively t
 	  org-fontify-quote-and-verse-blocks t org-fontify-whole-heading-line t
-	  org-pretty-entities t org-src-fontify-natively t
 	  treesit-enabled-modes t treesit-font-lock-level 4 go-ts-mode-indent-offset 4
 	  isearch-regexp-lax-whitespace t isearch-lazy-count t lazy-highlight-initial-delay 0
 	  isearch-repeat-on-direction-change t isearch-wrap-pause 'no-ding
-	  search-whitespace-regexp ".*?" copy-region-blink-predicate 'always
-	  dired-kill-when-opening-new-dired-buffer t delete-by-moving-to-trash t
-      help-window-select t kill-region-dwim 'emacs-word
+	  search-whitespace-regexp ".*?" dired-kill-when-opening-new-dired-buffer t
+      delete-by-moving-to-trash t help-window-select t kill-region-dwim 'emacs-word
       eglot-ignored-server-capabilities '(:inlayHintProvider :workspace.didChangeWatchedFiles)
-	  eglot-autoshutdown t jsonrpc-event-hook nil flymake-mode-line-title nil
-	  require-final-newline t resize-mini-windows t
+      eglot-sync-connect 0 eglot-autoshutdown t jsonrpc-event-hook nil
+      flymake-mode-line-title nil require-final-newline t resize-mini-windows t
       maximum-scroll-margin 0.5 scroll-margin 9999 scroll-conservatively 101
-      scroll-preserve-screen-position t doc-view-continuous t
+      scroll-preserve-screen-position t fast-but-imprecise-scrolling t doc-view-continuous t
       ring-bell-function 'ignore tab-always-indent 'complete
       vc-allow-rewriting-published-history t vc-follow-symlinks t
 	  vc-git-diff-switches '("--patch-with-stat" "--histogram")
       project-vc-extra-root-markers '("Cargo.toml" "build.zig" "go.work")
-      eshell-banner-message "\n" eshell-hist-ignoredups 'erase eshell-history-size 20000
+      eshell-banner-message "" eshell-hist-ignoredups 'erase eshell-history-size 20000
       eshell-save-history-on-exit t eshell-glob-case-insensitive t
       grep-command "rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)"
       grep-command-position 27 ido-enable-flex-matching t ido-everywhere t
@@ -53,21 +51,22 @@
       ido-show-dot-for-dired t ido-max-prospects 6 ido-auto-merge-work-directories-length -1
       Info-default-directory-list '("~/.emacs.d/info") Info-use-header-line nil)
 (if (not (eq system-type 'android)) (setq shell-file-name "~/.nix-profile/bin/fish")
-  (setq-default fill-column 120 line-spacing 7))
+  (setq-default fill-column 120 line-spacing '(4 . 4)))
 (put 'narrow-to-region 'disabled nil)
 (setcdr (assq 'continuation fringe-indicator-alist) '(nil nil))
 (set-display-table-slot standard-display-table 'vertical-border (make-glyph-code ?│))
-(blink-cursor-mode -1) (tooltip-mode -1) (menu-bar-mode -1) (scroll-bar-mode -1) (tool-bar-mode -1)
-(kill-ring-deindent-mode 1) (save-place-mode 1) (global-visual-line-mode 1) (repeat-mode 1)
+(blink-cursor-mode -1) (tooltip-mode -1) (menu-bar-mode -1) (scroll-bar-mode -1)
+(tool-bar-mode -1) (kill-ring-deindent-mode 1) (global-visual-line-mode 1)
 (add-hook 'emacs-startup-hook
-          (lambda () (ido-mode 'both) (which-key-mode 1) (global-auto-revert-mode 1)
-            (delete-selection-mode 1) (savehist-mode 1) (viper-mode)))
+          (lambda () (ido-mode 'both) (which-key-mode 1) (global-auto-revert-mode 1) (viper-mode)
+            (repeat-mode 1) (save-place-mode 1) (delete-selection-mode 1) (savehist-mode 1)))
 ;;; Keys ---
 (setq viper-mode t viper-expert-level 5 viper-ex-style-motion nil
       viper-inhibit-startup-message t viper-want-ctl-h-help t
       viper-want-emacs-keys-in-insert t viper-want-emacs-keys-in-vi t
       viper-ex-style-editing nil viper-insert-state-cursor-color nil)
 (with-eval-after-load 'viper
+  (defun viper-set-insert-cursor-type nil (setq cursor-type '(bar . 3)))
   (dolist (key '("\C-b" "\C-d" "\C-e" "\C-f" "\C-u" "\C-y" "\C-v"))
     (define-key viper-vi-basic-map key nil))
   (define-key viper-vi-basic-map (kbd "SPC") ctl-x-map)
@@ -76,11 +75,12 @@
                      ("g i" . eglot-find-implementation) ("g r" . xref-find-references)
                      ("C" . string-rectangle) ("p" . yank) ("+" . eglot-rename) ("g s" . imenu)
                      ("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all)
-                     ("[" . flymake-goto-prev-error) ("]" . flymake-goto-next-error)
+                     ("[" . flymake-goto-prev-error) ("]" . flymake-goto-next-error) ("q" . quit-window)
                      ("<" . beginning-of-buffer) (">" . end-of-buffer) ("o" . other-window)
                      ("v" . set-mark-command) ("s" . isearch-forward-regexp) ("u" . undo-only)
                      ("Z" . undo-redo) ("," . my-scroll-other-down) ("." . my-scroll-other-up)
-                     ("g /" . xref-find-definitions-other-window) ("q" . quit-window)))
+                     ("g /" . xref-find-definitions-other-window) ("K" . eldoc-doc-buffer)
+                     ("*" . isearch-forward-symbol-at-point)))
     (keymap-set viper-vi-basic-map (car binding) (cdr binding))))
 (dolist (binding '(("C-x c c" . compile) ("C-x c r" . recompile) ("C-h '" . describe-face)
                    ("C-x C-m" . execute-extended-command) ("C-x k" . kill-current-buffer)
@@ -109,17 +109,17 @@
 ;;; Visuals ---
 (dolist (face '(default fixed-pitch variable-pitch))
   (set-face-attribute face nil :font "Input Mono Narrow" :height (if (eq system-type 'android) 160 140)))
-(dolist (face '(vertical-border font-lock-comment-face))
-  (set-face-attribute face nil :foreground 'unspecified :inherit '(shadow default)))
+(set-face-attribute 'vertical-border nil :foreground 'unspecified :inherit '(shadow default))
+(set-face-attribute 'font-lock-comment-face nil :foreground 'unspecified :inherit 'shadow)
 (set-face-attribute 'fringe nil :background 'unspecified)
-(set-face-attribute 'default nil :foreground "#222323" :background "#eae8e1")
-(custom-set-faces '(bold ((((background dark)) :foreground "white" :weight bold) (((background light)) :weight bold))))
+(set-face-attribute 'default nil :foreground "#1b1b1b" :background "#eae8e1")
+(custom-set-faces '(bold ((((background dark)) :foreground "#fafbfc" :weight bold) (((background light)) :weight bold))))
 (add-hook 'post-command-hook
           (lambda () (unless (eq (buffer-modified-p) (bound-and-true-p curs-mod))
                        (set-cursor-color (if (setq curs-mod (buffer-modified-p)) "coral3" "#00c2ff")))))
 (dolist (spec '((font-lock-string-face :foreground nil) (show-paren-match :background t)))
   (let* ((face (car spec)) (prop (cadr spec)) (invert (caddr spec))
-         (dark "#26BF96") (light "#0C9671"))
+         (dark "#49e9a6") (light "#0C9671"))
     (custom-set-faces `(,face ((((background dark))  ,prop ,(if invert light dark))
                                (((background light)) ,prop ,(if invert dark light)))))))
 (set-face-attribute 'font-lock-variable-name-face nil :foreground 'unspecified)
@@ -129,6 +129,7 @@
 (custom-set-faces '(highlight ((((background dark))  :background "#383838")
                                (((background light)) :background "#d9d7d0"))))
 (custom-set-faces '(eglot-highlight-symbol-face ((t :inherit highlight))))
+(custom-set-faces '(org-code ((t :inherit highlight))))
 (custom-set-faces '(link ((((background light)) :foreground "RoyalBlue3" :underline t)
                           (((background dark))  :foreground "#80A0C2" :underline t))))
 (set-face-attribute 'region nil :background "lightgoldenrod2" :foreground "#222323" :extend nil)
@@ -136,23 +137,23 @@
           (lambda ()
             (font-lock-add-keywords nil '(("\\<\\(FIXME\\|HACK\\|TODO\\|WIP\\|BUG\\|DONE\\)" 1 'match t)
                                           (";" . 'shadow)))))
+(add-hook 'eglot-managed-mode-hook
+          (lambda () (when (eq major-mode 'go-ts-mode)
+                       (setq eldoc-documentation-functions
+                             (remove #'eglot-signature-eldoc-function eldoc-documentation-functions)))))
 ;;; Programming stuff ---
-(dolist (fn '(hs-minor-mode which-function-mode display-line-numbers-mode electric-pair-local-mode
-                            completion-preview-mode goto-address-mode))
+(dolist (fn '(hs-minor-mode display-line-numbers-mode electric-pair-local-mode ;which-function-mode 
+                            show-paren-mode completion-preview-mode goto-address-mode))
   (add-hook 'prog-mode-hook fn))
 (add-hook 'text-mode-hook #'goto-address-mode)
 (with-eval-after-load 'which-func ; disabled because this causes scroll slowdown
   (setq which-func-format (list (cadr which-func-format)) which-func-unknown "" which-func-update-delay 1)
   (set-face-attribute 'which-func nil :foreground 'unspecified :weight 'bold))
 (dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook c++-mode-hook)) (add-hook mode #'eglot-ensure))
-(dolist (mode-hook '(conf-mode-hook yaml-ts-mode-hook))
-  (add-hook mode-hook #'display-line-numbers-mode)
-  (add-hook mode-hook #'completion-preview-mode))
+(dolist (mode-hook '(conf-mode-hook yaml-ts-mode-hook)) (add-hook mode-hook #'display-line-numbers-mode))
 (with-eval-after-load 'completion-preview
-  (keymap-set completion-preview-active-mode-map
-              "C-s" #'completion-preview-next-candidate)
-  (keymap-set completion-preview-active-mode-map
-              "C-r" #'completion-preview-prev-candidate))
+  (keymap-set completion-preview-active-mode-map "C-s" #'completion-preview-next-candidate)
+  (keymap-set completion-preview-active-mode-map "C-r" #'completion-preview-prev-candidate))
 (with-eval-after-load 'eshell
   (defun eshell-insert-history () (interactive) ; src: habrams
          (let ((cmd (completing-read "Eshell history: "
@@ -163,7 +164,7 @@
     (setenv "GCTL_SESSION_ID" (string-trim (shell-command-to-string "uuidgen"))))
   (setenv "GOPATH" (concat (getenv "HOME") "/go"))
   (eshell/addpath (concat (getenv "GOPATH") "/bin")))
-(add-hook #'eshell-mode-hook 
+(add-hook #'eshell-mode-hook
           (lambda nil (define-key eshell-hist-mode-map (kbd "C-r") #'eshell-insert-history)))
 ;;; Miscellaneous ---
 (setq shr-max-image-proportion 0.5)
@@ -181,21 +182,23 @@
           (h3         . ,(my-shr-tag-render 'h3         '(:inherit bold :height 1.2))))))
 (with-eval-after-load 'eww
   (add-hook 'eww-after-render-hook #'viper-mode)
-  (setq eww-header-line-format nil)
-  (setq eww-auto-rename-buffer 'title))
-(setopt minibuffer-completion-auto-choose t completion-ignore-case t
-        completions-format 'one-column completions-header-format nil
-        completion-show-help nil completions-max-height 11
-        completion-preview-minimum-symbol-length 2 completion-auto-select 'second-tab
-        completions-sort 'historical completions-detailed t
-        completion-eager-update t completion-auto-help 'visible
-        completion-styles '(initials partial-completion basic flex))
+  (setq eww-header-line-format nil eww-auto-rename-buffer 'title))
+(setq minibuffer-completion-auto-choose t completion-ignore-case t
+      completions-format 'one-column completions-header-format nil
+      completion-show-help nil completions-max-height 11
+      completion-preview-minimum-symbol-length 2 completion-auto-select 'second-tab
+      completions-sort 'historical completions-detailed t
+      completion-eager-update t completion-auto-help 'visible
+      completion-styles '(initials partial-completion basic flex))
 (keymap-set minibuffer-local-completion-map "C-r" #'minibuffer-previous-completion)
 (keymap-set minibuffer-local-completion-map "C-s" #'minibuffer-next-completion)
 (add-to-list 'display-buffer-alist
-             '("\\*\\(Completions\\|xref\\|Occur.*\\|eldoc\\|compilation.*\\|Flymake.*\\)\\*"
+             '("\\*\\(Completions\\|xref\\|Occur.*\\|compilation.*\\|Flymake.*\\)\\*"
                (display-buffer-in-side-window) (side . bottom) (window-height . 0.30)
                (window-parameters . ((mode-line-format . none)))))
+(add-to-list 'display-buffer-alist
+             '("\\*\\(Dictionary\\|eldoc\\)\\*" display-buffer-in-side-window (body-function . select-window)
+               (window-parameters . ((split-window . #'ignore))) (side . right) (slot . 1) (window-width . 82)))
 ;;; Sensible changes ---
 (defun prot-quit (&optional interactive) "A sensible `keyboard-quit'."
        (interactive (list 'interactive))
@@ -230,9 +233,9 @@
                      (lmargin (if special-modes (max 0 (- margin 10)) margin)))
                 (if (> (window-total-width win) 140)
                     (progn (visual-line-mode 1) (set-window-margins win lmargin margin)
-                           (when special-modes (text-scale-set 1) (setq-local line-spacing 0.6)))
+                           (when special-modes (text-scale-set 1) (setq-local line-spacing '(0.3 . 0.3))))
                   (progn (set-window-margins win nil)
-                         (when special-modes (text-scale-set 0) (setq-local line-spacing 5))))))))
+                         (when special-modes (text-scale-set 0) (setq-local line-spacing '(3 . 3)))))))))
         nil t))
 (add-hook 'window-configuration-change-hook #'zen-buffer-apply-margins)
 
@@ -325,7 +328,7 @@
          (setq-local revert-buffer-function #'ignore write-contents-functions '(ignore))
          (add-hook 'after-change-functions (lambda (&rest _) (set-buffer-modified-p nil) (delete-directory dir t)) nil t)))
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . epub-open))
-;;; Archive (trying no mode-line)
+;;; Mode-line
 ;; (let ((common (list :background 'unspecified :foreground 'unspecified
 ;;                     :inverse-video (not (display-graphic-p))
 ;;                     :height (if (eq system-type 'android) 160 140)

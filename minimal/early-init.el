@@ -9,8 +9,7 @@
               (run-at-time
                2 nil
                (lambda nil            
-                 (setq gc-cons-threshold (* 32 1024 1024)
-                       gc-cons-percentage 0.1
+                 (setq gc-cons-threshold (* 64 1024 1024) gc-cons-percentage 0.1
                        file-name-handler-alist my/saved-file-name-handler-alist))))
           105)
 (setq inhibit-redisplay t)
@@ -47,7 +46,7 @@
     (setq native-comp-jit-compilation t
           native-comp-jit-compilation-deny-list
           '("/emacs-lisp/cl-loaddefs\\.el" "org-loaddefs\\.el")
-          native-comp-enable-subr-trampolines t
+          native-comp-enable-subr-trampolines nil
           native-comp-async-report-warnings-errors 'silent
           package-native-compile t)
   (setq features (delq 'native-compile features)))
@@ -62,6 +61,6 @@
   ;; For doc-view: "pkg install ghostscript mupdf-tools"
   (let ((termuxpath "/data/data/com.termux/files/usr/"))
     (setenv "PATH" (concat (getenv "PATH") ":" termuxpath "bin"))
-  (push (concat termuxpath "bin") exec-path))
+    (push (concat termuxpath "bin") exec-path))
   (unless (file-directory-p "~/fonts")
     (copy-directory "~/.emacs.d/fonts/" "~/fonts")))
