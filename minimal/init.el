@@ -11,8 +11,7 @@
               warning-minimum-level :error cursor-in-non-selected-windows nil
               frame-resize-pixelwise t show-paren-mode nil
               eldoc-echo-area-use-multiline-p nil imenu-flatten t
-              inhibit-startup-screen t mode-line-collapse-minor-modes '(not flymake-mode)
-              mode-line-end-spaces nil mode-line-compact t display-line-numbers-width 4
+              inhibit-startup-screen t display-line-numbers-width 4
               display-line-numbers-widen t truncate-lines nil tab-bar-show nil
               sentence-end-double-space nil ediff-split-window-function 'split-window-horizontally
               ediff-window-setup-function 'ediff-setup-windows-plain use-short-answers t
@@ -31,11 +30,10 @@
       delete-by-moving-to-trash t help-window-select t kill-region-dwim 'emacs-word
       eglot-ignored-server-capabilities '(:inlayHintProvider :workspace.didChangeWatchedFiles)
       eglot-sync-connect 0 eglot-autoshutdown t jsonrpc-event-hook nil
-      flymake-mode-line-title nil require-final-newline t resize-mini-windows t
       maximum-scroll-margin 0.5 scroll-margin 9999 scroll-conservatively 101
       scroll-preserve-screen-position t fast-but-imprecise-scrolling t doc-view-continuous t
-      ring-bell-function 'ignore tab-always-indent 'complete
-      vc-allow-rewriting-published-history t vc-follow-symlinks t
+      require-final-newline t resize-mini-windows t ring-bell-function 'ignore tab-always-indent 'complete
+      diff-font-lock-syntax nil vc-allow-rewriting-published-history t vc-follow-symlinks t
       vc-display-status 'no-backend vc-git-diff-switches '("--patch-with-stat" "--histogram")
       project-vc-extra-root-markers '("Cargo.toml" "build.zig" "go.work")
       eshell-banner-message "" eshell-hist-ignoredups 'erase eshell-history-size 20000
@@ -58,8 +56,12 @@
 (tool-bar-mode -1) (line-number-mode -1) (kill-ring-deindent-mode 1)
 (global-visual-line-mode 1) (global-visual-wrap-prefix-mode 1)
 (add-hook 'emacs-startup-hook
-          (lambda () (ido-mode 'both) (global-auto-revert-mode 1) (viper-mode) ; (which-key-mode 1)
+          (lambda () (ido-mode 'both) (global-auto-revert-mode 1) (viper-mode) (fido-vertical-mode)
             (repeat-mode 1) (save-place-mode 1) (delete-selection-mode 1) (savehist-mode 1)))
+(defun disable-fido-vertical (orig-fun &rest args)
+  (icomplete-vertical-mode -1) (unwind-protect (apply orig-fun args) (fido-vertical-mode 1)))
+(dolist (fn '(find-file find-file-other-window read-extended-command project-switch-to-buffer))
+  (advice-add fn :around #'disable-fido-vertical))
 (add-hook 'text-mode-hook #'goto-address-mode)
 ;;; Keys ---
 (setq viper-mode t viper-expert-level 5 viper-ex-style-motion nil
@@ -86,6 +88,11 @@
                      ("g z" . pop-to-mark-command) ("g /" . xref-find-definitions-other-window)
                      ("K" . eldoc-doc-buffer) ("*" . isearch-forward-symbol-at-point)))
     (keymap-set viper-vi-basic-map (car binding) (cdr binding))))
+(unless (display-graphic-p)
+  (add-hook 'viper-vi-state-hook (lambda () (send-string-to-terminal "\e[2 q")))
+  (add-hook 'viper-insert-state-hook (lambda () (send-string-to-terminal "\e[6 q")))
+  (add-hook 'viper-replace-state-hook (lambda () (send-string-to-terminal "\e[4 q")))
+  (add-hook 'kill-emacs-hook (lambda () (send-string-to-terminal "\e[2 q"))))
 (dolist (binding '(("C-x c c" . compile) ("C-x c r" . recompile) ("C-h '" . describe-face)
                    ("C-x C-m" . execute-extended-command) ("C-x k" . kill-current-buffer)
                    ("C-o" . other-window) ("<escape>" . keyboard-escape-quit) ("C-\\" . epop)
@@ -115,20 +122,21 @@
   (set-face-attribute face nil :font "Input Mono Narrow" :height (if (eq system-type 'android) 160 140)))
 (set-face-attribute 'vertical-border nil :foreground 'unspecified :inherit '(shadow default))
 (set-face-attribute 'font-lock-comment-face nil :foreground 'unspecified :inherit 'shadow)
+(set-face-attribute 'line-number-current-line nil :inherit 'bold)
 (set-face-attribute 'fringe nil :background 'unspecified)
-(set-face-attribute 'default nil :foreground "#222524" :background "#eae8e1")
-(custom-set-faces '(bold ((((background dark)) :foreground "#fafbfc" :weight bold) (((background light)) :weight bold))))
+(set-face-attribute 'default nil :foreground "#202225" :background "#eae8e1")
+(custom-set-faces '(bold ((((background dark)) :foreground "#fafbfc" :weight bold)
+                          (((background light)) :weight bold))))
 (add-hook 'post-command-hook
           (lambda () (unless (eq (buffer-modified-p) (bound-and-true-p curs-mod))
                        (set-cursor-color (if (setq curs-mod (buffer-modified-p)) "coral3" "#00c2ff")))))
-(dolist (spec '((font-lock-string-face :foreground nil) (show-paren-match :background t)))
-  (let* ((face (car spec)) (prop (cadr spec)) (invert (caddr spec))
-         (dark "#49e9a6") (light "#0C9671"))
-    (custom-set-faces `(,face ((((background dark))  ,prop ,(if invert light dark))
-                               (((background light)) ,prop ,(if invert dark light)))))))
-(set-face-attribute 'font-lock-variable-name-face nil :foreground 'unspecified)
-(dolist (face '(minibuffer-prompt eshell-prompt font-lock-keyword-face
-                                  font-lock-function-name-face font-lock-type-face))
+(custom-set-faces '(font-lock-string-face ((((background dark))  :foreground "#deb07a")
+                                           (((background light)) :foreground "#603d3a"))))
+(dolist (face '(font-lock-variable-name-face font-lock-constant-face))
+  (set-face-attribute face nil :foreground 'unspecified))
+(set-face-attribute 'font-lock-builtin-face nil :foreground 'unspecified :slant 'italic)
+(dolist (face '(eshell-prompt minibuffer-prompt font-lock-keyword-face
+                              font-lock-function-name-face font-lock-type-face))
   (custom-set-faces `(,face ((t :foreground unspecified :inherit bold)))))
 (custom-set-faces '(highlight ((((background dark))  :background "#383838")
                                (((background light)) :background "#d9d7d0"))))
@@ -144,7 +152,7 @@
                    (";" . 'shadow)))))
 (with-eval-after-load 'hideshow (set-face-attribute 'hs-ellipsis nil :box 'unspecified :underline t))
 ;;; Programming stuff ---
-(dolist (fn '(hs-minor-mode display-line-numbers-mode electric-pair-local-mode which-function-mode 
+(dolist (fn '(hs-minor-mode display-line-numbers-mode electric-pair-local-mode; which-function-mode
                             show-paren-mode completion-preview-mode goto-address-mode))
   (add-hook 'prog-mode-hook fn))
 (add-hook 'eglot-managed-mode-hook
@@ -189,15 +197,8 @@
 (with-eval-after-load 'eww
   (add-hook 'eww-after-render-hook #'viper-mode)
   (setq eww-header-line-format nil eww-auto-rename-buffer 'title))
-(setq minibuffer-completion-auto-choose t completion-ignore-case t
-      completions-format 'one-column completions-header-format nil
-      completion-show-help nil completions-max-height 11
-      completion-preview-minimum-symbol-length 2 completion-auto-select 'second-tab
-      completions-sort 'historical completions-detailed t
-      completion-eager-update t completion-auto-help 'visible
+(setq completion-ignore-case t completion-auto-help nil ;'visible
       completion-styles '(initials partial-completion basic flex))
-(keymap-set minibuffer-local-completion-map "C-r" #'minibuffer-previous-completion)
-(keymap-set minibuffer-local-completion-map "C-s" #'minibuffer-next-completion)
 (add-to-list 'display-buffer-alist
              '("\\*\\(Completions\\|xref\\|Occur.*\\|compilation.*\\|Flymake.*\\)\\*"
                (display-buffer-in-side-window) (side . bottom) (window-height . 0.25)
@@ -341,6 +342,8 @@
          (add-hook 'after-change-functions (lambda (&rest _) (set-buffer-modified-p nil) (delete-directory dir t)) nil t)))
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . epub-open))
 ;;; Mode-line
+(setq-default mode-line-collapse-minor-modes '(not flymake-mode)
+              mode-line-end-spaces nil mode-line-compact t flymake-mode-line-title nil)  
 (let ((common (list :background 'unspecified :foreground 'unspecified
                     :inverse-video (not (display-graphic-p))
                     :height (if (eq system-type 'android) 160 140)
