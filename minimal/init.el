@@ -193,7 +193,7 @@
 (add-hook #'eshell-mode-hook
           (lambda nil (define-key eshell-hist-mode-map (kbd "C-r") #'eshell-insert-history)))
 ;;; Miscellaneous ---
-(setq shr-max-image-proportion 0.5)
+(setq shr-max-image-proportion 0.5 shr-use-colors nil)
 (defun my-shr-tag-render (tag face-spec)
   (let ((default-renderer (intern (format "shr-tag-%s" tag))))
     (lambda (dom) (let ((start (point)))
@@ -251,7 +251,7 @@
         (lambda (win)
           (with-current-buffer (window-buffer win)
             (when (or (derived-mode-p '(prog-mode text-mode))
-                      (member major-mode '(Info-mode diff-mode eww-mode dired-mode)))
+                      (member major-mode '(Info-mode diff-mode eww-mode dired-mode gnus-article-mode)))
               (let* ((special-modes (member major-mode '(org-mode markdown-ts-mode)))
                      (margin (max 0 (/ (- (window-total-width win) fill-column) 2)))
                      (lmargin (if special-modes (max 0 (- margin 10)) margin)))
@@ -421,6 +421,8 @@
 (setq gnus-directory (concat "~/.emacs.d" "/gnus")
       gnus-startup-file (concat "~/.emacs.d" "/.newsrc")
       gnus-use-dribble-file nil gnus-always-read-dribble-file nil
+      gnus-interactive-exit nil gnus-widen-article-window t
+      gnus-thread-sort-functions '(gnus-thread-sort-by-most-recent-date)
       gnus-use-adaptive-scoring '(word line) gnus-summary-expunge-below 0
       gnus-select-method '(nntp "news.gwene.org") gnus-group-uncollapsed-levels 2
       gnus-sum-thread-tree-false-root "" gnus-sum-thread-tree-indent " "
@@ -430,16 +432,20 @@
       gnus-sum-thread-tree-single-leaf     "╰─►"
       gnus-user-date-format-alist '(((gnus-seconds-today) . " %H:%M") (t . "%b %d"))
       gnus-topic-line-format (concat "%(%{%n - %A%}%) %v\n")
-      gnus-group-line-format (concat "%S%4y: %(%-40,40c%)\n") ;; %E (gnus-group-icon-list)
-      ;;  06-Jan   Sender Name    Email Subject
-      gnus-summary-line-format (concat " %0{%U%R%}" "%1{%-4,4i%}" " " "%1{%&user-date;%}"
-                                       "%3{ %}" " " "%4{%-16,16f%}" " " "%3{ %}" " "
-                                       "%1{%B%}" "%S\n"))
+      gnus-group-line-format (concat "%S%4y: %(%-40,40c%)\n")
+      gnus-summary-line-format (concat " %0{%U%R%}" "%1{%&user-date;%}" "%3{ %}" " "
+                                       "%4{%-16,16f%}" " " "%3{ %}" " " "%1{%B%}" "%S\n"))
 (with-eval-after-load 'gnus
-  (add-hook 'gnus-article-mode-hook
-            (lambda () (setq-local browse-url-browser-function #'eww-browse-url)))
   (advice-add 'gnus-splash :before #'tab-bar-new-tab)
-  (add-hook 'gnus-after-exiting-hook #'tab-bar-close-tab))
+  (add-hook 'gnus-after-exiting-gnus-hook #'tab-bar-close-tab)
+  (with-eval-after-load 'gnus-sum
+    (define-key gnus-summary-mode-map (kbd "RET") #'gnus-summary-select-article-buffer))
+  (add-hook 'gnus-summary-prepare-hook (lambda () (setq-local truncate-lines t)))
+  (with-eval-after-load 'gnus-art
+    (dolist (binding '(("q" . quit-window) ("j" . next-line) ("k" . previous-line)))
+      (keymap-set gnus-article-mode-map (car binding) (cdr binding))))
+  (add-hook 'gnus-article-mode-hook
+            (lambda () (setq-local browse-url-browser-function #'eww-browse-url))))
 (with-eval-after-load 'mpc
   (setq mpc-browser-tags '(Directory) mpc-mpd-music-directory "~/Downloads/music")
   (advice-add 'mpc :before (lambda (&rest _args) (tab-bar-new-tab)))
