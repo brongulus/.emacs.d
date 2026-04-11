@@ -87,7 +87,7 @@
                      ("g a" . beginning-of-defun) ("g e" . end-of-defun)
                      ("(" . flymake-goto-prev-error) (")" . flymake-goto-next-error)
                      ("g z" . pop-to-mark-command) ("g /" . xref-find-definitions-other-window)
-                     ("K" . eldoc-doc-buffer) ("*" . isearch-forward-symbol-at-point)))
+                     ("K" . my/eldoc-get-help) ("*" . isearch-forward-symbol-at-point)))
     (keymap-set viper-vi-basic-map (car binding) (cdr binding))))
 (unless (display-graphic-p)
   (add-hook 'viper-vi-state-hook (lambda () (send-string-to-terminal "\e[2 q")))
@@ -447,7 +447,8 @@
   (add-hook 'gnus-article-mode-hook
             (lambda () (setq-local browse-url-browser-function #'eww-browse-url))))
 (with-eval-after-load 'mpc
-  (setq mpc-browser-tags '(Directory) mpc-mpd-music-directory "~/Downloads/music")
+  (setq mpc-browser-tags '(Directory) mpc-mpd-music-directory "~/Downloads/music"
+        mpc-songs-format "%-5{Time} %25{Title} %20{Album} %20{Artist}")
   (advice-add 'mpc :before (lambda (&rest _args) (tab-bar-new-tab)))
   (advice-add 'mpc :after (lambda (&rest _args) (call-interactively 'window-layout-transpose)))
   (advice-add 'mpc-quit :after (lambda (&rest _args) (tab-bar-close-tab)))
@@ -470,3 +471,16 @@
     (define-key map (kbd "U") 'mpc-update))
   (define-key mpc-tagbrowser-mode-map (kbd "TAB") 'my-mpc-tagbrowser-toggle)
   (define-key mpc-tagbrowser-mode-map (kbd "RET") 'mpc-play-at-point))
+;;; eldoc-box --- I need this man... ;-;
+(with-eval-after-load 'eglot (load "~/.emacs.d/minimal/eldoc-box" :noerr :no-message))
+(setq eldoc-box-clear-with-C-g t)
+(defun my/eldoc-get-help () (interactive)
+       (if (derived-mode-p 'emacs-lisp-mode) (describe-symbol (symbol-at-point))
+         (if (and (display-graphic-p) (symbolp 'eldoc-box-help-at-point))
+             (eldoc-box-help-at-point)
+           (eldoc-doc-buffer t))))
+(with-eval-after-load 'eldoc
+  (with-eval-after-load 'eldoc-box
+    (define-key (current-global-map) (kbd "C-;") (lambda nil (interactive) (eldoc-box-scroll-up 5)))
+    (define-key (current-global-map) (kbd "C-'") (lambda nil (interactive) (eldoc-box-scroll-down 5)))
+    (setq eldoc-box-max-pixel-width 800 eldoc-box-max-pixel-height 700 eldoc-box-only-multi-line t)))

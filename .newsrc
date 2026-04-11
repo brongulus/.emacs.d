@@ -10,7 +10,7 @@ gmane.emacs.tramp: 1-11034
 gwene.app.rsshub.leetcode.articles: 1-426
 gwene.com.arcan-fe: 1-24
 gwene.com.blogspot.petr-mitrichev: 1-551
-gwene.com.golangweekly: 1-542
+gwene.com.golangweekly: 1-552
 gwene.com.iximiuz: 1-90
 gwene.com.perlweekly.perlweekly: 1-5675
 gwene.com.rubyweekly: 1-481
@@ -25,8 +25,8 @@ gwene.net.lwn.headlines: 1-14100
 gwene.net.thegreenplace.eli.bendersky: 1-398
 gwene.org.bitlbee.news.rss: 1-49
 gwene.org.golang.blog: 1-274,276-277
-gwene.org.hnrss.newest.points: 1-33257
+gwene.org.hnrss.newest.points: 1-33258
 gwene.org.perlmonks.headlines: 1-22804
 gwene.org.quantamagazine: 1-1661
 gwene.org.rust-lang.blog: 1-390
-gwene.rs.lobste: 1-109265
+gwene.rs.lobste: 1-109268
