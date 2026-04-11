@@ -42,7 +42,7 @@
       ido-ignore-buffers
       '("\\` " "\\*Messages\\*" "\\*scratch\\*" "\\*Completions\\*" "\\*Native-compile-Log\\*"
         "\\*Async-native-compile-log\\*" "\\*EGLOT.*events\\*" "\\*Flymake.*\\*" "\\*MPC.*\\*"
-        "\\*Buffer List\\*" "\\*Help\\*" "\\*Minibuf-.*\\*" "\\*vc-.*\\*")
+        "\\*Buffer List\\*" "\\*Help\\*" "\\*Minibuf-.*\\*" "\\*vc-.*\\*" "\\#.*")
       ido-create-new-buffer 'always ido-use-virtual-buffers 'auto
       ido-show-dot-for-dired t ido-max-prospects 6 ido-auto-merge-work-directories-length -1
       Info-default-directory-list '("~/.emacs.d/info") Info-use-header-line nil)
@@ -126,13 +126,13 @@
 (set-face-attribute 'font-lock-comment-face nil :foreground 'unspecified :inherit 'shadow)
 (set-face-attribute 'fringe nil :background 'unspecified)
 (set-face-attribute 'default nil :foreground "#202225" :background "#eae8e1")
+(custom-set-faces '(font-lock-string-face ((((background dark))  :foreground "#deb07a")
+                                           (((background light)) :foreground "#0031a9"))))
 (custom-set-faces '(bold ((((background dark)) :foreground "#fafbfc" :weight bold)
                           (((background light)) :weight bold))))
 (add-hook 'post-command-hook
           (lambda () (unless (eq (buffer-modified-p) (bound-and-true-p curs-mod))
                        (set-cursor-color (if (setq curs-mod (buffer-modified-p)) "coral3" "#00c2ff")))))
-(custom-set-faces '(font-lock-string-face ((((background dark))  :foreground "#deb07a")
-                                           (((background light)) :foreground "#0031a9"))))
 (dolist (face '(font-lock-type-face font-lock-constant-face viper-minibuffer-insert
                                     font-lock-keyword-face font-lock-variable-name-face))
   (custom-set-faces `(,face ((t :foreground unspecified :background unspecified)))))
@@ -367,7 +367,7 @@
          (add-hook 'after-change-functions (lambda (&rest _) (set-buffer-modified-p nil)) nil t)
          (add-hook 'kill-buffer-hook (lambda () (delete-directory dir t)) nil t)))
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . epub-open))
-;;; Mode-line
+;;; Mode-line ---
 (setq-default mode-line-collapse-minor-modes '(not flymake-mode defining-kbd-macro)
               mode-line-end-spaces nil mode-line-compact t flymake-mode-line-title nil)
 (let ((common (list :background 'unspecified :foreground 'unspecified
@@ -407,32 +407,32 @@
         '((which-function-mode (which-func-mode (which-func--use-mode-line ("" which-func-format " "))))
           (global-mode-string ("" global-mode-string))
           (:eval (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p)) eglot-mode-line-progress)))))
-;;; Apps
+;;; Apps ---
 (setq erc-kill-queries-on-quit t erc-kill-server-buffer-on-quit t erc-join-buffer 'buffer
       erc-fill-function 'erc-fill-static erc-fill-static-center 18
       erc-prompt-for-password nil erc-use-auth-source-for-nickserv-password t
       erc-hide-list '("JOIN" "PART" "QUIT" "NICK" "MODE" "353" "366")
       erc-autojoin-channels-alist '(("libera.chat" "#emacs" "#emacs-social" "##rust"
                                      "#zig" "#janet" "#racket" "#ocaml")))
+(defun my-erc-tls () (interactive) (erc-tls :server "irc.libera.chat" :port 6697 :nick "brongulus"))
 (with-eval-after-load 'erc
   (dolist (mod '(keep-place log nicks services xdcc)) (push mod erc-modules))
-  (define-key erc-track-minor-mode-map "\C-j" #'erc-track-switch-buffer)
+  (with-eval-after-load 'erc-track
+    (define-key erc-track-minor-mode-map "\C-j" #'erc-track-switch-buffer))
   (erc-fill-mode 1) (erc-timestamp-mode -1) (erc-update-modules))
-(setq gnus-directory (concat "~/.emacs.d" "/gnus")
-      gnus-startup-file (concat "~/.emacs.d" "/.newsrc")
+(setq gnus-directory "~/.emacs.d/gnus" gnus-startup-file "~/.emacs.d/.newsrc"
       gnus-use-dribble-file nil gnus-always-read-dribble-file nil
       gnus-interactive-exit nil gnus-widen-article-window t
       gnus-thread-sort-functions '(gnus-thread-sort-by-most-recent-date)
       gnus-use-adaptive-scoring '(word line) gnus-summary-expunge-below 0
       gnus-select-method '(nntp "news.gwene.org") gnus-group-uncollapsed-levels 2
-      gnus-sum-thread-tree-false-root "" gnus-sum-thread-tree-indent " "
+      gnus-sum-thread-tree-indent " " gnus-sum-thread-tree-false-root ""
       gnus-sum-thread-tree-root "" gnus-sum-thread-tree-single-indent ""
       gnus-sum-thread-tree-vertical        "│"
       gnus-sum-thread-tree-leaf-with-other "├─►"
       gnus-sum-thread-tree-single-leaf     "╰─►"
       gnus-user-date-format-alist '(((gnus-seconds-today) . " %H:%M") (t . "%b %d"))
-      gnus-topic-line-format (concat "%(%{%n - %A%}%) %v\n")
-      gnus-group-line-format (concat "%S%4y: %(%-40,40c%)\n")
+      gnus-topic-line-format "%(%{%n - %A%}%) %v\n" gnus-group-line-format "%S%4y: %(%-40,40c%)\n"
       gnus-summary-line-format (concat " %0{%U%R%}" "%1{%&user-date;%}" "%3{ %}" " "
                                        "%4{%-16,16f%}" " " "%3{ %}" " " "%1{%B%}" "%S\n"))
 (with-eval-after-load 'gnus
