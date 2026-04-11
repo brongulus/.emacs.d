@@ -41,7 +41,7 @@
       grep-command-position 27 ido-enable-flex-matching t ido-everywhere t
       ido-ignore-buffers
       '("\\` " "\\*Messages\\*" "\\*scratch\\*" "\\*Completions\\*" "\\*Native-compile-Log\\*"
-        "\\*Async-native-compile-log\\*" "\\*EGLOT.*events\\*" "\\*Flymake.*\\*"
+        "\\*Async-native-compile-log\\*" "\\*EGLOT.*events\\*" "\\*Flymake.*\\*" "\\*MPC.*\\*"
         "\\*Buffer List\\*" "\\*Help\\*" "\\*Minibuf-.*\\*" "\\*vc-.*\\*")
       ido-create-new-buffer 'always ido-use-virtual-buffers 'auto
       ido-show-dot-for-dired t ido-max-prospects 6 ido-auto-merge-work-directories-length -1
@@ -97,7 +97,8 @@
 (dolist (binding '(("C-x c c" . compile) ("C-x c r" . recompile) ("C-h '" . describe-face)
                    ("C-x C-m" . execute-extended-command) ("C-x k" . kill-current-buffer)
                    ("M-o" . other-window) ("<escape>" . keyboard-escape-quit) ("C-\\" . epop)
-                   ("C-x ;" . comment-line) ("C-x x c" . save-buffers-kill-emacs) ("M-;" . eval-expression)
+                   ("C-x ;" . comment-line) ("C-x x c" . save-buffers-kill-emacs)
+                   ("C-x x b" . ibuffer) ("M-;" . eval-expression)
                    ("C-," . my-scroll-other-down) ("M-j" . window-toggle-side-windows)
                    ("C-<tab>" . tab-next) ("C-S-<tab>" . tab-previous) ("C-x x f" . find-file)
                    ("C-x x s" . save-buffer) ("C-x x e" . eval-defun) ("C-x x z" . restart-emacs)
@@ -162,8 +163,12 @@
 (dolist (fn '(hs-minor-mode display-line-numbers-mode ; hl-line-mode which-function-mode
                             show-paren-mode completion-preview-mode goto-address-mode))
   (add-hook 'prog-mode-hook fn))
+(with-eval-after-load 'eglot
+  (defun my-eglot-organize-imports () (interactive)
+         (ignore-errors (eglot-code-actions nil nil "source.organizeImports" t))))
 (add-hook 'eglot-managed-mode-hook
           (lambda () (add-hook 'before-save-hook 'eglot-format-buffer nil t)
+            (add-hook 'before-save-hook 'my-eglot-organize-imports nil t)
             (when (eq major-mode 'go-ts-mode)
               (setq eldoc-documentation-functions
                     (remove #'eglot-signature-eldoc-function eldoc-documentation-functions)))))
@@ -293,6 +298,14 @@
        (forward-line arg))
 (defun del-vi nil (interactive)
        (if (use-region-p) (call-interactively 'kill-region) (delete-char 1)))
+(defun file-capf ()
+  "File completion at point function. src: eshelyaron."
+  (let ((bounds (bounds-of-thing-at-point 'filename)))
+    (when bounds
+      (list (car bounds) (cdr bounds) #'completion-file-name-table
+            :annotation-function (lambda (_) " File")
+            :exclusive 'no))))
+(add-hook 'completion-at-point-functions #'file-capf)
 
 (define-advice ediff-vc-internal (:around (orig-fun &rest args) custom-quit)
   (apply orig-fun args) (switch-to-buffer "*Ediff Control Panel*")
@@ -305,6 +318,12 @@
 (add-hook 'ediff-before-setup-hook #'tab-bar-new-tab)
 (add-hook 'ediff-quit-hook (lambda nil (tab-bar-close-tab) (kill-buffer ediff-registry-buffer)))
 (with-eval-after-load 'ediff (advice-add 'ediff-quit :around (lambda (&rest args) (ediff-really-quit args))))
+(with-eval-after-load 'smerge-mode
+  (define-key ctl-x-map (kbd ",") smerge-basic-map)
+  (repeat-mode 1) (setq diff-refine 'navigation)
+  (map-keymap (lambda (_key cmd)
+                (when (symbolp cmd) (put cmd 'repeat-map 'smerge-basic-map)))
+              smerge-basic-map))
 ;; org
 (run-with-idle-timer 5 nil #'require 'org)
 (with-eval-after-load 'org
@@ -402,6 +421,7 @@
 (setq gnus-directory (concat "~/.emacs.d" "/gnus")
       gnus-startup-file (concat "~/.emacs.d" "/.newsrc")
       gnus-use-dribble-file nil gnus-always-read-dribble-file nil
+      gnus-use-adaptive-scoring '(word line) gnus-summary-expunge-below 0
       gnus-select-method '(nntp "news.gwene.org") gnus-group-uncollapsed-levels 2
       gnus-sum-thread-tree-false-root "" gnus-sum-thread-tree-indent " "
       gnus-sum-thread-tree-root "" gnus-sum-thread-tree-single-indent ""
@@ -416,6 +436,8 @@
                                        "%3{ %}" " " "%4{%-16,16f%}" " " "%3{ %}" " "
                                        "%1{%B%}" "%S\n"))
 (with-eval-after-load 'gnus
+  (add-hook 'gnus-article-mode-hook
+            (lambda () (setq-local browse-url-browser-function #'eww-browse-url)))
   (advice-add 'gnus-splash :before #'tab-bar-new-tab)
   (add-hook 'gnus-after-exiting-hook #'tab-bar-close-tab))
 (with-eval-after-load 'mpc
