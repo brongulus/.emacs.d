@@ -19,7 +19,6 @@ tutorial/
 undo-fu-session/
 url/
 *.eld
-*.ADAPT
 *.SCORE
 .DS_Store
 code-review*
