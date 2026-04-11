@@ -45,16 +45,7 @@
         "\\*Buffer List\\*" "\\*Help\\*" "\\*Minibuf-.*\\*" "\\*vc-.*\\*")
       ido-create-new-buffer 'always ido-use-virtual-buffers 'auto
       ido-show-dot-for-dired t ido-max-prospects 6 ido-auto-merge-work-directories-length -1
-      Info-default-directory-list '("~/.emacs.d/info") Info-use-header-line nil
-      erc-kill-queries-on-quit t erc-kill-server-buffer-on-quit t erc-join-buffer 'buffer
-      erc-fill-function 'erc-fill-static erc-fill-static-center 18 erc-prompt-for-password nil
-      erc-hide-list '("JOIN" "PART" "QUIT" "NICK" "MODE" "353" "366")
-      erc-autojoin-channels-alist '(("libera.chat" "#emacs" "#emacs-social" "##rust"
-                                     "#zig" "#janet" "#racket" "#ocaml")))
-(with-eval-after-load 'erc
-  (dolist (mod '(keep-place log nicks services xdcc)) (push mod erc-modules))
-  (define-key erc-track-minor-mode-map "\C-j" #'erc-track-switch-buffer)
-  (erc-fill-mode 1) (erc-timestamp-mode -1) (erc-update-modules))
+      Info-default-directory-list '("~/.emacs.d/info") Info-use-header-line nil)
 (if (not (eq system-type 'android)) (setq shell-file-name "~/.nix-profile/bin/fish")
   (setq-default fill-column 120 line-spacing '(4 . 4)))
 (put 'narrow-to-region 'disabled nil)
@@ -397,3 +388,57 @@
         '((which-function-mode (which-func-mode (which-func--use-mode-line ("" which-func-format " "))))
           (global-mode-string ("" global-mode-string))
           (:eval (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p)) eglot-mode-line-progress)))))
+;;; Apps
+(setq erc-kill-queries-on-quit t erc-kill-server-buffer-on-quit t erc-join-buffer 'buffer
+      erc-fill-function 'erc-fill-static erc-fill-static-center 18
+      erc-prompt-for-password nil erc-use-auth-source-for-nickserv-password t
+      erc-hide-list '("JOIN" "PART" "QUIT" "NICK" "MODE" "353" "366")
+      erc-autojoin-channels-alist '(("libera.chat" "#emacs" "#emacs-social" "##rust"
+                                     "#zig" "#janet" "#racket" "#ocaml")))
+(with-eval-after-load 'erc
+  (dolist (mod '(keep-place log nicks services xdcc)) (push mod erc-modules))
+  (define-key erc-track-minor-mode-map "\C-j" #'erc-track-switch-buffer)
+  (erc-fill-mode 1) (erc-timestamp-mode -1) (erc-update-modules))
+(setq gnus-directory (concat "~/.emacs.d" "/gnus")
+      gnus-startup-file (concat "~/.emacs.d" "/.newsrc")
+      gnus-use-dribble-file nil gnus-always-read-dribble-file nil
+      gnus-select-method '(nntp "news.gwene.org") gnus-group-uncollapsed-levels 2
+      gnus-sum-thread-tree-false-root "" gnus-sum-thread-tree-indent " "
+      gnus-sum-thread-tree-root "" gnus-sum-thread-tree-single-indent ""
+      gnus-sum-thread-tree-vertical        "│"
+      gnus-sum-thread-tree-leaf-with-other "├─►"
+      gnus-sum-thread-tree-single-leaf     "╰─►"
+      gnus-user-date-format-alist '(((gnus-seconds-today) . " %H:%M") (t . "%b %d"))
+      gnus-topic-line-format (concat "%(%{%n - %A%}%) %v\n")
+      gnus-group-line-format (concat "%S%4y: %(%-40,40c%)\n") ;; %E (gnus-group-icon-list)
+      ;;  06-Jan   Sender Name    Email Subject
+      gnus-summary-line-format (concat " %0{%U%R%}" "%1{%-4,4i%}" " " "%1{%&user-date;%}"
+                                       "%3{ %}" " " "%4{%-16,16f%}" " " "%3{ %}" " "
+                                       "%1{%B%}" "%S\n"))
+(with-eval-after-load 'gnus
+  (advice-add 'gnus-splash :before #'tab-bar-new-tab)
+  (add-hook 'gnus-after-exiting-hook #'tab-bar-close-tab))
+(with-eval-after-load 'mpc
+  (setq mpc-browser-tags '(Directory) mpc-mpd-music-directory "~/Downloads/music")
+  (advice-add 'mpc :before (lambda (&rest _args) (tab-bar-new-tab)))
+  (advice-add 'mpc :after (lambda (&rest _args) (call-interactively 'window-layout-transpose)))
+  (advice-add 'mpc-quit :after (lambda (&rest _args) (tab-bar-close-tab)))
+  (defun my-mpc-tagbrowser-toggle ()
+    "Toggle directory at point."
+    (interactive)
+    (let ((name (buffer-substring (line-beginning-position) (line-end-position)))
+          (prop (if (stringp mpc-tag) (intern mpc-tag) mpc-tag))
+          (proc (mpc-proc)))
+      (if (not (member name (process-get proc prop)))
+          (process-put proc prop (cons name (process-get proc prop)))
+        (let ((new (delete name (process-get proc prop))))
+          (setq name (concat name "/"))
+          (process-put
+           proc prop (delq nil (mapcar (lambda (x) (if (string-prefix-p name x) nil x)) new)))))
+      (mpc-tagbrowser-refresh)))
+  (dolist (map (list mpc-tagbrowser-dir-mode-map mpc-status-mode-map mpc-songs-mode-map))
+    (define-key map (kbd "SPC") ctl-x-map)
+    (define-key map (kbd "p") 'mpc-toggle-play)
+    (define-key map (kbd "U") 'mpc-update))
+  (define-key mpc-tagbrowser-mode-map (kbd "TAB") 'my-mpc-tagbrowser-toggle)
+  (define-key mpc-tagbrowser-mode-map (kbd "RET") 'mpc-play-at-point))
