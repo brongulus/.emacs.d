@@ -23,7 +23,7 @@
 	  isearch-regexp-lax-whitespace t isearch-lazy-count t lazy-highlight-initial-delay 0
 	  isearch-repeat-on-direction-change t isearch-wrap-pause 'no-ding
 	  search-whitespace-regexp ".*?" dired-kill-when-opening-new-dired-buffer t
-      dired-listing-switches "-l --almost-all --human-readable --group-directories-first"
+      dired-listing-switches "-l -v --almost-all --human-readable --group-directories-first"
       delete-by-moving-to-trash t help-window-select t kill-region-dwim 'emacs-word
       eglot-ignored-server-capabilities
       '(:inlayHintProvider :workspace.didChangeWatchedFiles :colorProvider :codeLensProvider
@@ -46,7 +46,7 @@
       ido-create-new-buffer 'always ido-use-virtual-buffers 'auto
       ido-show-dot-for-dired t ido-max-prospects 6 ido-auto-merge-work-directories-length -1
       Info-default-directory-list '("~/.emacs.d/info") Info-use-header-line nil)
-(if (not (eq system-type 'android)) (setq shell-file-name "~/.nix-profile/bin/fish")
+(if (not (eq system-type 'android)) (setq shell-file-name "/opt/homebrew/bin/fish")
   (setq-default fill-column 120 line-spacing '(4 . 4)))
 (put 'narrow-to-region 'disabled nil)
 (setcdr (assq 'continuation fringe-indicator-alist) '(nil nil))
@@ -79,7 +79,7 @@
                      ("g i" . eglot-find-implementation) ("g r" . xref-find-references)
                      ("C" . string-rectangle) ("p" . yank) ("+" . eglot-rename) ("g s" . imenu)
                      ("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all)
-                     ("[" . previous-error) ("]" . next-error)
+                     ("[" . previous-error) ("]" . next-error) ("#" . definition-at-point)
                      ("q" . quit-window) ("j" . next-line) ("k" . previous-line)
                      ("<" . beginning-of-buffer) (">" . end-of-buffer) ("o" . other-window)
                      ("v" . set-mark-command) ("s" . isearch-forward-regexp) ("u" . undo-only)
@@ -122,6 +122,7 @@
 ;;; Visuals ---
 (dolist (face '(default fixed-pitch fixed-pitch-serif variable-pitch))
   (set-face-attribute face nil :font "Input Mono Narrow" :height (if (eq system-type 'android) 160 140)))
+(dolist (set '(cjk-misc han kana)) (set-fontset-font t set "Noto Sans Mono CJK JP" nil 'prepend))
 (set-face-attribute 'vertical-border nil :foreground 'unspecified :inherit '(shadow default))
 (set-face-attribute 'font-lock-comment-face nil :foreground 'unspecified :inherit 'shadow)
 (set-face-attribute 'fringe nil :background 'unspecified)
@@ -221,7 +222,13 @@
     (display-buffer-in-side-window buffer (append `((side . ,side) ,size-param) alist))))
 (add-to-list 'display-buffer-alist
              '("\\*\\(Dictionary\\|eldoc\\)\\*" my/display-buffer-adaptive
-               (body-function . select-window) (window-parameters . ((split-window . #'ignore))))) 
+               (body-function . select-window) (window-parameters . ((split-window . #'ignore)))))
+(setq dictionary-server "localhost")
+(defun definition-at-point nil (interactive)
+       (if (use-region-p)
+           (dictionary-new-search (cons (buffer-substring-no-properties (mark) (point)) dictionary-default-dictionary))
+         (dictionary-lookup-definition)))
+(custom-set-faces '(dictionary-word-definition-face ((t :family unspecified))))
 ;;; Sensible changes ---
 (defun prot-quit (&optional interactive) "A sensible `keyboard-quit'."
        (interactive (list 'interactive))
