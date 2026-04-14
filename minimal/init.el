@@ -43,7 +43,7 @@
       '("\\` " "\\*Messages\\*" "\\*scratch\\*" "\\*Completions\\*" "\\*Native-compile-Log\\*"
         "\\*Async-native-compile-log\\*" "\\*EGLOT.*events\\*" "\\*Flymake.*\\*" "\\*MPC.*\\*"
         "\\*Buffer List\\*" "\\*Help\\*" "\\*Minibuf-.*\\*" "\\*vc-.*\\*" "\\#.*")
-      ido-create-new-buffer 'always ido-use-virtual-buffers 'auto
+      ido-create-new-buffer 'always ido-use-virtual-buffers 'auto recentf-max-saved-items 200
       ido-show-dot-for-dired t ido-max-prospects 6 ido-auto-merge-work-directories-length -1
       Info-default-directory-list '("~/.emacs.d/info") Info-use-header-line nil)
 (if (not (eq system-type 'android)) (setq shell-file-name "/opt/homebrew/bin/fish")
@@ -77,10 +77,10 @@
   (dolist (binding '(("g" . nil) ("x" . sel-line) ("-" . negative-argument) ("y" . kill-ring-save)
                      ("C-\\" . epop) ("R" . replace-regexp) ("=" . mark-inner) ("d" . del-vi)
                      ("g i" . eglot-find-implementation) ("g r" . xref-find-references)
-                     ("C" . string-rectangle) ("p" . yank) ("+" . eglot-rename) ("g s" . imenu)
+                     ("C" . string-rectangle) ("p" . yank) ("+" . eglot-rename) ("_" . eglot-code-actions)
                      ("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all)
                      ("[" . previous-error) ("]" . next-error) ("#" . definition-at-point)
-                     ("q" . quit-window) ("j" . next-line) ("k" . previous-line)
+                     ("g s" . imenu) ("q" . quit-window) ("j" . next-line) ("k" . previous-line)
                      ("<" . beginning-of-buffer) (">" . end-of-buffer) ("o" . other-window)
                      ("v" . set-mark-command) ("s" . isearch-forward-regexp) ("u" . undo-only)
                      ("Z" . undo-redo) ("," . my-scroll-other-down) ("." . my-scroll-other-up)
@@ -98,7 +98,7 @@
                    ("C-x C-m" . execute-extended-command) ("C-x k" . kill-current-buffer)
                    ("M-o" . other-window) ("<escape>" . keyboard-escape-quit) ("C-\\" . epop)
                    ("C-x ;" . comment-line) ("C-x x c" . save-buffers-kill-emacs)
-                   ("C-x x b" . ibuffer) ("M-;" . eval-expression)
+                   ("s-o" . other-window) ("C-x x b" . ibuffer) ("M-;" . eval-expression)
                    ("C-," . my-scroll-other-down) ("M-j" . window-toggle-side-windows)
                    ("C-<tab>" . tab-next) ("C-S-<tab>" . tab-previous) ("C-x x f" . find-file)
                    ("C-x x s" . save-buffer) ("C-x x e" . eval-defun) ("C-x x z" . restart-emacs)
@@ -138,7 +138,7 @@
                                     font-lock-keyword-face font-lock-variable-name-face))
   (custom-set-faces `(,face ((t :foreground unspecified :background unspecified)))))
 (set-face-attribute 'font-lock-builtin-face nil :foreground 'unspecified :slant 'italic)
-(set-face-attribute 'error nil :foreground "Coral3")
+(set-face-attribute 'error nil :foreground "Coral3") (set-face-attribute 'nobreak-space nil :underline nil)
 (custom-set-faces '(ido-subdir ((t :inherit font-lock-string-face))))
 (dolist (face '(eshell-prompt minibuffer-prompt font-lock-function-name-face line-number-current-line))
   (custom-set-faces `(,face ((t :foreground unspecified :inherit bold)))))
@@ -165,11 +165,15 @@
                             show-paren-mode completion-preview-mode goto-address-mode))
   (add-hook 'prog-mode-hook fn))
 (with-eval-after-load 'eglot
+  (setq python-flymake-command '("ruff" "check" "--output-format=concise" "--stdin-filename" "stdin" "-"))
+  (add-to-list 'eglot-server-programs '((python-ts-mode python-mode) . ("uvx" "ty" "server")))
   (defun my-eglot-organize-imports () (interactive)
          (ignore-errors (eglot-code-actions nil nil "source.organizeImports" t))))
 (add-hook 'eglot-managed-mode-hook
           (lambda () (add-hook 'before-save-hook 'eglot-format-buffer nil t)
             (add-hook 'before-save-hook 'my-eglot-organize-imports nil t)
+            (when (eq major-mode 'python-mode)
+              (add-hook 'flymake-diagnostic-functions 'python-flymake nil t))
             (when (eq major-mode 'go-ts-mode)
               (setq eldoc-documentation-functions
                     (remove #'eglot-signature-eldoc-function eldoc-documentation-functions)))))
@@ -181,6 +185,15 @@
 (with-eval-after-load 'completion-preview
   (keymap-set completion-preview-active-mode-map "C-s" #'completion-preview-next-candidate)
   (keymap-set completion-preview-active-mode-map "C-r" #'completion-preview-prev-candidate))
+(with-eval-after-load 'compile
+  (push 'go-test compilation-error-regexp-alist)
+  (add-to-list 'compilation-error-regexp-alist-alist
+               '(go-test
+                 . (".*?\\([[:alnum:]_./-]+\\.go\\):\\([0-9]+\\)\\(?:\\(?::\\([0-9]+\\)\\)?\\| \\+0x[0-9a-f]+\\)"
+                    1 2 3 nil 1)))
+  (add-hook 'compilation-filter-hook
+            (lambda nil (goto-address-mode -1)
+              (unless (eq major-mode 'grep-mode) (ansi-color-compilation-filter) (ansi-osc-compilation-filter)))))
 (with-eval-after-load 'eshell
   (defun eshell-insert-history () (interactive) ; src: habrams
          (let ((cmd (completing-read "Eshell history: "
@@ -253,12 +266,12 @@
         (list open (1+ open) (1- end) end))))
 (add-hook 'prog-mode-hook (lambda nil (setq-local show-paren-data-function #'my/show-paren-data)))
 
+(defvar zen-enabled-modes '(Info-mode diff-mode eww-mode dired-mode gnus-article-mode gnus-group-mode))
 (defun zen-buffer-apply-margins nil "Apply zen margins to all windows."
        (walk-windows
         (lambda (win)
           (with-current-buffer (window-buffer win)
-            (when (or (derived-mode-p '(prog-mode text-mode))
-                      (member major-mode '(Info-mode diff-mode eww-mode dired-mode gnus-article-mode)))
+            (when (or (derived-mode-p '(prog-mode text-mode)) (member major-mode zen-enabled-modes))
               (let* ((special-modes (member major-mode '(org-mode markdown-ts-mode)))
                      (margin (max 0 (/ (- (window-total-width win) fill-column) 2)))
                      (lmargin (if special-modes (max 0 (- margin 10)) margin)))
@@ -472,6 +485,8 @@
           (process-put
            proc prop (delq nil (mapcar (lambda (x) (if (string-prefix-p name x) nil x)) new)))))
       (mpc-tagbrowser-refresh)))
+  (dolist (binding '(("<f7>" . mpc-prev) ("<f8>" . mpc-toggle-play) ("<f9>" . mpc-next)))
+    (keymap-global-set (car binding) (cdr binding)))
   (dolist (map (list mpc-tagbrowser-dir-mode-map mpc-status-mode-map mpc-songs-mode-map))
     (define-key map (kbd "SPC") ctl-x-map)
     (define-key map (kbd "p") 'mpc-toggle-play)
