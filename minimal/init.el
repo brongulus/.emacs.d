@@ -34,7 +34,7 @@
       require-final-newline t resize-mini-windows t ring-bell-function 'ignore tab-always-indent 'complete
       diff-font-lock-syntax nil vc-allow-rewriting-published-history t vc-follow-symlinks t
       vc-display-status 'no-backend vc-git-diff-switches '("--patch-with-stat" "--histogram")
-      project-vc-extra-root-markers '("Cargo.toml" "build.zig" "go.work")
+      project-vc-extra-root-markers '("Cargo.toml" "build.zig" "go.work" "CMakeLists.txt")
       eshell-banner-message "" eshell-hist-ignoredups 'erase eshell-history-size 20000
       eshell-save-history-on-exit t eshell-glob-case-insensitive t eshell-scroll-to-bottom-on-input 'this
       grep-command "rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)"
@@ -84,11 +84,34 @@
                      ("<" . beginning-of-buffer) (">" . end-of-buffer) ("o" . other-window)
                      ("v" . set-mark-command) ("s" . isearch-forward-regexp) ("u" . undo-only)
                      ("Z" . undo-redo) ("," . my-scroll-other-down) ("." . my-scroll-other-up)
-                     ("g a" . beginning-of-defun) ("g e" . end-of-defun)
+                     ("@" . eww-open-in-new-buffer) ("g a" . beginning-of-defun) ("g e" . end-of-defun)
                      ("(" . flymake-goto-prev-error) (")" . flymake-goto-next-error)
                      ("g z" . pop-to-mark-command) ("g /" . xref-find-definitions-other-window)
                      ("K" . my/eldoc-get-help) ("*" . isearch-forward-symbol-at-point)))
-    (keymap-set viper-vi-basic-map (car binding) (cdr binding))))
+    (keymap-set viper-vi-basic-map (car binding) (cdr binding)))
+  ;; selection-first word movements (meow/kak style)
+  (defun my-viper-select-thing (thing n)
+    "Select the next N THINGs, advancing on repeat."
+    (let* ((fwd (> n 0))
+           (skip (let ((s (if (eq thing 'word) "^w" "^w_")))
+                   (if fwd (lambda () (skip-syntax-forward s)) (lambda () (skip-syntax-backward s))))))
+      (when (and (region-active-p) (eq last-command this-command))
+        (let ((b (bounds-of-thing-at-point thing)))
+          (when b (goto-char (if fwd (cdr b) (car b)))))
+        (funcall skip))
+      (dotimes (i (abs n))
+        (or (bounds-of-thing-at-point thing) (funcall skip))
+        (when-let* ((b (bounds-of-thing-at-point thing)))
+          (when (= i 0) (set-mark (if fwd (car b) (cdr b))))
+          (goto-char (if fwd (cdr b) (car b)))
+          (activate-mark)
+          (when (< i (1- (abs n))) (funcall skip))))))
+  (dolist (p '(("w" . (symbol . 1)) ("e" . (word . 1)) ("b" . (word . -1))
+               ("W" . (symbol . 1)) ("E" . (symbol . 1)) ("B" . (symbol . -1))))
+    (let ((thing (cadr p)) (dir (cddr p)))
+      (keymap-set viper-vi-basic-map (car p)
+                  (lambda (n) (interactive "p") (my-viper-select-thing thing (* n dir)))))))
+
 (unless (display-graphic-p)
   (add-hook 'viper-vi-state-hook (lambda () (send-string-to-terminal "\e[2 q")))
   (add-hook 'viper-insert-state-hook (lambda () (send-string-to-terminal "\e[6 q")))
@@ -266,7 +289,7 @@
         (list open (1+ open) (1- end) end))))
 (add-hook 'prog-mode-hook (lambda nil (setq-local show-paren-data-function #'my/show-paren-data)))
 
-(defvar zen-enabled-modes '(Info-mode diff-mode eww-mode dired-mode gnus-article-mode gnus-group-mode))
+(defvar zen-enabled-modes '(Info-mode diff-mode eww-mode dired-mode gnus-article-mode gnus-group-mode erc-mode))
 (defun zen-buffer-apply-margins nil "Apply zen margins to all windows."
        (walk-windows
         (lambda (win)
@@ -482,8 +505,7 @@
           (process-put proc prop (cons name (process-get proc prop)))
         (let ((new (delete name (process-get proc prop))))
           (setq name (concat name "/"))
-          (process-put
-           proc prop (delq nil (mapcar (lambda (x) (if (string-prefix-p name x) nil x)) new)))))
+          (process-put proc prop (delq nil (mapcar (lambda (x) (if (string-prefix-p name x) nil x)) new)))))
       (mpc-tagbrowser-refresh)))
   (dolist (binding '(("<f7>" . mpc-prev) ("<f8>" . mpc-toggle-play) ("<f9>" . mpc-next)))
     (keymap-global-set (car binding) (cdr binding)))
