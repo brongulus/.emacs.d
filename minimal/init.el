@@ -21,7 +21,7 @@
 	  org-fontify-quote-and-verse-blocks t org-fontify-whole-heading-line t
 	  treesit-enabled-modes t treesit-font-lock-level 2 go-ts-mode-indent-offset 4
 	  isearch-regexp-lax-whitespace t isearch-lazy-count t lazy-highlight-initial-delay 0
-	  isearch-repeat-on-direction-change t isearch-wrap-pause 'no-ding
+	  isearch-repeat-on-direction-change t isearch-wrap-pause 'no-ding save-interprogram-paste-before-kill t
 	  search-whitespace-regexp ".*?" dired-kill-when-opening-new-dired-buffer t
       dired-listing-switches "-l -v --almost-all --human-readable --group-directories-first"
       delete-by-moving-to-trash t help-window-select t kill-region-dwim 'emacs-word
@@ -71,21 +71,22 @@
   (advice-add 'viper-post-command-sentinel :override #'ignore)
   (defun viper-set-insert-cursor-type nil (setq cursor-type '(bar . 3)))
   (define-key viper-insert-basic-map "\C-d" #'viper-del-backward-char-in-insert)
+  (define-key viper-vi-basic-map "c" #'(lambda nil (interactive) (del-vi) (viper-change-state-to-insert)))
   (dolist (key '("\C-b" "\C-d" "\C-e" "\C-f" "\C-u" "\C-y" "\C-v"))
     (define-key viper-vi-basic-map key nil))
   (define-key viper-vi-basic-map (kbd "SPC") ctl-x-map)
   (dolist (binding '(("g" . nil) ("x" . sel-line) ("-" . negative-argument) ("y" . kill-ring-save)
                      ("C-\\" . epop) ("R" . replace-regexp) ("=" . mark-inner) ("d" . del-vi)
-                     ("g i" . eglot-find-implementation) ("g r" . xref-find-references)
+                     ("g i" . eglot-find-implementation) ("g r" . xref-find-references) (";" . prot-quit)
                      ("C" . string-rectangle) ("p" . yank) ("+" . eglot-rename) ("_" . eglot-code-actions)
                      ("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all)
                      ("[" . previous-error) ("]" . next-error) ("#" . definition-at-point)
                      ("g s" . imenu) ("q" . quit-window) ("j" . next-line) ("k" . previous-line)
                      ("<" . beginning-of-buffer) (">" . end-of-buffer) ("o" . other-window)
                      ("v" . set-mark-command) ("s" . isearch-forward-regexp) ("u" . undo-only)
-                     ("Z" . undo-redo) ("," . my-scroll-other-down) ("." . my-scroll-other-up)
+                     ("U" . undo-redo) ("," . my-scroll-other-down) ("." . my-scroll-other-up)
                      ("@" . eww-open-in-new-buffer) ("g a" . beginning-of-defun) ("g e" . end-of-defun)
-                     ("(" . flymake-goto-prev-error) (")" . flymake-goto-next-error)
+                     ("&" . align-regexp) ("(" . flymake-goto-prev-error) (")" . flymake-goto-next-error)
                      ("g z" . pop-to-mark-command) ("g /" . xref-find-definitions-other-window)
                      ("K" . my/eldoc-get-help) ("*" . isearch-forward-symbol-at-point)))
     (keymap-set viper-vi-basic-map (car binding) (cdr binding)))
@@ -120,8 +121,8 @@
 (dolist (binding '(("C-x c c" . compile) ("C-x c r" . recompile) ("C-h '" . describe-face)
                    ("C-x C-m" . execute-extended-command) ("C-x k" . kill-current-buffer)
                    ("M-o" . other-window) ("<escape>" . keyboard-escape-quit) ("C-\\" . epop)
-                   ("C-x ;" . comment-line) ("C-x x c" . save-buffers-kill-emacs)
-                   ("s-o" . other-window) ("C-x x b" . ibuffer) ("M-;" . eval-expression)
+                   ("C-x ;" . comment-line) ("C-x x c" . save-buffers-kill-emacs) ("s-o" . other-window)
+                   ("C-x x b" . ibuffer) ("M-;" . eval-expression) ("C-/" . undo-only)
                    ("C-," . my-scroll-other-down) ("M-j" . window-toggle-side-windows)
                    ("C-<tab>" . tab-next) ("C-S-<tab>" . tab-previous) ("C-x x f" . find-file)
                    ("C-x x s" . save-buffer) ("C-x x e" . eval-defun) ("C-x x z" . restart-emacs)
@@ -129,12 +130,16 @@
   (keymap-global-set (car binding) (cdr binding)))
 (keymap-global-set "C-x m" esc-map)
 (keymap-global-set "C-x 6" #'(lambda nil (interactive) (invert-face 'default)))
-(keymap-global-set "j" #'(lambda nil (interactive)
-                           (let* ((event (read-event nil nil 0.4)))
-                             (if event (if (and (characterp event) (= event ?k))
-                                           (viper-change-state-to-vi)
-                                         (insert ?j) (push event unread-command-events))
-                               (insert ?j)))))
+
+(defun my-chord (initial-key final-key fn)
+  (interactive) ;; src: wasamasa
+  (let ((event (read-event nil nil 0.4)))
+    (cond ((and event (characterp event) (= event final-key)) (call-interactively fn))
+          (event (insert initial-key) (push event unread-command-events))
+          (t (insert initial-key)))))
+(keymap-global-set "j" #'(lambda nil (interactive) (my-chord ?j ?k 'viper-change-state-to-vi)))
+(keymap-global-set "f" #'(lambda nil (interactive) (my-chord ?f ?g 'viper-find-char-forward)))
+(keymap-global-set "g" #'(lambda nil (interactive) (my-chord ?g ?f 'viper-find-char-backward)))
 (keymap-set vc-prefix-map "f" (lambda () (interactive) (vc-git--pushpull "push" nil '("--force-with-lease"))))
 (keymap-set vc-prefix-map "e" #'vc-ediff)
 (with-eval-after-load 'dired (keymap-set dired-mode-map "SPC" ctl-x-map))
@@ -151,7 +156,7 @@
 (set-face-attribute 'fringe nil :background 'unspecified)
 (set-face-attribute 'default nil :foreground "#202225" :background "#eae8e1")
 (custom-set-faces '(font-lock-string-face ((((background dark))  :foreground "#deb07a")
-                                           (((background light)) :foreground "#0031a9"))))
+                                           (((background light)) :foreground "sienna"))))
 (custom-set-faces '(bold ((((background dark)) :foreground "#fafbfc" :weight bold)
                           (((background light)) :weight bold))))
 (add-hook 'post-command-hook
@@ -172,7 +177,7 @@
 (custom-set-faces '(eglot-highlight-symbol-face ((t :inherit (highlight default)))))
 (dolist (face '(org-block org-block-begin-line org-block-end-line))
   (custom-set-faces `(,face ((t :inherit (highlight default) :extend t)))))
-(dolist (face '(org-code org-verbatim)) (custom-set-faces `(,face ((t :inherit highlight)))))
+(dolist (face '(org-code org-verbatim org-table)) (custom-set-faces `(,face ((t :inherit highlight)))))
 (custom-set-faces '(org-table ((t :foreground unspecified))))
 (custom-set-faces '(link ((t :foreground "DodgerBlue" :underline t))))
 (custom-set-faces '(hs-ellipsis ((t :box unspecified :underline t))))
@@ -229,6 +234,7 @@
   (eshell/addpath (concat (getenv "GOPATH") "/bin")))
 (add-hook #'eshell-mode-hook
           (lambda nil (define-key eshell-hist-mode-map (kbd "C-r") #'eshell-insert-history)))
+(setq inferior-lisp-program "clojure")
 ;;; Miscellaneous ---
 (setq shr-max-image-proportion 0.5 shr-use-colors nil)
 (defun my-shr-tag-render (tag face-spec)
@@ -245,7 +251,8 @@
           (h3         . ,(my-shr-tag-render 'h3         '(:inherit bold :height 1.2))))))
 (with-eval-after-load 'eww
   (add-hook 'eww-after-render-hook #'viper-mode)
-  (setq eww-header-line-format nil eww-auto-rename-buffer 'title))
+  (setq eww-header-line-format nil eww-auto-rename-buffer 'title
+        eww-default-download-directory "~/Downloads/eww/" browse-url-new-window-flag t))
 (setq completion-ignore-case t completion-auto-help nil ;'visible
       completion-styles '(initials partial-completion basic flex))
 (add-to-list 'display-buffer-alist
@@ -456,7 +463,7 @@
       erc-prompt-for-password nil erc-use-auth-source-for-nickserv-password t
       erc-hide-list '("JOIN" "PART" "QUIT" "NICK" "MODE" "353" "366")
       erc-autojoin-channels-alist '(("libera.chat" "#emacs" "#emacs-social" "##rust"
-                                     "#zig" "#janet" "#racket" "#ocaml")))
+                                     "#zig" "#janet" "#clojure" "#racket" "#ocaml")))
 (defun my-erc-tls () (interactive) (erc-tls :server "irc.libera.chat" :port 6697 :nick "brongulus"))
 (with-eval-after-load 'erc
   (dolist (mod '(keep-place log nicks services xdcc)) (push mod erc-modules))
@@ -525,6 +532,10 @@
            (eldoc-doc-buffer t))))
 (with-eval-after-load 'eldoc
   (with-eval-after-load 'eldoc-box
-    (define-key (current-global-map) (kbd "C-;") (lambda nil (interactive) (eldoc-box-scroll-up 5)))
-    (define-key (current-global-map) (kbd "C-'") (lambda nil (interactive) (eldoc-box-scroll-down 5)))
     (setq eldoc-box-max-pixel-width 800 eldoc-box-max-pixel-height 700 eldoc-box-only-multi-line t)))
+;;; mark-multiple clone --- This was an experiment to see how far opus 4.6 can go
+(load "~/.emacs.d/minimal/mini-mark-multiple" :noerr :no-message)
+(define-key (current-global-map) (kbd "M-p") #'mmm/mark-previous-like-this)
+(define-key (current-global-map) (kbd "M-n") #'mmm/mark-next-like-this)
+(define-key (current-global-map) (kbd "M-'") #'mmm/mark-all-like-this)
+(define-key (current-global-map) (kbd "M-r") #'mmm/mark-all-in-defun)
