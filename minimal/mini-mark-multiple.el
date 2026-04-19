@@ -13,7 +13,7 @@
 
 (defvar mmm/--unnarrow
   '(mmm/mark-next-like-this mmm/mark-previous-like-this
-    mmm/mark-all-like-this mmm/mark-all-in-defun mmm/clear-all keyboard-quit))
+                            mmm/mark-all-like-this mmm/mark-all-in-defun mmm/clear-all keyboard-quit))
 
 (defvar mmm/keymap (let ((m (make-sparse-keymap))) (define-key m (kbd "RET") #'mmm/clear-all) m))
 
@@ -134,19 +134,21 @@
 (defun mmm/mark-all-in-defun ()
   "Mark all matches within current defun."
   (interactive)
-  (let ((s (if (use-region-p)
-               (buffer-substring-no-properties (region-beginning) (region-end))
-             (let ((b (find-tag-default-bounds)))
-               (when b (buffer-substring-no-properties (car b) (cdr b)))))))
+  (let* ((bounds (if (use-region-p) (cons (region-beginning) (region-end))
+                   (find-tag-default-bounds)))
+         (s (when bounds (buffer-substring-no-properties (car bounds) (cdr bounds))))
+         (pt (car bounds)))
     (unless s (user-error "No region or symbol at point"))
     (save-excursion
       (let ((beg (progn (beginning-of-defun) (point)))
             (end (progn (end-of-defun) (point))))
-        (mmm/clear-all) (goto-char beg)
+        (mmm/clear-all)
+        (mmm/create-master pt (+ pt (length s)))
+        (goto-char beg)
         (let ((case-fold-search nil))
           (while (search-forward s end t)
-            (if mmm/master (mmm/add-mirror (match-beginning 0) (match-end 0))
-              (mmm/create-master (match-beginning 0) (match-end 0)))))))
+            (unless (= (match-beginning 0) pt)
+              (mmm/add-mirror (match-beginning 0) (match-end 0)))))))
     (unless mmm/master (user-error "No match for \"%s\"" s))
     (deactivate-mark) (goto-char (overlay-start mmm/master))))
 
