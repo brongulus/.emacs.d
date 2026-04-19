@@ -118,9 +118,9 @@
   (add-hook 'viper-insert-state-hook (lambda () (send-string-to-terminal "\e[6 q")))
   (add-hook 'viper-replace-state-hook (lambda () (send-string-to-terminal "\e[4 q")))
   (add-hook 'kill-emacs-hook (lambda () (send-string-to-terminal "\e[2 q"))))
-(dolist (binding '(("C-x c c" . compile) ("C-x c r" . recompile) ("C-h '" . describe-face)
-                   ("C-x C-m" . execute-extended-command) ("C-x k" . kill-current-buffer)
-                   ("M-o" . other-window) ("<escape>" . keyboard-escape-quit) ("C-\\" . epop)
+(dolist (binding '(("C-x c c" . compile) ("C-x c r" . recompile) ("C-x c ." . compile-at-root)
+                   ("C-h '" . describe-face) ("C-x C-m" . execute-extended-command) ("C-\\" . epop)
+                   ("C-x k" . kill-current-buffer) ("M-o" . other-window) ("<escape>" . keyboard-escape-quit)
                    ("C-x ;" . comment-line) ("C-x x c" . save-buffers-kill-emacs) ("s-o" . other-window)
                    ("C-x x b" . ibuffer) ("M-;" . eval-expression) ("C-/" . undo-only)
                    ("C-," . my-scroll-other-down) ("M-j" . window-toggle-side-windows)
@@ -253,6 +253,9 @@
   (add-hook 'eww-after-render-hook #'viper-mode)
   (setq eww-header-line-format nil eww-auto-rename-buffer 'title
         eww-default-download-directory "~/Downloads/eww/" browse-url-new-window-flag t))
+(defun compile-at-root nil (interactive) "Run compile command at project root."
+       (let ((default-directory (project-root (project-current nil))))
+         (call-interactively 'compile)))
 (setq completion-ignore-case t completion-auto-help nil ;'visible
       completion-styles '(initials partial-completion basic flex))
 (add-to-list 'display-buffer-alist
@@ -356,7 +359,7 @@
             :annotation-function (lambda (_) " File")
             :exclusive 'no))))
 (add-hook 'completion-at-point-functions #'file-capf)
-
+;; vc
 (define-advice ediff-vc-internal (:around (orig-fun &rest args) custom-quit)
   (apply orig-fun args) (switch-to-buffer "*Ediff Control Panel*")
   (define-key ediff-mode-map (kbd "q")
@@ -374,6 +377,53 @@
   (map-keymap (lambda (_key cmd)
                 (when (symbolp cmd) (put cmd 'repeat-map 'smerge-basic-map)))
               smerge-basic-map))
+
+(defun ediff-pr--blob (ref file)
+  "Read-only buffer with FILE at REF."
+  (with-current-buffer (get-buffer-create (format "*%s:%s*" ref (file-name-nondirectory file)))
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (ignore-errors (vc-git-command t 0 nil "show" (concat ref ":" file)))
+      (setq buffer-file-name file) (set-auto-mode)
+      (setq buffer-file-name nil buffer-read-only t))
+    (current-buffer)))
+(defun ediff-pr (pr-number base-branch)
+  "Review PR-NUMBER against BASE-BRANCH with ediff."
+  (interactive "nPR number: \nsBase branch (default main): ")
+  (require 'project)
+  (let* ((default-directory (project-root (project-current)))
+         (base (concat "origin/" (if (string-empty-p base-branch) "main" base-branch))))
+    (message "Fetching PR #%s..." pr-number)
+    (with-temp-buffer
+      (vc-git-command t 0 nil "fetch" "origin" (if (string-empty-p base-branch) "main" base-branch))
+      (vc-git-command t 0 nil "fetch" "origin" (format "pull/%s/head" pr-number)))
+    (cl-flet ((diff-files (&rest args)
+                (split-string (with-temp-buffer
+                                (apply #'vc-git-command t 0 nil "diff" "--name-only"
+                                       (append args (list (concat base "..FETCH_HEAD"))))
+                                (string-trim (buffer-string)))
+                              "\n" t)))
+      (let* ((files (diff-files))
+             (added (diff-files "--diff-filter=A"))
+             (deleted (diff-files "--diff-filter=D")))
+        (if (null files) (message "No changed files in PR %s" pr-number)
+          (with-current-buffer (get-buffer-create (format "*PR #%s*" pr-number))
+            (let ((inhibit-read-only t))
+              (erase-buffer)
+              (insert (format "PR #%s — %d files  (n/p to navigate, RET to diff, q to quit)\n\n" pr-number (length files)))
+              (dolist (f files)
+                (insert-text-button f 'face (cond ((member f added) 'success) ((member f deleted) 'error) (t 'button))
+                                    'action
+                                    (lambda (btn)
+                                      (ediff-buffers (ediff-pr--blob base (button-label btn))
+                                                     (ediff-pr--blob "FETCH_HEAD" (button-label btn)))
+                                      (let ((o (make-overlay (button-start btn) (button-end btn))))
+                                        (overlay-put o 'face 'shadow)))
+                                    'follow-link t)
+                (insert "\n"))
+              (goto-char (point-min))
+              (special-mode) (local-set-key "n" #'forward-button) (local-set-key "p" #'backward-button))
+            (switch-to-buffer (current-buffer))))))))
 ;; org
 (run-with-idle-timer 5 nil #'require 'org)
 (with-eval-after-load 'org
@@ -444,7 +494,7 @@
                          " ")))))
 (setq-default mode-line-format
               '("%e" mode-line-front-space
-                (:eval (unless (display-graphic-p) (concat " " viper-mode-string)))
+                (:eval (when (and (not (display-graphic-p)) (boundp 'viper-mode-string)) (concat " " viper-mode-string)))
                 (:propertize " %+  " display (min-width (6.0))) "%b"
                 (:eval (propertize (string-trim-left (format-mode-line vc-mode))))
                 (:propertize "   "   display (min-width (4.0))) mode-line-position
