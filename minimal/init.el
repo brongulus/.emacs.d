@@ -61,6 +61,8 @@
   (icomplete-vertical-mode -1) (unwind-protect (apply orig-fun args) (fido-vertical-mode 1)))
 (dolist (fn '(find-file find-file-other-window read-extended-command project-switch-to-buffer))
   (advice-add fn :around #'disable-fido-vertical))
+(add-hook 'icomplete-minibuffer-setup-hook
+          (lambda nil (setq-local icomplete-prospects-height (if icomplete-vertical-mode 11 1))))
 (dolist (hook '(text-mode-hook eshell-mode-hook)) (add-hook hook #'goto-address-mode))
 ;;; Keys ---
 (setq viper-mode t viper-expert-level 5 viper-ex-style-motion nil
@@ -154,7 +156,7 @@
 (set-face-attribute 'vertical-border nil :foreground 'unspecified :inherit '(shadow default))
 (set-face-attribute 'font-lock-comment-face nil :foreground 'unspecified :inherit 'shadow)
 (set-face-attribute 'fringe nil :background 'unspecified)
-(set-face-attribute 'default nil :foreground "#202225" :background "#eae8e1")
+(set-face-attribute 'default nil :foreground "#212121" :background "#eae8e1")
 (custom-set-faces '(font-lock-string-face ((((background dark))  :foreground "#deb07a")
                                            (((background light)) :foreground "sienna"))))
 (custom-set-faces '(bold ((((background dark)) :foreground "#fafbfc" :weight bold)
@@ -166,13 +168,16 @@
                                     font-lock-keyword-face font-lock-variable-name-face))
   (custom-set-faces `(,face ((t :foreground unspecified :background unspecified)))))
 (set-face-attribute 'font-lock-builtin-face nil :foreground 'unspecified :slant 'italic)
-(set-face-attribute 'error nil :foreground "Coral3") (set-face-attribute 'nobreak-space nil :underline nil)
+(set-face-attribute 'error nil :foreground "Coral3")
+(custom-set-faces '(success ((t :foreground "ForestGreen"))))
+(set-face-attribute 'nobreak-space nil :underline nil)
 (custom-set-faces '(ido-subdir ((t :inherit font-lock-string-face))))
+
 (dolist (face '(eshell-prompt minibuffer-prompt font-lock-function-name-face line-number-current-line))
   (custom-set-faces `(,face ((t :foreground unspecified :inherit bold)))))
 (dotimes (i 9) (let ((face (intern (format "outline-%d" (1+ i)))))
                  (custom-set-faces `(,face ((t :height 1.1 :inherit bold))))))
-(custom-set-faces '(highlight ((((background dark))  :background "#32353a")
+(custom-set-faces '(highlight ((((background dark))  :background "#2b2b2b")
                                (((background light)) :background "#d9d7d0"))))
 (custom-set-faces '(eglot-highlight-symbol-face ((t :inherit (highlight default)))))
 (dolist (face '(org-block org-block-begin-line org-block-end-line))
@@ -214,6 +219,7 @@
   (keymap-set completion-preview-active-mode-map "C-s" #'completion-preview-next-candidate)
   (keymap-set completion-preview-active-mode-map "C-r" #'completion-preview-prev-candidate))
 (with-eval-after-load 'compile
+  (setq compilation-scroll-output 'first-error)
   (push 'go-test compilation-error-regexp-alist)
   (add-to-list 'compilation-error-regexp-alist-alist
                '(go-test
@@ -407,10 +413,10 @@
              (added (diff-files "--diff-filter=A"))
              (deleted (diff-files "--diff-filter=D")))
         (if (null files) (message "No changed files in PR %s" pr-number)
-          (with-current-buffer (get-buffer-create (format "*PR #%s*" pr-number))
+          (with-current-buffer (get-buffer-create (format "*PR #%s:%s*" pr-number default-directory))
             (let ((inhibit-read-only t))
               (erase-buffer)
-              (insert (format "PR #%s — %d files  (n/p to navigate, RET to diff, q to quit)\n\n" pr-number (length files)))
+              (insert (format "PR #%s — %d files  (TAB/S-TAB to navigate)\n\n" pr-number (length files)))
               (dolist (f files)
                 (insert-text-button f 'face (cond ((member f added) 'success) ((member f deleted) 'error) (t 'button))
                                     'action
@@ -422,7 +428,7 @@
                                     'follow-link t)
                 (insert "\n"))
               (goto-char (point-min))
-              (special-mode) (local-set-key "n" #'forward-button) (local-set-key "p" #'backward-button))
+              (special-mode) (local-set-key "SPC" #'ctl-x-map))
             (switch-to-buffer (current-buffer))))))))
 ;; org
 (run-with-idle-timer 5 nil #'require 'org)
