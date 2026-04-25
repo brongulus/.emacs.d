@@ -17,7 +17,7 @@
 	  minibuffer-default-prompt-format " [%s]" minibuffer-visible-completions t
 	  read-buffer-completion-ignore-case t read-file-name-completion-ignore-case t
       org-modules nil org-pretty-entities t org-src-fontify-natively t
-      org-edit-src-content-indentation 0 org-src-preserve-indentation t
+      org-src-content-indentation 0 org-src-preserve-indentation t
 	  org-fontify-quote-and-verse-blocks t org-fontify-whole-heading-line t
 	  treesit-enabled-modes t treesit-font-lock-level 2 go-ts-mode-indent-offset 4
 	  isearch-regexp-lax-whitespace t isearch-lazy-count t lazy-highlight-initial-delay 0
@@ -38,13 +38,14 @@
       eshell-banner-message "" eshell-hist-ignoredups 'erase eshell-history-size 20000
       eshell-save-history-on-exit t eshell-glob-case-insensitive t eshell-scroll-to-bottom-on-input 'this
       grep-command "rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)"
-      grep-command-position 27 ido-enable-flex-matching t ido-everywhere t
+      grep-command-position 27 ido-enable-flex-matching t ido-everywhere nil
       ido-ignore-buffers
       '("\\` " "\\*Messages\\*" "\\*scratch\\*" "\\*Completions\\*" "\\*Native-compile-Log\\*"
         "\\*Async-native-compile-log\\*" "\\*EGLOT.*events\\*" "\\*Flymake.*\\*" "\\*MPC.*\\*"
         "\\*Buffer List\\*" "\\*Help\\*" "\\*Minibuf-.*\\*" "\\*vc-.*\\*" "\\#.*")
       ido-create-new-buffer 'always ido-use-virtual-buffers 'auto recentf-max-saved-items 200
-      ido-show-dot-for-dired t ido-max-prospects 6 ido-auto-merge-work-directories-length -1
+      ido-show-dot-for-dired t ido-max-window-height 1 ido-auto-merge-work-directories-length -1
+      ido-separator " • " icomplete-separator " • " icomplete-tidy-shadowed-file-names t
       Info-default-directory-list '("~/.emacs.d/info") Info-use-header-line nil)
 (if (not (eq system-type 'android)) (setq shell-file-name "/opt/homebrew/bin/fish")
   (setq-default fill-column 120 line-spacing '(4 . 4)))
@@ -55,24 +56,33 @@
 (tool-bar-mode -1) (line-number-mode -1) (kill-ring-deindent-mode 1)
 (global-visual-line-mode 1) (global-visual-wrap-prefix-mode 1) (electric-pair-mode 1)
 (add-hook 'emacs-startup-hook
-          (lambda () (ido-mode 'both) (global-auto-revert-mode 1) (viper-mode) (fido-vertical-mode)
+          (lambda () (ido-mode 'buffer) (global-auto-revert-mode 1) (viper-mode) (fido-mode)
             (repeat-mode 1) (save-place-mode 1) (delete-selection-mode 1) (savehist-mode 1)))
-(defun disable-fido-vertical (orig-fun &rest args)
-  (icomplete-vertical-mode -1) (unwind-protect (apply orig-fun args) (fido-vertical-mode 1)))
-(dolist (fn '(find-file find-file-other-window read-extended-command project-switch-to-buffer))
-  (advice-add fn :around #'disable-fido-vertical))
+(setq fido-non-vertical-fns
+      '(find-file find-file-other-window execute-extended-command project-switch-to-buffer))
 (add-hook 'icomplete-minibuffer-setup-hook
-          (lambda nil (setq-local icomplete-prospects-height (if icomplete-vertical-mode 11 1))))
+          (lambda nil
+            (unless (memq this-command fido-non-vertical-fns) (setq-local icomplete-vertical-mode t))
+            (setq-local icomplete-prospects-height (if icomplete-vertical-mode 11 1))))
 (dolist (hook '(text-mode-hook eshell-mode-hook)) (add-hook hook #'goto-address-mode))
 ;;; Keys ---
 (setq viper-mode t viper-expert-level 5 viper-ex-style-motion nil
       viper-inhibit-startup-message t viper-want-ctl-h-help t
       viper-want-emacs-keys-in-insert t viper-want-emacs-keys-in-vi t
       viper-ex-style-editing nil viper-insert-state-cursor-color nil)
+(with-eval-after-load 'viper-cmd
+  (setq viper-insert-basic-map (make-sparse-keymap))
+  (define-key viper-insert-basic-map viper-toggle-key 'viper-escape-to-vi)
+  (advice-add 'viper-adjust-keys-for :after
+              (lambda (state)
+                (when (memq state '(insert-state replace-state))
+                  (define-key viper-insert-basic-map [backspace] nil)
+                  (define-key viper-replace-map [backspace] nil)))
+              '((name . viper-remove-backspace-override))))
 (with-eval-after-load 'viper
   (advice-add 'viper-post-command-sentinel :override #'ignore)
   (defun viper-set-insert-cursor-type nil (setq cursor-type '(bar . 3)))
-  (define-key viper-insert-basic-map "\C-d" #'viper-del-backward-char-in-insert)
+  (define-key viper-minibuffer-map "\C-j" #'icomplete-fido-exit)
   (define-key viper-vi-basic-map "c" #'(lambda nil (interactive) (del-vi) (viper-change-state-to-insert)))
   (dolist (key '("\C-b" "\C-d" "\C-e" "\C-f" "\C-u" "\C-y" "\C-v"))
     (define-key viper-vi-basic-map key nil))
@@ -140,8 +150,6 @@
           (event (insert initial-key) (push event unread-command-events))
           (t (insert initial-key)))))
 (keymap-global-set "j" #'(lambda nil (interactive) (my-chord ?j ?k 'viper-change-state-to-vi)))
-(keymap-global-set "f" #'(lambda nil (interactive) (my-chord ?f ?g 'viper-find-char-forward)))
-(keymap-global-set "g" #'(lambda nil (interactive) (my-chord ?g ?f 'viper-find-char-backward)))
 (keymap-set vc-prefix-map "f" (lambda () (interactive) (vc-git--pushpull "push" nil '("--force-with-lease"))))
 (keymap-set vc-prefix-map "e" #'vc-ediff)
 (with-eval-after-load 'dired (keymap-set dired-mode-map "SPC" ctl-x-map))
@@ -166,23 +174,24 @@
                        (set-cursor-color (if (setq curs-mod (buffer-modified-p)) "coral3" "#00c2ff")))))
 (dolist (face '(font-lock-type-face font-lock-constant-face viper-minibuffer-insert
                                     font-lock-keyword-face font-lock-variable-name-face))
-  (custom-set-faces `(,face ((t :foreground unspecified :background unspecified)))))
+  (custom-set-faces `(,face ((t nil)))))
 (set-face-attribute 'font-lock-builtin-face nil :foreground 'unspecified :slant 'italic)
 (set-face-attribute 'error nil :foreground "Coral3")
 (custom-set-faces '(success ((t :foreground "ForestGreen"))))
 (set-face-attribute 'nobreak-space nil :underline nil)
-(custom-set-faces '(ido-subdir ((t :inherit font-lock-string-face))))
 
 (dolist (face '(eshell-prompt minibuffer-prompt font-lock-function-name-face line-number-current-line))
   (custom-set-faces `(,face ((t :foreground unspecified :inherit bold)))))
 (dotimes (i 9) (let ((face (intern (format "outline-%d" (1+ i)))))
                  (custom-set-faces `(,face ((t :height 1.1 :inherit bold))))))
-(custom-set-faces '(highlight ((((background dark))  :background "#2b2b2b")
+(custom-set-faces '(highlight ((((background dark))  :background "#393939")
                                (((background light)) :background "#d9d7d0"))))
 (custom-set-faces '(eglot-highlight-symbol-face ((t :inherit (highlight default)))))
 (dolist (face '(org-block org-block-begin-line org-block-end-line))
   (custom-set-faces `(,face ((t :inherit (highlight default) :extend t)))))
-(dolist (face '(org-code org-verbatim org-table)) (custom-set-faces `(,face ((t :inherit highlight)))))
+(custom-set-faces '(isearch ((t :inverse-video t))))
+(dolist (face '(lazy-highlight org-code org-verbatim org-table)) (custom-set-faces `(,face ((t :inherit highlight)))))
+(custom-set-faces '(completions-common-part ((t :underline t :weight bold))))
 (custom-set-faces '(org-table ((t :foreground unspecified))))
 (custom-set-faces '(link ((t :foreground "DodgerBlue" :underline t))))
 (custom-set-faces '(hs-ellipsis ((t :box unspecified :underline t))))
@@ -228,6 +237,7 @@
   (add-hook 'compilation-filter-hook
             (lambda nil (goto-address-mode -1)
               (unless (eq major-mode 'grep-mode) (ansi-color-compilation-filter) (ansi-osc-compilation-filter)))))
+(add-hook 'eshell-mode-hook #'compilation-shell-minor-mode)
 (with-eval-after-load 'eshell
   (defun eshell-insert-history () (interactive) ; src: habrams
          (let ((cmd (completing-read "Eshell history: "
@@ -294,15 +304,14 @@
                   (when interactive (setq this-command 'keyboard-quit)))))))
 (define-key (current-global-map) [remap keyboard-quit] #'prot-quit)
 
-(defun my/show-paren-data nil
-  (or (and (boundp 'treesit-show-paren-data) (treesit-show-paren-data))
-      (when-let* ((open (cond ((eq (car (syntax-after (point))) 4) (point))
-                              ((eq (car (syntax-after (1- (point)))) 5)
-                               (save-excursion (backward-sexp) (point)))
-                              ((nth 1 (syntax-ppss)))))
-                  (end (save-excursion (goto-char open) (forward-sexp) (point)))
-                  ((> end open)))
-        (list open (1+ open) (1- end) end))))
+(defun my/show-paren-data ()
+  (let ((open (cond ((eq (car (syntax-after (point))) 4) (point))
+                    ((eq (car (syntax-after (1- (point)))) 5)
+                     (save-excursion (backward-sexp) (point)))
+                    ((nth 1 (syntax-ppss))))))
+    (save-excursion
+      (when open (goto-char open))
+      (if (fboundp 'treesit-show-paren-data) (treesit-show-paren-data) (show-paren--default)))))
 (add-hook 'prog-mode-hook (lambda nil (setq-local show-paren-data-function #'my/show-paren-data)))
 
 (defvar zen-enabled-modes '(Info-mode diff-mode eww-mode dired-mode gnus-article-mode gnus-group-mode erc-mode))
@@ -383,6 +392,14 @@
   (map-keymap (lambda (_key cmd)
                 (when (symbolp cmd) (put cmd 'repeat-map 'smerge-basic-map)))
               smerge-basic-map))
+(with-eval-after-load 'log-edit
+  (define-advice log-edit-show-files (:after (&rest _args) show-diff)
+    (let ((orig-window (selected-window)))
+      (log-edit-show-diff) (select-window orig-window))
+    (setq-local other-window-scroll-buffer (get-buffer "*vc-diff*")))
+  (defun my/vc-cleanup-buffers ()
+    (dolist (buf '("*log-edit-files*" "*vc-diff*" "*vc*")) (when-let* ((b (get-buffer buf))) (kill-buffer b))))
+  (dolist (fn '(log-edit-done log-edit-kill-buffer)) (advice-add fn :after #'my/vc-cleanup-buffers)))
 
 (defun ediff-pr--blob (ref file)
   "Read-only buffer with FILE at REF."
@@ -501,7 +518,8 @@
 (setq-default mode-line-format
               '("%e" mode-line-front-space
                 (:eval (when (and (not (display-graphic-p)) (boundp 'viper-mode-string)) (concat " " viper-mode-string)))
-                (:propertize " %+  " display (min-width (6.0))) "%b"
+                (:propertize " %+  " display (min-width (6.0)))
+                (:eval (propertize "%b" 'face 'bold 'help-echo (buffer-file-name)))
                 (:eval (propertize (string-trim-left (format-mode-line vc-mode))))
                 (:propertize "   "   display (min-width (4.0))) mode-line-position
                 mode-line-format-right-align
