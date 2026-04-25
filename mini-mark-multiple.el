@@ -12,8 +12,8 @@
 (defvar-local mmm/--last nil)
 
 (defvar mmm/--unnarrow
-  '(mmm/mark-next-like-this mmm/mark-previous-like-this
-                            mmm/mark-all-like-this mmm/mark-all-in-defun mmm/clear-all keyboard-quit))
+  '(mmm/mark-next-like-this mmm/mark-previous-like-this mmm/mark-all-like-this
+                            mmm/mark-all-in-defun mmm/clear-all keyboard-quit))
 
 (defvar mmm/keymap (let ((m (make-sparse-keymap))) (define-key m (kbd "RET") #'mmm/clear-all) m))
 
