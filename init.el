@@ -456,7 +456,7 @@
               (special-mode) (local-set-key "SPC" #'ctl-x-map))
             (switch-to-buffer (current-buffer))))))))
 ;; org
-(run-with-idle-timer 5 nil #'require 'org)
+;; (run-with-idle-timer 5 nil #'require 'org)
 (with-eval-after-load 'org
   (require 'org-tempo)
   (with-eval-after-load 'org-src
@@ -508,21 +508,22 @@
                     :overline (face-foreground 'shadow))))
   (apply #'set-face-attribute 'mode-line-active nil :inherit 'default common)
   (apply #'set-face-attribute 'mode-line-inactive nil :inherit 'shadow common))
-(defvar tab-bar--tab-keymaps
-  (let ((v (make-vector 20 nil)))
-    (dotimes (i 20 v) (let ((m (make-sparse-keymap)))
-                        (define-key m [mode-line mouse-1] `(lambda () (interactive) (tab-bar-select-tab ,(1+ i))))
-                        (aset v i m)))))
-(setq mode-line-front-space
-      '(:eval (when (> (length (tab-bar-tabs)) 1)
-                (propertize
-                 (concat " "
-                         (mapconcat
-                          (lambda (i) (propertize (if (= i (tab-bar--current-tab-index)) "⦿" "○")
-                                                  'mouse-face 'mode-line-highlight
-                                                  'local-map (aref tab-bar--tab-keymaps i)))
-                          (number-sequence 0 (1- (length (tab-bar-tabs)))) " ")
-                         " ")))))
+(defvar my/tab-keymaps (let ((v (make-vector 20 nil)))
+                         (dotimes (i 20 v) (let ((m (make-sparse-keymap)))
+                                             (define-key m [mode-line mouse-1]
+                                                         `(lambda () (interactive) (tab-bar-select-tab ,(1+ i))))
+                                             (aset v i m)))))
+(defun my/tab-bar--update-indicator (&rest _)
+  (let* ((tabs (tab-bar-tabs)) (n (length tabs)) (cur (tab-bar--current-tab-index tabs)))
+    (setq-default mode-line-front-space
+                  (if (> n 1)
+                      (concat " " (mapconcat (lambda (i) (propertize (if (= i cur) "⦿" "○")
+                                                                      'mouse-face 'mode-line-highlight
+                                                                      'local-map (aref my/tab-keymaps i)))
+                                             (number-sequence 0 (1- n)) " ") " ") ""))))
+(setq-default mode-line-front-space "")
+(dolist (fn '(tab-bar-new-tab tab-bar-close-tab)) (advice-add fn :after #'my/tab-bar--update-indicator))
+(with-eval-after-load 'tab-bar (add-hook 'tab-bar-tab-post-select-functions #'my/tab-bar--update-indicator))
 (setq-default mode-line-format
               '("%e" mode-line-front-space
                 (:eval (when (and (not (display-graphic-p)) (boundp 'viper-mode-string)) (concat " " viper-mode-string)))
@@ -605,7 +606,7 @@
   (define-key mpc-tagbrowser-mode-map (kbd "TAB") 'my-mpc-tagbrowser-toggle)
   (define-key mpc-tagbrowser-mode-map (kbd "RET") 'mpc-play-at-point))
 ;;; eldoc-box --- I need this man... ;-;
-(with-eval-after-load 'eglot (load "~/.emacs.d/minimal/eldoc-box" :noerr :no-message))
+(with-eval-after-load 'eglot (load "~/.emacs.d/eldoc-box" :noerr :no-message))
 (setq eldoc-box-clear-with-C-g t)
 (defun my/eldoc-get-help () (interactive)
        (if (derived-mode-p 'emacs-lisp-mode) (describe-symbol (symbol-at-point))
@@ -616,7 +617,7 @@
   (with-eval-after-load 'eldoc-box
     (setq eldoc-box-max-pixel-width 800 eldoc-box-max-pixel-height 700 eldoc-box-only-multi-line t)))
 ;;; mark-multiple clone --- This was an experiment to see how far opus 4.6 can go
-(load "~/.emacs.d/minimal/mini-mark-multiple" :noerr :no-message)
+(load "~/.emacs.d/mini-mark-multiple" :noerr :no-message)
 (define-key (current-global-map) (kbd "M-p") #'mmm/mark-previous-like-this)
 (define-key (current-global-map) (kbd "M-n") #'mmm/mark-next-like-this)
 (define-key (current-global-map) (kbd "M-'") #'mmm/mark-all-like-this)
