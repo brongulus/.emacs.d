@@ -82,34 +82,22 @@
       '((bg-main "#212121")))
 ;; (load-theme 'modus-operandi-deuteranopia)
 ;; (load-theme 'stillpoint)
-(set-face-attribute 'fringe nil :background (face-background 'default))
-(load "~/.emacs.d/lisp/nano-theme" :noerr :no-message)
+(keymap-global-set "C-x 6" #'(lambda nil (interactive) (invert-face 'default)))
+(custom-set-faces '(fringe ((t :background unspecified))))
+;; (load "~/.emacs.d/lisp/nano-theme" :noerr :no-message)
 (define-advice load-theme (:before (&rest _args) theme-dont-propagate)
   (mapc #'disable-theme custom-enabled-themes))
 (define-advice load-theme (:after (&rest _args) fringe-fix)
-  (set-face-attribute 'fringe nil :background (face-background 'default)))
-
-(defun adjust-color (color alpha lighten)
-  "Darken or lighten COLOR (hex string) by ALPHA (0.0-1.0).
-If lighten is non-nil, lighten; otherwise darken"
-  (if (string-prefix-p "#" color)
-      (let ((div (float (car (tty-color-standard-values "#ffffff")))))
-        (apply (lambda (r g b) (format "#%02x%02x%02x" (* r 255) (* g 255) (* b 255)))
-               (seq-mapn (lambda (c w)
-                           (if lighten
-                               (* (- 1 alpha) (/ c div))
-                             (+ (* (- 1 alpha) (/ c div)) (* alpha (/ w div)))))
-                         (tty-color-standard-values color)
-                         (tty-color-standard-values "#ffffff"))))
-    color))
+  (custom-set-faces '(fringe ((t :background unspecified)))))
 
 (defface solaire-default-face '((t :inherit default)) "Tinted backgrounds.")
 (defun solaire-update-face () "Update solaire face based on current theme."
+       (require 'color)
        (let* ((bg (face-background 'default nil t))
               (is-light (< (color-distance bg "white")
                            (color-distance bg "black")))
-              (alpha (if is-light 0.03 0.02))
-              (new-bg (adjust-color bg alpha is-light)))
+              (new-bg (if is-light (color-darken-name bg 3.0)
+                        (color-lighten-name bg 2.0))))
          (set-face-attribute 'solaire-default-face nil :background new-bg)))
 
 (defun solaire-background () "Remap faces to use solaire background."
@@ -150,25 +138,23 @@ If lighten is non-nil, lighten; otherwise darken"
                          org-mode-line-string))
                 (:eval (when (member major-mode '(comint-mode compilation-mode))
                          compilation-mode-line-errors))))
-(defvar default-mode-line-format
+(defvar default-mode-line-l-format
   '("%e"
-    (:eval
-     ;; (when (mode-line-window-selected-p)
-     (let* ((tabs (tab-bar-tabs))
-            (count (length tabs)))
-       (when (> count 1)
-         (let ((active (tab-bar--current-tab-index)))
-           (propertize
-            (concat " "
-                    (mapconcat
-                     (lambda (i)
-                       (propertize (if (= i active) "⦿" "○")
-                                   'mouse-face 'mode-line-highlight
-                                   'local-map
-                                   (aref tab-bar--tab-keymaps i)))
-                     (number-sequence 0 (1- count)) " ")
-                    " ")
-            'face 'bold)))));)
+    (:eval (let* ((tabs (tab-bar-tabs))
+                  (count (length tabs)))
+             (when (> count 1)
+               (let ((active (tab-bar--current-tab-index)))
+                 (propertize
+                  (concat " "
+                          (mapconcat
+                           (lambda (i)
+                             (propertize (if (= i active) "⦿" "○")
+                                         'mouse-face 'mode-line-highlight
+                                         'local-map
+                                         (aref tab-bar--tab-keymaps i)))
+                           (number-sequence 0 (1- count)) " ")
+                          " ")
+                  'face 'bold)))))
     (:eval (when (and (buffer-narrowed-p)
                       (not (derived-mode-p 'Info-mode)))
              (propertize "(N)")))
@@ -203,10 +189,11 @@ If lighten is non-nil, lighten; otherwise darken"
     ;; (:eval (unless display-line-numbers
     ;;          (propertize "   L%l" 'face 'shadow)))
     (:eval (when (bound-and-true-p flymake-mode)
-             (format-mode-line flymake-mode-line-format)))
-    mode-line-format-right-align
-    (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
-      eglot-mode-line-progress)
+             (format-mode-line flymake-mode-line-format)))))
+
+(defvar default-mode-line-r-format
+  '((:eval (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
+             eglot-mode-line-progress))
     (:eval (when (and (derived-mode-p 'text-mode)
                       (not (eq major-mode 'yaml-ts-mode)) my-word-count-cache)
              (propertize (format " %s Words" my-word-count-cache)
@@ -224,6 +211,11 @@ If lighten is non-nil, lighten; otherwise darken"
                     'mode-line-inactive)))
     (:eval (when (mode-line-window-selected-p)
              mode-line-end-spaces))))
+
+(defvar default-mode-line-format
+  `(,default-mode-line-l-format
+    mode-line-format-right-align
+    ,default-mode-line-r-format))
 
 (defun my-set-mode-line-once ()
   (setq-default mode-line-format default-mode-line-format)

@@ -30,7 +30,7 @@
 
 (setq-default default-frame-alist
               '((alpha . 100)
-                (font . "Input Mono Narrow-15:weight=light")
+                (font . "Input Mono Narrow-14.5:weight=light")
                 (menu-bar-lines . 0)
                 (tool-bar-lines . 0)
                 (vertical-scroll-bars . nil)
@@ -146,7 +146,8 @@
     ;; Activate `native-compile'
     (setq native-comp-jit-compilation t
           native-comp-jit-compilation-deny-list
-          '("/emacs-lisp/cl-loaddefs\\.el")
+          '("/emacs-lisp/cl-loaddefs\\.el"
+            "org-loaddefs\\.el")
           native-comp-enable-subr-trampolines t
           native-comp-async-report-warnings-errors 'silent
           package-native-compile t)
