@@ -20,8 +20,9 @@
       org-src-content-indentation 0 org-src-preserve-indentation t
 	  org-fontify-quote-and-verse-blocks t org-fontify-whole-heading-line t
 	  treesit-enabled-modes t treesit-font-lock-level 2 go-ts-mode-indent-offset 4
-	  isearch-regexp-lax-whitespace t isearch-lazy-count t lazy-highlight-initial-delay 0
-	  isearch-repeat-on-direction-change t isearch-wrap-pause 'no-ding save-interprogram-paste-before-kill t
+      save-interprogram-paste-before-kill t delete-pair-push-mark t ispell-program-name "aspell"
+      delete-pair-blink-delay t lazy-highlight-initial-delay 0  isearch-regexp-lax-whitespace t
+      isearch-lazy-count t isearch-repeat-on-direction-change t isearch-wrap-pause 'no-ding
 	  search-whitespace-regexp ".*?" dired-kill-when-opening-new-dired-buffer t
       dired-listing-switches "-l -v --almost-all --human-readable --group-directories-first"
       delete-by-moving-to-trash t help-window-select t kill-region-dwim 'emacs-word
@@ -32,7 +33,7 @@
       maximum-scroll-margin 0.5 scroll-margin 9999 scroll-conservatively 101
       scroll-preserve-screen-position t fast-but-imprecise-scrolling t doc-view-continuous t
       require-final-newline t resize-mini-windows t ring-bell-function 'ignore tab-always-indent 'complete
-      diff-font-lock-syntax nil vc-allow-rewriting-published-history t vc-follow-symlinks t
+      diff-font-lock-syntax nil vc-allow-rewriting-published-history t vc-follow-symlinks t vc-make-backup-files t
       vc-display-status 'no-backend vc-git-diff-switches '("--patch-with-stat" "--histogram")
       project-vc-extra-root-markers '("Cargo.toml" "build.zig" "go.work" "CMakeLists.txt")
       eshell-banner-message "" eshell-hist-ignoredups 'erase eshell-history-size 20000
@@ -87,12 +88,14 @@
   (dolist (key '("\C-b" "\C-d" "\C-e" "\C-f" "\C-u" "\C-y" "\C-v"))
     (define-key viper-vi-basic-map key nil))
   (define-key viper-vi-basic-map (kbd "SPC") ctl-x-map)
+  (define-key viper-vi-basic-map (kbd "m") (make-sparse-keymap))
+  (define-key viper-vi-basic-map "ms" insert-pair-map)
   (dolist (binding '(("g" . nil) ("x" . sel-line) ("-" . negative-argument) ("y" . kill-ring-save)
                      ("C-\\" . epop) ("R" . replace-regexp) ("=" . mark-inner) ("d" . del-vi)
                      ("g i" . eglot-find-implementation) ("g r" . xref-find-references) (";" . prot-quit)
                      ("C" . string-rectangle) ("p" . yank) ("+" . eglot-rename) ("_" . eglot-code-actions)
                      ("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all)
-                     ("[" . previous-error) ("]" . next-error) ("#" . definition-at-point)
+                     ("[" . previous-error) ("]" . next-error) ("#" . definition-at-point) ("m d" . my/delete-pair)
                      ("g s" . imenu) ("q" . quit-window) ("j" . next-line) ("k" . previous-line)
                      ("<" . beginning-of-buffer) (">" . end-of-buffer) ("o" . other-window)
                      ("v" . set-mark-command) ("s" . isearch-forward-regexp) ("u" . undo-only)
@@ -285,6 +288,11 @@
 (add-to-list 'display-buffer-alist
              '("\\*\\(Dictionary\\|eldoc\\)\\*" my/display-buffer-adaptive
                (body-function . select-window) (window-parameters . ((split-window . #'ignore)))))
+(defvar insert-pair-map ;; src: oantolin
+  (let ((map (make-sparse-keymap))) (define-key map [t] #'insert-pair) map))
+(defun my/delete-pair () (interactive)
+       (if (use-region-p) (progn (goto-char (region-beginning)) (delete-pair))
+         (mark-inner) (my/delete-pair)))
 (setq dictionary-server "localhost")
 (defun definition-at-point nil (interactive)
        (if (use-region-p)
