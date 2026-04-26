@@ -36,7 +36,7 @@
       diff-font-lock-syntax nil vc-allow-rewriting-published-history t vc-follow-symlinks t vc-make-backup-files t
       vc-display-status 'no-backend vc-git-diff-switches '("--patch-with-stat" "--histogram")
       project-vc-extra-root-markers '("Cargo.toml" "build.zig" "go.work" "CMakeLists.txt")
-      eshell-banner-message "" eshell-hist-ignoredups 'erase eshell-history-size 20000
+      pcomplete-termination-string "" eshell-banner-message "" eshell-hist-ignoredups 'erase eshell-history-size 20000
       eshell-save-history-on-exit t eshell-glob-case-insensitive t eshell-scroll-to-bottom-on-input 'this
       grep-command "rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)"
       grep-command-position 27 ido-enable-flex-matching t ido-everywhere nil
@@ -137,7 +137,7 @@
                    ("C-h '" . describe-face) ("C-x C-m" . execute-extended-command) ("C-\\" . epop)
                    ("C-x k" . kill-current-buffer) ("M-o" . other-window) ("<escape>" . keyboard-escape-quit)
                    ("C-x ;" . comment-line) ("C-x x c" . save-buffers-kill-emacs) ("s-o" . other-window)
-                   ("C-x x b" . ibuffer) ("M-;" . eval-expression) ("C-/" . undo-only)
+                   ("C-x C-b" . ibuffer) ("M-;" . eval-expression) ("C-/" . undo-only)
                    ("C-," . my-scroll-other-down) ("M-j" . window-toggle-side-windows)
                    ("C-<tab>" . tab-next) ("C-S-<tab>" . tab-previous) ("C-x x f" . find-file)
                    ("C-x x s" . save-buffer) ("C-x x e" . eval-defun) ("C-x x z" . restart-emacs)
@@ -164,10 +164,12 @@
 (dolist (face '(default fixed-pitch fixed-pitch-serif variable-pitch))
   (set-face-attribute face nil :font "Input Mono Narrow" :height (if (eq system-type 'android) 160 140)))
 (dolist (set '(cjk-misc han kana)) (set-fontset-font t set "Noto Sans Mono CJK JP" nil 'prepend))
+(set-face-attribute 'default nil :foreground "#272e33" :background "#fffbef")
+(set-face-attribute 'fringe nil :background 'unspecified)
 (set-face-attribute 'vertical-border nil :foreground 'unspecified :inherit '(shadow default))
 (set-face-attribute 'font-lock-comment-face nil :foreground 'unspecified :inherit 'shadow)
-(set-face-attribute 'fringe nil :background 'unspecified)
-(set-face-attribute 'default nil :foreground "#212121" :background "#eae8e1")
+(custom-set-faces '(highlight ((((background dark))  :background "#374145")
+                               (((background light)) :background "#f2efdf"))))
 (custom-set-faces '(font-lock-string-face ((((background dark))  :foreground "#deb07a")
                                            (((background light)) :foreground "sienna"))))
 (custom-set-faces '(bold ((((background dark)) :foreground "#fafbfc" :weight bold)
@@ -182,13 +184,10 @@
 (set-face-attribute 'error nil :foreground "Coral3")
 (custom-set-faces '(success ((t :foreground "ForestGreen"))))
 (set-face-attribute 'nobreak-space nil :underline nil)
-
 (dolist (face '(eshell-prompt minibuffer-prompt font-lock-function-name-face line-number-current-line))
   (custom-set-faces `(,face ((t :foreground unspecified :inherit bold)))))
 (dotimes (i 9) (let ((face (intern (format "outline-%d" (1+ i)))))
                  (custom-set-faces `(,face ((t :height 1.1 :inherit bold))))))
-(custom-set-faces '(highlight ((((background dark))  :background "#393939")
-                               (((background light)) :background "#d9d7d0"))))
 (custom-set-faces '(eglot-highlight-symbol-face ((t :inherit (highlight default)))))
 (dolist (face '(org-block org-block-begin-line org-block-end-line))
   (custom-set-faces `(,face ((t :inherit (highlight default) :extend t)))))
@@ -518,8 +517,8 @@
     (setq-default mode-line-front-space
                   (if (> n 1)
                       (concat " " (mapconcat (lambda (i) (propertize (if (= i cur) "⦿" "○")
-                                                                      'mouse-face 'mode-line-highlight
-                                                                      'local-map (aref my/tab-keymaps i)))
+                                                                     'mouse-face 'mode-line-highlight
+                                                                     'local-map (aref my/tab-keymaps i)))
                                              (number-sequence 0 (1- n)) " ") " ") ""))))
 (setq-default mode-line-front-space "")
 (dolist (fn '(tab-bar-new-tab tab-bar-close-tab)) (advice-add fn :after #'my/tab-bar--update-indicator))
