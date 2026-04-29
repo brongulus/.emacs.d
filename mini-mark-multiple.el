@@ -13,9 +13,15 @@
 
 (defvar mmm/--unnarrow
   '(mmm/mark-next-like-this mmm/mark-previous-like-this mmm/mark-all-like-this
-                            mmm/mark-all-in-defun mmm/clear-all keyboard-quit))
+                            mmm/mark-all-in-defun mmm/cycle-master mmm/cycle-master-backward
+                            mmm/clear-all keyboard-quit))
 
-(defvar mmm/keymap (let ((m (make-sparse-keymap))) (define-key m (kbd "RET") #'mmm/clear-all) m))
+(defvar mmm/keymap
+  (let ((m (make-sparse-keymap)))
+    (define-key m (kbd "RET") #'mmm/clear-all)
+    (define-key m (kbd "C-s") #'mmm/cycle-master)
+    (define-key m (kbd "C-r") #'mmm/cycle-master-backward)
+    m))
 
 (defun mmm/--ov (beg end face &rest props)
   (let ((o (make-overlay beg end nil nil t)))
@@ -151,6 +157,32 @@
               (mmm/add-mirror (match-beginning 0) (match-end 0)))))))
     (unless mmm/master (user-error "No match for \"%s\"" s))
     (deactivate-mark) (goto-char (overlay-start mmm/master))))
+
+;;;###autoload
+(defun mmm/cycle-master (arg)
+  "Move master to the next mirror (or previous with negative ARG)."
+  (interactive "p")
+  (unless (and mmm/master mmm/mirrors) (user-error "No mirrors"))
+  (let* ((offset (- (point) (overlay-start mmm/master)))
+         (pos (overlay-start mmm/master))
+         (sorted (seq-sort-by #'overlay-start (if (> arg 0) #'< #'>) mmm/mirrors))
+         (target (or (if (> arg 0)
+                         (cl-find-if (lambda (m) (> (overlay-start m) pos)) sorted)
+                       (cl-find-if (lambda (m) (< (overlay-start m) pos)) sorted))
+                     (car sorted))))
+    (let ((mb (overlay-start mmm/master)) (me (overlay-end mmm/master))
+          (tb (overlay-start target)) (te (overlay-end target)))
+      (setq mmm/mirrors (delq target mmm/mirrors))
+      (delete-overlay target)
+      (push (mmm/--ov mb me 'mmm/mirror-face) mmm/mirrors)
+      (delete-overlay mmm/master)
+      (setq mmm/master (mmm/--ov tb te 'mmm/master-face 'keymap mmm/keymap))
+      (goto-char (min (+ tb offset) te)))))
+
+;;;###autoload
+(defun mmm/cycle-master-backward ()
+  "Move master to the previous mirror."
+  (interactive) (mmm/cycle-master -1))
 
 (provide 'mini-mark-multiple)
 ;;; mini-mark-multiple.el ends here
