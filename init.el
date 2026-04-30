@@ -161,6 +161,10 @@
   (keymap-set doc-view-mode-map "j" #'doc-view-next-line-or-next-page)
   (keymap-set doc-view-mode-map "k" #'doc-view-previous-line-or-previous-page))
 ;;; Visuals ---
+(setq custom-theme-directory "~/.emacs.d/themes/" custom-safe-themes t)
+(define-advice load-theme (:around (orig-fun &rest args) theme-dont-propagate)
+  (put 'user 'theme-settings nil) (mapc #'disable-theme custom-enabled-themes)
+  (apply orig-fun args) (custom-set-faces '(fringe ((t :background unspecified)))))
 (dolist (face '(default fixed-pitch fixed-pitch-serif variable-pitch))
   (set-face-attribute face nil :font "Input Mono Narrow" :height (if (eq system-type 'android) 160 140)))
 (dolist (set '(cjk-misc han kana)) (set-fontset-font t set "Noto Sans Mono CJK JP" nil 'prepend))
@@ -168,6 +172,7 @@
 (set-face-attribute 'fringe nil :background 'unspecified)
 (set-face-attribute 'vertical-border nil :foreground 'unspecified :inherit '(shadow default))
 (set-face-attribute 'font-lock-comment-face nil :foreground 'unspecified :inherit 'shadow)
+(custom-set-faces '(header-line ((t :box t :inherit (highlight default)))))
 (custom-set-faces '(highlight ((((background dark))  :background "#374145")
                                (((background light)) :background "#f2efdf"))))
 (custom-set-faces '(font-lock-string-face ((((background dark))  :foreground "#deb07a")
@@ -205,8 +210,7 @@
              nil '(("\\<\\(FIXME\\|HACK\\|TODO\\|WIP\\|BUG\\)\\( \\|:\\)" 1 'match t)
                    (";" . 'shadow)))))
 ;;; Programming stuff ---
-(dolist (fn '(hs-minor-mode display-line-numbers-mode ; hl-line-mode which-function-mode
-                            show-paren-mode completion-preview-mode goto-address-mode))
+(dolist (fn '(hs-minor-mode display-line-numbers-mode show-paren-mode completion-preview-mode goto-address-mode))
   (add-hook 'prog-mode-hook fn))
 (with-eval-after-load 'eglot
   (setq python-flymake-command '("ruff" "check" "--output-format=concise" "--stdin-filename" "stdin" "-"))
@@ -246,6 +250,12 @@
                                      (delete-dups (ring-elements eshell-history-ring)))))
            (when cmd (kill-line 0) (insert cmd))))
   (add-hook 'eshell-mode-hook #'completion-preview-mode)
+  (add-hook 'eshell-mode-hook
+            (lambda ()
+              (require 'server) (unless (server-running-p) (server-start))
+              (setenv "GIT_EDITOR" "emacsclient")))
+  (add-hook 'server-visit-hook
+            (lambda () (local-set-key (kbd "C-c C-c") #'server-edit)))
   (when (not (or (getenv "GCTL_SESSION_ID") (getenv "TERM_SESSION_ID")))
     (setenv "GCTL_SESSION_ID" (string-trim (shell-command-to-string "uuidgen"))))
   (setenv "GOPATH" (concat (getenv "HOME") "/go"))
@@ -253,6 +263,7 @@
 (add-hook #'eshell-mode-hook
           (lambda nil (define-key eshell-hist-mode-map (kbd "C-r") #'eshell-insert-history)))
 (setq inferior-lisp-program "clojure")
+(add-to-list 'auto-mode-alist '("\\.log\\'" . (lambda () (display-line-numbers-mode))))
 ;;; Miscellaneous ---
 (setq shr-max-image-proportion 0.5 shr-use-colors nil)
 (defun my-shr-tag-render (tag face-spec)
@@ -263,14 +274,20 @@
   (set-face-attribute 'shr-mark nil :foreground 'unspecified :background 'unspecified)
   (setq shr-external-rendering-functions
         `((pre        . ,(my-shr-tag-render 'pre        '(:inherit highlight :extend t)))
+          (table      . ,(my-shr-tag-render 'table      '(:inherit mode-line-active)))
           (blockquote . ,(my-shr-tag-render 'blockquote '(:slant italic)))
           (h1         . ,(my-shr-tag-render 'h1         '(:inherit bold :height 1.3)))
           (h2         . ,(my-shr-tag-render 'h2         '(:inherit bold :height 1.2)))
           (h3         . ,(my-shr-tag-render 'h3         '(:inherit bold :height 1.2))))))
+(setq browse-url-handlers '(("youtu\\(?:\\.be\\|be\\.com\\)" .
+                             (lambda (url &rest _)
+                               (call-process-shell-command
+                                (concat "nohup mpv " (shell-quote-argument url) " >/dev/null 2>&1 &"))))))
 (with-eval-after-load 'eww
   (add-hook 'eww-after-render-hook #'viper-mode)
   (setq eww-header-line-format nil eww-auto-rename-buffer 'title
-        eww-default-download-directory "~/Downloads/eww/" browse-url-new-window-flag t))
+        eww-default-download-directory "~/Downloads/eww/" browse-url-new-window-flag t
+        eww-use-browse-url "\\`mailto:\\|youtu\\(?:\\.be\\|be\\.com\\)"))
 (defun compile-at-root nil (interactive) "Run compile command at project root."
        (let ((default-directory (project-root (project-current nil))))
          (call-interactively 'compile)))
@@ -499,12 +516,12 @@
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . epub-open))
 ;;; Mode-line ---
 (setq-default mode-line-collapse-minor-modes '(not flymake-mode defining-kbd-macro)
-              mode-line-end-spaces nil mode-line-compact t flymake-mode-line-title nil)
+              mode-line-end-spaces nil flymake-mode-line-title nil)
 (let ((common (list :background 'unspecified :foreground 'unspecified
                     :inverse-video (not (display-graphic-p))
                     :height (if (eq system-type 'android) 160 140)
-                    :box '(:line-width 1 :style flat-button)
-                    :overline (face-foreground 'shadow))))
+                    :overline (face-foreground 'shadow)
+                    :box '(:line-width 1 :style flat-button))))
   (apply #'set-face-attribute 'mode-line-active nil :inherit 'default common)
   (apply #'set-face-attribute 'mode-line-inactive nil :inherit 'shadow common))
 (defvar my/tab-keymaps (let ((v (make-vector 20 nil)))
@@ -526,11 +543,9 @@
 (setq-default mode-line-format
               '("%e" mode-line-front-space
                 (:eval (when (and (not (display-graphic-p)) (boundp 'viper-mode-string)) (concat " " viper-mode-string)))
-                (:propertize " %+  " display (min-width (6.0)))
-                (:eval (propertize "%b" 'face 'bold 'help-echo (buffer-file-name)))
+                " %+  " (:eval (propertize "%b" 'face 'bold 'help-echo (buffer-file-name)))
                 (:eval (propertize (string-trim-left (format-mode-line vc-mode))))
-                (:propertize "   "   display (min-width (4.0))) mode-line-position
-                mode-line-format-right-align
+                "    " mode-line-position mode-line-format-right-align
                 mode-line-modes mode-line-misc-info mode-line-end-spaces))
 (with-eval-after-load 'viper
   (setq global-mode-string '((:eval (unless (derived-mode-p 'prog-mode) (format-time-string "%a %H:%M"))))))

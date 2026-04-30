@@ -134,7 +134,8 @@
       (while (search-forward s nil t)
         (unless (= (match-beginning 0) ms)
           (mmm/add-mirror (match-beginning 0) (match-end 0))))))
-  (deactivate-mark))
+  (deactivate-mark)
+  (message "%d matches" (1+ (length mmm/mirrors))))
 
 ;;;###autoload
 (defun mmm/mark-all-in-defun ()

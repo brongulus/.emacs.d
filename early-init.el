@@ -8,7 +8,7 @@
           #'(lambda ()
               (run-at-time
                2 nil
-               (lambda nil            
+               (lambda nil
                  (setq gc-cons-threshold (* 64 1024 1024) gc-cons-percentage 0.1
                        file-name-handler-alist my/saved-file-name-handler-alist))))
           105)
@@ -43,12 +43,14 @@
 (fset 'display-startup-echo-area-message 'ignore)
 (push '(fullscreen . maximized) initial-frame-alist)
 (if (and (featurep 'native-compile) (fboundp 'native-comp-available-p) (native-comp-available-p))
-    (setq native-comp-jit-compilation t
+    (setq native-comp-jit-compilation nil
           native-comp-jit-compilation-deny-list
           '("/emacs-lisp/cl-loaddefs\\.el" "org-loaddefs\\.el")
-          native-comp-enable-subr-trampolines nil
           native-comp-async-report-warnings-errors 'silent
           package-native-compile t)
+    (add-hook 'window-setup-hook
+              (lambda () (setq native-comp-jit-compilation t))
+              110)
   (setq features (delq 'native-compile features)))
 (when (eq system-type 'android)
   ;; Install termux first, "pkg update && pkg upgrade"
@@ -64,3 +66,15 @@
     (push (concat termuxpath "bin") exec-path))
   (unless (file-directory-p "~/fonts")
     (copy-directory "~/.emacs.d/fonts/" "~/fonts")))
+(when (eq system-type 'darwin)
+  (setq process-connection-type nil)
+  (let ((home (getenv "HOME")))
+    (setenv "PATH" (concat (getenv "PATH")
+                           ":" home "/.nix-profile/bin:/usr/bin"
+                           ":/opt/homebrew/bin"
+                           ":/usr/local/bin"))
+    (setq exec-path (append `(,(concat home "/.nix-profile/bin")
+                              "/opt/homebrew/bin"
+                              "/usr/local/bin"
+                              "/nix/var/nix/profiles/default/bin")
+                            exec-path))))
