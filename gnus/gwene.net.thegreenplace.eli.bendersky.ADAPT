@@ -1,1 +1,1 @@
-(("subject" ("toolkit" 30 739717 w) ("webassembly" 30 739717 w) ("watgo" 30 739717 w) ("watgo - a WebAssembly Toolkit for Go" 30 739717 f)) ("from" ("Eli Bendersky <post@gwene.org>" 5 739717 s)))
+(("subject" ("machine" 30 739736 w) ("stack" 30 739736 w) ("webassembly" 30 739736 w) ("thoughts" 30 739736 w) ("Thoughts on WebAssembly as a stack machine" 30 739736 f) ("devtools" 30 739729 w) ("chrome" 30 739729 w) ("wasm" 30 739729 w) ("debugging" 30 739729 w) ("Debugging WASM in Chrome DevTools" 30 739729 f)) ("from" ("Eli Bendersky <post@gwene.org>" 15 739736 s)))
