@@ -43,7 +43,7 @@
       ido-ignore-buffers
       '("\\` " "\\*Messages\\*" "\\*scratch\\*" "\\*Completions\\*" "\\*Native-compile-Log\\*"
         "\\*Async-native-compile-log\\*" "\\*EGLOT.*events\\*" "\\*Flymake.*\\*" "\\*MPC.*\\*"
-        "\\*Buffer List\\*" "\\*Help\\*" "\\*Minibuf-.*\\*" "\\*vc-.*\\*" "\\#.*")
+        "\\*Buffer List\\*" "\\*Help\\*" "\\*Minibuf-.*\\*" "\\*vc-.*\\*" "^\\#.*")
       ido-create-new-buffer 'always ido-use-virtual-buffers 'auto recentf-max-saved-items 200
       ido-show-dot-for-dired t ido-max-window-height 1 ido-auto-merge-work-directories-length -1
       ido-separator " • " icomplete-separator " • " icomplete-tidy-shadowed-file-names t
@@ -166,15 +166,16 @@
   (put 'user 'theme-settings nil) (mapc #'disable-theme custom-enabled-themes)
   (apply orig-fun args) (custom-set-faces '(fringe ((t :background unspecified)))))
 (dolist (face '(default fixed-pitch fixed-pitch-serif variable-pitch))
-  (set-face-attribute face nil :font "Input Mono Narrow" :height (if (eq system-type 'android) 160 140)))
+  (custom-set-faces `(,face ((t :font "Input Mono Narrow" :height ,(if (eq system-type 'android) 160 140))))))
 (dolist (set '(cjk-misc han kana)) (set-fontset-font t set "Noto Sans Mono CJK JP" nil 'prepend))
-(set-face-attribute 'default nil :foreground "#fffbef" :background "#272e33")
-(set-face-attribute 'fringe nil :background 'unspecified)
-(set-face-attribute 'vertical-border nil :foreground 'unspecified :inherit '(shadow default))
-(set-face-attribute 'font-lock-comment-face nil :foreground 'unspecified :inherit 'shadow)
+(custom-set-faces '(default ((t :foreground "#fffbef" :background "#1a1a1a"))))
+(custom-set-faces '(fringe ((t :background unspecified))))
+(custom-set-faces '(region ((t :background "lightgoldenrod2" :foreground "#1a1a1a" :extend nil))))
+(custom-set-faces '(vertical-border ((t :foreground unspecified :inherit (shadow default)))))
+(custom-set-faces '(font-lock-comment-face ((t :foreground unspecified :inherit shadow))))
 (custom-set-faces '(header-line ((t :box t :inherit (highlight default)))))
-(custom-set-faces '(highlight ((((background dark))  :background "#374145")
-                               (((background light)) :background "#f2efdf"))))
+(custom-set-faces '(highlight ((((background dark))  :background "#393939")
+                               (((background light)) :background "#ece8d1"))))
 (custom-set-faces '(font-lock-string-face ((((background dark))  :foreground "#deb07a")
                                            (((background light)) :foreground "sienna"))))
 (add-hook 'post-command-hook
@@ -183,10 +184,10 @@
 (dolist (face '(font-lock-type-face font-lock-constant-face viper-minibuffer-insert
                                     font-lock-keyword-face font-lock-variable-name-face))
   (custom-set-faces `(,face ((t nil)))))
-(set-face-attribute 'font-lock-builtin-face nil :foreground 'unspecified :slant 'italic)
-(set-face-attribute 'error nil :foreground "Coral3")
+(custom-set-faces '(font-lock-builtin-face ((t :foreground unspecified :slant italic))))
+(custom-set-faces '(error ((t :foreground "Coral3"))))
 (custom-set-faces '(success ((t :foreground "ForestGreen"))))
-(set-face-attribute 'nobreak-space nil :underline nil)
+(custom-set-faces '(nobreak-space ((t :underline nil))))
 (dolist (face '(eshell-prompt minibuffer-prompt font-lock-function-name-face line-number-current-line))
   (custom-set-faces `(,face ((t :foreground unspecified :inherit bold)))))
 (dotimes (i 9) (let ((face (intern (format "outline-%d" (1+ i)))))
@@ -198,10 +199,21 @@
 (dolist (face '(lazy-highlight org-code org-verbatim org-table)) (custom-set-faces `(,face ((t :inherit highlight)))))
 (custom-set-faces '(completions-common-part ((t :underline t :weight bold))))
 (custom-set-faces '(org-table ((t :foreground unspecified))))
+(custom-set-faces '(org-document-title ((t :height 1.2 :inherit bold))))
+(custom-set-faces '(org-document-info ((t :height 1.1 :inherit bold))))
 (custom-set-faces '(link ((t :foreground "DodgerBlue" :underline t))))
 (custom-set-faces '(hs-ellipsis ((t :box unspecified :underline t))))
 (custom-set-faces '(compilation-info ((t :foreground "#448c27" :inherit bold))))
-(set-face-attribute 'region nil :background "lightgoldenrod2" :foreground "#202225" :extend nil)
+(custom-set-faces '(which-func ((t :foreground unspecified :inherit mode-line))))
+(custom-set-faces '(shr-mark ((t :foreground unspecified :background unspecified))))
+(custom-set-faces '(dictionary-word-definition-face ((t :family unspecified))))
+(let* ((common `(:background unspecified :foreground unspecified
+                             :inverse-video ,(not (display-graphic-p))
+                             :height ,(if (eq system-type 'android) 160 140)
+                             :overline ,(face-foreground 'shadow)
+                             :box (:line-width 1 :style flat-button))))
+  (custom-set-faces `(mode-line-active ((t :inherit default ,@common)))
+                    `(mode-line-inactive ((t :inherit shadow ,@common)))))
 (add-hook 'prog-mode-hook
           (lambda ()
             (font-lock-add-keywords
@@ -224,8 +236,7 @@
               (setq eldoc-documentation-functions
                     (remove #'eglot-signature-eldoc-function eldoc-documentation-functions)))))
 (with-eval-after-load 'which-func ; disabled because this causes scroll slowdown
-  (setq which-func-format (list (cadr which-func-format)) which-func-unknown "" hich-func-update-delay 1)
-  (set-face-attribute 'which-func nil :foreground 'unspecified :inherit 'mode-line))
+  (setq which-func-format (list (cadr which-func-format)) which-func-unknown "" hich-func-update-delay 1))
 (dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook c++-mode-hook)) (add-hook mode #'eglot-ensure))
 (dolist (mode-hook '(conf-mode-hook yaml-ts-mode-hook)) (add-hook mode-hook #'display-line-numbers-mode))
 (with-eval-after-load 'completion-preview
@@ -269,7 +280,6 @@
     (lambda (dom) (let ((start (point)))
                     (funcall default-renderer dom) (add-face-text-property start (point) face-spec)))))
 (with-eval-after-load 'shr
-  (set-face-attribute 'shr-mark nil :foreground 'unspecified :background 'unspecified)
   (setq shr-external-rendering-functions
         `((pre        . ,(my-shr-tag-render 'pre        '(:inherit highlight :extend t)))
           (table      . ,(my-shr-tag-render 'table      '(:inherit mode-line-active)))
@@ -312,7 +322,6 @@
        (if (use-region-p)
            (dictionary-new-search (cons (buffer-substring-no-properties (mark) (point)) dictionary-default-dictionary))
          (dictionary-lookup-definition)))
-(custom-set-faces '(dictionary-word-definition-face ((t :family unspecified))))
 ;;; Sensible changes ---
 (defun prot-quit (&optional interactive) "A sensible `keyboard-quit'."
        (interactive (list 'interactive))
@@ -515,13 +524,6 @@
 ;;; Mode-line ---
 (setq-default mode-line-collapse-minor-modes '(not flymake-mode defining-kbd-macro)
               mode-line-end-spaces nil flymake-mode-line-title nil)
-(let ((common (list :background 'unspecified :foreground 'unspecified
-                    :inverse-video (not (display-graphic-p))
-                    :height (if (eq system-type 'android) 160 140)
-                    :overline (face-foreground 'shadow)
-                    :box '(:line-width 1 :style flat-button))))
-  (apply #'set-face-attribute 'mode-line-active nil :inherit 'default common)
-  (apply #'set-face-attribute 'mode-line-inactive nil :inherit 'shadow common))
 (defvar my/tab-keymaps (let ((v (make-vector 20 nil)))
                          (dotimes (i 20 v) (let ((m (make-sparse-keymap)))
                                              (define-key m [mode-line mouse-1]
