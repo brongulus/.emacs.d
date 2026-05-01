@@ -80,6 +80,8 @@
                   (define-key viper-insert-basic-map [backspace] nil)
                   (define-key viper-replace-map [backspace] nil)))
               '((name . viper-remove-backspace-override))))
+(defvar insert-pair-map ;; src: oantolin
+  (let ((map (make-sparse-keymap))) (define-key map [t] #'insert-pair) map))
 (with-eval-after-load 'viper
   (advice-add 'viper-post-command-sentinel :override #'ignore)
   (defun viper-set-insert-cursor-type nil (setq cursor-type '(bar . 3)))
@@ -318,8 +320,6 @@
 (add-to-list 'display-buffer-alist
              '("\\*\\(Dictionary\\|eldoc\\)\\*" my/display-buffer-adaptive
                (body-function . select-window) (window-parameters . ((split-window . #'ignore)))))
-(defvar insert-pair-map ;; src: oantolin
-  (let ((map (make-sparse-keymap))) (define-key map [t] #'insert-pair) map))
 (defun my/delete-pair () (interactive)
        (if (use-region-p) (progn (goto-char (region-beginning)) (delete-pair))
          (mark-inner) (my/delete-pair)))
@@ -343,8 +343,10 @@
 
 (defun my/show-paren-data ()
   (let ((open (cond ((eq (car (syntax-after (point))) 4) (point))
+                    ((eq (car (syntax-after (point))) 5)
+                     (ignore-errors (save-excursion (forward-char) (backward-list) (point))))
                     ((eq (car (syntax-after (1- (point)))) 5)
-                     (save-excursion (backward-sexp) (point)))
+                     (ignore-errors (save-excursion (backward-list) (point))))
                     ((nth 1 (syntax-ppss))))))
     (save-excursion
       (when open (goto-char open))
