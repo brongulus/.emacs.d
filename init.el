@@ -168,7 +168,7 @@
 (dolist (face '(default fixed-pitch fixed-pitch-serif variable-pitch))
   (set-face-attribute face nil :font "Input Mono Narrow" :height (if (eq system-type 'android) 160 140)))
 (dolist (set '(cjk-misc han kana)) (set-fontset-font t set "Noto Sans Mono CJK JP" nil 'prepend))
-(set-face-attribute 'default nil :foreground "#272e33" :background "#fffbef")
+(set-face-attribute 'default nil :foreground "#fffbef" :background "#272e33")
 (set-face-attribute 'fringe nil :background 'unspecified)
 (set-face-attribute 'vertical-border nil :foreground 'unspecified :inherit '(shadow default))
 (set-face-attribute 'font-lock-comment-face nil :foreground 'unspecified :inherit 'shadow)
@@ -177,8 +177,6 @@
                                (((background light)) :background "#f2efdf"))))
 (custom-set-faces '(font-lock-string-face ((((background dark))  :foreground "#deb07a")
                                            (((background light)) :foreground "sienna"))))
-(custom-set-faces '(bold ((((background dark)) :foreground "#fafbfc" :weight bold)
-                          (((background light)) :weight bold))))
 (add-hook 'post-command-hook
           (lambda () (unless (eq (buffer-modified-p) (bound-and-true-p curs-mod))
                        (set-cursor-color (if (setq curs-mod (buffer-modified-p)) "coral3" "#00c2ff")))))
