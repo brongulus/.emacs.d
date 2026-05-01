@@ -275,14 +275,20 @@
 (add-to-list 'auto-mode-alist '("\\.log\\'" . (lambda () (display-line-numbers-mode))))
 ;;; Miscellaneous ---
 (setq shr-max-image-proportion 0.5 shr-use-colors nil)
-(defun my-shr-tag-render (tag face-spec)
+(defun my-shr-tag-render (tag face-spec &optional predicate)
   (let ((default-renderer (intern (format "shr-tag-%s" tag))))
     (lambda (dom) (let ((start (point)))
-                    (funcall default-renderer dom) (add-face-text-property start (point) face-spec)))))
+                    (funcall default-renderer dom)
+                    (when (or (null predicate) (funcall predicate dom))
+                      (add-face-text-property start (point) face-spec))))))
+(defun my-table-is-data-p (dom)
+  "Return non-nil if DOM looks like a data table, not a layout table."
+  (or (equal (dom-attr dom 'role) "grid") (equal (dom-attr dom 'role) "table")
+      (dom-attr dom 'summary) (dom-by-tag dom 'th)))
 (with-eval-after-load 'shr
   (setq shr-external-rendering-functions
         `((pre        . ,(my-shr-tag-render 'pre        '(:inherit highlight :extend t)))
-          (table      . ,(my-shr-tag-render 'table      '(:inherit mode-line-active)))
+          (table      . ,(my-shr-tag-render 'table      '(:inherit mode-line-active) #'my-table-is-data-p))
           (blockquote . ,(my-shr-tag-render 'blockquote '(:slant italic)))
           (h1         . ,(my-shr-tag-render 'h1         '(:inherit bold :height 1.3)))
           (h2         . ,(my-shr-tag-render 'h2         '(:inherit bold :height 1.2)))

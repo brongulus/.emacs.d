@@ -5,7 +5,7 @@
 ;;; Code:
 
 (defface mmm/master-face '((t :inherit region)) "Master region." :group 'mini-mark-multiple)
-(defface mmm/mirror-face '((t :inherit secondary-selection)) "Mirror region." :group 'mini-mark-multiple)
+(defface mmm/mirror-face '((t :inherit highlight)) "Mirror region." :group 'mini-mark-multiple)
 
 (defvar-local mmm/master nil)
 (defvar-local mmm/mirrors nil)
