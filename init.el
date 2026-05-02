@@ -141,8 +141,18 @@
 (dolist (fn '(tab-bar-new-tab tab-bar-close-tab)) (advice-add fn :after #'my/tab-bar--update-indicator))
 (with-eval-after-load 'tab-bar (add-hook 'tab-bar-tab-post-select-functions #'my/tab-bar--update-indicator))
 
+(defun ml-margin-pad (side)
+  (let ((m (or (funcall side (window-margins)) 0)))
+    (if (> m 0) (propertize (make-string m ?\s)
+                            'face `(:background ,(face-background 'default)
+                                                :foreground ,(face-background 'default)
+                                                :inverse-video nil
+                                                :overline nil :box nil)) "")))
+
 (setq-default mode-line-format
-              '("%e" mode-line-front-space
+              '("%e"
+                (:eval (ml-margin-pad #'car))
+                mode-line-front-space
                 (:eval (when (and (not (display-graphic-p)) (boundp 'viper-mode-string))
                          (concat " " viper-mode-string)))
                 " %+  "
@@ -151,6 +161,7 @@
                 "    " mode-line-position
                 mode-line-format-right-align
                 mode-line-modes mode-line-misc-info
+                (:eval (ml-margin-pad #'cdr))
                 mode-line-end-spaces))
 
 (with-eval-after-load 'viper
@@ -211,7 +222,9 @@
 
 ;;;; Zen margins
 
-(defvar zen-enabled-modes '(Info-mode diff-mode eww-mode dired-mode gnus-article-mode gnus-group-mode erc-mode))
+(defvar zen-enabled-modes '(eww-mode diff-mode Info-mode dired-mode gnus-article-mode gnus-group-mode erc-mode
+                                     eshell-mode compilation-mode occur-mode flymake-diagnostics-buffer-mode
+                                     xref--xref-buffer-mode grep-mode vc-git-log-edit-mode org-capture-mode special-mode))
 
 (defun zen-buffer-apply-margins nil "Apply zen margins to all windows."
        (walk-windows
@@ -418,10 +431,11 @@
                    ("C-x k" . kill-current-buffer) ("M-o" . other-window) ("<escape>" . keyboard-escape-quit)
                    ("C-x ;" . comment-line) ("C-x x c" . save-buffers-kill-emacs) ("s-o" . other-window)
                    ("C-x C-b" . ibuffer) ("M-;" . eval-expression) ("C-/" . undo-only)
-                   ("C-," . my-scroll-other-down) ("M-j" . window-toggle-side-windows)
+                   ("C-," . my-scroll-other-down) ("C-." . my-scroll-other-up)
+                   ("M-j" . window-toggle-side-windows) ("M-`" . cycle-side-windows)
                    ("C-<tab>" . tab-next) ("C-S-<tab>" . tab-previous) ("C-x x f" . find-file)
                    ("C-x x s" . save-buffer) ("C-x x e" . eval-defun) ("C-x x z" . restart-emacs)
-                   ("C-." . my-scroll-other-up) ("C-x x x" . flymake-show-project-diagnostics)))
+                   ("C-x x x" . flymake-show-project-diagnostics)))
   (keymap-global-set (car binding) (cdr binding)))
 
 (keymap-global-set "C-x m" esc-map)
@@ -486,6 +500,14 @@
               display-line-numbers-widen t
               imenu-flatten t)
 
+(defun cycle-side-windows () (interactive)
+       "Cycle through buffers in the side window."
+       (let ((side-win (car (cl-remove-if-not
+                             (lambda (w) (window-parameter w 'window-side))
+                             (window-list)))))
+         (when side-win
+           (select-window side-win) (switch-to-prev-buffer side-win))))
+
 (add-to-list
  'display-buffer-alist
  '((or "\\*Completions\\*" "\\*xref\\*" "\\*Occur.*\\*" "\\*compilation.*\\*"
@@ -493,6 +515,13 @@
    (display-buffer-in-side-window)
    (side . bottom) (window-height . 0.25)
    (window-parameters . ((mode-line-format . none)))))
+
+(advice-add 'window-toggle-side-windows :after
+            (lambda (&rest _)
+              (walk-windows (lambda (win)
+                              (when (window-parameter win 'window-side)
+                                (set-window-parameter win 'mode-line-format 'none)))
+                            nil t)))
 
 (defun my/display-buffer-adaptive (buffer alist)
   (let ((side (if (< (frame-width) 160) 'bottom 'right))
@@ -731,7 +760,7 @@
 (defun epop nil (interactive) (defvar eshell-buffer-name)
        (let* ((display-buffer-alist `(("\\*eshell-pop.*\\*"
                                        (display-buffer-in-side-window)
-                                       (side . bottom) (slot . -2) (window-height . 0.25))))
+                                       (side . bottom) (window-height . 0.25))))
               (dir (if-let* ((proj (project-current)))
                        (file-name-nondirectory (directory-file-name (project-root proj)))
                      default-directory))
@@ -802,9 +831,9 @@
             (t (git '("symbolic-ref" "-q" "--short" "HEAD")))))))
 
 (add-hook 'eshell-mode-hook #'compilation-shell-minor-mode)
-(setq eshell-highlight-prompt nil)
 (with-eval-after-load 'eshell
-  (setq eshell-prompt-regexp "^.* λ "
+  (setq eshell-highlight-prompt nil
+        eshell-prompt-regexp "^.* λ "
         eshell-prompt-function
         (lambda ()
           (concat (propertize (or (eshell--k8s-context-and-namespace) "") 'font-lock-face 'font-lock-string-face)
