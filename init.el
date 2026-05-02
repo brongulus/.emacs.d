@@ -621,20 +621,7 @@
              ("yaml" . yaml-ts) ("toml" . toml-ts) ("c" . c-ts) ("cpp" . c++-ts))))
   (org-babel-do-load-languages
    'org-babel-load-languages '((C . t) (shell . t) (python . t) (emacs-lisp . t)))
-  (setq org-confirm-babel-evaluate nil)
-
-  (defun org-outer-indent--compute-prefixes () ; src: rougier
-    "Compute prefix strings with outer-aligned stars."
-    (setq org-indent--heading-line-prefixes (make-vector org-indent--deepest-level nil)
-          org-indent--inlinetask-line-prefixes (make-vector org-indent--deepest-level nil)
-          org-indent--text-line-prefixes (make-vector org-indent--deepest-level nil))
-    (let ((indent 7))  ; (+ 3 4)
-      (dotimes (n org-indent--deepest-level)
-        (aset org-indent--heading-line-prefixes n (make-string (max 0 (- indent (1+ n))) ?\s))
-        (aset org-indent--inlinetask-line-prefixes n (make-string indent ?\s))
-        (aset org-indent--text-line-prefixes n (make-string indent ?\s)))
-      (setq-local org-hide-leading-stars nil)))
-  (advice-add 'org-indent--compute-prefixes :override #'org-outer-indent--compute-prefixes))
+  (setq org-confirm-babel-evaluate nil))
 
 (with-eval-after-load 'org-capture
   (add-hook 'org-capture-mode-hook
