@@ -1,4 +1,4 @@
-;;; init.el --- 🦬 -*- lexical-binding: t -*-
+;;; init.el - 🦬 ---  -*- lexical-binding: t; -*-
 ;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
 
 ;;; Initialisation
@@ -66,7 +66,7 @@
                    '(font-lock-type-face font-lock-constant-face viper-minibuffer-insert
                                          font-lock-keyword-face font-lock-variable-name-face))
          ,@(mapcar (lambda (f) `(,f ((t :foreground unspecified :inherit bold))))
-                   '(eshell-prompt minibuffer-prompt font-lock-function-name-face line-number-current-line))
+                   '(minibuffer-prompt font-lock-function-name-face line-number-current-line))
          ,@(mapcar (lambda (i) `(,(intern (format "outline-%d" i)) ((t :height 1.1 :inherit bold))))
                    (number-sequence 1 9))
          ,@(mapcar (lambda (f) `(,f ((t :inherit (highlight default) :extend t))))
@@ -102,10 +102,7 @@
 
 ;;;; Cursor colour on modification
 
-(add-hook 'post-command-hook
-          (lambda ()
-            (unless (eq (buffer-modified-p) (bound-and-true-p curs-mod))
-              (set-cursor-color (if (setq curs-mod (buffer-modified-p)) "coral3" "#00c2ff")))))
+(add-hook 'post-command-hook (lambda () (set-cursor-color (if (buffer-modified-p) "coral3" "#00c2ff"))))
 
 ;;;; Keyword highlighting in prog buffers
 
@@ -337,7 +334,8 @@
 (setq viper-mode t viper-expert-level 5 viper-ex-style-motion nil
       viper-inhibit-startup-message t viper-want-ctl-h-help t
       viper-want-emacs-keys-in-insert t viper-want-emacs-keys-in-vi t
-      viper-ex-style-editing nil viper-insert-state-cursor-color nil)
+      viper-ex-style-editing nil viper-insert-state-cursor-color nil
+      viper-vi-state-cursor-color nil viper-emacs-state-cursor-color nil)
 
 (with-eval-after-load 'viper-cmd
   (setq viper-insert-basic-map (make-sparse-keymap))
@@ -624,6 +622,7 @@
 ;;;; Eshell
 
 (setq pcomplete-termination-string ""
+      eshell-aliases-file "~/.config/alias"
       eshell-banner-message ""
       eshell-hist-ignoredups 'erase
       eshell-history-size 20000
@@ -639,12 +638,89 @@
                        (file-name-nondirectory (directory-file-name (project-root proj)))
                      default-directory))
               (eshell-buffer-name (concat "*eshell-pop:*" dir))
-              (inhibit-message t) (mode-line-format nil))
-         (eshell)))
+              (inhibit-message t))
+         (eshell) (setq-local mode-line-format nil)))
+
+(defun my-eshell-read-aliases-list ()
+  "Read in an aliases list from `eshell-aliases-file' using bash format."
+  (interactive)
+  (when (and eshell-aliases-file
+             (file-readable-p eshell-aliases-file))
+    (setq eshell-command-aliases-list
+          (with-temp-buffer
+            (let (eshell-command-aliases-list)
+              (insert-file-contents eshell-aliases-file)
+              (while (not (eobp))
+                (if (re-search-forward
+                     "^alias\\s-+\\(\\S-+\\)=\'\\(.+\\)\'$")
+                    (setq eshell-command-aliases-list
+                          (cons (list (match-string 1)
+                                      (concat (match-string 2) " $*"))
+                                eshell-command-aliases-list)))
+                (forward-line 1))
+              eshell-command-aliases-list))))
+  (my-eshell-only-aliases))
+(advice-add 'eshell-read-aliases-list :override #'my-eshell-read-aliases-list)
+
+(defun my-eshell-only-aliases () ; create aliases that shouldn't be exported to common file
+  (push '("source" ". $1") eshell-command-aliases-list)
+  (push '("mkcd" "mkdir -p $1 && cd $1") eshell-command-aliases-list)
+  (push '("k" "kubectl $*") eshell-command-aliases-list)
+  (push '("clear" "clear t") eshell-command-aliases-list)
+  (push '("d" "dired-other-window $1") eshell-command-aliases-list)
+  (push '("dired" "dired $1") eshell-command-aliases-list)
+  (push '("ff" "find-file $1") eshell-command-aliases-list)
+  (push '("jq" "jq -M $*") eshell-command-aliases-list)
+  (push '("rg" "rg --color=never --no-line-number $*") eshell-command-aliases-list)
+  (push '("gd" "vc-diff") eshell-command-aliases-list)
+  (push '("glog" "vc-print-root-log") eshell-command-aliases-list)
+  (push '("groot" "cd ${git rev-parse --show-toplevel}") eshell-command-aliases-list)
+  (push '("gk" "export KUBECONFIG=${gardenctl kubectl-env zsh | awk -F\"'\" '/export KUBECONFIG/ {print \$2}'})") eshell-command-aliases-list))
+
+(defun eshell--k8s-context-and-namespace ()
+  (when-let* ((kubeconfig (getenv "KUBECONFIG"))
+              ((not (string-empty-p (string-trim kubeconfig))))
+              (kc (concat "kubectl --kubeconfig=" kubeconfig " "))
+              (context (string-trim (or (eshell-command-result (concat kc "config current-context")) "")))
+              ((not (string-empty-p context)))
+              ((not (string-match "error" context)))
+              (ns (or (string-trim (or (eshell-command-result
+                                        (concat kc (format
+                                                    "config view -o 'jsonpath={.contexts[?(@.name==\"%s\")].context.namespace}'"
+                                                    context)))
+                                       ""))
+                      "default")))
+    (format "(%s|%s) " context (if (string-empty-p ns) "default" ns))))
+
+(defun eshell--git-prompt ()
+  (cl-flet ((git (cmd)
+              (with-temp-buffer
+                (if (zerop (apply #'call-process "git" nil t nil cmd))
+                    (format " (%s)" (string-trim (buffer-string)))
+                  ""))))
+    (let* ((git-dir (locate-dominating-file default-directory ".git"))
+           (rebasing (and git-dir
+                          (or (file-exists-p (expand-file-name ".git/rebase-merge" git-dir))
+                              (file-exists-p (expand-file-name ".git/rebase-apply" git-dir)))
+                          (not (string-empty-p (git '("rev-parse" "--verify" "REBASE_HEAD"))))))
+           (merging (not (string-empty-p (git '("rev-parse" "--verify" "MERGE_HEAD"))))))
+      (cond (rebasing " (REBASE-i)")
+            (merging " (MERGE-i)")
+            (t (git '("symbolic-ref" "-q" "--short" "HEAD")))))))
 
 (add-hook 'eshell-mode-hook #'compilation-shell-minor-mode)
-
+(setq eshell-highlight-prompt nil)
 (with-eval-after-load 'eshell
+  (setq eshell-prompt-regexp "^.* λ "
+        eshell-prompt-function
+        (lambda ()
+          (concat (propertize (or (eshell--k8s-context-and-namespace) "") 'font-lock-face 'font-lock-string-face)
+                  (abbreviate-file-name (eshell/pwd))
+                  (propertize (eshell--git-prompt) 'font-lock-face 'font-lock-comment-face)
+                  (if (zerop eshell-last-command-status)
+                      (propertize " λ" 'font-lock-face 'success)
+                    (propertize (format " [%s] λ" eshell-last-command-status) 'font-lock-face 'warning))
+                  " ")))
   (defun eshell-insert-history () (interactive) ; src: habrams
          (let ((cmd (completing-read "Eshell history: "
                                      (delete-dups (ring-elements eshell-history-ring)))))
