@@ -686,16 +686,6 @@
         org-log-into-drawer t
         org-agenda-include-deadlines t)
 
-  (defun elegant-agenda--title nil
-    (when-let* ((cmd (cadr org-agenda-redo-command))
-                ((stringp cmd))
-                (title (format "─  %s " cmd))
-                (w (window-width)))
-      (face-remap-set-base 'header-line :height 1.4)
-      (setq-local header-line-format
-                  (format "%s %s" title (make-string (- w (length title)) ?─ t)))))
-  (add-hook 'org-agenda-finalize-hook #'elegant-agenda--title)
-
   (setq my/org-grid-w 31)
   (defun my/org-agenda-clean-clockin (orig-fun &rest args)
     "Reformat clock entries to show time ranges after task name."
@@ -1086,6 +1076,7 @@
       erc-join-buffer 'buffer
       erc-fill-function 'erc-fill-static
       erc-fill-static-center 18
+      erc-header-line-format nil
       erc-prompt-for-password nil
       erc-use-auth-source-for-nickserv-password t
       erc-hide-list '("JOIN" "PART" "QUIT" "NICK" "MODE" "353" "366")
