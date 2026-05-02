@@ -143,7 +143,7 @@
 
 (defun ml-margin-pad (side)
   (let ((m (or (funcall side (window-margins)) 0)))
-    (if (> m 0) (propertize (make-string m ?\s)
+    (if (> m 0) (propertize (make-string (if (eq major-mode 'eww-mode) (- m 10) m) ?\s)
                             'face `(:background ,(face-background 'default)
                                                 :foreground ,(face-background 'default)
                                                 :inverse-video nil
@@ -227,7 +227,8 @@
         (lambda (win)
           (with-current-buffer (window-buffer win)
             (let* ((special-modes (member major-mode '(org-mode markdown-ts-mode)))
-                   (margin (max 0 (/ (- (window-total-width win) fill-column) 2)))
+                   (fill (if (eq major-mode 'eww-mode) 120 fill-column))
+                   (margin (max 0 (/ (- (window-total-width win) fill) 2)))
                    (lmargin (if special-modes (max 0 (- margin 10)) margin)))
               (if (> (window-total-width win) 140)
                   (progn (visual-line-mode 1) (set-window-margins win lmargin margin)
@@ -240,10 +241,11 @@
 
 (add-hook 'minibuffer-setup-hook
           (lambda ()
-            (let ((margins (window-margins (minibuffer-selected-window))))
-              (when (car margins)
-                (set-window-margins (active-minibuffer-window)
-                                    (car margins) (cdr margins))))))
+            (let* ((sel-win (minibuffer-selected-window))
+                   (sel-mode (buffer-local-value 'major-mode (window-buffer sel-win)))
+                   (margin (car (window-margins sel-win)))
+                   (m (if (eq sel-mode 'eww-mode) (- margin 10) margin)))
+              (when margin (set-window-margins (active-minibuffer-window) m m)))))
 
 ;;;; Sensible keyboard-quit
 
@@ -332,7 +334,7 @@
       ido-ignore-buffers
       '("\\` " "\\*Messages\\*" "\\*scratch\\*" "\\*Completions\\*" "\\*Native-compile-Log\\*"
         "\\*Async-native-compile-log\\*" "\\*EGLOT.*events\\*" "\\*Flymake.*\\*" "\\*MPC.*\\*"
-        "\\*Buffer List\\*" "\\*Help\\*" "\\*Minibuf-.*\\*" "\\*vc-.*\\*" "^\\#.*")
+        "\\*Buffer List\\*" "\\*Help\\*" "\\*Minibuf-.*\\*" "\\*vc-.*\\*" "\\*changes to.*" "^\\#.*")
       ido-create-new-buffer 'always ido-use-virtual-buffers 'auto recentf-max-saved-items 200
       ido-show-dot-for-dired t ido-max-window-height 1 ido-auto-merge-work-directories-length -1
       ido-separator " • " icomplete-separator " • " icomplete-tidy-shadowed-file-names t)
@@ -963,8 +965,7 @@
 
 ;;; Browsing and web
 
-(setq shr-max-image-proportion 0.5
-      shr-use-colors nil)
+(setq shr-max-image-proportion 0.5 shr-use-colors nil)
 
 (defun my-shr-tag-render (tag face-spec &optional predicate) ; src: takeonrules
   (let ((default-renderer (intern (format "shr-tag-%s" tag))))
@@ -1100,7 +1101,8 @@
       gnus-interactive-exit nil gnus-widen-article-window t
       gnus-thread-sort-functions '(gnus-thread-sort-by-most-recent-date)
       gnus-use-adaptive-scoring '(word line) gnus-summary-expunge-below 0
-      gnus-select-method '(nntp "news.gwene.org") gnus-group-uncollapsed-levels 2
+      gnus-group-uncollapsed-levels 2 gnus-inhibit-startup-message t
+      gnus-select-method '(nntp "news.gwene.org")
       gnus-sum-thread-tree-indent " " gnus-sum-thread-tree-false-root ""
       gnus-sum-thread-tree-root "" gnus-sum-thread-tree-single-indent ""
       gnus-sum-thread-tree-vertical        "│"
