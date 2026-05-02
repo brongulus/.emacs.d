@@ -63,7 +63,7 @@
          (success ((t :foreground "ForestGreen")))
          (nobreak-space ((t :underline nil)))
          ,@(mapcar (lambda (f) `(,f ((t nil))))
-                   '(font-lock-type-face font-lock-constant-face viper-minibuffer-insert
+                   '(font-lock-type-face font-lock-constant-face viper-minibuffer-insert org-agenda-done
                                          font-lock-keyword-face font-lock-variable-name-face))
          ,@(mapcar (lambda (f) `(,f ((t :foreground unspecified :inherit bold))))
                    '(minibuffer-prompt font-lock-function-name-face line-number-current-line))
@@ -72,13 +72,16 @@
          ,@(mapcar (lambda (f) `(,f ((t :inherit (highlight default) :extend t))))
                    '(org-block org-block-begin-line org-block-end-line))
          ,@(mapcar (lambda (f) `(,f ((t :inherit highlight))))
-                   '(lazy-highlight org-code org-verbatim org-table))
+                   '(lazy-highlight org-code org-verbatim org-agenda-clocking))
          (eglot-highlight-symbol-face ((t :inherit (highlight default))))
          (isearch ((t :inverse-video t)))
          (org-table ((t :foreground unspecified)))
          (completions-common-part ((t :underline t :weight bold)))
          (org-document-title ((t :height 1.2 :inherit bold)))
          (org-document-info ((t :height 1.1 :inherit bold)))
+         (org-agenda-structure ((t :height 1.2 :foreground unspecified :inherit default)))
+         (org-agenda-date ((t :weight bold :slant italic)))
+         (org-time-grid ((t :foreground unspecified :inherit font-lock-comment-face)))
          (link ((t :foreground "DodgerBlue" :underline t)))
          (hs-ellipsis ((t :box unspecified :underline t)))
          (compilation-info ((t :foreground "#448c27" :inherit bold)))
@@ -372,6 +375,7 @@
                      ("U" . undo-redo) ("," . my-scroll-other-down) ("." . my-scroll-other-up)
                      ("@" . eww-open-in-new-buffer) ("g a" . beginning-of-defun) ("g e" . end-of-defun)
                      ("&" . align-regexp) ("(" . flymake-goto-prev-error) (")" . flymake-goto-next-error)
+                     ("g A" . (lambda nil (interactive) (org-agenda nil "n"))) ("g c" . org-capture)
                      ("g z" . pop-to-mark-command) ("g /" . xref-find-definitions-other-window)
                      ("K" . my/eldoc-get-help) ("*" . isearch-forward-symbol-at-point)))
     (keymap-set viper-vi-basic-map (car binding) (cdr binding)))
@@ -403,10 +407,9 @@
 ;;;; Terminal cursor shapes
 
 (unless (display-graphic-p)
-  (add-hook 'viper-vi-state-hook (lambda () (send-string-to-terminal "\e[2 q")))
-  (add-hook 'viper-insert-state-hook (lambda () (send-string-to-terminal "\e[6 q")))
-  (add-hook 'viper-replace-state-hook (lambda () (send-string-to-terminal "\e[4 q")))
-  (add-hook 'kill-emacs-hook (lambda () (send-string-to-terminal "\e[2 q"))))
+  (dolist (p '((viper-vi-state-hook . "\e[2 q") (viper-insert-state-hook . "\e[6 q")
+               (viper-replace-state-hook . "\e[4 q") (kill-emacs-hook . "\e[2 q")))
+    (add-hook (car p) (let ((s (cdr p))) (lambda () (send-string-to-terminal s))))))
 
 ;;;; Global bindings
 
@@ -485,7 +488,8 @@
 
 (add-to-list
  'display-buffer-alist
- '("\\*\\(Completions\\|xref\\|Occur.*\\|compilation.*\\|Flymake.*\\|vc-git :.*\\)\\*"
+ '((or "\\*Completions\\*" "\\*xref\\*" "\\*Occur.*\\*" "\\*compilation.*\\*"
+       "\\*Flymake.*\\*" "\\*vc-git :.*\\*" "\\*Org Select\\*" "\\CAPTURE-.*")
    (display-buffer-in-side-window)
    (side . bottom) (window-height . 0.25)
    (window-parameters . ((mode-line-format . none)))))
@@ -602,9 +606,11 @@
 
 ;;;; Org
 
-(setq org-modules nil org-pretty-entities t org-src-fontify-natively t
-      org-src-content-indentation 0 org-src-preserve-indentation t
-      org-fontify-quote-and-verse-blocks t org-fontify-whole-heading-line t)
+(setq org-directory (concat "~/Dropbox/" "org") org-agenda-files (list org-directory)
+      org-modules nil org-pretty-entities t org-src-fontify-natively t
+      org-startup-indented t org-src-content-indentation 0 org-src-preserve-indentation t
+      org-fontify-quote-and-verse-blocks t org-fontify-whole-heading-line t
+      org-special-ctrl-a/e nil org-M-RET-may-split-line '((item . nil)))
 
 (with-eval-after-load 'org
   (require 'org-tempo)
@@ -615,7 +621,112 @@
              ("yaml" . yaml-ts) ("toml" . toml-ts) ("c" . c-ts) ("cpp" . c++-ts))))
   (org-babel-do-load-languages
    'org-babel-load-languages '((C . t) (shell . t) (python . t) (emacs-lisp . t)))
-  (setq org-confirm-babel-evaluate nil))
+  (setq org-confirm-babel-evaluate nil)
+
+  (defun org-outer-indent--compute-prefixes () ; src: rougier
+    "Compute prefix strings with outer-aligned stars."
+    (setq org-indent--heading-line-prefixes (make-vector org-indent--deepest-level nil)
+          org-indent--inlinetask-line-prefixes (make-vector org-indent--deepest-level nil)
+          org-indent--text-line-prefixes (make-vector org-indent--deepest-level nil))
+    (let ((indent 7))  ; (+ 3 4)
+      (dotimes (n org-indent--deepest-level)
+        (aset org-indent--heading-line-prefixes n (make-string (max 0 (- indent (1+ n))) ?\s))
+        (aset org-indent--inlinetask-line-prefixes n (make-string indent ?\s))
+        (aset org-indent--text-line-prefixes n (make-string indent ?\s)))
+      (setq-local org-hide-leading-stars nil)))
+  (advice-add 'org-indent--compute-prefixes :override #'org-outer-indent--compute-prefixes))
+
+(with-eval-after-load 'org-capture
+  (add-hook 'org-capture-mode-hook
+            (lambda nil (setq-local header-line-format nil)))
+  (setq org-capture-file (concat org-directory "/inbox.org")
+        org-joural-file (concat org-directory "/journal.org")
+        org-capture-templates
+        '(("t" "TODO" entry (file+headline org-capture-file "Tasks")
+           "* TODO %?\n%<%d %b '%g %R>" :prepend t)
+          ("n" "Note" entry (file+headline org-capture-file "Notes")
+           "* %?\n" :prepend t)
+          ;; https://www.twelvety.net/2024/12/styling-a-markdown-one-line-journal-in-emacs
+          ("j" "Journal" plain (file+datetree org-joural-file)
+           "%<%d %b, %a> | %?" :tree-type month :empty-lines 1)
+          ("h" "Habit" entry (file+headline org-capture-file "Habit")
+           "* TODO %?\n:PROPERTIES:\n:STYLE: habit\n:END:" :prepend t))))
+
+(with-eval-after-load 'org-agenda
+  (setq org-agenda-ignore-properties '(effort appt stats category)
+        org-agenda-dim-blocked-tasks nil
+        org-agenda-use-tag-inheritance nil
+        org-agenda-inhibit-startup t
+        org-agenda-window-setup 'current-window
+        org-agenda-restore-windows-after-quit t
+        org-agenda-start-with-log-mode t
+        org-agenda-log-mode-add-notes nil
+        org-agenda-remove-tags t
+        org-agenda-show-all-dates nil
+        org-agenda-start-on-weekday 0
+        org-log-done 'time
+        org-log-into-drawer t
+        org-agenda-include-deadlines t)
+
+  (defun elegant-agenda--title nil
+    (when-let* ((cmd (cadr org-agenda-redo-command))
+                ((stringp cmd))
+                (title (format "─  %s " cmd))
+                (w (window-width)))
+      (face-remap-set-base 'header-line :height 1.4)
+      (setq-local header-line-format
+                  (format "%s %s" title (make-string (- w (length title)) ?─ t)))))
+  (add-hook 'org-agenda-finalize-hook #'elegant-agenda--title)
+
+  (setq my/org-grid-w 31)
+  (defun my/org-agenda-clean-clockin (orig-fun &rest args)
+    "Reformat clock entries to show time ranges after task name."
+    (let ((result (apply orig-fun args)))
+      (when (and result (stringp result))
+        (cl-flet ((fmt (prefix time dur task pad-w &optional mark)
+                    (let* ((full (concat (or mark "") task))
+                           (pad (make-string (max 0 (- pad-w (length full))) ?┄ t)))
+                      (format "%s%s %7s %s %s" prefix time dur full pad))))
+          (cond
+           ((string-match "\\([0-9]+:[0-9]+\\)-\\([0-9]+:[0-9]+\\)Clocked:\\s-+(\\([^)]+\\))\\(.+\\)$" result)
+            (fmt (substring result 0 (match-beginning 1))
+                 (match-string 1 result)
+                 (concat "(" (match-string 3 result) ")")
+                 (string-trim (match-string 4 result))
+                 (1- my/org-grid-w)))
+           ((string-match "\\([0-9]+:[0-9]+\\)\\s-+Closed:\\s-+\\(.+\\)$" result)
+            (fmt (substring result 0 (match-beginning 1))
+                 (match-string 1 result) ""
+                 (string-trim (match-string 2 result))
+                 (+ 4 my/org-grid-w) "✓ "))
+           ((string-match "\\([0-9]+:[0-9]+\\)\\s-+Clocked:\\s-+\\(.+\\)$" result)
+            (fmt (substring result 0 (match-beginning 1))
+                 (match-string 1 result) ""
+                 (string-trim (match-string 2 result))
+                 (1- my/org-grid-w)))
+           (t result))))))
+  (advice-add 'org-agenda-format-item :around #'my/org-agenda-clean-clockin)
+
+  (setq org-agenda-breadcrumbs-separator " ❱ "
+        org-agenda-todo-keyword-format "%-1s"
+        org-agenda-use-time-grid t
+        org-agenda-skip-timestamp-if-done t
+        org-agenda-skip-scheduled-if-done t
+        org-agenda-skip-deadline-if-done t
+        org-agenda-skip-deadline-prewarning-if-scheduled 'pre-scheduled
+        org-agenda-scheduled-leaders '("" "")
+        org-agenda-deadline-leaders '("" "" "")
+        org-agenda-todo-keyword-format ""
+        org-agenda-block-separator (string-to-char " ")
+        org-agenda-current-time-string
+        (concat "← now " (make-string (- my/org-grid-w 6) ?─ t))
+        org-agenda-time-grid
+        `((daily today require-timed remove-matched)
+          (800 1200 1600 2000)
+          ,(make-string 9 ?  t) ,(make-string my/org-grid-w ?┄ t))
+        org-agenda-prefix-format
+        '((agenda . " %i %-16b%t%s")
+          (todo . " %i %?-16b"))))
 
 ;;; Shells
 
@@ -662,20 +773,15 @@
   (my-eshell-only-aliases))
 (advice-add 'eshell-read-aliases-list :override #'my-eshell-read-aliases-list)
 
-(defun my-eshell-only-aliases () ; create aliases that shouldn't be exported to common file
-  (push '("source" ". $1") eshell-command-aliases-list)
-  (push '("mkcd" "mkdir -p $1 && cd $1") eshell-command-aliases-list)
-  (push '("k" "kubectl $*") eshell-command-aliases-list)
-  (push '("clear" "clear t") eshell-command-aliases-list)
-  (push '("d" "dired-other-window $1") eshell-command-aliases-list)
-  (push '("dired" "dired $1") eshell-command-aliases-list)
-  (push '("ff" "find-file $1") eshell-command-aliases-list)
-  (push '("jq" "jq -M $*") eshell-command-aliases-list)
-  (push '("rg" "rg --color=never --no-line-number $*") eshell-command-aliases-list)
-  (push '("gd" "vc-diff") eshell-command-aliases-list)
-  (push '("glog" "vc-print-root-log") eshell-command-aliases-list)
-  (push '("groot" "cd ${git rev-parse --show-toplevel}") eshell-command-aliases-list)
-  (push '("gk" "export KUBECONFIG=${gardenctl kubectl-env zsh | awk -F\"'\" '/export KUBECONFIG/ {print \$2}'})") eshell-command-aliases-list))
+(defun my-eshell-only-aliases ()
+  (dolist (a '(("source" ". $1") ("mkcd" "mkdir -p $1 && cd $1") ("k" "kubectl $*")
+               ("clear" "clear t") ("d" "dired-other-window $1") ("dired" "dired $1")
+               ("ff" "find-file $1") ("jq" "jq -M $*")
+               ("rg" "rg --color=never --no-line-number $*")
+               ("gd" "vc-diff") ("glog" "vc-print-root-log")
+               ("groot" "cd ${git rev-parse --show-toplevel}")
+               ("gk" "export KUBECONFIG=${gardenctl kubectl-env zsh | awk -F\"'\" '/export KUBECONFIG/ {print \\$2}'})")))
+    (push a eshell-command-aliases-list)))
 
 (defun eshell--k8s-context-and-namespace ()
   (when-let* ((kubeconfig (getenv "KUBECONFIG"))
@@ -1038,7 +1144,7 @@
   (define-key mpc-tagbrowser-mode-map (kbd "TAB") 'my-mpc-tagbrowser-toggle)
   (define-key mpc-tagbrowser-mode-map (kbd "RET") 'mpc-play-at-point))
 
-;;;; Eldoc-box
+;;;; Eldoc-box (vendored since I can't live without this)
 
 (with-eval-after-load 'eglot (load "~/.emacs.d/eldoc-box" :noerr :no-message))
 (setq eldoc-box-clear-with-C-g t)
@@ -1065,9 +1171,8 @@
 ;;;; Mark-multiple clone — experiment to see how far opus 4.6 can go
 
 (load "~/.emacs.d/mini-mark-multiple" :noerr :no-message)
-(define-key (current-global-map) (kbd "M-p") #'mmm/mark-previous-like-this)
-(define-key (current-global-map) (kbd "M-n") #'mmm/mark-next-like-this)
-(define-key (current-global-map) (kbd "M-'") #'mmm/mark-all-like-this)
-(define-key (current-global-map) (kbd "M-r") #'mmm/mark-all-in-defun)
+(dolist (b '(("M-p" . mmm/mark-previous-like-this) ("M-n" . mmm/mark-next-like-this)
+             ("M-'" . mmm/mark-all-like-this) ("M-r" . mmm/mark-all-in-defun)))
+  (keymap-global-set (car b) (cdr b)))
 
 ;;; init.el ends here
