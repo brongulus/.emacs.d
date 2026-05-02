@@ -222,27 +222,28 @@
 
 ;;;; Zen margins
 
-(defvar zen-enabled-modes '(eww-mode diff-mode Info-mode dired-mode gnus-article-mode gnus-group-mode erc-mode
-                                     eshell-mode compilation-mode occur-mode flymake-diagnostics-buffer-mode
-                                     xref--xref-buffer-mode grep-mode vc-git-log-edit-mode org-capture-mode
-                                     vc-dir-mode special-mode))
-
 (defun zen-buffer-apply-margins nil "Apply zen margins to all windows."
        (walk-windows
         (lambda (win)
           (with-current-buffer (window-buffer win)
-            (when (or (derived-mode-p '(prog-mode text-mode)) (member major-mode zen-enabled-modes))
-              (let* ((special-modes (member major-mode '(org-mode markdown-ts-mode)))
-                     (margin (max 0 (/ (- (window-total-width win) fill-column) 2)))
-                     (lmargin (if special-modes (max 0 (- margin 10)) margin)))
-                (if (> (window-total-width win) 140)
-                    (progn (visual-line-mode 1) (set-window-margins win lmargin margin)
-                           (when special-modes (text-scale-set 1) (setq-local line-spacing '(0.3 . 0.3))))
-                  (progn (set-window-margins win nil)
-                         (when special-modes (text-scale-set 0) (setq-local line-spacing '(3 . 3)))))))))
+            (let* ((special-modes (member major-mode '(org-mode markdown-ts-mode)))
+                   (margin (max 0 (/ (- (window-total-width win) fill-column) 2)))
+                   (lmargin (if special-modes (max 0 (- margin 10)) margin)))
+              (if (> (window-total-width win) 140)
+                  (progn (visual-line-mode 1) (set-window-margins win lmargin margin)
+                         (when special-modes (text-scale-set 1) (setq-local line-spacing '(0.3 . 0.3))))
+                (progn (set-window-margins win nil)
+                       (when special-modes (text-scale-set 0) (setq-local line-spacing '(3 . 3))))))))
         nil t))
 
 (add-hook 'window-configuration-change-hook #'zen-buffer-apply-margins)
+
+(add-hook 'minibuffer-setup-hook
+          (lambda ()
+            (let ((margins (window-margins (minibuffer-selected-window))))
+              (when (car margins)
+                (set-window-margins (active-minibuffer-window)
+                                    (car margins) (cdr margins))))))
 
 ;;;; Sensible keyboard-quit
 
