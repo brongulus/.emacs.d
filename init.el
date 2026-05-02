@@ -9,9 +9,9 @@
               warning-minimum-level :error)
 
 (put 'narrow-to-region 'disabled nil)
-(if (not (eq system-type 'android))
-    (setq shell-file-name "/opt/homebrew/bin/fish")
-  (setq-default fill-column 120 line-spacing '(4 . 4)))
+(if (eq system-type 'android)
+    (setq-default fill-column 120 line-spacing '(4 . 4))
+  (setq shell-file-name "/opt/homebrew/bin/fish"))
 
 (add-hook 'emacs-startup-hook
           (lambda () (ido-mode 'buffer) (global-auto-revert-mode 1) (fido-mode)
@@ -224,7 +224,8 @@
 
 (defvar zen-enabled-modes '(eww-mode diff-mode Info-mode dired-mode gnus-article-mode gnus-group-mode erc-mode
                                      eshell-mode compilation-mode occur-mode flymake-diagnostics-buffer-mode
-                                     xref--xref-buffer-mode grep-mode vc-git-log-edit-mode org-capture-mode special-mode))
+                                     xref--xref-buffer-mode grep-mode vc-git-log-edit-mode org-capture-mode
+                                     vc-dir-mode special-mode))
 
 (defun zen-buffer-apply-margins nil "Apply zen margins to all windows."
        (walk-windows
@@ -836,13 +837,15 @@
         eshell-prompt-regexp "^.* λ "
         eshell-prompt-function
         (lambda ()
-          (concat (propertize (or (eshell--k8s-context-and-namespace) "") 'font-lock-face 'font-lock-string-face)
-                  (abbreviate-file-name (eshell/pwd))
-                  (propertize (eshell--git-prompt) 'font-lock-face 'font-lock-comment-face)
-                  (if (zerop eshell-last-command-status)
-                      (propertize " λ" 'font-lock-face 'success)
-                    (propertize (format " [%s] λ" eshell-last-command-status) 'font-lock-face 'warning))
-                  " ")))
+          (let ((prompt (concat (propertize (or (eshell--k8s-context-and-namespace) "") 'font-lock-face 'font-lock-string-face)
+                                (abbreviate-file-name (eshell/pwd))
+                                (propertize (eshell--git-prompt) 'font-lock-face 'font-lock-comment-face)
+                                (if (zerop eshell-last-command-status)
+                                    (propertize " λ" 'font-lock-face 'success)
+                                  (propertize (format " [%s] λ" eshell-last-command-status) 'font-lock-face 'warning))
+                                " ")))
+            (add-text-properties 0 (length prompt) '(read-only t rear-nonsticky (read-only)) prompt)
+            prompt)))
   (defun eshell-insert-history () (interactive) ; src: habrams
          (let ((cmd (completing-read "Eshell history: "
                                      (delete-dups (ring-elements eshell-history-ring)))))
