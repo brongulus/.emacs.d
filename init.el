@@ -487,11 +487,14 @@
 (setq dired-kill-when-opening-new-dired-buffer t
       dired-listing-switches
       "-l -v --almost-all --human-readable --group-directories-first"
+      dired-dwim-target t
+      dired-auto-revert-buffer 'dired-buffer-stale-p
       delete-by-moving-to-trash t
       doc-view-continuous t
       vc-allow-rewriting-published-history t
       vc-follow-symlinks t
       vc-make-backup-files t
+      vc-find-revision-no-save t
       vc-display-status 'no-backend
       vc-git-diff-switches '("--patch-with-stat" "--histogram")
       project-vc-extra-root-markers '("Cargo.toml" "build.zig" "go.work" "CMakeLists.txt"))
