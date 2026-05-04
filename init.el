@@ -790,7 +790,7 @@
                ("rg" "rg --color=never --no-line-number $*")
                ("gd" "vc-diff") ("glog" "vc-print-root-log")
                ("groot" "cd ${git rev-parse --show-toplevel}")
-               ("gk" "export KUBECONFIG=${gardenctl kubectl-env zsh | awk -F\"'\" '/export KUBECONFIG/ {print \\$2}'})")))
+               ("gk" "export KUBECONFIG=${gardenctl kubectl-env zsh | sed -n \"s/export KUBECONFIG='\\(.*\\)'/\\1/p\" | sed 's/;//g'}")))
     (push a eshell-command-aliases-list)))
 
 (defun eshell--k8s-context-and-namespace ()
@@ -993,6 +993,7 @@
                                (call-process-shell-command
                                 (concat "nohup mpv " (shell-quote-argument url) " >/dev/null 2>&1 &"))))))
 
+(autoload 'eww-open-in-new-buffer "eww")
 (with-eval-after-load 'eww
   (add-hook 'eww-after-render-hook #'viper-mode)
   (setq eww-header-line-format nil
@@ -1012,6 +1013,7 @@
             (cons (buffer-substring-no-properties (mark) (point))
                   dictionary-default-dictionary))
          (dictionary-lookup-definition)))
+(autoload 'dictionary-new-search "dictionary")
 
 ;;;; EPUB reader (claude, nov.el)
 
