@@ -141,18 +141,8 @@
 (dolist (fn '(tab-bar-new-tab tab-bar-close-tab)) (advice-add fn :after #'my/tab-bar--update-indicator))
 (with-eval-after-load 'tab-bar (add-hook 'tab-bar-tab-post-select-functions #'my/tab-bar--update-indicator))
 
-(defun ml-margin-pad (side)
-  (let ((m (or (funcall side (window-margins)) 0)))
-    (if (> m 0) (propertize (make-string (if (eq major-mode 'eww-mode) (- m 10) m) ?\s)
-                            'face `(:background ,(face-background 'default)
-                                                :foreground ,(face-background 'default)
-                                                :inverse-video nil
-                                                :overline nil :box nil)) "")))
-
 (setq-default mode-line-format
-              '("%e"
-                (:eval (ml-margin-pad #'car))
-                mode-line-front-space
+              '("%e" mode-line-front-space
                 (:eval (when (and (not (display-graphic-p)) (boundp 'viper-mode-string))
                          (concat " " viper-mode-string)))
                 " %+  "
@@ -161,7 +151,6 @@
                 "    " mode-line-position
                 mode-line-format-right-align
                 mode-line-modes mode-line-misc-info
-                (:eval (ml-margin-pad #'cdr))
                 mode-line-end-spaces))
 
 (with-eval-after-load 'viper
@@ -222,10 +211,14 @@
 
 ;;;; Zen margins
 
+(defvar zen-enabled-modes '(Info-mode diff-mode eww-mode dired-mode gnus-article-mode
+                                      gnus-group-mode erc-mode eshell-mode))
+
 (defun zen-buffer-apply-margins nil "Apply zen margins to all windows."
        (walk-windows
         (lambda (win)
           (with-current-buffer (window-buffer win)
+            (when (or (derived-mode-p '(prog-mode text-mode)) (member major-mode zen-enabled-modes))
             (let* ((special-modes (member major-mode '(org-mode markdown-ts-mode)))
                    (fill (if (eq major-mode 'eww-mode) 120 fill-column))
                    (margin (max 0 (/ (- (window-total-width win) fill) 2)))
@@ -234,18 +227,10 @@
                   (progn (visual-line-mode 1) (set-window-margins win lmargin margin)
                          (when special-modes (text-scale-set 1) (setq-local line-spacing '(0.3 . 0.3))))
                 (progn (set-window-margins win nil)
-                       (when special-modes (text-scale-set 0) (setq-local line-spacing '(3 . 3))))))))
+                       (when special-modes (text-scale-set 0) (setq-local line-spacing '(3 . 3)))))))))
         nil t))
 
 (add-hook 'window-configuration-change-hook #'zen-buffer-apply-margins)
-
-(add-hook 'minibuffer-setup-hook
-          (lambda ()
-            (let* ((sel-win (minibuffer-selected-window))
-                   (sel-mode (buffer-local-value 'major-mode (window-buffer sel-win)))
-                   (margin (car (window-margins sel-win)))
-                   (m (if (eq sel-mode 'eww-mode) (- margin 10) margin)))
-              (when margin (set-window-margins (active-minibuffer-window) m m)))))
 
 ;;;; Sensible keyboard-quit
 
@@ -523,13 +508,6 @@
    (side . bottom) (window-height . 0.25)
    (window-parameters . ((mode-line-format . none)))))
 
-(advice-add 'window-toggle-side-windows :after
-            (lambda (&rest _)
-              (walk-windows (lambda (win)
-                              (when (window-parameter win 'window-side)
-                                (set-window-parameter win 'mode-line-format 'none)))
-                            nil t)))
-
 (defun my/display-buffer-adaptive (buffer alist)
   (let ((side (if (< (frame-width) 160) 'bottom 'right))
         (size-param (if (< (frame-width) 160)
@@ -757,7 +735,7 @@
 (defun epop nil (interactive) (defvar eshell-buffer-name)
        (let* ((display-buffer-alist `(("\\*eshell-pop.*\\*"
                                        (display-buffer-in-side-window)
-                                       (side . bottom) (window-height . 0.25))))
+                                       (side . bottom) (slot . -2) (window-height . 0.25))))
               (dir (if-let* ((proj (project-current)))
                        (file-name-nondirectory (directory-file-name (project-root proj)))
                      default-directory))
