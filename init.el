@@ -35,7 +35,8 @@
 ;;;; Fonts
 
 (dolist (face '(default fixed-pitch fixed-pitch-serif variable-pitch))
-  (custom-set-faces `(,face ((t :font "Input Mono Narrow" :height ,(if (eq system-type 'android) 160 140))))))
+  (custom-set-faces `(,face ((t :family "Input Mono Narrow")))))
+(set-face-attribute 'default nil :height (if (eq system-type 'android) 160 140))
 (dolist (set '(cjk-misc han kana)) (set-fontset-font t set "Noto Sans Mono CJK JP" nil 'prepend))
 
 ;;;; Theme
@@ -812,7 +813,7 @@
         eshell-prompt-function
         (lambda ()
           (let ((prompt (concat (propertize (or (eshell--k8s-context-and-namespace) "") 'font-lock-face 'font-lock-string-face)
-                                (abbreviate-file-name (eshell/pwd))
+                                (propertize (abbreviate-file-name (eshell/pwd)) 'font-lock-face 'bold-italic)
                                 (propertize (eshell--git-prompt) 'font-lock-face 'font-lock-comment-face)
                                 (if (zerop eshell-last-command-status)
                                     (propertize " λ" 'font-lock-face 'success)
