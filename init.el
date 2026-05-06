@@ -48,18 +48,19 @@
   (apply orig-fun args)
   (custom-set-faces '(fringe ((t :background unspecified)))))
 
-(deftheme standard-calm "A minimal warm dark theme.")
+(deftheme standard-calm "A minimal subtly washed theme. Colors inspired by the uchu palette.")
 (apply #'custom-theme-set-faces 'standard-calm
        `((fringe ((t :background unspecified)))
-         (region ((t :background "lightgoldenrod2" :foreground "#1f1f1f" :extend nil)))
+         (region ((t :background "#fedf7b" :foreground "#202225" :extend nil)))
          (vertical-border ((t :foreground unspecified :inherit (shadow default))))
          (font-lock-comment-face ((t :foreground unspecified :inherit shadow)))
          (header-line ((t :box (:line-width 4 :style flat-button) :inverse-video t)))
-         (highlight ((((background dark))  :background "#393939")
-                     (((background light)) :background "#ece8d1")))
+         (highlight ((((background dark))  :background "#383b3d")
+                     (((background light)) :background "#bfc0c1")))
          (font-lock-string-face ((((background dark))  :foreground "#deb07a")
-                                 (((background light)) :foreground "sienna")))
+                                 (((background light)) :foreground "VioletRed4")))
          (font-lock-builtin-face ((t :foreground unspecified :slant italic)))
+         (shadow ((t :foreground "#828386")))
          (error ((t :foreground "Coral3")))
          (success ((t :foreground "ForestGreen")))
          (nobreak-space ((t :underline nil)))
@@ -74,6 +75,7 @@
                    '(org-block org-block-begin-line org-block-end-line))
          ,@(mapcar (lambda (f) `(,f ((t :inherit highlight))))
                    '(lazy-highlight org-code org-verbatim org-agenda-clocking))
+         (dired-directory ((t :inherit font-lock-string-face)))
          (eglot-highlight-symbol-face ((t :inherit (highlight default))))
          (isearch ((t :inverse-video t)))
          (org-table ((t :foreground unspecified)))
@@ -83,13 +85,15 @@
          (org-agenda-structure ((t :height 1.2 :foreground unspecified :inherit default)))
          (org-agenda-date ((t :weight bold :slant italic)))
          (org-time-grid ((t :foreground unspecified :inherit font-lock-comment-face)))
-         (link ((t :foreground "DodgerBlue" :underline t)))
+         (link ((t :foreground "#0965ef" :underline t)))
          (hs-ellipsis ((t :box unspecified :underline t)))
          (compilation-info ((t :foreground "#448c27" :inherit bold)))
          (which-func ((t :foreground unspecified :inherit mode-line)))
          (shr-mark ((t :foreground unspecified :background unspecified)))
          (eww-form-text ((t :box (:line-width 1) :inherit (highlight default))))
          (eww-form-submit ((t :box (:line-width 2 :style released-button) :inherit (highlight default))))
+         (woman-bold ((t :inherit font-lock-string-face :weight bold)))
+         (Man-overstrike ((t :inherit font-lock-string-face :weight bold)))
          (dictionary-word-definition-face ((t :family unspecified)))
          ,@(let ((common `(:background unspecified :foreground unspecified
                                        :inverse-video ,(not (display-graphic-p))
@@ -98,12 +102,11 @@
                                        :box (:line-width 1 :style flat-button))))
              `((mode-line-active ((t :inherit default ,@common)))
                (mode-line-inactive ((t :inherit shadow ,@common)))))))
-(set-face-attribute 'default nil :foreground "#fffbef" :background "#1f1f1f")
+(set-face-attribute 'default nil :foreground "#d8d8da" :background "#202225")
 (enable-theme 'standard-calm)
 (keymap-global-set "C-x 6"
                    #'(lambda () (interactive)
-                       (invert-face 'default)
-                       (frame-set-background-mode nil)
+                       (invert-face 'default) (frame-set-background-mode nil)
                        (enable-theme 'standard-calm)))
 
 ;;;; Cursor colour on modification
@@ -154,7 +157,7 @@
                 "    " mode-line-position
                 mode-line-format-right-align
                 mode-line-modes mode-line-misc-info
-                mode-line-end-spaces))
+                mode-line-end-spaces " "))
 
 (with-eval-after-load 'viper
   (setq global-mode-string
@@ -214,8 +217,8 @@
 
 ;;;; Zen margins
 
-(defvar zen-enabled-modes '(Info-mode diff-mode eww-mode dired-mode gnus-article-mode
-                                      gnus-group-mode erc-mode eshell-mode))
+(defvar zen-enabled-modes '(Info-mode diff-mode eww-mode dired-mode gnus-article-mode Man-mode
+                                      gnus-group-mode erc-mode eshell-mode woman-mode))
 
 (defun zen-buffer-apply-margins nil "Apply zen margins to all windows."
        (walk-windows
@@ -980,6 +983,9 @@
 (autoload 'eww-open-in-new-buffer "eww")
 (with-eval-after-load 'eww
   (add-hook 'eww-after-render-hook #'viper-mode)
+  (defun my/eww-redirect-urls (url)
+    (replace-regexp-in-string "://\\(www\\.\\)?reddit\\.com" "://old.reddit.com" url))
+  (push 'my/eww-redirect-urls eww-url-transformers)
   (setq eww-header-line-format nil
         eww-auto-rename-buffer 'title
         eww-default-download-directory "~/Downloads/eww/"
@@ -1144,6 +1150,15 @@
   (define-key mpc-tagbrowser-mode-map (kbd "TAB") 'my-mpc-tagbrowser-toggle)
   (define-key mpc-tagbrowser-mode-map (kbd "RET") 'mpc-play-at-point))
 
+;;;; Info and Man
+
+(setq Info-default-directory-list '("~/.emacs.d/info")
+      Info-use-header-line nil
+      woman-manpath '("/usr/share/man")
+      woman-cache-filename (expand-file-name "~/.emacs.d/woman-cache.el"))
+
+;;; External packages
+
 ;;;; Eldoc-box (vendored since I can't live without this)
 
 (with-eval-after-load 'eglot (load "~/.emacs.d/eldoc-box" :noerr :no-message))
@@ -1161,18 +1176,16 @@
           eldoc-box-max-pixel-height 700
           eldoc-box-only-multi-line t)))
 
-;;;; Info
-
-(setq Info-default-directory-list '("~/.emacs.d/info")
-      Info-use-header-line nil)
-
-;;; External packages
-
 ;;;; Mark-multiple clone — experiment to see how far opus 4.6 can go
 
 (load "~/.emacs.d/mini-mark-multiple" :noerr :no-message)
 (dolist (b '(("M-p" . mmm/mark-previous-like-this) ("M-n" . mmm/mark-next-like-this)
              ("M-'" . mmm/mark-all-like-this) ("M-r" . mmm/mark-all-in-defun)))
   (keymap-global-set (car b) (cdr b)))
+
+;;;; Corfu clone — experiment to see how far opus 4.6 can go
+
+(load "~/.emacs.d/ac-lite" :noerr :no-message)
+(add-hook 'prog-mode-hook #'ac-mode)
 
 ;;; init.el ends here

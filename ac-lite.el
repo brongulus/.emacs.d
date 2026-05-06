@@ -8,19 +8,17 @@
 (defcustom ac-count 8 "Max visible candidates." :type 'natnum)
 (defcustom ac-min-width 15 "Min popup width in chars." :type 'natnum)
 (defcustom ac-max-width 80 "Max popup width in chars." :type 'natnum)
-(defcustom ac-auto-delay 0.2 "Auto-trigger idle delay." :type 'float)
+(defcustom ac-auto-delay 0.3 "Auto-trigger idle delay." :type 'float)
 (defcustom ac-auto-prefix 2 "Min chars before auto-trigger." :type 'natnum)
 (defcustom ac-border-width 1 "Border pixels." :type 'natnum)
 (defcustom ac-doc-delay 1.0 "Doc popup delay (nil to disable)."
   :type '(choice float (const nil)))
-(defcustom ac-doc-max-width 60 "Doc popup max width in chars." :type 'natnum)
+(defcustom ac-doc-max-width 70 "Doc popup max width in chars." :type 'natnum)
 (defcustom ac-doc-max-height 12 "Doc popup max lines." :type 'natnum)
 
 (defface ac-default '((t :inherit highlight :extend t)) "Popup face.")
 (defface ac-current '((t :inherit region)) "Selected candidate face.")
-(defface ac-border '((((background dark)) :background "white")
-                     (((background light)) :background "black"))
-  "Border face.")
+(defface ac-border `((t :background ,(face-foreground 'shadow)))  "Border face.")
 
 ;;; State
 (defvar ac--frame nil)

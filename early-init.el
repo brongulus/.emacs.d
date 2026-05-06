@@ -36,7 +36,7 @@
       redisplay-skip-fontification-on-input t)
 (setq-default bidi-display-reordering 'left-to-right
               bidi-paragraph-direction 'left-to-right)
-(setq default-frame-alist '((internal-border-width . 12) (undecorated-round . t)
+(setq default-frame-alist '((undecorated-round . t) (internal-border-width . 6)
                             (menu-bar-lines . 0) (tool-bar-lines . 0) (left-fringe . 8)
                             (right-fringe . 8) (vertical-scroll-bars . nil)
                             (horizontal-scroll-bar . nil)))
