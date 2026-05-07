@@ -40,7 +40,7 @@
     (vertical-scroll-bars . nil) (horizontal-scroll-bars . nil)
     (left-fringe . 0) (right-fringe . 0)
     (menu-bar-lines . 0) (tool-bar-lines . 0) (tab-bar-lines . 0)
-    (no-other-frame . t) (unsplittable . t) (undecorated . t)
+    (no-other-frame . t) (unsplittable . t) (undecorated-round . t)
     (cursor-type . nil) (no-special-glyphs . t) (minibuffer . nil)
     (inhibit-double-buffering . t) (desktop-dont-save . t)))
 
@@ -49,7 +49,7 @@
     (truncate-lines . t) (cursor-in-non-selected-windows . nil)
     (cursor-type . nil) (show-trailing-whitespace . nil)
     (display-line-numbers . nil) (left-fringe-width . 0) (right-fringe-width . 0)
-    (left-margin-width . 0) (right-margin-width . 0) (line-spacing . 0)
+    (left-margin-width . 0) (right-margin-width . 0)
     (buffer-read-only . t)))
 
 (defun ac--make-buffer (name)
@@ -146,15 +146,17 @@
            (cw (default-font-width))
            (lh (with-current-buffer buf (default-line-height)))
            (fe (frame-edges ac--frame 'outer-edges))
-           (rx (nth 2 fe)) (ry (nth 1 fe))
+           (gap 4)
+           (rx (+ (nth 2 fe) gap)) (ry (nth 1 fe))
            (fw (frame-pixel-width))
-           (avr (- fw rx 4)) (avl (- (nth 0 fe) 4))
+           (avr (- fw rx)) (avl (- (nth 0 fe) gap))
            (pw (if (>= avr (* cw 20)) (min (* cw ac-doc-max-width) avr)
                  (min (* cw ac-doc-max-width) avl)))
            (x (if (>= avr (* cw 20)) rx (max 0 (- (nth 0 fe) pw))))
            (fill-col (max 20 (/ pw cw))))
       (with-current-buffer buf
         (let ((inhibit-read-only t))
+          (setq-local left-margin-width 1 right-margin-width 1)
           (erase-buffer) (insert doc)
           (let ((fill-column fill-col))
             (goto-char (point-min))
@@ -236,7 +238,7 @@
     (cons all (or base 0))))
 
 (defun ac--in-region (beg end table pred)
-  (if (minibufferp)
+  (if (or (minibufferp) (not ac-mode))
       (completion--in-region beg end table pred)
     (barf-if-buffer-read-only)
     (let* ((inhibit-message t)
@@ -389,7 +391,8 @@
 
 ;;; Auto trigger
 (defun ac--auto-post-command ()
-  (when (and (eq this-command 'self-insert-command)
+  (when (and ac-mode
+             (eq this-command 'self-insert-command)
              (not completion-in-region-mode)
              (not (minibufferp)))
     (when (timerp ac--auto-timer) (cancel-timer ac--auto-timer))
