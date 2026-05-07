@@ -85,7 +85,7 @@
          (org-agenda-structure ((t :height 1.2 :foreground unspecified :inherit default)))
          (org-agenda-date ((t :weight bold :slant italic)))
          (org-time-grid ((t :foreground unspecified :inherit font-lock-comment-face)))
-         (link ((t :foreground "#0965ef" :underline t)))
+         (link ((t :underline t))) ;:foreground "#0965ef"
          (hs-ellipsis ((t :box unspecified :underline t)))
          (compilation-info ((t :foreground "#448c27" :inherit bold)))
          (which-func ((t :foreground unspecified :inherit mode-line)))
@@ -95,6 +95,15 @@
          (woman-bold ((t :inherit font-lock-string-face :weight bold)))
          (Man-overstrike ((t :inherit font-lock-string-face :weight bold)))
          (dictionary-word-definition-face ((t :family unspecified)))
+         ;; diff colors for light background taken from doric-marble
+         (ediff-current-diff-A ((((background light)) :background "#eac0bf" :extend t)))
+         (ediff-current-diff-B ((((background light)) :background "#bde0c2" :extend t)))
+         (ediff-fine-diff-A ((((background light)) :background "#e05fa1209f9e" :weight bold)))
+         (ediff-fine-diff-B ((((background light)) :background "#a187d39fa8af" :weight bold)))
+         (diff-removed ((((background light)) :background "#ed05c713c62b" :extend t)))
+         (diff-added ((((background light)) :background "#c45de3fcc8e1" :extend t)))
+         (diff-refine-removed ((((background light)) :background "#e05fa1209f9e" :weight bold)))
+         (diff-refine-added ((((background light)) :background "#a187d39fa8af" :weight bold)))
          ,@(let ((common `(:background unspecified :foreground unspecified
                                        :inverse-video ,(not (display-graphic-p))
                                        :height ,(if (eq system-type 'android) 160 140)
@@ -217,8 +226,8 @@
 
 ;;;; Zen margins
 
-(defvar zen-enabled-modes '(Info-mode diff-mode eww-mode dired-mode gnus-article-mode Man-mode
-                                      gnus-group-mode erc-mode eshell-mode woman-mode))
+(defvar zen-enabled-modes '(Info-mode diff-mode eww-mode dired-mode gnus-article-mode Man-mode org-agenda-mode
+                                      vc-dir-mode gnus-group-mode erc-mode eshell-mode woman-mode))
 
 (defun zen-buffer-apply-margins nil "Apply zen margins to all windows."
        (walk-windows
