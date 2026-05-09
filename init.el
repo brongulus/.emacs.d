@@ -50,51 +50,45 @@
 
 (deftheme standard-calm "A minimal subtly washed theme. Colors inspired by the uchu palette.")
 (apply #'custom-theme-set-faces 'standard-calm
-       `((fringe ((t :background unspecified)))
-         (region ((t :background "#fedf7b" :foreground "#202225" :extend nil)))
-         (vertical-border ((t :foreground unspecified :inherit (shadow default))))
-         (font-lock-comment-face ((t :foreground unspecified :inherit shadow)))
+       `((region ((t :background "#fedf7b" :foreground "#202225" :extend nil)))
          (header-line ((t :box (:line-width 4 :style flat-button) :inverse-video t)))
          (highlight ((((background dark))  :background "#383b3d")
                      (((background light)) :background "#bfc0c1")))
          (font-lock-string-face ((((background dark))  :foreground "#deb07a")
                                  (((background light)) :foreground "VioletRed4")))
-         (font-lock-builtin-face ((t :foreground unspecified :slant italic)))
+         (font-lock-builtin-face ((t :slant italic)))
+         (font-lock-function-name-face ((t :inherit bold)))
          (shadow ((t :foreground "#828386")))
          (error ((t :foreground "Coral3")))
          (success ((t :foreground "ForestGreen")))
-         (nobreak-space ((t :underline nil)))
          ,@(mapcar (lambda (f) `(,f ((t nil))))
-                   '(font-lock-type-face font-lock-constant-face viper-minibuffer-insert org-agenda-done
-                                         font-lock-keyword-face font-lock-variable-name-face))
-         ,@(mapcar (lambda (f) `(,f ((t :foreground unspecified :inherit bold))))
-                   '(minibuffer-prompt font-lock-function-name-face line-number-current-line))
+                   '(fringe shr-mark font-lock-type-face font-lock-constant-face viper-minibuffer-insert org-agenda-done
+                            font-lock-keyword-face font-lock-variable-name-face dictionary-word-definition-face org-table))
          ,@(mapcar (lambda (i) `(,(intern (format "outline-%d" i)) ((t :height 1.1 :inherit bold))))
                    (number-sequence 1 9))
          ,@(mapcar (lambda (f) `(,f ((t :inherit (highlight default) :extend t))))
                    '(org-block org-block-begin-line org-block-end-line))
          ,@(mapcar (lambda (f) `(,f ((t :inherit highlight))))
                    '(lazy-highlight org-code org-verbatim org-agenda-clocking))
-         (dired-directory ((t :inherit font-lock-string-face)))
+         ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :weight bold))))
+                   '(minibuffer-prompt dired-directory woman-bold Man-overstrike))
+         ,@(mapcar (lambda (f) `(,f ((t :inherit shadow))))
+                   '(vertical-border font-lock-comment-face org-time-grid))
+         (link ((t :underline t))) ;:foreground "#0965ef"
+         (hs-ellipsis ((t :underline t)))
+         (nobreak-space ((t :underline nil)))
+         (line-number-current-line ((t :weight bold :inherit default)))
          (eglot-highlight-symbol-face ((t :inherit (highlight default))))
          (isearch ((t :inverse-video t)))
-         (org-table ((t :foreground unspecified)))
          (completions-common-part ((t :underline t :weight bold)))
-         (org-document-title ((t :height 1.2 :inherit bold)))
          (org-document-info ((t :height 1.1 :inherit bold)))
-         (org-agenda-structure ((t :height 1.2 :foreground unspecified :inherit default)))
+         (org-document-title ((t :height 1.2 :inherit bold)))
+         (org-agenda-structure ((t :height 1.2 :inherit default)))
          (org-agenda-date ((t :weight bold :slant italic)))
-         (org-time-grid ((t :foreground unspecified :inherit font-lock-comment-face)))
-         (link ((t :underline t))) ;:foreground "#0965ef"
-         (hs-ellipsis ((t :box unspecified :underline t)))
          (compilation-info ((t :foreground "#448c27" :inherit bold)))
-         (which-func ((t :foreground unspecified :inherit mode-line)))
-         (shr-mark ((t :foreground unspecified :background unspecified)))
+         (which-func ((t :inherit mode-line)))
          (eww-form-text ((t :box (:line-width 1) :inherit (highlight default))))
          (eww-form-submit ((t :box (:line-width 2 :style released-button) :inherit (highlight default))))
-         (woman-bold ((t :inherit font-lock-string-face :weight bold)))
-         (Man-overstrike ((t :inherit font-lock-string-face :weight bold)))
-         (dictionary-word-definition-face ((t :family unspecified)))
          ;; diff colors for light background taken from doric-marble
          (ediff-current-diff-A ((((background light)) :background "#eac0bf" :extend t)))
          (ediff-current-diff-B ((((background light)) :background "#bde0c2" :extend t)))
@@ -104,11 +98,10 @@
          (diff-added ((((background light)) :background "#c45de3fcc8e1" :extend t)))
          (diff-refine-removed ((((background light)) :background "#e05fa1209f9e" :weight bold)))
          (diff-refine-added ((((background light)) :background "#a187d39fa8af" :weight bold)))
-         ,@(let ((common `(:background unspecified :foreground unspecified
-                                       :inverse-video ,(not (display-graphic-p))
-                                       :height ,(if (eq system-type 'android) 160 140)
-                                       :overline ,(face-foreground 'shadow)
-                                       :box (:line-width 1 :style flat-button))))
+         ,@(let ((common `(:inverse-video ,(not (display-graphic-p))
+                                          :height ,(if (eq system-type 'android) 160 140)
+                                          :overline ,(face-foreground 'shadow)
+                                          :box (:line-width 1 :style flat-button))))
              `((mode-line-active ((t :inherit default ,@common)))
                (mode-line-inactive ((t :inherit shadow ,@common)))))))
 (set-face-attribute 'default nil :foreground "#d8d8da" :background "#202225")
@@ -133,7 +126,7 @@
 ;;;; Mode-line
 
 (setq-default mode-line-collapse-minor-modes
-              '(not flymake-mode defining-kbd-macro)
+              '(not flymake-mode defining-kbd-macro text-scale-mode)
               mode-line-end-spaces nil
               flymake-mode-line-title nil)
 
@@ -327,6 +320,13 @@
       completion-ignore-case t
       completion-auto-help nil
       completion-styles '(initials partial-completion basic flex))
+
+(with-eval-after-load 'recentf ; silence recentf
+  (dolist (recentf-fn '(recentf-load-list recentf-cleanup))
+    (advice-add recentf-fn :around
+                (lambda (fn &rest args)
+                  (let ((inhibit-message t) (message-log-max nil) (save-silently t))
+                    (apply fn args))))))
 
 ;;;; Ido and fido
 
@@ -979,7 +979,7 @@
   (setq shr-external-rendering-functions
         `((pre        . ,(my-shr-tag-render 'pre        '(:inherit highlight :extend t)))
           (table      . ,(my-shr-tag-render 'table      '(:inherit mode-line-active) #'my-table-is-data-p))
-          (blockquote . ,(my-shr-tag-render 'blockquote '(:slant italic)))
+          (blockquote . ,(my-shr-tag-render 'blockquote '(:inherit font-lock-string-face :slant italic)))
           (h1         . ,(my-shr-tag-render 'h1         '(:inherit bold :height 1.3)))
           (h2         . ,(my-shr-tag-render 'h2         '(:inherit bold :height 1.2)))
           (h3         . ,(my-shr-tag-render 'h3         '(:inherit bold :height 1.2))))))
