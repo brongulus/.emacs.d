@@ -1,5 +1,7 @@
 ;;; ac-lite.el --- Child-frame completion popup -*- lexical-binding: t -*-
 ;;; Minimal corfu alternative. Works with any CAPF. Requires Emacs 29+.
+;;  Regurgitated by Opus 4.6, taking corfu and yuta as input
+
 
 (require 'cl-lib)
 (eval-when-compile (require 'subr-x))
@@ -11,13 +13,13 @@
 (defcustom ac-auto-delay 0.3 "Auto-trigger idle delay." :type 'float)
 (defcustom ac-auto-prefix 2 "Min chars before auto-trigger." :type 'natnum)
 (defcustom ac-border-width 1 "Border pixels." :type 'natnum)
-(defcustom ac-doc-delay 1.0 "Doc popup delay (nil to disable)."
+(defcustom ac-doc-delay 0.7 "Doc popup delay (nil to disable)."
   :type '(choice float (const nil)))
 (defcustom ac-doc-max-width 70 "Doc popup max width in chars." :type 'natnum)
 (defcustom ac-doc-max-height 12 "Doc popup max lines." :type 'natnum)
 
 (defface ac-default '((t :inherit highlight :extend t)) "Popup face.")
-(defface ac-current '((t :inherit region)) "Selected candidate face.")
+(defface ac-current '((t :inherit match)) "Selected candidate face.")
 (defface ac-border `((t :background ,(face-foreground 'shadow)))  "Border face.")
 
 ;;; State
@@ -63,7 +65,7 @@
   (let* ((window-min-height 1) (window-min-width 1)
          (b ac-border-width)
          (params `((parent-frame . ,parent)
-                   (background-color . ,(face-attribute 'ac-default :background nil 'default))
+                   (background-color . ,(face-attribute 'highlight :background nil 'ac-default))
                    (font . ,(frame-parameter parent 'font))
                    (internal-border-width . ,b) (child-frame-border-width . ,b)
                    ,@ac--frame-params)))
@@ -79,6 +81,7 @@
       (set-window-parameter win 'no-other-window t))
     (set-face-background 'internal-border (face-attribute 'ac-border :background nil 'default) frame)
     (set-face-background 'child-frame-border (face-attribute 'ac-border :background nil 'default) frame)
+    (set-face-background 'margin (face-attribute 'highlight :background nil 'ac-default) frame)
     (set-frame-size frame w h t)
     (set-frame-position frame x y)
     (redirect-frame-focus frame parent)
@@ -293,8 +296,8 @@
                   ac--total (length ac--candidates)
                   ac--index (min ac--index (1- ac--total))))
           (when (< ac--index 0) (setq ac--index 0))
-          (when-let ((pos (posn-at-point))
-                     (xpos (posn-at-point (+ beg base))))
+          (when-let* ((pos (posn-at-point))
+                      (xpos (posn-at-point (+ beg base))))
             (ac--popup-show xpos pos)
             (ac--doc-schedule)))))))
 
@@ -307,9 +310,9 @@
                                                   mwheel-scroll mac-mwheel-scroll))
             nil)
            ((memq this-command '(ac-next ac-prev))
-            (when-let ((xpos (pcase-let ((`(,beg . ,_) completion-in-region--data))
-                               (posn-at-point (+ beg (length ac--base)))))
-                       (ypos (posn-at-point)))
+            (when-let* ((xpos (pcase-let ((`(,beg . ,_) completion-in-region--data))
+                                (posn-at-point (+ beg (length ac--base)))))
+                        (ypos (posn-at-point)))
               (ac--popup-show xpos ypos)
               (ac--doc-schedule)))
            (t (ac--exhibit)))
@@ -342,7 +345,7 @@
              (unless (equal str (buffer-substring-no-properties beg end))
                (completion--replace beg end str))
              (ac-quit)
-             (when-let ((exit (plist-get completion-extra-properties :exit-function)))
+             (when-let* ((exit (plist-get completion-extra-properties :exit-function)))
                (funcall exit str 'finished))))))
 
 (defun ac-quit () (interactive)

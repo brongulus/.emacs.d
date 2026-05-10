@@ -51,6 +51,7 @@
 (deftheme standard-calm "A minimal subtly washed theme. Colors inspired by the uchu palette.")
 (apply #'custom-theme-set-faces 'standard-calm
        `((region ((t :background "#fedf7b" :foreground "#202225" :extend nil)))
+         (match ((t :background "RoyalBlue3" :foreground "#d8d8da")))
          (header-line ((t :box (:line-width 4 :style flat-button) :inverse-video t)))
          (highlight ((((background dark))  :background "#383b3d")
                      (((background light)) :background "#bfc0c1")))
@@ -220,7 +221,7 @@
 ;;;; Zen margins
 
 (defvar zen-enabled-modes '(Info-mode diff-mode eww-mode dired-mode gnus-article-mode Man-mode org-agenda-mode
-                                      vc-dir-mode gnus-group-mode erc-mode eshell-mode woman-mode))
+                                      vc-dir-mode gnus-group-mode erc-mode woman-mode))
 
 (defun zen-buffer-apply-margins nil "Apply zen margins to all windows."
        (walk-windows
@@ -332,9 +333,9 @@
 
 (setq ido-enable-flex-matching t ido-everywhere nil
       ido-ignore-buffers
-      '("\\` " "\\*Messages\\*" "\\*scratch\\*" "\\*Completions\\*" "\\*Native-compile-Log\\*"
+      '("\\` " "\\*Messages\\*" "\\*Completions\\*" "\\*Native-compile-Log\\*" "\\*Buffer List\\*"
         "\\*Async-native-compile-log\\*" "\\*EGLOT.*events\\*" "\\*Flymake.*\\*" "\\*MPC.*\\*"
-        "\\*Buffer List\\*" "\\*Help\\*" "\\*Minibuf-.*\\*" "\\*vc-.*\\*" "\\*changes to.*" "^\\#.*")
+        "\\*Help\\*" "\\*Minibuf-.*\\*" "\\*vc-.*\\*" "\\*changes to.*" "^\\#.*")
       ido-create-new-buffer 'always ido-use-virtual-buffers 'auto recentf-max-saved-items 200
       ido-show-dot-for-dired t ido-max-window-height 1 ido-auto-merge-work-directories-length -1
       ido-separator " • " icomplete-separator " • " icomplete-tidy-shadowed-file-names t)
@@ -745,6 +746,7 @@
       eshell-history-size 20000
       eshell-save-history-on-exit t
       eshell-glob-case-insensitive t
+      eshell-status-in-mode-line nil
       eshell-scroll-to-bottom-on-input 'this)
 
 (defun epop nil (interactive) (defvar eshell-buffer-name)
@@ -1083,7 +1085,7 @@
       erc-use-auth-source-for-nickserv-password t
       erc-hide-list '("JOIN" "PART" "QUIT" "NICK" "MODE" "353" "366")
       erc-autojoin-channels-alist
-      '(("libera.chat" "#emacs" "#emacs-social" "##rust"
+      '(("libera.chat" "#emacs" "#emacs-social" "##rust" "#uxn"
          "#zig" "#janet" "#clojure" "#racket" "#ocaml")))
 
 (defun my-erc-tls () (interactive)
