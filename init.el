@@ -64,20 +64,22 @@
          (success ((t :foreground "ForestGreen")))
          ,@(mapcar (lambda (f) `(,f ((t nil))))
                    '(fringe shr-mark font-lock-type-face font-lock-constant-face viper-minibuffer-insert org-agenda-done
-                            font-lock-keyword-face font-lock-variable-name-face dictionary-word-definition-face org-table))
+                            font-lock-keyword-face font-lock-variable-name-face dictionary-word-definition-face org-table
+                            speedbar-selected-face))
          ,@(mapcar (lambda (i) `(,(intern (format "outline-%d" i)) ((t :height 1.1 :inherit bold))))
                    (number-sequence 1 9))
          ,@(mapcar (lambda (f) `(,f ((t :inherit (highlight default) :extend t))))
-                   '(org-block org-block-begin-line org-block-end-line))
+                   '(org-block org-block-begin-line org-block-end-line diff-header))
          ,@(mapcar (lambda (f) `(,f ((t :inherit highlight))))
-                   '(lazy-highlight org-code org-verbatim org-agenda-clocking))
+                   '(lazy-highlight org-code org-verbatim org-agenda-clocking speedbar-highlight-face))
          ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :weight bold))))
-                   '(minibuffer-prompt dired-directory woman-bold Man-overstrike))
+                   '(minibuffer-prompt dired-directory woman-bold Man-overstrike speedbar-directory-face))
          ,@(mapcar (lambda (f) `(,f ((t :inherit shadow))))
-                   '(vertical-border font-lock-comment-face org-time-grid))
+                   '(vertical-border font-lock-comment-face org-time-grid speedbar-file-face))
          (link ((t :underline t))) ;:foreground "#0965ef"
          (hs-ellipsis ((t :underline t)))
          (nobreak-space ((t :underline nil)))
+         (diff-file-header ((t :inherit (highlight bold))))
          (line-number-current-line ((t :weight bold :inherit default)))
          (eglot-highlight-symbol-face ((t :inherit (highlight default))))
          (isearch ((t :inverse-video t)))
@@ -436,7 +438,7 @@
                    ("C-x k" . kill-current-buffer) ("M-o" . other-window) ("<escape>" . keyboard-escape-quit)
                    ("C-x ;" . comment-line) ("C-x x c" . save-buffers-kill-emacs) ("s-o" . other-window)
                    ("C-x C-b" . ibuffer) ("M-;" . eval-expression) ("C-/" . undo-only)
-                   ("C-," . my-scroll-other-down) ("C-." . my-scroll-other-up)
+                   ("C-," . my-scroll-other-down) ("C-." . my-scroll-other-up) ("C-x d" . speedbar)
                    ("M-j" . window-toggle-side-windows) ("M-`" . cycle-side-windows)
                    ("C-<tab>" . tab-next) ("C-S-<tab>" . tab-previous) ("C-x x f" . find-file)
                    ("C-x x s" . save-buffer) ("C-x x e" . eval-defun) ("C-x x z" . restart-emacs)
@@ -497,8 +499,25 @@
       vc-make-backup-files t
       vc-find-revision-no-save t
       vc-display-status 'no-backend
-      vc-git-diff-switches '("--patch-with-stat" "--histogram")
+      vc-git-diff-switches '("--patch-with-stat" "--histogram" "-w")
       project-vc-extra-root-markers '("Cargo.toml" "build.zig" "go.work" "CMakeLists.txt"))
+
+(setq speedbar-prefer-window t
+      speedbar-use-images t
+      speedbar-show-unknown-files t
+      speedbar-window-default-width 30)
+
+(with-eval-after-load 'ezimage
+  (dolist (var '(ezimage-page ezimage-directory-plus ezimage-directory-minus ezimage-page-plus ezimage-page-minus     
+                              ezimage-box-plus ezimage-box-minus ezimage-tag ezimage-label ezimage-checkout))
+    (set var "")))
+
+(with-eval-after-load 'speedbar
+  (advice-add 'speedbar-window-mode :after
+              (lambda (&rest _)
+                (when (window-live-p speedbar--window)
+                  (set-window-parameter speedbar--window 'no-other-window nil))))
+  (advice-add 'speedbar-set-mode-line-format :override (lambda () nil)))
 
 ;;; Windows and buffers
 
@@ -559,6 +578,7 @@
                 :documentHighlightProvider)
               eglot-sync-connect 0
               eglot-autoshutdown t
+              eglot-extend-to-xref t
               jsonrpc-event-hook nil)
 
 ;;;; Prog-mode hooks
