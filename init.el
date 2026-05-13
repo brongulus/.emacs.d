@@ -48,15 +48,14 @@
   (apply orig-fun args)
   (custom-set-faces '(fringe ((t :background unspecified)))))
 
-(deftheme standard-calm "A minimal subtly washed theme. Colors inspired by the uchu palette.")
-(apply #'custom-theme-set-faces 'standard-calm
-       `((region ((t :background "#fedf7b" :foreground "#202225" :extend nil)))
-         (match ((t :background "RoyalBlue3" :foreground "#d8d8da")))
-         (header-line ((t :box (:line-width 4 :style flat-button) :inverse-video t)))
-         (highlight ((((background dark))  :background "#383b3d")
+(deftheme untitled-plain "An industrial subtly washed theme.")
+(apply #'custom-theme-set-faces 'untitled-plain
+       `((region ((t :background "#fedf7b" :foreground "#0f0e0d" :extend nil)))
+         (header-line ((t :box (:line-width 2 :style flat-button) :inverse-video t)))
+         (highlight ((((background dark))  :background "#1e1e1e")
                      (((background light)) :background "#bfc0c1")))
-         (font-lock-string-face ((((background dark))  :foreground "#deb07a")
-                                 (((background light)) :foreground "VioletRed4")))
+         (font-lock-string-face ((((background dark))  :foreground "#eeb43d")
+                                 (((background light)) :foreground "#084095")))
          (font-lock-builtin-face ((t :slant italic)))
          (font-lock-function-name-face ((t :inherit bold)))
          (shadow ((t :foreground "#828386")))
@@ -65,11 +64,11 @@
          ,@(mapcar (lambda (f) `(,f ((t nil))))
                    '(fringe shr-mark font-lock-type-face font-lock-constant-face viper-minibuffer-insert org-agenda-done
                             font-lock-keyword-face font-lock-variable-name-face dictionary-word-definition-face org-table
-                            speedbar-selected-face))
+                            speedbar-selected-face markdown-ts-list-marker markdown-ts-table-delimiter-cell))
          ,@(mapcar (lambda (i) `(,(intern (format "outline-%d" i)) ((t :height 1.1 :inherit bold))))
                    (number-sequence 1 9))
          ,@(mapcar (lambda (f) `(,f ((t :inherit (highlight default) :extend t))))
-                   '(org-block org-block-begin-line org-block-end-line diff-header))
+                   '(org-block org-block-begin-line org-block-end-line diff-header markdown-ts-code-block))
          ,@(mapcar (lambda (f) `(,f ((t :inherit highlight))))
                    '(lazy-highlight org-code org-verbatim org-agenda-clocking speedbar-highlight-face))
          ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :weight bold))))
@@ -107,12 +106,12 @@
                                           :box (:line-width 1 :style flat-button))))
              `((mode-line-active ((t :inherit default ,@common)))
                (mode-line-inactive ((t :inherit shadow ,@common)))))))
-(set-face-attribute 'default nil :foreground "#d8d8da" :background "#202225")
-(enable-theme 'standard-calm)
+(set-face-attribute 'default nil :foreground "#d8d8da" :background "#0f0e0d")
+(enable-theme 'untitled-plain)
 (keymap-global-set "C-x 6"
                    #'(lambda () (interactive)
                        (invert-face 'default) (frame-set-background-mode nil)
-                       (enable-theme 'standard-calm)))
+                       (enable-theme 'untitled-plain)))
 
 ;;;; Cursor colour on modification
 
@@ -230,15 +229,18 @@
         (lambda (win)
           (with-current-buffer (window-buffer win)
             (when (or (derived-mode-p '(prog-mode text-mode)) (member major-mode zen-enabled-modes))
-              (let* ((special-modes (member major-mode '(org-mode markdown-ts-mode)))
+              (let* ((special-modes (member major-mode '(Info-mode markdown-ts-mode)))
+                     (winw (window-total-width win))
                      (fill (if (eq major-mode 'eww-mode) 120 fill-column))
-                     (margin (max 0 (/ (- (window-total-width win) fill) 2)))
-                     (lmargin (if special-modes (max 0 (- margin 10)) margin)))
-                (if (> (window-total-width win) 140)
+                     (margin (max 0 (/ (- winw fill) 2)))
+                     (lmargin (if (eq major-mode 'org) (max 0 (- margin 5)) margin)))
+                (if (> winw 140)
                     (progn (visual-line-mode 1) (set-window-margins win lmargin margin)
                            (when special-modes (text-scale-set 1) (setq-local line-spacing '(0.3 . 0.3))))
-                  (progn (set-window-margins win nil)
-                         (when special-modes (text-scale-set 0) (setq-local line-spacing '(3 . 3)))))))))
+                  (progn (set-window-margins win nil 1)
+                         (when special-modes
+                           (set-window-margins win (if (eq major-mode 'org-mode) 0 5) 5)
+                           (text-scale-set 0) (setq-local line-spacing '(3 . 3)))))))))
         nil t))
 
 (add-hook 'window-configuration-change-hook #'zen-buffer-apply-margins)
@@ -658,11 +660,26 @@
 
 (setq org-directory (concat "~/Dropbox/" "org") org-agenda-files (list org-directory)
       org-modules nil org-pretty-entities t org-src-fontify-natively t
-      org-startup-indented t org-src-content-indentation 0 org-src-preserve-indentation t
+      org-adapt-indentation t org-startup-indented t org-startup-truncated nil
+      org-src-content-indentation 0 org-src-preserve-indentation t
       org-fontify-quote-and-verse-blocks t org-fontify-whole-heading-line t
       org-special-ctrl-a/e nil org-M-RET-may-split-line '((item . nil)))
 
 (with-eval-after-load 'org
+  (defun org-outer-indent--compute-prefixes () ; src: rougier
+    "Compute prefix strings with outer-aligned stars."
+    (setq org-indent--heading-line-prefixes (make-vector org-indent--deepest-level nil)
+          org-indent--inlinetask-line-prefixes (make-vector org-indent--deepest-level nil)
+          org-indent--text-line-prefixes (make-vector org-indent--deepest-level nil))
+    (let ((indent 7))  ; (+ 3 4)
+      (dotimes (n org-indent--deepest-level)
+        (aset org-indent--heading-line-prefixes n (make-string (max 0 (- indent (1+ n))) ?\s))
+        (aset org-indent--inlinetask-line-prefixes n (make-string indent ?\s))
+        (aset org-indent--text-line-prefixes n (make-string indent ?\s)))
+      (setq-local org-hide-leading-stars nil)))
+
+  (advice-add 'org-indent--compute-prefixes :override #'org-outer-indent--compute-prefixes)
+
   (require 'org-tempo)
   (with-eval-after-load 'org-src
     (nconc org-src-lang-modes
