@@ -16,7 +16,8 @@
 (add-hook 'emacs-startup-hook
           (lambda () (ido-mode 'buffer) (global-auto-revert-mode 1) (fido-mode)
             (repeat-mode 1) (save-place-mode 1) (delete-selection-mode 1) (savehist-mode 1)
-            (global-visual-line-mode 1) (global-visual-wrap-prefix-mode 1)             (window-divider-mode 1) (electric-pair-mode 1) (kill-ring-deindent-mode 1)))
+            (global-visual-line-mode 1) (global-visual-wrap-prefix-mode 1)
+            (window-divider-mode 1) (electric-pair-mode 1) (kill-ring-deindent-mode 1)))
 (run-with-idle-timer 0.1 nil #'viper-mode)
 
 ;;; Appearance
@@ -50,11 +51,15 @@
   (apply orig-fun args)
   (custom-set-faces '(fringe ((t :background unspecified)))))
 
+(defun solaire-background () "Remap faces to use solaire background."
+       (dolist (face '(default fringe header-line margin))
+         (face-remap-add-relative face 'highlight)))
+
 (deftheme untitled-plain "An industrial subtly washed theme.")
 (apply #'custom-theme-set-faces 'untitled-plain
        `((region ((t :background "#fedf7b" :foreground "#0f0e0d" :extend nil)))
-         (header-line ((t :box (:line-width 2 :style flat-button) :inverse-video t)))
-         (highlight ((((background dark))  :background "#1e1e1e")
+         (header-line ((t :overline ,(face-foreground 'shadow))))
+         (highlight ((((background dark))  :background "#303030")
                      (((background light)) :background "#bfc0c1")))
          (font-lock-string-face ((((background dark))  :foreground "#eeb43d")
                                  (((background light)) :foreground "#084095")))
@@ -105,7 +110,7 @@
          ,@(let ((common `(:inverse-video ,(not (display-graphic-p))
                                           :height ,(if (eq system-type 'android) 160 140)
                                           :overline ,(face-foreground 'shadow)
-                                          :box (:line-width 1 :style flat-button))))
+                                          :box (:line-width 2 :style flat-button))))
              `((mode-line-active ((t :inherit default ,@common)))
                (mode-line-inactive ((t :inherit shadow ,@common)))))))
 (set-face-attribute 'default nil :foreground "#d8d8da" :background "#0f0e0d")
@@ -131,6 +136,8 @@
 
 (setq-default mode-line-collapse-minor-modes
               '(not flymake-mode defining-kbd-macro text-scale-mode)
+              mode-line-collapse-minor-modes-to ""
+              mode-line-modes-delimiters '("" . "")
               mode-line-end-spaces nil
               flymake-mode-line-title nil)
 
@@ -163,12 +170,12 @@
                 "    " mode-line-position
                 mode-line-format-right-align
                 mode-line-modes mode-line-misc-info
-                mode-line-end-spaces " "))
+                mode-line-end-spaces ""))
 
 (with-eval-after-load 'viper
   (setq global-mode-string
         '((:eval (unless (derived-mode-p 'prog-mode)
-                   (format-time-string "%a %H:%M"))))))
+                   (format-time-string "%a %H:%M "))))))
 
 (with-eval-after-load 'eglot
   (setq mode-line-misc-info
@@ -439,11 +446,11 @@
 
 (dolist (binding '(("C-x c c" . compile) ("C-x c r" . recompile) ("C-x c ." . compile-at-root)
                    ("C-h '" . describe-face) ("C-x C-m" . execute-extended-command) ("C-\\" . epop)
-                   ("C-x k" . kill-current-buffer) ("M-o" . other-window) ("<escape>" . keyboard-escape-quit)
-                   ("C-x ;" . comment-line) ("C-x x c" . save-buffers-kill-emacs) ("s-o" . other-window)
+                   ("C-x k" . kill-current-buffer) ("M-o" . other-window) ("s-o" . other-window)
+                   ("C-x ;" . comment-line) ("C-x x c" . save-buffers-kill-emacs)
                    ("C-x C-b" . ibuffer) ("M-;" . eval-expression) ("C-/" . undo-only)
                    ("C-," . my-scroll-other-down) ("C-." . my-scroll-other-up) ("C-x d" . speedbar)
-                   ("M-j" . window-toggle-side-windows) ("M-`" . cycle-side-windows)
+                   ("M-j" . window-toggle-side-windows) ("<escape>" . keyboard-escape-quit)
                    ("C-<tab>" . tab-next) ("C-S-<tab>" . tab-previous) ("C-x x f" . find-file)
                    ("C-x x s" . save-buffer) ("C-x x e" . eval-defun) ("C-x x z" . restart-emacs)
                    ("C-x x x" . flymake-show-project-diagnostics)))
@@ -506,6 +513,8 @@
       vc-git-diff-switches '("--patch-with-stat" "--histogram" "-w")
       project-vc-extra-root-markers '("Cargo.toml" "build.zig" "go.work" "CMakeLists.txt"))
 
+(add-hook 'dired-mode-hook (lambda () (setq mode-name "Dired")))
+
 (setq speedbar-prefer-window t
       speedbar-use-images t
       speedbar-show-unknown-files t
@@ -517,11 +526,15 @@
     (set var "")))
 
 (with-eval-after-load 'speedbar
+  (define-key speedbar-file-key-map (kbd "q") #'speedbar-window)
   (advice-add 'speedbar-window-mode :after
               (lambda (&rest _)
                 (when (window-live-p speedbar--window)
-                  (set-window-parameter speedbar--window 'no-other-window nil))))
+                  (select-window speedbar--window))))
   (advice-add 'speedbar-set-mode-line-format :override (lambda () nil)))
+
+(add-hook 'speedbar-mode-hook
+          (lambda nil (solaire-background) (setq-local mode-line-format nil)))
 
 ;;; Windows and buffers
 
@@ -531,26 +544,18 @@
               display-line-numbers-widen t
               imenu-flatten t)
 
-(defun cycle-side-windows () (interactive)
-       "Cycle through buffers in the side window."
-       (let ((side-win (car (cl-remove-if-not
-                             (lambda (w) (window-parameter w 'window-side))
-                             (window-list)))))
-         (when side-win
-           (select-window side-win) (switch-to-prev-buffer side-win))))
-
 (add-to-list
  'display-buffer-alist
  '((or "\\*Completions\\*" "\\*xref\\*" "\\*Occur.*\\*" "\\*compilation.*\\*" "\\*Flymake.*\\*"
-       "\\*vc-git :.*\\*" "\\*xref.*\\*" "\\*Occur.*\\*" "\\*Org Select\\*" "\\CAPTURE-.*")
+       "\\*vc-git :.*\\*" "\\*vc-change-log\\*" "\\*Org Select\\*" "\\CAPTURE-.*")
    (display-buffer-in-side-window)
-   (side . bottom) (window-height . 0.25)
+   (side . bottom) (window-height . 0.28)
    (window-parameters . ((mode-line-format . none)))))
 
 (defun my/display-buffer-adaptive (buffer alist)
   (let ((side (if (< (frame-width) 160) 'bottom 'right))
         (size-param (if (< (frame-width) 160)
-                        '(window-height . 0.30)
+                        '(window-height . 0.28)
                       '(window-width . 82))))
     (display-buffer-in-side-window
      buffer (append `((side . ,side) ,size-param) alist))))
@@ -793,13 +798,14 @@
 (defun epop nil (interactive) (defvar eshell-buffer-name)
        (let* ((display-buffer-alist `(("\\*eshell-pop.*\\*"
                                        (display-buffer-in-side-window)
-                                       (side . bottom) (slot . -2) (window-height . 0.25))))
+                                       (side . bottom) (slot . -2) (window-height . 0.28))))
               (dir (if-let* ((proj (project-current)))
                        (file-name-nondirectory (directory-file-name (project-root proj)))
                      default-directory))
               (eshell-buffer-name (concat "*eshell-pop:*" dir))
               (inhibit-message t))
-         (eshell) (setq-local mode-line-format nil)))
+         (eshell) (setq-local mode-line-format nil header-line-format "")
+         (solaire-background)))
 
 (defun my-eshell-read-aliases-list ()
   "Read in an aliases list from `eshell-aliases-file' using bash format."
