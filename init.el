@@ -55,12 +55,13 @@
          (face-remap-add-relative face 'highlight)))
 
 (deftheme untitled-plain "An industrial subtly washed theme.")
+(set-face-attribute 'default nil :foreground "#f2f1e5" :background "#1a1a18")
 (apply #'custom-theme-set-faces 'untitled-plain
        `((region ((t :background "#fedf7b" :foreground "#0f0e0d" :extend nil)))
          (header-line ((t :overline ,(face-foreground 'shadow))))
-         (highlight ((((background dark))  :background "#303030")
-                     (((background light)) :background "#bfc0c1")))
-         (font-lock-string-face ((((background dark))  :foreground "#eeb43d")
+         (highlight ((((background dark)) :background "#2e2e2c")
+                     (((background light)) :background "#e2e0ce")))
+         (font-lock-string-face ((((background dark))  :foreground "#7eaee6")
                                  (((background light)) :foreground "#084095")))
          (font-lock-builtin-face ((t :slant italic)))
          (font-lock-function-name-face ((t :inherit bold)))
@@ -118,7 +119,6 @@
                                          :background ,(face-foreground 'default) ,@common)))
                  (mode-line-inactive ((t :inherit shadow  :foreground ,(face-background 'default)
                                          :background ,(face-foreground 'shadow) ,@common))))))))
-(set-face-attribute 'default nil :foreground "#d8d8da" :background "#0f0e0d")
 (enable-theme 'untitled-plain)
 (keymap-global-set "C-x 6"
                    #'(lambda () (interactive)
