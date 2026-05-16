@@ -27,7 +27,6 @@
               frame-resize-pixelwise t
               inhibit-startup-screen t
               window-divider-default-right-width 1
-              window-divider-default-bottom-width 0
               window-divider-default-places 'right-only)
 (blink-cursor-mode -1) (tooltip-mode -1) (menu-bar-mode -1) (scroll-bar-mode -1)
 (tool-bar-mode -1) (line-number-mode -1)
@@ -81,9 +80,10 @@
          ,@(mapcar (lambda (f) `(,f ((t :inherit highlight))))
                    '(lazy-highlight org-code org-verbatim org-agenda-clocking speedbar-highlight-face))
          ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :weight bold))))
-                   '(minibuffer-prompt dired-directory woman-bold Man-overstrike speedbar-directory-face fixed-pitch-serif))
+                   '(woman-bold Man-overstrike minibuffer-prompt dired-directory speedbar-directory-face
+                                erc-my-nick-face erc-prompt-face fixed-pitch-serif))
          ,@(mapcar (lambda (f) `(,f ((t :inherit shadow))))
-                   '(vertical-border font-lock-comment-face org-time-grid))
+                   '(vertical-border font-lock-comment-face org-time-grid erc-notice-face))
          (link ((t :underline t))) ;:foreground "#0965ef"
          (hs-ellipsis ((t :underline t)))
          (speedbar-selected-face ((t :underline t)))
@@ -615,6 +615,51 @@
 (add-to-list 'auto-mode-alist
              '("\\.log\\'" . (lambda () (display-line-numbers-mode))))
 
+;;;; Simple Zig-mode
+
+(defvar zig-mode-syntax-table
+  (let ((table (make-syntax-table)))
+    (modify-syntax-entry ?/ ". 12b" table)
+    (modify-syntax-entry ?\n "> b"  table)
+    (modify-syntax-entry ?{ "(}"    table)
+    (modify-syntax-entry ?} "){"    table)
+    (modify-syntax-entry ?\[ "(]"   table)
+    (modify-syntax-entry ?\] ")["   table)
+    table))
+
+(defun zig-beginning-of-defun (&optional arg)
+  (interactive "p")
+  (re-search-backward "^\\s-*\\(?:pub\\s-+\\)?fn\\s-+" nil 'move (or arg 1)))
+
+(defun zig-end-of-defun () ; taken from upstream zig-mode
+  (interactive)
+  (while (re-search-forward "(" (line-end-position) t)
+    (progn (backward-char) (forward-sexp)))
+  (if (re-search-forward "[{]" nil t)
+      (progn
+        (goto-char (match-beginning 0))
+        ;; Go to the closing brace
+        (condition-case nil
+            (forward-sexp)
+          (scan-error (goto-char (point-max))))
+        (end-of-line))
+    ;; No opening brace, whole buffer is one "defun"
+    (goto-char (point-max))))
+
+(define-derived-mode zig-mode prog-mode "Zig"
+  :syntax-table zig-mode-syntax-table
+  (setq-local font-lock-defaults
+              '((("\\bfn\\s-+\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*("
+                  1 font-lock-function-name-face)
+                 ("@[a-zA-Z_][a-zA-Z0-9_]*" . font-lock-builtin-face))
+                 nil nil nil nil))
+  (setq-local comment-start "// "
+              comment-end   ""
+              end-of-defun-function #'zig-end-of-defun
+              beginning-of-defun-function #'zig-beginning-of-defun))
+
+(add-to-list 'auto-mode-alist '("\\.zig\\'" . zig-mode))
+
 ;;;; Eglot
 
 (with-eval-after-load 'eglot
@@ -1131,7 +1176,8 @@
 
 ;;;; ERC (IRC)
 
-(setq erc-kill-queries-on-quit t
+(setq erc-prompt ">"
+      erc-kill-queries-on-quit t
       erc-kill-server-buffer-on-quit t
       erc-join-buffer 'buffer
       erc-fill-function 'erc-fill-static
@@ -1140,6 +1186,7 @@
       erc-prompt-for-password nil
       erc-use-auth-source-for-nickserv-password t
       erc-hide-list '("JOIN" "PART" "QUIT" "NICK" "MODE" "353" "366")
+      erc-track-exclude-types '("NICK" "NOTICE" "324" "329" "333" "353")
       erc-autojoin-channels-alist
       '(("libera.chat" "#emacs" "#emacs-social" "##rust" "#uxn"
          "#zig" "#janet" "#clojure" "#racket" "#ocaml")))
