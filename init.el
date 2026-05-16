@@ -16,8 +16,7 @@
 (add-hook 'emacs-startup-hook
           (lambda () (ido-mode 'buffer) (global-auto-revert-mode 1) (fido-mode)
             (repeat-mode 1) (save-place-mode 1) (delete-selection-mode 1) (savehist-mode 1)
-            (global-visual-line-mode 1) (global-visual-wrap-prefix-mode 1)
-            (electric-pair-mode 1) (kill-ring-deindent-mode 1)))
+            (global-visual-line-mode 1) (global-visual-wrap-prefix-mode 1)             (window-divider-mode 1) (electric-pair-mode 1) (kill-ring-deindent-mode 1)))
 (run-with-idle-timer 0.1 nil #'viper-mode)
 
 ;;; Appearance
@@ -26,7 +25,10 @@
 
 (setq-default cursor-in-non-selected-windows nil
               frame-resize-pixelwise t
-              inhibit-startup-screen t)
+              inhibit-startup-screen t
+              window-divider-default-right-width 1
+              window-divider-default-bottom-width 0
+              window-divider-default-places 'right-only)
 (blink-cursor-mode -1) (tooltip-mode -1) (menu-bar-mode -1) (scroll-bar-mode -1)
 (tool-bar-mode -1) (line-number-mode -1)
 (setcdr (assq 'continuation fringe-indicator-alist) '(nil nil))
@@ -539,8 +541,8 @@
 
 (add-to-list
  'display-buffer-alist
- '((or "\\*Completions\\*" "\\*xref\\*" "\\*Occur.*\\*" "\\*compilation.*\\*"
-       "\\*Flymake.*\\*" "\\*vc-git :.*\\*" "\\*Org Select\\*" "\\CAPTURE-.*")
+ '((or "\\*Completions\\*" "\\*xref\\*" "\\*Occur.*\\*" "\\*compilation.*\\*" "\\*Flymake.*\\*"
+       "\\*vc-git :.*\\*" "\\*xref.*\\*" "\\*Occur.*\\*" "\\*Org Select\\*" "\\CAPTURE-.*")
    (display-buffer-in-side-window)
    (side . bottom) (window-height . 0.25)
    (window-parameters . ((mode-line-format . none)))))
@@ -548,17 +550,17 @@
 (defun my/display-buffer-adaptive (buffer alist)
   (let ((side (if (< (frame-width) 160) 'bottom 'right))
         (size-param (if (< (frame-width) 160)
-                        '(window-height . 0.25)
+                        '(window-height . 0.30)
                       '(window-width . 82))))
     (display-buffer-in-side-window
      buffer (append `((side . ,side) ,size-param) alist))))
 
 (add-to-list
  'display-buffer-alist
- '("\\*\\(Dictionary\\|eldoc\\)\\*"
+ '("\\*\\(Dictionary\\|eldoc\\|Help\\)\\*"
    my/display-buffer-adaptive
    (body-function . select-window)
-   (window-parameters . ((split-window . #'ignore)))))
+   (window-parameters . ((split-window . #'ignore) (mode-line-format . none)))))
 
 ;;; Programming
 
@@ -581,6 +583,8 @@
               eglot-sync-connect 0
               eglot-autoshutdown t
               eglot-extend-to-xref t
+              xref-auto-jump-to-first-xref t
+              xref-auto-jump-to-first-definition t
               jsonrpc-event-hook nil)
 
 ;;;; Prog-mode hooks
