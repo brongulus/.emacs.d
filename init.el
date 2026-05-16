@@ -72,7 +72,7 @@
          ,@(mapcar (lambda (f) `(,f ((t :inherit highlight))))
                    '(lazy-highlight org-code org-verbatim org-agenda-clocking speedbar-highlight-face))
          ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :weight bold))))
-                   '(minibuffer-prompt dired-directory woman-bold Man-overstrike speedbar-directory-face))
+                   '(minibuffer-prompt dired-directory woman-bold Man-overstrike speedbar-directory-face fixed-pitch-serif))
          ,@(mapcar (lambda (f) `(,f ((t :inherit shadow))))
                    '(vertical-border font-lock-comment-face org-time-grid speedbar-file-face))
          (link ((t :underline t))) ;:foreground "#0965ef"
@@ -187,10 +187,10 @@
               tab-width 4
               c-basic-offset 4
               indent-tabs-mode nil
-              fill-column 140
+              fill-column 130
               line-spacing '(3 . 3)
               text-scale-mode-step 1.3
-              split-width-threshold 130
+              split-width-threshold (- fill-column 20)
               use-short-answers t
               require-final-newline t
               resize-mini-windows t
@@ -229,12 +229,12 @@
         (lambda (win)
           (with-current-buffer (window-buffer win)
             (when (or (derived-mode-p '(prog-mode text-mode)) (member major-mode zen-enabled-modes))
-              (let* ((special-modes (member major-mode '(Info-mode markdown-ts-mode)))
+              (let* ((special-modes (member major-mode '(Info-mode org-mode markdown-ts-mode)))
                      (winw (window-total-width win))
                      (fill (if (eq major-mode 'eww-mode) 120 fill-column))
                      (margin (max 0 (/ (- winw fill) 2)))
                      (lmargin (if (eq major-mode 'org) (max 0 (- margin 5)) margin)))
-                (if (> winw 140)
+                (if (> winw fill-column)
                     (progn (visual-line-mode 1) (set-window-margins win lmargin margin)
                            (when special-modes (text-scale-set 1) (setq-local line-spacing '(0.3 . 0.3))))
                   (progn (set-window-margins win nil 1)
@@ -1032,7 +1032,8 @@
 (with-eval-after-load 'eww
   (add-hook 'eww-after-render-hook #'viper-mode)
   (defun my/eww-redirect-urls (url)
-    (replace-regexp-in-string "://\\(www\\.\\)?reddit\\.com" "://old.reddit.com" url))
+    (replace-regexp-in-string "://\\(www\\.\\)?reddit\\.com" "://old.reddit.com" url)
+    (replace-regexp-in-string "://\\(www\\.\\)?x\\.com" "://nitter.net" url))
   (push 'my/eww-redirect-urls eww-url-transformers)
   (setq eww-header-line-format nil
         eww-auto-rename-buffer 'title
