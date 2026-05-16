@@ -2,7 +2,6 @@
 ;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
 
 ;;; Initialisation
-
 (setq-default auto-save-file-name-transforms `((".*" "~/.emacs.d/backup/" t))
               backup-directory-alist `(("." . "~/.emacs.d/backup/"))
               create-lockfiles nil custom-file "/tmp/emacs-custom"
@@ -69,9 +68,10 @@
          (error ((t :foreground "Coral3")))
          (success ((t :foreground "ForestGreen")))
          ,@(mapcar (lambda (f) `(,f ((t nil))))
-                   '(fringe shr-mark font-lock-type-face font-lock-constant-face viper-minibuffer-insert org-agenda-done
-                            font-lock-keyword-face font-lock-variable-name-face dictionary-word-definition-face org-table
-                            speedbar-selected-face markdown-ts-list-marker markdown-ts-table-delimiter-cell))
+                   '(fringe shr-mark font-lock-type-face font-lock-constant-face viper-minibuffer-insert
+                            org-agenda-done markdown-ts-table-delimiter-cell dictionary-word-definition-face
+                            font-lock-keyword-face font-lock-variable-name-face speedbar-file-face
+                            markdown-ts-list-marker org-table))
          ,@(mapcar (lambda (i) `(,(intern (format "outline-%d" i)) ((t :height 1.1 :inherit bold))))
                    (number-sequence 1 9))
          ,@(mapcar (lambda (f) `(,f ((t :inherit (highlight default) :extend t))))
@@ -81,9 +81,10 @@
          ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :weight bold))))
                    '(minibuffer-prompt dired-directory woman-bold Man-overstrike speedbar-directory-face fixed-pitch-serif))
          ,@(mapcar (lambda (f) `(,f ((t :inherit shadow))))
-                   '(vertical-border font-lock-comment-face org-time-grid speedbar-file-face))
+                   '(vertical-border font-lock-comment-face org-time-grid))
          (link ((t :underline t))) ;:foreground "#0965ef"
          (hs-ellipsis ((t :underline t)))
+         (speedbar-selected-face ((t :underline t)))
          (nobreak-space ((t :underline nil)))
          (diff-file-header ((t :inherit (highlight bold))))
          (line-number-current-line ((t :weight bold :inherit default)))
@@ -107,12 +108,16 @@
          (diff-added ((((background light)) :background "#c45de3fcc8e1" :extend t)))
          (diff-refine-removed ((((background light)) :background "#e05fa1209f9e" :weight bold)))
          (diff-refine-added ((((background light)) :background "#a187d39fa8af" :weight bold)))
-         ,@(let ((common `(:inverse-video ,(not (display-graphic-p))
-                                          :height ,(if (eq system-type 'android) 160 140)
-                                          :overline ,(face-foreground 'shadow)
-                                          :box (:line-width 2 :style flat-button))))
-             `((mode-line-active ((t :inherit default ,@common)))
-               (mode-line-inactive ((t :inherit shadow ,@common)))))))
+         ,@(let* ((common `(:height ,(if (eq system-type 'android) 160 140)
+                                    :overline ,(face-foreground 'shadow)
+                                    :box (:line-width 2 :style flat-button))))
+             (if (display-graphic-p)
+                 `((mode-line-active   ((t :inherit default ,@common)))
+                   (mode-line-inactive ((t :inherit shadow  ,@common))))
+               `((mode-line-active   ((t :inherit default :foreground ,(face-background 'default)
+                                         :background ,(face-foreground 'default) ,@common)))
+                 (mode-line-inactive ((t :inherit shadow  :foreground ,(face-background 'default)
+                                         :background ,(face-foreground 'shadow) ,@common))))))))
 (set-face-attribute 'default nil :foreground "#d8d8da" :background "#0f0e0d")
 (enable-theme 'untitled-plain)
 (keymap-global-set "C-x 6"
@@ -174,8 +179,8 @@
 
 (with-eval-after-load 'viper
   (setq global-mode-string
-        '((:eval (unless (derived-mode-p 'prog-mode)
-                   (format-time-string "%a %H:%M "))))))
+        '((:eval (concat (propertize "| " 'face 'shadow)
+                         (format-time-string "%a %H:%M "))))))
 
 (with-eval-after-load 'eglot
   (setq mode-line-misc-info
@@ -526,7 +531,9 @@
     (set var "")))
 
 (with-eval-after-load 'speedbar
-  (define-key speedbar-file-key-map (kbd "q") #'speedbar-window)
+  (dolist (binding '(("q" . speedbar-window) ("TAB" . speedbar-expand-line)
+                     ("<backtab>" . speedbar-contract-line)))
+    (keymap-set speedbar-file-key-map (car binding) (cdr binding)))
   (advice-add 'speedbar-window-mode :after
               (lambda (&rest _)
                 (when (window-live-p speedbar--window)
@@ -1241,10 +1248,5 @@
 (dolist (b '(("M-p" . mmm/mark-previous-like-this) ("M-n" . mmm/mark-next-like-this)
              ("M-'" . mmm/mark-all-like-this) ("M-r" . mmm/mark-all-in-defun)))
   (keymap-global-set (car b) (cdr b)))
-
-;;;; Corfu clone — experiment to see how far opus 4.6 can go
-
-(load "~/.emacs.d/ac-lite" :noerr :no-message)
-(add-hook 'prog-mode-hook #'ac-mode)
 
 ;;; init.el ends here
