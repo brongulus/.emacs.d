@@ -51,13 +51,14 @@
   (custom-set-faces '(fringe ((t :background unspecified)))))
 
 (defun solaire-background () "Remap faces to use solaire background."
-       (dolist (face '(default fringe header-line margin))
+       (dolist (face '(default fringe margin header-line))
          (face-remap-add-relative face 'highlight)))
 
 (deftheme untitled-plain "An industrial subtly washed theme.")
 (set-face-attribute 'default nil :foreground "#f2f1e5" :background "#1a1a18")
 (apply #'custom-theme-set-faces 'untitled-plain
-       `((region ((t :background "#fedf7b" :foreground "#0f0e0d" :extend nil)))
+       `((region ((((background dark)) :background "#fedf7b" :foreground "#1a1a18" :extend nil)
+                  (((background light)) :background "#fff7b1" :foreground "#1a1a18" :extend nil)))
          (header-line ((t :overline ,(face-foreground 'shadow))))
          (highlight ((((background dark)) :background "#2e2e2c")
                      (((background light)) :background "#e2e0ce")))
@@ -505,7 +506,7 @@
 
 (setq dired-kill-when-opening-new-dired-buffer t
       dired-listing-switches
-      "-l -v --almost-all --human-readable --group-directories-first"
+      "-log --almost-all --human-readable --group-directories-first"
       dired-dwim-target t
       dired-auto-revert-buffer 'dired-buffer-stale-p
       delete-by-moving-to-trash t
@@ -536,8 +537,8 @@
     (keymap-set speedbar-file-key-map (car binding) (cdr binding)))
   (advice-add 'speedbar-window-mode :after
               (lambda (&rest _)
-                (when (window-live-p speedbar--window)
-                  (select-window speedbar--window))))
+                (when (window-live-p speedbar--window) (select-window speedbar--window)
+                      (set-window-parameter speedbar--window 'no-other-window nil))))
   (advice-add 'speedbar-set-mode-line-format :override (lambda () nil)))
 
 (add-hook 'speedbar-mode-hook
