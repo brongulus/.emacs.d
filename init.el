@@ -76,12 +76,14 @@
          ,@(mapcar (lambda (i) `(,(intern (format "outline-%d" i)) ((t :height 1.1 :inherit bold))))
                    (number-sequence 1 9))
          ,@(mapcar (lambda (f) `(,f ((t :inherit (highlight default) :extend t))))
-                   '(org-block org-block-begin-line org-block-end-line diff-header markdown-ts-code-block))
+                   '(org-block diff-header markdown-ts-code-block))
+         ,@(mapcar (lambda (f) `(,f ((t :inherit (highlight shadow) :extend t))))
+                   '(org-block-begin-line org-block-end-line))
          ,@(mapcar (lambda (f) `(,f ((t :inherit highlight))))
                    '(lazy-highlight org-code org-verbatim org-agenda-clocking speedbar-highlight-face))
          ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :weight bold))))
                    '(woman-bold Man-overstrike minibuffer-prompt dired-directory speedbar-directory-face
-                                erc-my-nick-face erc-prompt-face fixed-pitch-serif))
+                                erc-my-nick-face erc-prompt-face fixed-pitch-serif help-key-binding))
          ,@(mapcar (lambda (f) `(,f ((t :inherit shadow))))
                    '(vertical-border font-lock-comment-face org-time-grid erc-notice-face))
          (link ((t :underline t))) ;:foreground "#0965ef"
@@ -99,8 +101,8 @@
          (org-agenda-date ((t :weight bold :slant italic)))
          (compilation-info ((t :foreground "#448c27" :inherit bold)))
          (which-func ((t :inherit mode-line)))
-         (eww-form-text ((t :box (:line-width 1) :inherit (highlight default))))
-         (eww-form-submit ((t :box (:line-width 2 :style released-button) :inherit (highlight default))))
+         (eww-form-text ((t :box (:line-width 1) :underline nil)))
+         (eww-form-submit ((t :box (:line-width 2) :underline nil)))
          ;; diff colors for light background taken from doric-marble
          (ediff-current-diff-A ((((background light)) :background "#eac0bf" :extend t)))
          (ediff-current-diff-B ((((background light)) :background "#bde0c2" :extend t)))
@@ -244,7 +246,7 @@
         (lambda (win)
           (with-current-buffer (window-buffer win)
             (when (or (derived-mode-p '(prog-mode text-mode)) (member major-mode zen-enabled-modes))
-              (let* ((special-modes (member major-mode '(Info-mode org-mode markdown-ts-mode)))
+              (let* ((special-modes (member major-mode '(org-mode markdown-ts-mode)))
                      (winw (window-total-width win))
                      (fill (if (eq major-mode 'eww-mode) 120 fill-column))
                      (margin (max 0 (/ (- winw fill) 2)))
@@ -527,7 +529,7 @@
       speedbar-window-default-width 30)
 
 (with-eval-after-load 'ezimage
-  (dolist (var '(ezimage-page ezimage-directory-plus ezimage-directory-minus ezimage-page-plus ezimage-page-minus     
+  (dolist (var '(ezimage-page ezimage-directory-plus ezimage-directory-minus ezimage-page-plus ezimage-page-minus
                               ezimage-box-plus ezimage-box-minus ezimage-tag ezimage-label ezimage-checkout))
     (set var "")))
 
@@ -584,6 +586,10 @@
               treesit-font-lock-level 2
               go-ts-mode-indent-offset 4
               diff-font-lock-syntax nil
+              flymake-show-diagnostics-at-end-of-line 'short
+              flymake-warning-bitmap '(large-circle compilation-warning)
+              flymake-error-bitmap '(large-circle compilation-error)
+              flymake-note-bitmap '(large-circle compilation-info)
               ispell-program-name "aspell"
               inferior-lisp-program "clojure"
               eglot-ignored-server-capabilities
@@ -628,11 +634,9 @@
     table))
 
 (defun zig-beginning-of-defun (&optional arg)
-  (interactive "p")
   (re-search-backward "^\\s-*\\(?:pub\\s-+\\)?fn\\s-+" nil 'move (or arg 1)))
 
 (defun zig-end-of-defun () ; taken from upstream zig-mode
-  (interactive)
   (while (re-search-forward "(" (line-end-position) t)
     (progn (backward-char) (forward-sexp)))
   (if (re-search-forward "[{]" nil t)
@@ -652,7 +656,7 @@
               '((("\\bfn\\s-+\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*("
                   1 font-lock-function-name-face)
                  ("@[a-zA-Z_][a-zA-Z0-9_]*" . font-lock-builtin-face))
-                 nil nil nil nil))
+                nil nil nil nil))
   (setq-local comment-start "// "
               comment-end   ""
               end-of-defun-function #'zig-end-of-defun
@@ -701,7 +705,8 @@
 
 ;;;; Compilation
 
-(defun compile-at-root nil (interactive) "Run compile command at project root."
+(defun compile-at-root nil "Run compile command at project root."
+       (interactive)
        (let ((default-directory (project-root (project-current nil))))
          (call-interactively 'compile)))
 
@@ -1063,7 +1068,8 @@
 
 ;;; Browsing and web
 
-(setq shr-max-image-proportion 0.5 shr-use-colors nil)
+(setq shr-max-image-proportion 0.5 shr-use-colors nil
+      shr-max-inline-image-size '(0.8 . 3.0))
 
 (defun my-shr-tag-render (tag face-spec &optional predicate) ; src: takeonrules
   (let ((default-renderer (intern (format "shr-tag-%s" tag))))
@@ -1080,11 +1086,11 @@
 (with-eval-after-load 'shr
   (setq shr-external-rendering-functions
         `((pre        . ,(my-shr-tag-render 'pre        '(:inherit highlight :extend t)))
-          (table      . ,(my-shr-tag-render 'table      '(:inherit mode-line-active) #'my-table-is-data-p))
-          (blockquote . ,(my-shr-tag-render 'blockquote '(:inherit font-lock-string-face :slant italic)))
           (h1         . ,(my-shr-tag-render 'h1         '(:inherit bold :height 1.3)))
           (h2         . ,(my-shr-tag-render 'h2         '(:inherit bold :height 1.2)))
-          (h3         . ,(my-shr-tag-render 'h3         '(:inherit bold :height 1.2))))))
+          (h3         . ,(my-shr-tag-render 'h3         '(:inherit bold :height 1.2)))
+          (table      . ,(my-shr-tag-render 'table      '(:inherit mode-line-active) #'my-table-is-data-p))
+          (blockquote . ,(my-shr-tag-render 'blockquote '(:inherit font-lock-string-face :slant italic))))))
 
 (setq browse-url-handlers '(("youtu\\(?:\\.be\\|be\\.com\\)" .
                              (lambda (url &rest _)
@@ -1195,6 +1201,17 @@
        (erc-tls :server "irc.libera.chat" :port 6697 :nick "brongulus"))
 
 (with-eval-after-load 'erc
+  (setq erc--message-speaker-chan-privmsg
+        #("%p%n %m"
+          0 2 (font-lock-face erc-nick-prefix-face)
+          2 4 (font-lock-face erc-nick-default-face)
+          4 7 (font-lock-face erc-default-face)))
+  (setq erc--message-speaker-input-chan-privmsg
+        #("%p%n %m"
+          0 2 (font-lock-face erc-my-nick-prefix-face)
+          2 4 (font-lock-face erc-my-nick-face)
+          4 5 (font-lock-face erc-default-face)
+          5 7 (font-lock-face erc-input-face)))
   (dolist (mod '(keep-place log nicks services xdcc)) (push mod erc-modules))
   (with-eval-after-load 'erc-track
     (define-key erc-track-minor-mode-map "\C-j" #'erc-track-switch-buffer))
@@ -1298,3 +1315,8 @@
   (keymap-global-set (car b) (cdr b)))
 
 ;;; init.el ends here
+
+;; Local Variables:
+;; byte-compile-warnings: (not free-vars unresolved)
+;; checkdoc-force-docstrings-flag: nil
+;; End:
