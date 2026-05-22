@@ -54,12 +54,12 @@
          (face-remap-add-relative face 'highlight)))
 
 (deftheme untitled-plain "An industrial subtly washed theme.")
-(set-face-attribute 'default nil :foreground "#f2f1e5" :background "#1a1a18")
+(set-face-attribute 'default nil :foreground "#f2f1e5" :background "#121212")
 (apply #'custom-theme-set-faces 'untitled-plain
-       `((region ((((background dark)) :background "#fedf7b" :foreground "#1a1a18" :extend nil)
-                  (((background light)) :background "#fff7b1" :foreground "#1a1a18" :extend nil)))
+       `((region ((((background dark)) :background "#fedf7b" :foreground "#121212" :extend nil)
+                  (((background light)) :background "#fff7b1" :foreground "#121212" :extend nil)))
          (header-line ((t :overline ,(face-foreground 'shadow))))
-         (highlight ((((background dark)) :background "#2e2e2c")
+         (highlight ((((background dark)) :background "#242424")
                      (((background light)) :background "#e2e0ce")))
          (font-lock-string-face ((((background dark))  :foreground "#7eaee6")
                                  (((background light)) :foreground "#084095")))
@@ -406,7 +406,7 @@
                      ("C-\\" . epop) ("R" . replace-regexp) ("=" . mark-inner) ("d" . del-vi)
                      ("g i" . eglot-find-implementation) ("g r" . xref-find-references) (";" . prot-quit)
                      ("C" . string-rectangle) ("p" . yank) ("+" . eglot-rename) ("_" . eglot-code-actions)
-                     ("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all)
+                     ("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all) ("m m" . imenu)
                      ("[" . previous-error) ("]" . next-error) ("#" . definition-at-point) ("m d" . my/delete-pair)
                      ("g s" . imenu) ("q" . quit-window) ("j" . next-line) ("k" . previous-line)
                      ("<" . beginning-of-buffer) (">" . end-of-buffer) ("o" . other-window)
@@ -580,10 +580,10 @@
 ;;; Programming
 
 ;;;; Options
-
 (setq-default eldoc-echo-area-use-multiline-p nil
               treesit-enabled-modes t
               treesit-font-lock-level 2
+              font-lock-maximum-decoration nil
               go-ts-mode-indent-offset 4
               diff-font-lock-syntax nil
               flymake-show-diagnostics-at-end-of-line 'short
