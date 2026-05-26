@@ -313,7 +313,7 @@
 
 (setq-default maximum-scroll-margin 0.5
               scroll-margin 9999
-              scroll-conservatively 101
+              scroll-conservatively 1
               scroll-preserve-screen-position t
               fast-but-imprecise-scrolling t)
 
@@ -506,11 +506,13 @@
 
 ;;; Files and projects
 
+(setq-default dired-omit-mode t) ; clean ._ temp files in macos
 (setq dired-kill-when-opening-new-dired-buffer t
       dired-listing-switches
       "-log --almost-all --human-readable --group-directories-first"
       dired-dwim-target t
       dired-auto-revert-buffer 'dired-buffer-stale-p
+      dired-omit-files "\\\.\_.*"
       delete-by-moving-to-trash t
       doc-view-continuous t
       vc-allow-rewriting-published-history t
