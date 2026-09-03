@@ -23,9 +23,12 @@ Development
 Emacs misc features
 * Emacs Lisp Elements: (elispelem).
                                 A big picture view of Emacs Lisp.
+Emacs
+* Howm Tutorial: (howm-tutorial).
+                                Efficient note-taking in Emacs with Howm.
 
 Individual utilities
-* awk: (gawk)Invoking Gawk.                     Text scanning and processing.
+* awk: (gawk)Invoking Gawk.     Text scanning and processing.
 
 Miscellaneous
 * RubyIntro: (RubyIntro).       Ruby in Twenty Minutes
