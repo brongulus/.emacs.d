@@ -1129,9 +1129,10 @@
 (with-eval-after-load 'log-edit
   (add-hook 'log-edit-hook
             (lambda nil
-              (vc-git-log-edit-toggle-signoff)
               (log-edit-maybe-show-diff)
-              (setq-local other-window-scroll-buffer (get-buffer "*vc-diff*"))))
+              (vc-git-log-edit-toggle-signoff)
+              (setq-local other-window-scroll-buffer (get-buffer "*vc-diff*")))
+            100)
   (defun my/vc-cleanup-buffers ()
     (dolist (buf '("*log-edit-files*" "*vc-diff*" "*vc*"))
       (when-let* ((b (get-buffer buf))) (kill-buffer b))))
