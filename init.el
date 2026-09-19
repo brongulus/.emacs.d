@@ -31,8 +31,7 @@
               xterm-update-cursor t
               window-divider-default-right-width 1
               window-divider-default-places 'right-only)
-(blink-cursor-mode -1) (tooltip-mode -1) (menu-bar-mode -1) (scroll-bar-mode -1)
-(tool-bar-mode -1) (line-number-mode -1)
+(blink-cursor-mode -1) (tooltip-mode -1) (menu-bar-mode -1) (scroll-bar-mode -1) (tool-bar-mode -1)
 (setcdr (assq 'continuation fringe-indicator-alist) '(nil nil))
 (set-display-table-slot standard-display-table 'vertical-border (make-glyph-code ?│))
 
@@ -41,7 +40,6 @@
 (dolist (face '(default fixed-pitch fixed-pitch-serif variable-pitch))
   (custom-set-faces `(,face ((t :family "Input Mono Narrow")))))
 (set-face-attribute 'default nil :height (if (eq system-type 'android) 160 140))
-(set-face-attribute 'italic nil :family "Victor Mono" :weight 'demi-bold)
 (dolist (set '(cjk-misc han kana)) (set-fontset-font t set "Noto Sans Mono CJK JP" nil 'prepend))
 
 ;;;; Theme
@@ -69,9 +67,10 @@
        (solaire-background) (mode-line-invisible-mode t))
 
 (deftheme untitled-plain "An industrial subtly washed theme.") ; https://williamjansson.com/info/
-(set-face-attribute 'default nil :foreground "#f2f1e5" :background "#121212") ; #d7f6f6
 (apply #'custom-theme-set-faces 'untitled-plain
        `((cursor ((t :background "#00c2ff")))
+         (default ((((background dark))  :foreground "#f2f1e5" :background "#121212")
+                   (((background light)) :foreground "#121212" :background "#f2f1e5")))
          (bold ((((background dark)) :weight heavy)
                 (((background light)) :weight bold)))
          (region ((((background dark)) :background "#fedf7b" :foreground "#121212" :extend nil)
@@ -79,12 +78,14 @@
          (header-line ((t :overline ,(face-foreground 'shadow) :inherit bold)))
          (highlight ((((background dark)) :background "#242424")
                      (((background light)) :background "#e2e0ce")))
-         (font-lock-string-face ((((background dark))  :foreground "#90A4AE" :slant italic :weight medium)
-                                 (((background light)) :foreground "#51696a" :slant italic :weight medium)))
+         (font-lock-string-face ((((background dark))  :foreground "#d7ccb0")
+                                 (((background light)) :foreground "#5f4625")))
+         (completions-highlight ((((background dark)) :background "gray20" :foreground "gold1" :weight bold)
+                                 (((background light)) :background "SlateGray1" :foreground "DarkBlue" :weight bold)))
          (font-lock-builtin-face ((t :slant italic)))
          (font-lock-function-name-face ((t :inherit bold)))
          (shadow ((t :foreground "#828386")))
-         (error ((t :foreground "Coral3")))
+         (error ((t :foreground "Coral3" :inherit bold)))
          (ido-subdir ((t :inherit error)))
          (speedbar-tag-face ((t :inherit error)))
          (success ((t :foreground "ForestGreen")))
@@ -103,21 +104,33 @@
                    '(org-block-begin-line org-block-end-line))
          ,@(mapcar (lambda (f) `(,f ((t :inherit highlight))))
                    '(lazy-highlight org-code org-verbatim org-agenda-clocking speedbar-highlight-face))
-         ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :weight bold))))
+         ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :weight heavy))))
                    '(woman-bold Man-overstrike minibuffer-prompt dired-directory speedbar-directory-face
                                 erc-my-nick-face erc-prompt-face fixed-pitch-serif help-key-binding
-                                speedbar-separator-face speedbar-button-face))
+                                speedbar-separator-face))
+         ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :slant italic))))
+                   '(shr-code markdown-ts-code-span font-lock-doc-face))
          ,@(mapcar (lambda (f) `(,f ((t :inherit shadow))))
                    '(vertical-border font-lock-comment-face org-time-grid erc-notice-face org-agenda-done
-                                     gnus-summary-normal-read icomplete-vertical-selected-prefix-indicator-face))
+                                     gnus-summary-normal-read icomplete-vertical-selected-prefix-indicator-face
+                                     speedbar-button-face))
          ,@(mapcar (lambda (f) `(,f ((t :underline t)))) ;:foreground "#0965ef"
                    '(link hs-ellipsis speedbar-selected-face dired-header))
-         (eglot-code-action-indicator-face ((t :weight bold :inherit shadow)))
+         ,@(mapcar (lambda (i)
+                     `(,(intern (format "gnus-cite-%d" i)) ((t :inherit font-lock-string-face))))
+                   (number-sequence 1 11 2))
+         ,@(mapcar (lambda (i)
+                     `(,(intern (format "gnus-cite-%d" i)) ((t :inherit font-lock-comment-face))))
+                   (number-sequence 2 10 2))
+         ,@(mapcar (lambda (f) `(,f ((t nil))))
+                   '(gnus-header-from gnus-header-content gnus-header-subject  gnus-header-newsgroups))
+         (gnus-header-name ((t :inherit bold)))
          (nobreak-space ((t :underline nil)))
          (diff-file-header ((t :inherit (highlight bold))))
          (line-number-current-line ((t :weight bold :inherit default)))
          (eglot-highlight-symbol-face ((t :inherit (highlight default))))
          (isearch ((t :inverse-video t)))
+         (show-paren-match ((t :inverse-video t)))
          (log-edit-headers-separator ((t :inherit separator-line :extend t))) ; emacs <32
          (completions-common-part ((t :underline t :weight bold)))
          (org-document-info ((t :height 1.1 :inherit bold)))
@@ -125,7 +138,15 @@
          (org-agenda-structure ((t :height 1.2 :inherit default)))
          (org-agenda-date ((t :weight bold :inherit italic)))
          (compilation-info ((t :foreground "#448c27" :inherit bold)))
-         (which-func ((t :inherit mode-line-inactive)))
+         (flymake-note ((t :underline (:color "#448c27"))))
+         (flymake-warning ((t :underline (:color "Darkgoldenrod3"))))
+         (flymake-error ((t :underline (:color "coral3"))))
+         ,@(if (display-graphic-p)
+               `((which-func ((t :inherit shadow))))
+             `((which-func ((t nil)))))
+         ,@(if (display-graphic-p)
+               `((eglot-code-action-indicator-face ((t :weight bold :inherit shadow))))
+             `((eglot-code-action-indicator-face ((t :weight bold)))))
          (eww-form-text ((t :box (:line-width 1) :underline nil)))
          (eww-form-submit ((t :box (:line-width 2) :underline nil)))
          ;; diff colors for light background taken from doric-marble
@@ -137,20 +158,23 @@
          (diff-added ((((background light)) :background "#c45de3fcc8e1" :extend t)))
          (diff-refine-removed ((((background light)) :background "#e05fa1209f9e" :weight bold)))
          (diff-refine-added ((((background light)) :background "#a187d39fa8af" :weight bold)))
+         (mode-line ((t :inherit mode-line-active)))
          ,@(let* ((common `(:height ,(if (eq system-type 'android) 160 140)
                                     :overline ,(face-foreground 'shadow)
                                     :box (:line-width 2 :style flat-button))))
              (if (display-graphic-p)
                  `((mode-line-active   ((t :inherit default ,@common)))
                    (mode-line-inactive ((t :inherit shadow  ,@common))))
-               `((mode-line-active   ((t :inherit default :foreground ,(face-background 'default)
-                                         :background ,(face-foreground 'default) ,@common)))
-                 (mode-line-inactive ((t :inherit shadow  :foreground ,(face-background 'default)
+               `((mode-line-active   ((t :inverse-video t ,@common)))
+                 (mode-line-inactive ((t :inherit shadow
+                                         :foreground ,(face-background 'default)
                                          :background ,(face-foreground 'shadow) ,@common))))))))
-(enable-theme 'untitled-plain)
+(setq frame-background-mode 'dark) (mapc #'frame-set-background-mode (frame-list)) (enable-theme 'untitled-plain)
 (keymap-global-set "C-x 6"
                    #'(lambda () (interactive)
-                       (invert-face 'default) (frame-set-background-mode nil)
+                       (setq frame-background-mode
+                             (if (eq (frame-parameter nil 'background-mode) 'dark) 'light 'dark))
+                       (mapc #'frame-set-background-mode (frame-list))
                        (enable-theme 'untitled-plain)))
 
 (add-hook 'markdown-ts-mode-hook
@@ -158,6 +182,8 @@
 
 (with-eval-after-load 'markdown-ts-mode
   (keymap-set markdown-ts-mode-map "C-M-'" #'markdown-ts-toggle-hide-markup))
+
+(setq markdown-ts-image-max-width 600)
 
 ;;;; Cursor colour on modification
 
@@ -169,7 +195,7 @@
           (lambda ()
             (font-lock-add-keywords
              nil '(("\\<\\(FIXME\\|HACK\\|TODO\\|WIP\\|BUG\\)\\( \\|:\\)"
-                    1 'ansi-color-inverse t)
+                    1 'completions-highlight t)
                    (";" . 'shadow)))))
 
 ;;;; Mode-line
@@ -186,41 +212,39 @@
               flymake-suppress-zero-counters t
               flymake-mode-line-title nil)
 
-(defvar my/tab-keymaps (let ((v (make-vector 20 nil)))
-                         (dotimes (i 20 v) (let ((m (make-sparse-keymap)))
-                                             (define-key m [mode-line mouse-1]
-                                                         `(lambda () (interactive) (tab-bar-select-tab ,(1+ i))))
-                                             (aset v i m)))))
+(defvar my/tab-count-map
+  (make-mode-line-mouse-map 'mouse-1 #'tab-bar-switch-to-tab))
 
-(defun my/tab-bar--update-indicator (&rest _)
-  (let* ((tabs (tab-bar-tabs)) (n (length tabs)) (cur (tab-bar--current-tab-index tabs)))
-    (setq-default mode-line-front-space
-                  (if (> n 1)
-                      (concat " " (mapconcat (lambda (i) (propertize (if (= i cur) "⦿" "○")
-                                                                     'mouse-face 'mode-line-highlight
-                                                                     'local-map (aref my/tab-keymaps i)))
-                                             (number-sequence 0 (1- n)) " ") " ") ""))))
+(defconst my/narrow-string
+  (propertize "NARROW" 'face 'completions-highlight))
 
-(setq-default mode-line-front-space "")
-(dolist (fn '(tab-bar-new-tab tab-bar-close-tab)) (advice-add fn :after #'my/tab-bar--update-indicator))
-(with-eval-after-load 'tab-bar (add-hook 'tab-bar-tab-post-select-functions #'my/tab-bar--update-indicator))
+(defun my/mode-line-file-help (window _object _pos)
+  (buffer-file-name (window-buffer window)))
+
+(setq mode-line-front-space
+      '(:eval (let ((n (length (frame-parameter nil 'tabs))))
+                (when (> n 1)
+                  (propertize (format " [%d]" n)
+                              'face 'mode-line-emphasis
+                              'help-echo "mouse-1: Switch tab"
+                              'local-map my/tab-count-map)))))
 
 (setq-default mode-line-format
               '("%e" mode-line-front-space
-                (:eval (when (and (not (display-graphic-p)) (boundp 'viper-mode-string))
-                         (concat " " viper-mode-string)))
-                " %+  "
-                (:eval (propertize "%b" 'face 'bold 'help-echo (buffer-file-name)))
-                (:eval (propertize (string-trim-left (format-mode-line vc-mode))))
-                "    " mode-line-position " "
+                (:eval (and (not (display-graphic-p)) (boundp 'viper-mode-string) '(" " viper-mode-string)))
+                " %+ "
+                (:eval (and (buffer-narrowed-p) (not (derived-mode-p 'Info-mode)) my/narrow-string))
+                (:propertize " %b" face bold help-echo my/mode-line-file-help)
+                (vc-mode vc-mode)
+                "    " mode-line-percent-position " "
                 mode-line-format-right-align
-                mode-line-modes mode-line-misc-info
-                mode-line-end-spaces ""))
+                mode-line-process
+                mode-line-minor-modes
+                mode-line-misc-info
+                mode-line-end-spaces))
 
 (with-eval-after-load 'viper
-  (setq global-mode-string
-        '((:eval (concat (propertize "/ " 'face 'shadow)
-                         (format-time-string "%a %H:%M "))))))
+  (setq global-mode-string '((:eval (format-time-string " %a %H:%M ")))))
 
 (with-eval-after-load 'eglot
   (setq eglot-mode-line-format
@@ -231,7 +255,7 @@
         eglot-code-action-indicator "︎i "
         mode-line-misc-info
         '((which-function-mode
-           (which-func-mode (which-func--use-mode-line ("" which-func-format " "))))
+           (which-func-mode (which-func--use-mode-line (" " which-func-format ""))))
           (global-mode-string ("" global-mode-string))
           (:eval (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
                    (mapconcat (lambda (elem) (format-mode-line elem))
@@ -265,6 +289,16 @@
               help-window-select t
               help-enable-variable-value-editing t
               describe-bindings-outline-rules nil)
+
+(unless (display-graphic-p)
+  (setq interprogram-paste-function
+        (lambda ()
+          (when-let ((cmd (pcase system-type
+                            ('darwin     "pbpaste")
+                            ('gnu/linux  "xclip -selection clipboard -o"))))
+            (let ((text (string-replace "\r\n" "\n" (shell-command-to-string cmd))))
+              (unless (or (string-empty-p text) (equal text (car kill-ring)))
+                text))))))
 
 ;;;; Show paren
 
@@ -384,6 +418,7 @@
       savehist-additional-variables '(register-alist kill-ring)
       minibuffer-default-prompt-format " [%s]"
       minibuffer-visible-completions t
+      minibuffer-eldef-shorten-default t
       read-buffer-completion-ignore-case t
       read-file-name-completion-ignore-case t
       recentf-show-messages nil
@@ -391,7 +426,10 @@
       completion-eager-update t
       completion-auto-help t;nil
       completions-sort 'historical
-      completion-styles '(initials partial-completion basic flex))
+      completion-styles '(initials partial-completion basic flex)
+      completion-category-overrides
+      '((project-file (styles basic partial-completion substring initials flex))
+        (file (styles basic partial-completion substring initials flex))))
 
 ;;;; Completion-preview
 
@@ -401,7 +439,7 @@
       completion-preview-message-format nil)
 (with-eval-after-load 'completion-preview
   (keymap-set completion-preview-active-mode-map "C-j" #'completion-preview-insert)
-  (keymap-set completion-preview-active-mode-map "<tab>" #'completion-preview-complete))
+  (keymap-set completion-preview-active-mode-map "TAB" #'completion-preview-complete))
 
 ;;;; Ido, icomplete and fido
 
@@ -437,7 +475,7 @@
 (with-eval-after-load 'icomplete
   (keymap-set icomplete-minibuffer-map "RET" #'icomplete-fido-ret)
   (keymap-set icomplete-minibuffer-map "C-j" #'icomplete-fido-exit)
-  (keymap-set icomplete-minibuffer-map "<tab>" #'icomplete-forward-completions)
+  (keymap-set icomplete-minibuffer-map "TAB" #'icomplete-forward-completions)
   (keymap-set icomplete-minibuffer-map "<backtab>" #'icomplete-backward-completions))
 
 ;;; Keybindings
@@ -584,6 +622,8 @@
       isearch-wrap-pause 'no-ding
       query-replace-show-preview t
       search-whitespace-regexp ".*?"
+      xref-search-program 'ripgrep
+      grep-program "rg"
       grep-command
       "rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)"
       grep-command-position 27)
@@ -614,6 +654,7 @@
       vc-make-backup-files t
       vc-find-revision-no-save t
       vc-display-status 'no-backend
+      diff-switches '("-u" "-w")
       vc-git-diff-switches '("--patch-with-stat" "--histogram" "-w")
       project-vc-extra-root-markers
       '("Cargo.toml" "build.zig" "go.work" "CMakeLists.txt" ".fossil-settings"))
@@ -698,10 +739,10 @@
               jit-lock-defer-time 0
               go-ts-indent-offset 4
               diff-font-lock-syntax nil
-              flymake-show-diagnostics-at-end-of-line 'short
-              flymake-warning-bitmap '(large-circle compilation-warning)
-              flymake-error-bitmap '(large-circle compilation-error)
-              flymake-note-bitmap '(large-circle compilation-info)
+              flymake-show-diagnostics-at-end-of-line nil;'fancy
+              flymake-warning-bitmap '(hs-show compilation-warning)
+              flymake-error-bitmap '(hs-show compilation-error)
+              flymake-note-bitmap '(hs-show compilation-info)
               ispell-program-name "aspell"
               inferior-lisp-program "clojure"
               eglot-ignored-server-capabilities
@@ -736,7 +777,7 @@
   (add-hook hook #'(lambda nil (setq-local tab-width 2))))
 
 (add-to-list 'auto-mode-alist
-             '("\\.log\\'" . (lambda () (display-line-numbers-mode))))
+             '("\\.log\\'" . (lambda () (display-line-numbers-mode) (hl-line-mode))))
 
 (add-to-list 'auto-mode-alist '("\\.test\\'" . tcl-mode))
 (add-hook 'mhtml-mode-hook (lambda () (eww-open-file buffer-file-name)))
@@ -749,15 +790,15 @@
 
 ;;;; Ocaml
 
-(load "~/.emacs.d/lisp/ocaml/ocp-indent.el" nil :no-message)
-(defun opam-env ()
-  (interactive nil)
-  (dolist (var (car (read-from-string (shell-command-to-string "opam env --sexp"))))
-    (setenv (car var) (cadr var)))
-  (setq exec-path (split-string (getenv "PATH") path-separator))
-  (with-eval-after-load 'eshell
-    (eshell/addpath (concat (getenv "OPAM_SWITCH_PREFIX") "/bin/"))))
-(add-hook 'eshell-mode-hook #'opam-env)
+;; (load "~/.emacs.d/lisp/ocaml/ocp-indent.el" nil :no-message)
+;; (defun opam-env ()
+;;   (interactive nil)
+;;   (dolist (var (car (read-from-string (shell-command-to-string "opam env --sexp"))))
+;;     (setenv (car var) (cadr var)))
+;;   (setq exec-path (split-string (getenv "PATH") path-separator))
+;;   (with-eval-after-load 'eshell
+;;     (eshell/addpath (concat (getenv "OPAM_SWITCH_PREFIX") "/bin/"))))
+;; (add-hook 'eshell-mode-hook #'opam-env)
 
 ;;;; Eglot
 
@@ -1213,7 +1254,7 @@
           (h2         . ,(my-shr-tag-render 'h2         '(:inherit bold :height 1.2)))
           (h3         . ,(my-shr-tag-render 'h3         '(:inherit bold :height 1.2)))
           (table      . ,(my-shr-tag-render 'table      '(:inherit mode-line-active) #'my-table-is-data-p))
-          (blockquote . ,(my-shr-tag-render 'blockquote '(:inherit italic :weight demi-bold))))))
+          (blockquote . ,(my-shr-tag-render 'blockquote '(:inherit font-lock-string-face))))))
 
 (setq browse-url-handlers '(("youtu\\(?:\\.be\\|be\\.com\\)" .
                              (lambda (url &rest _)
@@ -1430,7 +1471,6 @@
 ;;; External packages
 
 ;;;; Eldoc-box (vendored since I can't live without this)
-
 ;; (with-eval-after-load 'eglot (load "~/.emacs.d/eldoc-box" :noerr :no-message))
 (setq eldoc-box-clear-with-C-g t)
 
