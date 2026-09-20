@@ -66,24 +66,26 @@
          (set-window-parameter win 'window-size-fixed 'width))
        (solaire-background) (mode-line-invisible-mode t))
 
-(deftheme untitled-plain "An industrial subtly washed theme.") ; https://williamjansson.com/info/
+(deftheme untitled-plain ; https://williamjansson.com/info/
+  "An industrial subtly washed theme, gruvbox inspired.")
 (apply #'custom-theme-set-faces 'untitled-plain
        `((cursor ((t :background "#00c2ff")))
-         (default ((((background dark))  :foreground "#f2f1e5" :background "#121212")
-                   (((background light)) :foreground "#121212" :background "#f2f1e5")))
-         (bold ((((background dark)) :weight heavy)
+         (default ((((background dark))  :foreground "#f8f9e8" :background "#191919") ; 121212
+                   (((background light)) :foreground "#212121" :background "#eae3ce")))
+         (bold ((((background dark))  :weight bold)
                 (((background light)) :weight bold)))
-         (region ((((background dark)) :background "#fedf7b" :foreground "#121212" :extend nil)
-                  (((background light)) :background "#fff7b1" :foreground "#121212" :extend nil)))
+         (font-lock-string-face ((((background dark))  :foreground "cornsilk3")
+                                 (((background light)) :foreground "#4a3c25"))) ;5f3c25
+         (region ((((background dark))  :background "#393939" :extend nil)
+                  (((background light)) :background "#d5c4a1" :extend nil)))
          (header-line ((t :overline ,(face-foreground 'shadow) :inherit bold)))
-         (highlight ((((background dark)) :background "#242424")
-                     (((background light)) :background "#e2e0ce")))
-         (font-lock-string-face ((((background dark))  :foreground "#d7ccb0")
-                                 (((background light)) :foreground "#5f4625")))
-         (completions-highlight ((((background dark)) :background "gray20" :foreground "gold1" :weight bold)
-                                 (((background light)) :background "SlateGray1" :foreground "DarkBlue" :weight bold)))
+         (highlight ((((background dark))  :background "#202020") ; 242424
+                     (((background light)) :background "#e2d9bc")))
+         (completions-highlight ((((background dark))  :background "gray20" :foreground "gold1" :weight bold)
+                                 (((background light)) :background "lightgoldenrod3" :foreground "tan4" :weight bold)))
          (font-lock-builtin-face ((t :slant italic)))
          (font-lock-function-name-face ((t :inherit bold)))
+         (font-lock-keyword-face ((t :inherit bold)))
          (shadow ((t :foreground "#828386")))
          (error ((t :foreground "Coral3" :inherit bold)))
          (ido-subdir ((t :inherit error)))
@@ -92,7 +94,7 @@
          ,@(mapcar (lambda (f) `(,f ((t nil))))
                    '(fringe shr-mark font-lock-type-face font-lock-constant-face viper-minibuffer-insert
                             markdown-ts-table-delimiter-cell dictionary-word-definition-face
-                            font-lock-keyword-face font-lock-variable-name-face speedbar-file-face
+                            font-lock-variable-name-face speedbar-file-face icomplete-vertical-selected-prefix-indicator-face
                             markdown-ts-list-marker markdown-ts-in-code-block org-table))
          ,@(mapcar (lambda (i) `(,(intern (format "outline-%d" i)) ((t :height 1.1 :inherit bold))))
                    (number-sequence 1 9))
@@ -109,11 +111,10 @@
                                 erc-my-nick-face erc-prompt-face fixed-pitch-serif help-key-binding
                                 speedbar-separator-face))
          ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :slant italic))))
-                   '(shr-code markdown-ts-code-span font-lock-doc-face))
+                   '(markdown-ts-code-span font-lock-doc-face))
          ,@(mapcar (lambda (f) `(,f ((t :inherit shadow))))
                    '(vertical-border font-lock-comment-face org-time-grid erc-notice-face org-agenda-done
-                                     gnus-summary-normal-read icomplete-vertical-selected-prefix-indicator-face
-                                     speedbar-button-face))
+                                     gnus-summary-normal-read speedbar-button-face))
          ,@(mapcar (lambda (f) `(,f ((t :underline t)))) ;:foreground "#0965ef"
                    '(link hs-ellipsis speedbar-selected-face dired-header))
          ,@(mapcar (lambda (i)
@@ -175,6 +176,8 @@
                        (setq frame-background-mode
                              (if (eq (frame-parameter nil 'background-mode) 'dark) 'light 'dark))
                        (mapc #'frame-set-background-mode (frame-list))
+                       (put 'user 'theme-settings nil)
+                       (mapc #'disable-theme custom-enabled-themes)
                        (enable-theme 'untitled-plain)))
 
 (add-hook 'markdown-ts-mode-hook
@@ -201,10 +204,11 @@
 ;;;; Mode-line
 
 (setq-default mode-line-collapse-minor-modes
-              '(not flymake-mode defining-kbd-macro text-scale-mode view-mode)
+              '(not flymake-mode defining-kbd-macro text-scale-mode view-mode erc-track-minor-mode)
               mode-line-collapse-minor-modes-to ""
               mode-line-modes-delimiters '("" . "")
               mode-line-end-spaces nil
+              erc-track-position-in-mode-line t
               flymake-mode-line-counter-format
               '("" flymake-mode-line-error-counter
                 flymake-mode-line-warning-counter
@@ -296,9 +300,9 @@
 (unless (display-graphic-p)
   (setq interprogram-paste-function
         (lambda ()
-          (when-let ((cmd (pcase system-type
-                            ('darwin     "pbpaste")
-                            ('gnu/linux  "xclip -selection clipboard -o"))))
+          (when-let* ((cmd (pcase system-type
+                             ('darwin     "pbpaste")
+                             ('gnu/linux  "xclip -selection clipboard -o"))))
             (let ((text (string-replace "\r\n" "\n" (shell-command-to-string cmd))))
               (unless (or (string-empty-p text) (equal text (car kill-ring)))
                 text))))))
@@ -425,6 +429,7 @@
       read-buffer-completion-ignore-case t
       read-file-name-completion-ignore-case t
       recentf-show-messages nil
+      recentf-max-saved-items 200
       completion-ignore-case t
       completion-eager-update t
       completion-auto-help t;nil
@@ -456,8 +461,8 @@
       '("\\` " "\\*Messages\\*" "\\*Completions\\*" "\\*Native-compile-Log\\*" "\\*Buffer List\\*"
         "\\*Async-native-compile-log\\*" "\\*EGLOT.*events\\*" "\\*Flymake.*\\*" "\\*MPC.*\\*"
         "\\*Help\\*" "\\*Minibuf-.*\\*" "\\*vc-.*\\*" "\\*changes to.*" "^\\#.*")
-      ido-create-new-buffer 'always ido-use-virtual-buffers 'auto recentf-max-saved-items 200
-      ido-show-dot-for-dired t ido-max-window-height 1 ido-auto-merge-work-directories-length -1)
+      ido-create-new-buffer 'always ido-use-virtual-buffers 'auto ido-show-dot-for-dired t
+      ido-max-window-height 1 ido-auto-merge-work-directories-length -1)
 
 (setq fido-non-vertical-fns
       '(find-file find-file-other-window execute-extended-command project-switch-to-buffer bookmark-jump))
@@ -566,7 +571,8 @@
                    ("C-c b" . ibuffer) ("M-;" . eval-expression) ("C-/" . undo-only) ("C-c k" . my/lookup)
                    ("s-n" . tab-new) ("s-w" . tab-close) ("C-x g" . C-M-prefix) ("C-c v" . view-mode)
                    ("M-(" . flymake-goto-prev-error) ("M-)" . flymake-goto-next-error)
-                   ("M-[" . previous-error) ("M-]" . next-error) ("M-i" . eglot-find-implementation)
+                   ;; ("M-[" . previous-error) ("M-]" . next-error)
+                   ("M-i" . eglot-find-implementation)
                    ("C-," . my-scroll-other-down) ("C-." . my-scroll-other-up) ("C-z" . hs-prefix-map)
                    ("M-j" . window-toggle-side-windows) ("<escape>" . keyboard-escape-quit)
                    ("C-<tab>" . tab-next) ("C-S-<tab>" . tab-previous) ("C-x x f" . find-file)
@@ -643,6 +649,7 @@
                 (apply fn args))))
 
 (setq dired-kill-when-opening-new-dired-buffer t
+      dired-hide-details-preserved-columns '(3 4 5 6)
       dired-listing-switches
       "-log --almost-all --human-readable --group-directories-first"
       dired-dwim-target t
@@ -662,7 +669,9 @@
       project-vc-extra-root-markers
       '("Cargo.toml" "build.zig" "go.work" "CMakeLists.txt" ".fossil-settings"))
 
-(add-hook 'dired-mode-hook (lambda () (setq mode-name "Dired") (dired-omit-mode 1)))
+(add-hook 'dired-mode-hook (lambda ()
+                             (setq mode-name "Dired") (hl-line-mode)
+                             (dired-hide-details-mode) (dired-omit-mode 1)))
 
 (setq speedbar-prefer-window t
       speedbar-verbosity-level 0
@@ -759,7 +768,7 @@
                 :foldingRangeProvider
                 :semanticTokensProvider
                 :documentHighlightProvider)
-              eglot-sync-connect 0
+              ;; eglot-sync-connect 0
               eglot-autoshutdown t
               eglot-extend-to-xref t
               eglot-report-progress 'messages
@@ -1080,8 +1089,8 @@
         eshell-prompt-function
         (lambda ()
           (let ((prompt (concat (propertize (or (eshell--k8s-context-and-namespace) "")
-                                            'font-lock-face 'font-lock-string-face)
-                                (propertize (abbreviate-file-name (eshell/pwd)) 'font-lock-face 'ansi-color-inverse)
+                                            'font-lock-face 'font-lock-comment-face)
+                                (propertize (abbreviate-file-name (eshell/pwd)) 'font-lock-face 'font-lock-string-face)
                                 (propertize (eshell--git-prompt) 'font-lock-face 'font-lock-comment-face)
                                 (if (zerop eshell-last-command-status)
                                     (propertize " λ" 'font-lock-face 'success)
@@ -1239,7 +1248,7 @@
 
 ;;; Browsing and web
 
-(setq shr-max-image-proportion 0.7 shr-sliced-image-height 0.7
+(setq shr-max-image-proportion 0.7 shr-sliced-image-height 0.7 shr-hr-line ?―
       shr-use-colors nil shr-max-inline-image-size '(0.8 . 3.0))
 
 (defun my-shr-tag-render (tag face-spec &optional predicate) ; src: takeonrules
@@ -1255,6 +1264,7 @@
       (dom-attr dom 'summary) (dom-by-tag dom 'th)))
 
 (with-eval-after-load 'shr
+  (set-face-attribute 'shr-code nil :inherit font-lock-string-face :height 1.1 :weight 'bold)
   (setq shr-external-rendering-functions
         `((pre        . ,(my-shr-tag-render 'pre        '(:inherit highlight :extend t)))
           (h1         . ,(my-shr-tag-render 'h1         '(:inherit bold :height 1.3)))
@@ -1359,6 +1369,7 @@
       erc-join-buffer 'buffer
       erc-fill-function 'erc-fill-static
       erc-fill-static-center 18
+      erc-track-use-faces nil
       erc-header-line-format nil
       erc-prompt-for-password nil
       erc-use-auth-source-for-nickserv-password t
