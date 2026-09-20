@@ -221,13 +221,16 @@
 (defun my/mode-line-file-help (window _object _pos)
   (buffer-file-name (window-buffer window)))
 
-(setq mode-line-front-space
-      '(:eval (let ((n (length (frame-parameter nil 'tabs))))
-                (when (> n 1)
-                  (propertize (format " [%d]" n)
-                              'face 'mode-line-emphasis
-                              'help-echo "mouse-1: Switch tab"
-                              'local-map my/tab-count-map)))))
+(defun my/tab-indicator ()
+  (when-let* ((tabs (tab-bar-tabs))
+              ((cdr tabs)))
+    (propertize (format " %d/%d"
+                        (1+ (tab-bar--current-tab-index tabs))
+                        (length tabs))
+                'help-echo "mouse-1: Switch tab"
+                'local-map my/tab-count-map)))
+
+(setq mode-line-front-space '(:eval (my/tab-indicator)))
 
 (setq-default mode-line-format
               '("%e" mode-line-front-space
@@ -334,7 +337,7 @@
                 (if (> winw fill-column)
                     (progn (visual-line-mode 1) (set-window-margins win lmargin margin)
                            (when special-modes (text-scale-set 1) (setq-local line-spacing '(0.3 . 0.3))))
-                  (progn (set-window-margins win nil 1)
+                  (progn (set-window-margins win 1 1)
                          (when special-modes
                            (set-window-margins win (if (eq major-mode 'org-mode) 0 5) 5)
                            (text-scale-set 0) (setq-local line-spacing '(3 . 3)))))))))
@@ -740,9 +743,13 @@
               go-ts-indent-offset 4
               diff-font-lock-syntax nil
               flymake-show-diagnostics-at-end-of-line nil;'fancy
-              flymake-warning-bitmap '(hs-show compilation-warning)
               flymake-error-bitmap '(hs-show compilation-error)
+              flymake-warning-bitmap '(hs-show compilation-warning)
               flymake-note-bitmap '(hs-show compilation-info)
+              flymake-margin-indicators-string
+              '((error ">" compilation-error)
+                (warning ">" compilation-warning)
+                (note ">" compilation-info))
               ispell-program-name "aspell"
               inferior-lisp-program "clojure"
               eglot-ignored-server-capabilities
