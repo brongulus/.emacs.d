@@ -20,6 +20,19 @@
             (window-divider-mode 1) (electric-pair-mode 1) (kill-ring-deindent-mode 1)))
 (run-with-idle-timer 0.1 nil #'viper-mode)
 
+(dolist (hook '(text-mode-hook eshell-mode-hook erc-mode-hook))
+  (add-hook hook #'goto-address-mode))
+
+;;;; Terminal setup
+(unless (display-graphic-p)
+  (xterm-mouse-mode 1) (tty-enable-overline t)
+  (defun kkp-tab--setup ()
+    (unless (display-graphic-p)
+      (define-key input-decode-map "\e[9;5u" (kbd "C-<tab>"))
+      (define-key input-decode-map "\e[9;6u" (kbd "C-S-<tab>"))))
+  (add-hook 'tty-setup-hook #'kkp-tab--setup)
+  (setq xterm-extra-capabilities '(getSelection setSelection modifyOtherKeys)))
+
 ;;; Appearance
 
 ;;;; Frame and chrome
@@ -77,7 +90,7 @@
          (font-lock-string-face ((((background dark))  :foreground "cornsilk3")
                                  (((background light)) :foreground "#4a3c25"))) ;5f3c25
          (region ((((background dark))  :background "#393939" :extend nil)
-                  (((background light)) :background "#d5c4a1" :extend nil)))
+                  (((background light)) :background "#d5c9b5" :extend nil)))
          (header-line ((t :overline ,(face-foreground 'shadow) :inherit bold)))
          (highlight ((((background dark))  :background "#202020") ; 242424
                      (((background light)) :background "#e2d9bc")))
@@ -86,7 +99,7 @@
          (font-lock-builtin-face ((t :slant italic)))
          (font-lock-function-name-face ((t :inherit bold)))
          (font-lock-keyword-face ((t :inherit bold)))
-         (shadow ((t :foreground "#828386")))
+         (shadow ((t :foreground "#696a6c")))
          (error ((t :foreground "Coral3" :inherit bold)))
          (ido-subdir ((t :inherit error)))
          (speedbar-tag-face ((t :inherit error)))
@@ -108,15 +121,15 @@
                    '(lazy-highlight org-code org-verbatim org-agenda-clocking speedbar-highlight-face))
          ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :weight heavy))))
                    '(woman-bold Man-overstrike minibuffer-prompt dired-directory speedbar-directory-face
-                                erc-my-nick-face erc-prompt-face fixed-pitch-serif help-key-binding
-                                speedbar-separator-face))
+                                erc-my-nick-face erc-prompt-face fixed-pitch-serif
+                                help-key-binding speedbar-separator-face))
          ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :slant italic))))
-                   '(markdown-ts-code-span font-lock-doc-face))
+                   '(markdown-ts-code-span font-lock-doc-face erc-input-face))
          ,@(mapcar (lambda (f) `(,f ((t :inherit shadow))))
                    '(vertical-border font-lock-comment-face org-time-grid erc-notice-face org-agenda-done
                                      gnus-summary-normal-read speedbar-button-face))
          ,@(mapcar (lambda (f) `(,f ((t :underline t)))) ;:foreground "#0965ef"
-                   '(link hs-ellipsis speedbar-selected-face dired-header))
+                   '(link match hs-ellipsis speedbar-selected-face dired-header))
          ,@(mapcar (lambda (i)
                      `(,(intern (format "gnus-cite-%d" i)) ((t :inherit font-lock-string-face))))
                    (number-sequence 1 11 2))
@@ -124,7 +137,8 @@
                      `(,(intern (format "gnus-cite-%d" i)) ((t :inherit font-lock-comment-face))))
                    (number-sequence 2 10 2))
          ,@(mapcar (lambda (f) `(,f ((t nil))))
-                   '(gnus-header-from gnus-header-content gnus-header-subject  gnus-header-newsgroups))
+                   '(gnus-header-from gnus-summary-normal-ancient gnus-header-content
+                                      gnus-header-subject gnus-header-newsgroups))
          (gnus-header-name ((t :inherit bold)))
          (nobreak-space ((t :underline nil)))
          (diff-file-header ((t :inherit (highlight bold))))
@@ -145,11 +159,12 @@
          ,@(if (display-graphic-p)
                `((which-func ((t :inherit shadow))))
              `((which-func ((t nil)))))
-         ,@(if (display-graphic-p)
-               `((eglot-code-action-indicator-face ((t :weight bold :inherit shadow))))
-             `((eglot-code-action-indicator-face ((t :weight bold)))))
+         (eglot-code-action-indicator-face ((t :weight bold)))
          (eww-form-text ((t :box (:line-width 1) :underline nil)))
          (eww-form-submit ((t :box (:line-width 2) :underline nil)))
+         ,@(mapcar (lambda (f) `(,f ((t :inherit region :extend t))))
+                   '(ediff-odd-diff-A ediff-odd-diff-B ediff-odd-diff-C ediff-odd-diff-Ancestor
+                                      ediff-even-diff-A ediff-even-diff-B ediff-even-diff-C ediff-even-diff-Ancestor))
          ;; diff colors for light background taken from doric-marble
          (ediff-current-diff-A ((((background light)) :background "#eac0bf" :extend t)))
          (ediff-current-diff-B ((((background light)) :background "#bde0c2" :extend t)))
@@ -163,7 +178,7 @@
          ,@(let* ((common `(:height ,(if (eq system-type 'android) 160 140)
                                     :overline ,(face-foreground 'shadow)
                                     :box (:line-width 2 :style flat-button))))
-             (if (display-graphic-p)
+             (if t ;(display-graphic-p) ; ghostty supports overline
                  `((mode-line-active   ((t :inherit default ,@common)))
                    (mode-line-inactive ((t :inherit shadow  ,@common))))
                `((mode-line-active   ((t :inverse-video t ,@common)))
@@ -234,11 +249,14 @@
                 'help-echo "mouse-1: Switch tab"
                 'local-map my/tab-count-map)))
 
-(setq mode-line-front-space '(:eval (my/tab-indicator)))
+(setq mode-line-front-space
+      '((:eval (my/tab-indicator))
+        (:eval (and (not (display-graphic-p)) (boundp 'viper-mode-string)
+                    '(" " viper-mode-string)))))
 
 (setq-default mode-line-format
-              '("%e" mode-line-front-space
-                (:eval (and (not (display-graphic-p)) (boundp 'viper-mode-string) '(" " viper-mode-string)))
+              '("%e"
+                (:eval (when (mode-line-window-selected-p) mode-line-front-space))
                 " %+ "
                 (:eval (and (buffer-narrowed-p) (not (derived-mode-p 'Info-mode)) my/narrow-string))
                 (:propertize " %b" face bold help-echo my/mode-line-file-help)
@@ -247,8 +265,8 @@
                 mode-line-format-right-align
                 mode-line-process
                 mode-line-minor-modes
-                mode-line-misc-info
-                mode-line-end-spaces))
+                (:eval (when (mode-line-window-selected-p) mode-line-misc-info))
+                (:eval (when (mode-line-window-selected-p) mode-line-end-spaces))))
 
 (with-eval-after-load 'viper
   (setq global-mode-string '((:eval (format-time-string " %a %H:%M ")))))
@@ -266,8 +284,7 @@
           (global-mode-string ("" global-mode-string))
           (:eval (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
                    (mapconcat (lambda (elem) (format-mode-line elem))
-                              eglot-mode-line-format
-                              ""))))))
+                              eglot-mode-line-format))))))
 
 ;;; General editing
 
@@ -279,7 +296,7 @@
               c-basic-offset 4
               indent-tabs-mode nil
               duplicate-line-final-position 1
-              fill-column 130
+              fill-column (if (display-graphic-p) 130 110)
               display-fill-column-indicator-column 100
               line-spacing '(3 . 3)
               text-scale-mode-step 1.2
@@ -290,6 +307,7 @@
               ring-bell-function 'ignore
               tab-always-indent 'complete
               save-interprogram-paste-before-kill t
+              copy-region-blink-delay 0
               delete-pair-push-mark t
               delete-pair-blink-delay t
               kill-region-dwim 'emacs-word
@@ -297,15 +315,15 @@
               help-enable-variable-value-editing t
               describe-bindings-outline-rules nil)
 
-(unless (display-graphic-p)
-  (setq interprogram-paste-function
-        (lambda ()
-          (when-let* ((cmd (pcase system-type
-                             ('darwin     "pbpaste")
-                             ('gnu/linux  "xclip -selection clipboard -o"))))
-            (let ((text (string-replace "\r\n" "\n" (shell-command-to-string cmd))))
-              (unless (or (string-empty-p text) (equal text (car kill-ring)))
-                text))))))
+;; (unless (display-graphic-p)
+;;   (setq interprogram-paste-function
+;;         (lambda ()
+;;           (when-let* ((cmd (pcase system-type
+;;                              ('darwin     "pbpaste")
+;;                              ('gnu/linux  "xclip -selection clipboard -o"))))
+;;             (let ((text (string-replace "\r\n" "\n" (shell-command-to-string cmd))))
+;;               (unless (or (string-empty-p text) (equal text (car kill-ring)))
+;;                 text))))))
 
 ;;;; Show paren
 
@@ -521,12 +539,14 @@
   (define-key viper-vi-basic-map "ms" insert-pair-map)
   (dolist (binding '(("g" . nil) ("x" . sel-line) ("-" . negative-argument) ("y" . kill-ring-save)
                      ("C-\\" . epop) ("R" . replace-regexp) ("=" . mark-inner) ("d" . del-vi)
-                     ("g i" . eglot-find-implementation) ("g r" . xref-find-references) (";" . prot-quit)
+                     ("g i" . eglot-find-implementation) (";" . prot-quit) ("o" . other-window)
+                     ("g r" . xref-find-references) ("g ." . xref-find-by-kind) ("m m" . imenu)
                      ("C" . string-rectangle) ("p" . yank) ("_" . eglot-rename) ("+" . eglot-code-actions)
-                     ("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all) ("m m" . imenu)
-                     ("[" . previous-error) ("]" . next-error) ("#" . definition-at-point) ("m d" . my/delete-pair)
-                     ("g s" . imenu) ("q" . quit-window) ("j" . next-line) ("k" . previous-line)
-                     ("g f" . ffap) ("<" . beginning-of-buffer) (">" . end-of-buffer) ("o" . other-window)
+                     ("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all)
+                     ("[" . previous-error) ("]" . next-error) ("m d" . my/delete-pair)
+                     ("g s" . imenu) ("q" . quit-window)
+                     ;; ("j" . next-line) ("k" . previous-line)
+                     ("g f" . ffap) ("<" . beginning-of-buffer) (">" . end-of-buffer)
                      ("v" . set-mark-command) ("s" . isearch-forward-regexp) ("u" . undo-only)
                      ("U" . undo-redo) ("," . my-scroll-other-down) ("." . my-scroll-other-up)
                      ("@" . eww-open-in-new-buffer) ("g a" . beginning-of-defun) ("g e" . end-of-defun)
@@ -569,9 +589,8 @@
                    ("C-x k" . kill-current-buffer) ("M-o" . other-window) ("s-o" . other-window)
                    ("C-x ;" . comment-line) ("C-x x c" . save-buffers-kill-emacs) ("M-l" . sel-line)
                    ("C-c b" . ibuffer) ("M-;" . eval-expression) ("C-/" . undo-only) ("C-c k" . my/lookup)
-                   ("s-n" . tab-new) ("s-w" . tab-close) ("C-x g" . C-M-prefix) ("C-c v" . view-mode)
+                   ("s-t" . tab-new) ("s-w" . tab-close) ("C-x g" . C-M-prefix) ("C-c v" . view-mode)
                    ("M-(" . flymake-goto-prev-error) ("M-)" . flymake-goto-next-error)
-                   ;; ("M-[" . previous-error) ("M-]" . next-error)
                    ("M-i" . eglot-find-implementation)
                    ("C-," . my-scroll-other-down) ("C-." . my-scroll-other-up) ("C-z" . hs-prefix-map)
                    ("M-j" . window-toggle-side-windows) ("<escape>" . keyboard-escape-quit)
@@ -783,8 +802,7 @@
                             goto-address-mode which-function-mode))
   (add-hook 'prog-mode-hook fn))
 
-(dolist (hook '(text-mode-hook eshell-mode-hook))
-  (add-hook hook #'goto-address-mode))
+;; (unless (display-graphic-p) (add-hook 'prog-mode-hook #'display-fill-column-indicator-mode))
 
 (dolist (mode-hook '(conf-mode-hook yaml-ts-mode-hook))
   (add-hook mode-hook #'display-line-numbers-mode))
@@ -1249,7 +1267,7 @@
 ;;; Browsing and web
 
 (setq shr-max-image-proportion 0.7 shr-sliced-image-height 0.7 shr-hr-line ?―
-      shr-use-colors nil shr-max-inline-image-size '(0.8 . 3.0))
+      shr-fill-text nil shr-use-colors nil shr-max-inline-image-size '(0.8 . 3.0))
 
 (defun my-shr-tag-render (tag face-spec &optional predicate) ; src: takeonrules
   (let ((default-renderer (intern (format "shr-tag-%s" tag))))
@@ -1363,7 +1381,7 @@
 
 ;;;; ERC (IRC)
 
-(setq erc-prompt ">"
+(setq erc-prompt "> "
       erc-kill-queries-on-quit t
       erc-kill-server-buffer-on-quit t
       erc-join-buffer 'buffer
@@ -1383,6 +1401,11 @@
        (erc-tls :server "irc.libera.chat" :port 6697 :nick "brongulus"))
 
 (with-eval-after-load 'erc
+  (with-eval-after-load 'erc-track
+    (advice-add 'erc-modified-channels-object :override
+                (lambda (strings)
+                  (if strings (concat "<#" (number-to-string (length strings)) "> ") "")))
+    (define-key ctl-x-map "j" #'erc-track-switch-buffer))
   (setq erc--message-speaker-chan-privmsg
         #("%p%n %m"
           0 2 (font-lock-face erc-nick-prefix-face)
@@ -1494,7 +1517,7 @@
 
 (defun my/lookup () (interactive)
        (cond ((derived-mode-p 'emacs-lisp-mode) (describe-symbol (symbol-at-point)))
-             ((derived-mode-p 'text-mode) (definition-at-point))
+             ((or (derived-mode-p 'text-mode) (derived-mode-p 'special-mode)) (definition-at-point))
              (t (if nil ;(and (display-graphic-p) (symbolp 'eldoc-box-help-at-point))
                     (eldoc-box-help-at-point)
                   (eldoc-doc-buffer t)))))
