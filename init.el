@@ -1,17 +1,21 @@
-;;; init.el - 🦬 ---  -*- lexical-binding: t; -*-
+;;; init.el - 🦬 ¯\_(ツ)_/¯ ---  -*- lexical-binding: t; -*-
 ;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
 
 ;;; Initialisation
+;; https://myaccount.google.com/apppasswords
+;; machine smtp.gmail.com login prashantrameshtak@gmail.com port 587 password ***
 (setq-default auto-save-file-name-transforms `((".*" "~/.emacs.d/backup/" t))
               backup-directory-alist `(("." . "~/.emacs.d/backup/"))
               create-lockfiles nil custom-file "/tmp/emacs-custom"
-              warning-minimum-level :error)
+              user-full-name "Prashant Tak" user-mail-address "prashantrameshtak@gmail.com"
+              send-mail-function 'smtpmail-send-it smtpmail-smtp-server "smtp.gmail.com"
+              smtpmail-smtp-service 587 warning-minimum-level :error)
 
 (add-to-list 'warning-suppress-types '(files missing-lexbind-cookie)) ; lots of built-in stuff doesn't
 (put 'narrow-to-region 'disabled nil)
-(if (eq system-type 'android)
-    (setq-default fill-column 120 line-spacing '(4 . 4))
-  (setq shell-file-name "/opt/homebrew/bin/fish"))
+(if (eq system-type 'darwin)
+    (setq shell-file-name "/opt/homebrew/bin/fish")
+  (setq-default fill-column 120 line-spacing '(4 . 4)))
 
 (add-hook 'emacs-startup-hook
           (lambda () (ido-mode 'buffer) (global-auto-revert-mode 1) (fido-mode)
@@ -32,6 +36,16 @@
       (define-key input-decode-map "\e[9;6u" (kbd "C-S-<tab>"))))
   (add-hook 'tty-setup-hook #'kkp-tab--setup)
   (setq xterm-extra-capabilities '(getSelection setSelection modifyOtherKeys)))
+
+;; (unless (display-graphic-p)
+;;   (setq interprogram-paste-function
+;;         (lambda ()
+;;           (when-let* ((cmd (pcase system-type
+;;                              ('darwin     "pbpaste")
+;;                              ('gnu/linux  "xclip -selection clipboard -o"))))
+;;             (let ((text (string-replace "\r\n" "\n" (shell-command-to-string cmd))))
+;;               (unless (or (string-empty-p text) (equal text (car kill-ring)))
+;;                 text))))))
 
 ;;; Appearance
 
@@ -84,7 +98,7 @@
 (apply #'custom-theme-set-faces 'untitled-plain
        `((cursor ((t :background "#00c2ff")))
          (default ((((background dark))  :foreground "#f8f9e8" :background "#191919") ; 121212
-                   (((background light)) :foreground "#212121" :background "#eae3ce")))
+                   (((background light)) :foreground "#212121" :background "#eae3ce"))) ; f5f5f0
          (bold ((((background dark))  :weight bold)
                 (((background light)) :weight bold)))
          (font-lock-string-face ((((background dark))  :foreground "cornsilk3")
@@ -92,7 +106,7 @@
          (region ((((background dark))  :background "#393939" :extend nil)
                   (((background light)) :background "#d5c9b5" :extend nil)))
          (header-line ((t :overline ,(face-foreground 'shadow) :inherit bold)))
-         (highlight ((((background dark))  :background "#202020") ; 242424
+         (highlight ((((background dark))  :background "#242424")
                      (((background light)) :background "#e2d9bc")))
          (completions-highlight ((((background dark))  :background "gray20" :foreground "gold1" :weight bold)
                                  (((background light)) :background "lightgoldenrod3" :foreground "tan4" :weight bold)))
@@ -102,12 +116,12 @@
          (shadow ((t :foreground "#696a6c")))
          (error ((t :foreground "Coral3" :inherit bold)))
          (ido-subdir ((t :inherit error)))
-         (speedbar-tag-face ((t :inherit error)))
          (success ((t :foreground "ForestGreen")))
          ,@(mapcar (lambda (f) `(,f ((t nil))))
                    '(fringe shr-mark font-lock-type-face font-lock-constant-face viper-minibuffer-insert
                             markdown-ts-table-delimiter-cell dictionary-word-definition-face
-                            font-lock-variable-name-face speedbar-file-face icomplete-vertical-selected-prefix-indicator-face
+                            font-lock-variable-name-face speedbar-file-face erc-direct-msg-face
+                            icomplete-vertical-selected-prefix-indicator-face
                             markdown-ts-list-marker markdown-ts-in-code-block org-table))
          ,@(mapcar (lambda (i) `(,(intern (format "outline-%d" i)) ((t :height 1.1 :inherit bold))))
                    (number-sequence 1 9))
@@ -121,15 +135,15 @@
                    '(lazy-highlight org-code org-verbatim org-agenda-clocking speedbar-highlight-face))
          ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :weight heavy))))
                    '(woman-bold Man-overstrike minibuffer-prompt dired-directory speedbar-directory-face
-                                erc-my-nick-face erc-prompt-face fixed-pitch-serif
+                                erc-my-nick-face erc-current-nick-face erc-prompt-face fixed-pitch-serif
                                 help-key-binding speedbar-separator-face))
          ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :slant italic))))
                    '(markdown-ts-code-span font-lock-doc-face erc-input-face))
          ,@(mapcar (lambda (f) `(,f ((t :inherit shadow))))
-                   '(vertical-border font-lock-comment-face org-time-grid erc-notice-face org-agenda-done
-                                     gnus-summary-normal-read speedbar-button-face))
+                   '(vertical-border font-lock-comment-face org-time-grid erc-notice-face speedbar-tag-face
+                                     org-agenda-done gnus-summary-normal-read speedbar-button-face))
          ,@(mapcar (lambda (f) `(,f ((t :underline t)))) ;:foreground "#0965ef"
-                   '(link match hs-ellipsis speedbar-selected-face dired-header))
+                   '(link match hs-ellipsis speedbar-selected-face dired-header dictionary-word-entry-face))
          ,@(mapcar (lambda (i)
                      `(,(intern (format "gnus-cite-%d" i)) ((t :inherit font-lock-string-face))))
                    (number-sequence 1 11 2))
@@ -223,11 +237,12 @@
               mode-line-collapse-minor-modes-to ""
               mode-line-modes-delimiters '("" . "")
               mode-line-end-spaces nil
+              line-number-mode nil
               erc-track-position-in-mode-line t
               flymake-mode-line-counter-format
               '("" flymake-mode-line-error-counter
                 flymake-mode-line-warning-counter
-                flymake-mode-line-note-counter "")
+                flymake-mode-line-note-counter " ")
               flymake-suppress-zero-counters t
               flymake-mode-line-title nil)
 
@@ -261,26 +276,26 @@
                 (:eval (and (buffer-narrowed-p) (not (derived-mode-p 'Info-mode)) my/narrow-string))
                 (:propertize " %b" face bold help-echo my/mode-line-file-help)
                 (vc-mode vc-mode)
-                "    " mode-line-percent-position " "
+                " " ; "    " ; mode-line-position " "
                 mode-line-format-right-align
                 mode-line-process
                 mode-line-minor-modes
                 (:eval (when (mode-line-window-selected-p) mode-line-misc-info))
-                (:eval (when (mode-line-window-selected-p) mode-line-end-spaces))))
+                (:eval (when (mode-line-window-selected-p) mode-line-end-spaces))
+                "" mode-line-position))
 
-(with-eval-after-load 'viper
-  (setq global-mode-string '((:eval (format-time-string " %a %H:%M ")))))
+(with-eval-after-load 'viper (setq global-mode-string nil)) ; (format-time-string " %a %H:%M ")
 
 (with-eval-after-load 'eglot
   (setq eglot-mode-line-format
         '(eglot-mode-line-error
           eglot-mode-line-progress
           eglot-mode-line-action-suggestion)
-        eglot-code-action-indications '(mode-line)
+        eglot-code-action-indications nil ;'(mode-line)
         eglot-code-action-indicator "︎i "
         mode-line-misc-info
         '((which-function-mode
-           (which-func-mode (which-func--use-mode-line (" " which-func-format ""))))
+           (which-func-mode (which-func--use-mode-line ("" which-func-format " "))))
           (global-mode-string ("" global-mode-string))
           (:eval (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
                    (mapconcat (lambda (elem) (format-mode-line elem))
@@ -298,7 +313,7 @@
               duplicate-line-final-position 1
               fill-column (if (display-graphic-p) 130 110)
               display-fill-column-indicator-column 100
-              line-spacing '(3 . 3)
+              line-spacing '(0.2 . 0.2)
               text-scale-mode-step 1.2
               split-width-threshold (- fill-column 20)
               use-short-answers t
@@ -314,16 +329,6 @@
               help-window-select t
               help-enable-variable-value-editing t
               describe-bindings-outline-rules nil)
-
-;; (unless (display-graphic-p)
-;;   (setq interprogram-paste-function
-;;         (lambda ()
-;;           (when-let* ((cmd (pcase system-type
-;;                              ('darwin     "pbpaste")
-;;                              ('gnu/linux  "xclip -selection clipboard -o"))))
-;;             (let ((text (string-replace "\r\n" "\n" (shell-command-to-string cmd))))
-;;               (unless (or (string-empty-p text) (equal text (car kill-ring)))
-;;                 text))))))
 
 ;;;; Show paren
 
@@ -345,7 +350,7 @@
 ;;;; Zen margins
 
 (defvar zen-enabled-modes '(Info-mode diff-mode eww-mode dired-mode gnus-article-mode Man-mode org-agenda-mode
-                                      vc-dir-mode gnus-group-mode erc-mode woman-mode))
+                                      conf-unix-mode vc-dir-mode gnus-group-mode erc-mode woman-mode))
 
 (defun zen-buffer-apply-margins nil "Apply zen margins to all windows."
        (walk-windows
@@ -362,7 +367,7 @@
                   (progn (set-window-margins win 1 1)
                          (when special-modes
                            (set-window-margins win (if (eq major-mode 'org-mode) 0 5) 5)
-                           (text-scale-set 0) (setq-local line-spacing '(3 . 3)))))))))
+                           (text-scale-set 0) (setq-local line-spacing '(0.2 . 0.2)))))))))
         nil t))
 
 (add-hook 'window-configuration-change-hook #'zen-buffer-apply-margins)
@@ -528,6 +533,7 @@
   (let ((map (make-sparse-keymap))) (define-key map [t] #'insert-pair) map))
 
 (with-eval-after-load 'viper
+  (setq viper-insert-state-mode-list (delq 'erc-mode viper-insert-state-mode-list))
   (advice-add 'viper-post-command-sentinel :override #'ignore)
   (defun viper-set-insert-cursor-type nil (setq cursor-type '(bar . 3)))
   (define-key viper-minibuffer-map "\C-j" #'icomplete-fido-exit)
@@ -544,9 +550,8 @@
                      ("C" . string-rectangle) ("p" . yank) ("_" . eglot-rename) ("+" . eglot-code-actions)
                      ("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all)
                      ("[" . previous-error) ("]" . next-error) ("m d" . my/delete-pair)
-                     ("g s" . imenu) ("q" . quit-window)
-                     ;; ("j" . next-line) ("k" . previous-line)
-                     ("g f" . ffap) ("<" . beginning-of-buffer) (">" . end-of-buffer)
+                     ("g s" . imenu) ("q" . quit-window) ;("j" . next-line) ("k" . previous-line)
+                     ("g f" . ffap) ("<" . beginning-of-buffer) (">" . end-of-buffer) ("^" . dired-jump)
                      ("v" . set-mark-command) ("s" . isearch-forward-regexp) ("u" . undo-only)
                      ("U" . undo-redo) ("," . my-scroll-other-down) ("." . my-scroll-other-up)
                      ("@" . eww-open-in-new-buffer) ("g a" . beginning-of-defun) ("g e" . end-of-defun)
@@ -584,14 +589,14 @@
 
 (dolist (binding '(("C-c c" . compile) ("C-c r" . recompile) ("C-c ." . compile-at-root)
                    ("C-h '" . describe-face) ("C-\\" . epop) ("C-c d" . speedbar) ("C-=" . mark-inner)
-                   ("C-j" . bookmark-jump) ("C-c i" . imenu) ("C-'" . ido-switch-buffer)
+                   ("C-j" . bookmark-jump) ("C-c i" . imenu) ("M-i" . eglot-find-implementation)
                    ("C-c e" . eshell) ("C-c f" . find-file) ("C-c x" . execute-extended-command) 
                    ("C-x k" . kill-current-buffer) ("M-o" . other-window) ("s-o" . other-window)
                    ("C-x ;" . comment-line) ("C-x x c" . save-buffers-kill-emacs) ("M-l" . sel-line)
                    ("C-c b" . ibuffer) ("M-;" . eval-expression) ("C-/" . undo-only) ("C-c k" . my/lookup)
                    ("s-t" . tab-new) ("s-w" . tab-close) ("C-x g" . C-M-prefix) ("C-c v" . view-mode)
                    ("M-(" . flymake-goto-prev-error) ("M-)" . flymake-goto-next-error)
-                   ("M-i" . eglot-find-implementation)
+                   ("C-x b" . my-switch-buffer) ("C-x C-b" . ido-switch-buffer) ("C-'" . ido-switch-buffer)
                    ("C-," . my-scroll-other-down) ("C-." . my-scroll-other-up) ("C-z" . hs-prefix-map)
                    ("M-j" . window-toggle-side-windows) ("<escape>" . keyboard-escape-quit)
                    ("C-<tab>" . tab-next) ("C-S-<tab>" . tab-previous) ("C-x x f" . find-file)
@@ -600,6 +605,14 @@
   (keymap-global-set (car binding) (cdr binding)))
 
 (keymap-global-set "C-x m" esc-map)
+
+(defun my-switch-buffer nil (interactive)
+       (cond ((eq major-mode 'eww-mode) (eww-switch-to-buffer))
+             ((eq major-mode 'erc-mode) (erc-switch-to-buffer))
+             ((project-current) (call-interactively 'project-switch-to-buffer))
+             (t (let ((ido-ignore-buffers (cons ".*eww\\*" ido-ignore-buffers))
+                      (ido-use-virtual-buffers nil))
+                  (ido-switch-buffer)))))
 
 (defun C-M-prefix ()
   "Read next key and execute it with C-M- prefix"
@@ -816,6 +829,7 @@
 (add-to-list 'auto-mode-alist '("\\.test\\'" . tcl-mode))
 (add-hook 'mhtml-mode-hook (lambda () (eww-open-file buffer-file-name)))
 (add-to-list 'auto-mode-alist '("\\.qmd\\'" . markdown-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.nim\\'" . conf-mode))
 
 ;;;; Simple Zig-mode
 
@@ -856,14 +870,14 @@
                     (remove #'eglot-signature-eldoc-function eldoc-documentation-functions)))))
 
 (dolist (mode '(rust-ts-mode-hook go-ts-mode-hook python-mode-hook c++-mode-hook zig-mode-hook))
-  (add-hook mode #'eglot-ensure))
+  (add-hook mode #'subword-mode) (add-hook mode #'eglot-ensure))
 
 ;;;; Which-func
 
 (with-eval-after-load 'which-func ; disabled because this causes scroll slowdown
   (setq which-func-format (list (cadr which-func-format))
         which-func-unknown ""
-        which-func-modes '(go-ts-mode zig-mode)
+        which-func-modes '(emacs-lisp-mode go-ts-mode zig-mode)
         which-func-update-delay 1))
 
 ;;;; Compilation
@@ -901,6 +915,9 @@
       org-special-ctrl-a/e nil org-M-RET-may-split-line '((item . nil)))
 
 (with-eval-after-load 'org
+  (modify-syntax-entry ?< "." org-mode-syntax-table)
+  (modify-syntax-entry ?> "." org-mode-syntax-table)
+
   (defun org-outer-indent--compute-prefixes () ; src: rougier
     "Compute prefix strings with outer-aligned stars."
     (setq org-indent--heading-line-prefixes (make-vector org-indent--deepest-level nil)
@@ -1266,7 +1283,12 @@
 
 ;;; Browsing and web
 
+(advice-add 'eww :around ; always open new url in new buffer
+            (lambda (orig-fun url &optional _new-buffer buffer)
+              (funcall orig-fun url t buffer)))
+
 (setq shr-max-image-proportion 0.7 shr-sliced-image-height 0.7 shr-hr-line ?―
+      shr-block-indentation-width 0
       shr-fill-text nil shr-use-colors nil shr-max-inline-image-size '(0.8 . 3.0))
 
 (defun my-shr-tag-render (tag face-spec &optional predicate) ; src: takeonrules
@@ -1294,14 +1316,14 @@
 (setq browse-url-handlers '(("youtu\\(?:\\.be\\|be\\.com\\)" .
                              (lambda (url &rest _)
                                (call-process-shell-command
-                                (concat "nohup mpv " (shell-quote-argument url) " >/dev/null 2>&1 &"))))))
+                                (concat "nohup mpv " (shell-quote-argument url)) nil 0 nil)))))
 
 (autoload 'eww-open-in-new-buffer "eww")
 (with-eval-after-load 'eww
   (add-hook 'eww-after-render-hook #'viper-mode)
   (defun my/eww-redirect-urls (url)
     (replace-regexp-in-string "://\\(www\\.\\)?reddit\\.com" "://old.reddit.com" url)
-    (replace-regexp-in-string "://\\(www\\.\\)?x\\.com" "://nitter.net" url))
+    (replace-regexp-in-string "://\\(www\\.\\)?x\\.com" "://nitter.kareem.one" url))
   (push 'my/eww-redirect-urls eww-url-transformers) ;; TODO: use browse-url-transform-alist
   (setq eww-header-line-format nil
         eww-auto-rename-buffer 'title
@@ -1394,13 +1416,16 @@
       erc-hide-list '("JOIN" "PART" "QUIT" "NICK" "MODE" "353" "366")
       erc-track-exclude-types '("NICK" "NOTICE" "324" "329" "333" "353")
       erc-autojoin-channels-alist
-      '(("libera.chat" "#emacs" "#emacs-social" "##rust" "#uxn" "#arcan"
-         "##chat" "#zig" "#janet" "#clojure" "#racket" "#ocaml")))
+      '(("libera.chat" "#emacs" "#uxn" "##forth" "#arcan" "##netbsd" "#pkgsrc"
+         "#llamas" "##chat" "##rust" "#zig")))
+;; "#go-nuts" "#janet" "#clojure" "#racket" "#ocaml" "##japanese" "#kubernetes")))
 
 (defun my-erc-tls () (interactive)
        (erc-tls :server "irc.libera.chat" :port 6697 :nick "brongulus"))
 
 (with-eval-after-load 'erc
+  (add-hook 'erc-mode-hook #'hl-line-mode 50)
+  (add-hook 'erc-join-hook #'viper-change-state-to-vi 100)
   (with-eval-after-load 'erc-track
     (advice-add 'erc-modified-channels-object :override
                 (lambda (strings)
@@ -1428,6 +1453,7 @@
       gnus-thread-sort-functions '(gnus-thread-sort-by-most-recent-date)
       gnus-use-adaptive-scoring '(word line) gnus-summary-expunge-below 0
       gnus-group-uncollapsed-levels 2 gnus-inhibit-startup-message t
+      gnus-asynchronous t gnus-use-cache t 
       gnus-select-method '(nntp "news.gwene.org")
       gnus-sum-thread-tree-indent " " gnus-sum-thread-tree-false-root ""
       gnus-sum-thread-tree-root "" gnus-sum-thread-tree-single-indent ""
@@ -1504,7 +1530,7 @@
 ;;;; Info and Man
 
 ;; install-info --dir-file=./dir --info-file=
-(setq Info-default-directory-list '("~/.emacs.d/info")
+(setq Info-additional-directory-list '("~/.emacs.d/info")
       Info-use-header-line nil
       woman-manpath '("/usr/share/man")
       woman-cache-filename (expand-file-name "~/.emacs.d/woman-cache.el"))
@@ -1517,7 +1543,8 @@
 
 (defun my/lookup () (interactive)
        (cond ((derived-mode-p 'emacs-lisp-mode) (describe-symbol (symbol-at-point)))
-             ((or (derived-mode-p 'text-mode) (derived-mode-p 'special-mode)) (definition-at-point))
+             ((or (derived-mode-p 'text-mode) (derived-mode-p 'special-mode) (eq major-mode 'erc-mode))
+              (definition-at-point))
              (t (if nil ;(and (display-graphic-p) (symbolp 'eldoc-box-help-at-point))
                     (eldoc-box-help-at-point)
                   (eldoc-doc-buffer t)))))
