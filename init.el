@@ -32,7 +32,7 @@
 
 ;;;; Terminal setup
 (unless (display-graphic-p)
-  (xterm-mouse-mode 1) ;(tty-enable-overline t)
+  (xterm-mouse-mode 1) (when (string> emacs-version "32") (tty-enable-overline t))
   (defun kkp-tab--setup ()
     (unless (display-graphic-p)
       (define-key input-decode-map "\e[9;5u" (kbd "C-<tab>"))
@@ -201,7 +201,7 @@
          ,@(let* ((common `(:height ,my-fsize
                                     :overline ,(face-foreground 'shadow)
                                     :box (:line-width 2 :style flat-button))))
-             (if (display-graphic-p) ; ghostty supports overline
+             (if (or (display-graphic-p) (string> emacs-version "32"))
                  `((mode-line-active   ((t :inherit default ,@common)))
                    (mode-line-inactive ((t :inherit shadow  ,@common))))
                `((mode-line-active   ((t :inverse-video t ,@common)))
