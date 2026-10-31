@@ -1,1 +1,1 @@
-(("subject" ("openvms" 60 739906 w) ("port" 60 739906 w) ("Port to OpenVMS" 60 739906 f)) ("from" ("Jeffrey Chimene <jchimene-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>" 10 739906 s)))
+(("subject" ("yodl" 60 739918 w) ("dependency" 60 739918 w) ("build" 60 739918 w) ("removed" 60 739918 w) ("patch" 60 739918 w) ("[PATCH] Removed build dependency on Yodl." 60 739918 f)) ("from" ("Matt Curtis <matt.r.curtis-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>" 10 739918 s)))
