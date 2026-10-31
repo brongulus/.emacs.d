@@ -1254,7 +1254,7 @@
   (add-hook 'log-edit-hook
             (lambda nil
               (log-edit-maybe-show-diff)
-              (vc-git-log-edit-toggle-signoff)
+              (when (eq system-type 'darwin) (vc-git-log-edit-toggle-signoff))
               (setq-local other-window-scroll-buffer (get-buffer "*vc-diff*")))
             100)
   (defun my/vc-cleanup-buffers ()
