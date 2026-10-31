@@ -1,6 +1,6 @@
 gmane.comp.lang.forth.gforth: 1-1389
-gmane.emacs.devel: 1-347418
-gmane.emacs.bugs: 1-340627
+gmane.emacs.devel: 1-347419
+gmane.emacs.bugs: 1-340635
 gmane.emacs.announce: 1-387
 gwene.com.arcan-fe: 1-26
 gwene.com.blogspot.petr-mitrichev: 1-553
@@ -21,4 +21,4 @@ gwene.org.golang.blog: 1-274,276-277,285
 gwene.org.hnrss.newest.points! 1-34954
 gwene.org.rust-lang.blog: 1-421
 gwene.org.ziglang.devlog:
-gwene.rs.lobste: 1-114879
+gwene.rs.lobste: 1-114880

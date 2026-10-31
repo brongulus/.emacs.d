@@ -21,6 +21,7 @@ undo-fu-session/
 url/
 *.eld
 *.SCORE
+*:sent.*
 .DS_Store
 code-review*
 forge-database*
