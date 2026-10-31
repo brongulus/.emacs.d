@@ -1,5 +1,8 @@
 ;;; init.el - 🦬 ¯\_(ツ)_/¯ ---  -*- lexical-binding: t; -*-
 ;; (load "~/.emacs.d/lisp/benchmarking.el" :noerr :no-message)
+(setq my-fsize (cond ((eq system-type 'android) 160)
+                     ((eq system-type 'darwin) 140)
+                     (t 120)))
 
 ;;; Initialisation
 ;; https://myaccount.google.com/apppasswords
@@ -15,12 +18,12 @@
 (put 'narrow-to-region 'disabled nil)
 (if (eq system-type 'darwin)
     (setq shell-file-name "/opt/homebrew/bin/fish")
-  (setq-default fill-column 120 line-spacing '(4 . 4)))
+  (setq-default fill-column 120 line-spacing '(0.2 . 0.2)))
 
 (add-hook 'emacs-startup-hook
           (lambda () (ido-mode 'buffer) (global-auto-revert-mode 1) (fido-mode)
             (repeat-mode 1) (save-place-mode 1) (delete-selection-mode 1) (savehist-mode 1)
-            (global-visual-line-mode 1) (global-visual-wrap-prefix-mode 1)
+            (global-visual-line-mode 1) (global-visual-wrap-prefix-mode 1) (which-key-mode 1)
             (window-divider-mode 1) (electric-pair-mode 1) (kill-ring-deindent-mode 1)))
 (run-with-idle-timer 0.1 nil #'viper-mode)
 
@@ -29,7 +32,7 @@
 
 ;;;; Terminal setup
 (unless (display-graphic-p)
-  (xterm-mouse-mode 1) (tty-enable-overline t)
+  (xterm-mouse-mode 1) ;(tty-enable-overline t)
   (defun kkp-tab--setup ()
     (unless (display-graphic-p)
       (define-key input-decode-map "\e[9;5u" (kbd "C-<tab>"))
@@ -66,8 +69,12 @@
 
 (dolist (face '(default fixed-pitch fixed-pitch-serif variable-pitch))
   (custom-set-faces `(,face ((t :family "Input Mono Narrow")))))
-(set-face-attribute 'default nil :height (if (eq system-type 'android) 160 140))
+(set-face-attribute 'default nil :height my-fsize :weight 'regular)
+(set-face-attribute 'variable-pitch-text nil :height 'unspecified)
 (dolist (set '(cjk-misc han kana)) (set-fontset-font t set "Noto Sans Mono CJK JP" nil 'prepend))
+(dolist (cat '(unicode emoji))
+    (set-fontset-font t cat (font-spec :family "Noto Color Emoji") nil 'prepend))
+
 
 ;;;; Theme
 
@@ -105,15 +112,16 @@
                                  (((background light)) :foreground "#4a3c25"))) ;5f3c25
          (region ((((background dark))  :background "#393939" :extend nil)
                   (((background light)) :background "#d5c9b5" :extend nil)))
+         (shadow ((t :foreground "#696a6c")))
          (header-line ((t :overline ,(face-foreground 'shadow) :inherit bold)))
          (highlight ((((background dark))  :background "#242424")
                      (((background light)) :background "#e2d9bc")))
          (completions-highlight ((((background dark))  :background "gray20" :foreground "gold1" :weight bold)
                                  (((background light)) :background "lightgoldenrod3" :foreground "tan4" :weight bold)))
+         (minibuffer-nonselected ((t :inherit completions-highlight)))
          (font-lock-builtin-face ((t :slant italic)))
          (font-lock-function-name-face ((t :inherit bold)))
          (font-lock-keyword-face ((t :inherit bold)))
-         (shadow ((t :foreground "#696a6c")))
          (error ((t :foreground "Coral3" :inherit bold)))
          (ido-subdir ((t :inherit error)))
          (success ((t :foreground "ForestGreen")))
@@ -176,6 +184,7 @@
          (eglot-code-action-indicator-face ((t :weight bold)))
          (eww-form-text ((t :box (:line-width 1) :underline nil)))
          (eww-form-submit ((t :box (:line-width 2) :underline nil)))
+         (eww-form-select ((t :inherit eww-form-submit)))
          ,@(mapcar (lambda (f) `(,f ((t :inherit region :extend t))))
                    '(ediff-odd-diff-A ediff-odd-diff-B ediff-odd-diff-C ediff-odd-diff-Ancestor
                                       ediff-even-diff-A ediff-even-diff-B ediff-even-diff-C ediff-even-diff-Ancestor))
@@ -189,10 +198,10 @@
          (diff-refine-removed ((((background light)) :background "#e05fa1209f9e" :weight bold)))
          (diff-refine-added ((((background light)) :background "#a187d39fa8af" :weight bold)))
          (mode-line ((t :inherit mode-line-active)))
-         ,@(let* ((common `(:height ,(if (eq system-type 'android) 160 140)
+         ,@(let* ((common `(:height ,my-fsize
                                     :overline ,(face-foreground 'shadow)
                                     :box (:line-width 2 :style flat-button))))
-             (if t ;(display-graphic-p) ; ghostty supports overline
+             (if (display-graphic-p) ; ghostty supports overline
                  `((mode-line-active   ((t :inherit default ,@common)))
                    (mode-line-inactive ((t :inherit shadow  ,@common))))
                `((mode-line-active   ((t :inverse-video t ,@common)))
@@ -282,7 +291,7 @@
                 mode-line-minor-modes
                 (:eval (when (mode-line-window-selected-p) mode-line-misc-info))
                 (:eval (when (mode-line-window-selected-p) mode-line-end-spaces))
-                "" mode-line-position))
+                " " mode-line-position))
 
 (with-eval-after-load 'viper (setq global-mode-string nil)) ; (format-time-string " %a %H:%M ")
 
@@ -295,7 +304,7 @@
         eglot-code-action-indicator "︎i "
         mode-line-misc-info
         '((which-function-mode
-           (which-func-mode (which-func--use-mode-line ("" which-func-format " "))))
+           (which-func-mode (which-func--use-mode-line ("" which-func-format ""))))
           (global-mode-string ("" global-mode-string))
           (:eval (when (and (bound-and-true-p eglot--managed-mode) (eglot-managed-p))
                    (mapconcat (lambda (elem) (format-mode-line elem))
@@ -311,7 +320,7 @@
               c-basic-offset 4
               indent-tabs-mode nil
               duplicate-line-final-position 1
-              fill-column (if (display-graphic-p) 130 110)
+              fill-column (if (and (display-graphic-p) (eq system-type 'darwin)) 130 110)
               display-fill-column-indicator-column 100
               line-spacing '(0.2 . 0.2)
               text-scale-mode-step 1.2
@@ -357,7 +366,7 @@
         (lambda (win)
           (with-current-buffer (window-buffer win)
             (when (or (derived-mode-p '(prog-mode text-mode)) (member major-mode zen-enabled-modes))
-              (let* ((special-modes (member major-mode '(org-mode markdown-ts-mode)))
+              (let* ((special-modes (member major-mode '(org-mode markdown-ts-mode eww-mode)))
                      (winw (window-total-width win))
                      (margin (max 0 (/ (- winw fill-column) 2)))
                      (lmargin (if (eq major-mode 'org) (max 0 (- margin 5)) margin)))
@@ -550,7 +559,7 @@
                      ("C" . string-rectangle) ("p" . yank) ("_" . eglot-rename) ("+" . eglot-code-actions)
                      ("z f" . hs-toggle-hiding) ("z c" . hs-hide-all) ("z s" . hs-show-all)
                      ("[" . previous-error) ("]" . next-error) ("m d" . my/delete-pair)
-                     ("g s" . imenu) ("q" . quit-window) ;("j" . next-line) ("k" . previous-line)
+                     ("g s" . imenu) ("q" . quit-window) ("j" . next-line) ("k" . previous-line)
                      ("g f" . ffap) ("<" . beginning-of-buffer) (">" . end-of-buffer) ("^" . dired-jump)
                      ("v" . set-mark-command) ("s" . isearch-forward-regexp) ("u" . undo-only)
                      ("U" . undo-redo) ("," . my-scroll-other-down) ("." . my-scroll-other-up)
@@ -596,7 +605,7 @@
                    ("C-c b" . ibuffer) ("M-;" . eval-expression) ("C-/" . undo-only) ("C-c k" . my/lookup)
                    ("s-t" . tab-new) ("s-w" . tab-close) ("C-x g" . C-M-prefix) ("C-c v" . view-mode)
                    ("M-(" . flymake-goto-prev-error) ("M-)" . flymake-goto-next-error)
-                   ("C-x b" . my-switch-buffer) ("C-x C-b" . ido-switch-buffer) ("C-'" . ido-switch-buffer)
+                   ("C-x b" . ido-switch-buffer) ("C-x C-b" . ibuffer) ("C-'" . my-switch-buffer)
                    ("C-," . my-scroll-other-down) ("C-." . my-scroll-other-up) ("C-z" . hs-prefix-map)
                    ("M-j" . window-toggle-side-windows) ("<escape>" . keyboard-escape-quit)
                    ("C-<tab>" . tab-next) ("C-S-<tab>" . tab-previous) ("C-x x f" . find-file)
@@ -646,13 +655,22 @@
 ;;;; Mode-specific SPC as ctl-x
 
 (with-eval-after-load 'dired
+  (keymap-set dired-mode-map "o" #'other-window)
+  (keymap-set dired-mode-map "h" #'dired-up-directory)
+  (keymap-set dired-mode-map "j" #'dired-next-line)
+  (keymap-set dired-mode-map "k" #'dired-previous-line)
+  (keymap-set dired-mode-map "l" #'dired-find-file)
   (keymap-set dired-mode-map "f" #'find-name-dired)
   (keymap-set dired-mode-map "G" #'find-grep-dired)
   (keymap-set dired-mode-map "SPC" ctl-x-map))
 (with-eval-after-load 'doc-view
   (keymap-set doc-view-mode-map "SPC" ctl-x-map)
-  (keymap-set doc-view-mode-map "j" #'doc-view-next-line-or-next-page)
-  (keymap-set doc-view-mode-map "k" #'doc-view-previous-line-or-previous-page))
+  (keymap-set doc-view-mode-map "J" #'doc-view-next-page)
+  (keymap-set doc-view-mode-map "K" #'doc-view-previous-page)
+  (define-key doc-view-mode-map "j"
+              #'(lambda nil (interactive) (doc-view-scroll-up-or-next-page 5)))
+  (define-key doc-view-mode-map "k"
+              #'(lambda nil (interactive) (doc-view-scroll-down-or-previous-page 5))))
 
 ;;; Search and grep
 
@@ -669,7 +687,14 @@
       "rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)"
       grep-command-position 27)
 
-;;; Files and projects
+;;; Buffers, Files and projects
+
+(setq ibuffer-human-readable-size t
+      ibuffer-default-sorting-mode 'major-mode
+      ibuffer-formats
+      '((mark modified " " (size 9 -1 :right) " " (name 18 18 :left :elide)
+              " " (mode 16 16 :left :elide) " " filename-and-process)
+        (mark " " (name 16 -1) " " filename)))
 
 (advice-add 'dired-find-file :around
             (lambda (fn &rest args)
@@ -689,7 +714,10 @@
       dired-omit-files (concat "\\\.\_.*" "\\|^\\.DS_Store\\'")
       dired-omit-verbose nil
       delete-by-moving-to-trash t
+      doc-view-resolution 400
       doc-view-continuous t
+      doc-view-mupdf-use-svg t
+      large-file-warning-threshold (* 50 (expt 2 20))
       vc-dir-auto-hide-up-to-date 'revert
       vc-allow-rewriting-published-history t
       vc-follow-symlinks t
@@ -769,6 +797,10 @@
    my/display-buffer-adaptive
    (body-function . select-window)
    (window-parameters . ((split-window . #'ignore) (mode-line-format . none)))))
+
+(add-to-list 'display-buffer-alist
+             '("\\*\\(Man.*\\|info\\)\\*" display-buffer-same-window
+               (inhibit-same-window . nil) (body-function . select-window)))
 
 ;;; Programming
 
@@ -1283,12 +1315,11 @@
 
 ;;; Browsing and web
 
-(advice-add 'eww :around ; always open new url in new buffer
-            (lambda (orig-fun url &optional _new-buffer buffer)
-              (funcall orig-fun url t buffer)))
+;; (advice-add 'eww :around ; always open new url in new buffer
+;;             (lambda (orig-fun url &optional _new-buffer buffer)
+;;               (funcall orig-fun url t buffer)))
 
-(setq shr-max-image-proportion 0.7 shr-sliced-image-height 0.7 shr-hr-line ?―
-      shr-block-indentation-width 0
+(setq shr-max-image-proportion 0.7 shr-hr-line ?― shr-block-indentation-width 0
       shr-fill-text nil shr-use-colors nil shr-max-inline-image-size '(0.8 . 3.0))
 
 (defun my-shr-tag-render (tag face-spec &optional predicate) ; src: takeonrules
@@ -1320,7 +1351,7 @@
 
 (autoload 'eww-open-in-new-buffer "eww")
 (with-eval-after-load 'eww
-  (add-hook 'eww-after-render-hook #'viper-mode)
+  (add-hook 'eww-after-render-hook (lambda nil (viper-mode) (set-buffer-modified-p nil)))
   (defun my/eww-redirect-urls (url)
     (replace-regexp-in-string "://\\(www\\.\\)?reddit\\.com" "://old.reddit.com" url)
     (replace-regexp-in-string "://\\(www\\.\\)?x\\.com" "://nitter.kareem.one" url))
@@ -1420,6 +1451,7 @@
          "#llamas" "##chat" "##rust" "#zig")))
 ;; "#go-nuts" "#janet" "#clojure" "#racket" "#ocaml" "##japanese" "#kubernetes")))
 
+;; machine irc.libera.chat login "brongulus" password ***
 (defun my-erc-tls () (interactive)
        (erc-tls :server "irc.libera.chat" :port 6697 :nick "brongulus"))
 
@@ -1534,6 +1566,8 @@
       Info-use-header-line nil
       woman-manpath '("/usr/share/man")
       woman-cache-filename (expand-file-name "~/.emacs.d/woman-cache.el"))
+
+(add-hook 'Man-mode-hook #'viper-mode)
 
 ;;; External packages
 
