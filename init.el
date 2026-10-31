@@ -961,6 +961,7 @@
         (aset org-indent--inlinetask-line-prefixes n (make-string indent ?\s))
         (aset org-indent--text-line-prefixes n (make-string indent ?\s)))))
   (advice-add 'org-indent--compute-prefixes :override #'org-outer-indent--compute-prefixes)
+  (add-hook 'org-mode-hook (lambda () (visual-wrap-prefix-mode -1))) ; very important for the above
 
   (require 'org-tempo)
   (with-eval-after-load 'org-src
