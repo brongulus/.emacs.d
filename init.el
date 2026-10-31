@@ -940,7 +940,7 @@
 
 (setq org-directory (concat "~/Dropbox/" "org") org-agenda-files (list org-directory)
       org-modules nil org-pretty-entities t org-src-fontify-natively t
-      org-adapt-indentation t org-startup-truncated nil org-startup-indented nil;t
+      org-adapt-indentation nil org-startup-truncated nil org-startup-indented t
       org-indent-mode-turns-on-hiding-stars nil
       org-src-content-indentation 0 org-src-preserve-indentation t
       org-fontify-quote-and-verse-blocks t org-fontify-whole-heading-line t
@@ -955,12 +955,12 @@
     (setq org-indent--heading-line-prefixes (make-vector org-indent--deepest-level nil)
           org-indent--inlinetask-line-prefixes (make-vector org-indent--deepest-level nil)
           org-indent--text-line-prefixes (make-vector org-indent--deepest-level nil))
-    (let ((indent 7))  ; (+ 3 4)
+    (let ((indent 5))  ; (+ 3 4)
       (dotimes (n org-indent--deepest-level)
         (aset org-indent--heading-line-prefixes n (make-string (max 0 (- indent (1+ n))) ?\s))
         (aset org-indent--inlinetask-line-prefixes n (make-string indent ?\s))
         (aset org-indent--text-line-prefixes n (make-string indent ?\s)))))
-  ;; (advice-add 'org-indent--compute-prefixes :override #'org-outer-indent--compute-prefixes)
+  (advice-add 'org-indent--compute-prefixes :override #'org-outer-indent--compute-prefixes)
 
   (require 'org-tempo)
   (with-eval-after-load 'org-src
