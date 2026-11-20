@@ -27,7 +27,7 @@
             (window-divider-mode 1) (electric-pair-mode 1) (kill-ring-deindent-mode 1)))
 (run-with-idle-timer 0.1 nil #'viper-mode)
 
-(dolist (hook '(text-mode-hook eshell-mode-hook erc-mode-hook))
+(dolist (hook '(text-mode-hook eshell-mode-hook erc-mode-hook vc-compilation-mode-hook))
   (add-hook hook #'goto-address-mode))
 
 ;;;; Terminal setup
@@ -144,9 +144,9 @@
          ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :weight heavy))))
                    '(woman-bold Man-overstrike minibuffer-prompt dired-directory speedbar-directory-face
                                 erc-my-nick-face erc-current-nick-face erc-prompt-face fixed-pitch-serif
-                                help-key-binding speedbar-separator-face))
+                                help-key-binding speedbar-separator-face message-header-subject message-header-cc))
          ,@(mapcar (lambda (f) `(,f ((t :inherit font-lock-string-face :slant italic))))
-                   '(markdown-ts-code-span font-lock-doc-face erc-input-face))
+                   '(markdown-ts-code-span font-lock-doc-face erc-input-face message-header-to message-header-other))
          ,@(mapcar (lambda (f) `(,f ((t :inherit shadow))))
                    '(vertical-border font-lock-comment-face org-time-grid erc-notice-face speedbar-tag-face
                                      org-agenda-done gnus-summary-normal-read speedbar-button-face))
@@ -159,8 +159,8 @@
                      `(,(intern (format "gnus-cite-%d" i)) ((t :inherit font-lock-comment-face))))
                    (number-sequence 2 10 2))
          ,@(mapcar (lambda (f) `(,f ((t nil))))
-                   '(gnus-header-from gnus-summary-normal-ancient gnus-header-content
-                                      gnus-header-subject gnus-header-newsgroups))
+                   '(gnus-header-from gnus-summary-normal-ancient gnus-header-content gnus-header-subject
+                                      gnus-header-newsgroups message-header-name))
          (gnus-header-name ((t :inherit bold)))
          (nobreak-space ((t :underline nil)))
          (diff-file-header ((t :inherit (highlight bold))))
@@ -369,7 +369,7 @@
               (let* ((special-modes (member major-mode '(org-mode markdown-ts-mode eww-mode)))
                      (winw (window-total-width win))
                      (margin (max 0 (/ (- winw fill-column) 2)))
-                     (lmargin (if (eq major-mode 'org) (max 0 (- margin 5)) margin)))
+                     (lmargin (if (eq major-mode 'org) (max 0 (- margin 10)) margin)))
                 (if (> winw fill-column)
                     (progn (visual-line-mode 1) (set-window-margins win lmargin margin)
                            (when special-modes (text-scale-set 1) (setq-local line-spacing '(0.3 . 0.3))))
